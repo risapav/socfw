@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 from socfw.elaborate.bus_plan import InterconnectPlan, ResolvedBusEndpoint
+from socfw.model.system import SystemModel
 from socfw.plugins.bus_api import BusPlanner
+from socfw.plugins.simple_bus.cpu_endpoint import CpuMasterEndpointBuilder
 
 
 class SimpleBusPlanner(BusPlanner):
     protocol = "simple_bus"
 
-    def plan(self, system) -> InterconnectPlan:
+    def __init__(self) -> None:
+        self.cpu_builder = CpuMasterEndpointBuilder()
+
+    def plan(self, system: SystemModel) -> InterconnectPlan:
         plan = InterconnectPlan()
 
         for fabric in system.project.bus_fabrics:
@@ -15,6 +20,10 @@ class SimpleBusPlanner(BusPlanner):
                 continue
 
             endpoints: list[ResolvedBusEndpoint] = []
+
+            cpu_ep = self.cpu_builder.build(system, fabric.name)
+            if cpu_ep is not None:
+                endpoints.append(cpu_ep)
 
             for mod in system.project.modules:
                 if mod.bus is None or mod.bus.fabric != fabric.name:

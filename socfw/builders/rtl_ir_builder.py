@@ -7,6 +7,7 @@ from socfw.ir.rtl import (
     BOARD_CLOCK,
     BOARD_RESET,
     RtlAssign,
+    RtlBusConn,
     RtlConn,
     RtlInstance,
     RtlModuleIR,
@@ -58,6 +59,52 @@ class RtlIRBuilder:
             for iface in self.bus_builder.build_interfaces(design.interconnect):
                 rtl.add_interface_once(iface)
             rtl.fabrics.extend(self.bus_builder.build_fabrics(design.interconnect))
+
+        if system.cpu is not None:
+            cpu_conns = [
+                RtlConn(port=system.cpu.clock_port, signal=BOARD_CLOCK),
+                RtlConn(port=system.cpu.reset_port, signal=BOARD_RESET),
+            ]
+            cpu_bus_conns: list[RtlBusConn] = []
+            if system.cpu.bus_master is not None and design.interconnect is not None:
+                for fabric_name, endpoints in design.interconnect.fabrics.items():
+                    for ep in endpoints:
+                        if ep.instance == "cpu":
+                            cpu_bus_conns.append(
+                                RtlBusConn(
+                                    port=system.cpu.bus_master.port_name,
+                                    interface_name=f"if_cpu_{fabric_name}",
+                                    modport="master",
+                                )
+                            )
+            rtl.instances.append(
+                RtlInstance(
+                    module=system.cpu.module,
+                    name="cpu",
+                    params=system.cpu.params,
+                    conns=cpu_conns,
+                    bus_conns=cpu_bus_conns,
+                    comment=system.cpu.cpu_type,
+                )
+            )
+
+        if system.ram is not None:
+            ram_conns = [
+                RtlConn(port="SYS_CLK", signal=BOARD_CLOCK),
+                RtlConn(port="RESET_N", signal=BOARD_RESET),
+            ]
+            rtl.instances.append(
+                RtlInstance(
+                    module=system.ram.module,
+                    name="ram",
+                    params={
+                        "RAM_BYTES": system.ram.size,
+                        "INIT_FILE": system.ram.init_file or "",
+                    },
+                    conns=ram_conns,
+                    comment=f"RAM @ 0x{system.ram.base:08X}",
+                )
+            )
 
         for mod in system.project.modules:
             ip = system.ip_catalog.get(mod.type_name)

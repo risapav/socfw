@@ -82,6 +82,35 @@ class ArtifactsSchema(BaseModel):
     emit: list[str] = Field(default_factory=lambda: ["rtl", "timing", "board", "docs"])
 
 
+class CpuSchema(BaseModel):
+    type: str
+    module: str
+    params: dict[str, Any] = Field(default_factory=dict)
+    clock_port: str = "SYS_CLK"
+    reset_port: str = "RESET_N"
+    irq_port: str | None = None
+    bus_master_port: str | None = None
+    bus_protocol: str = "simple_bus"
+    addr_width: int = 32
+    data_width: int = 32
+
+
+class RamSchema(BaseModel):
+    module: str = "soc_ram"
+    base: int
+    size: int
+    data_width: int = 32
+    addr_width: int = 32
+    latency: Literal["combinational", "registered"] = "registered"
+    init_file: str | None = None
+    image_format: Literal["hex", "mif", "bin"] = "hex"
+
+
+class BootSchema(BaseModel):
+    reset_vector: int = 0
+    stack_percent: int = 25
+
+
 class ProjectConfigSchema(BaseModel):
     version: Literal[2]
     kind: Literal["project"]
@@ -89,6 +118,9 @@ class ProjectConfigSchema(BaseModel):
     registries: RegistriesSchema = Field(default_factory=RegistriesSchema)
     features: FeaturesSchema = Field(default_factory=FeaturesSchema)
     clocks: ClocksSchema
+    cpu: CpuSchema | None = None
+    ram: RamSchema | None = None
+    boot: BootSchema = Field(default_factory=BootSchema)
     modules: list[ModuleSchema] = Field(default_factory=list)
     timing: TimingRefSchema | None = None
     artifacts: ArtifactsSchema = Field(default_factory=ArtifactsSchema)

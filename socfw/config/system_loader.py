@@ -25,7 +25,13 @@ class SystemLoader:
         diags.extend(prj_res.diagnostics)
         if not prj_res.ok or prj_res.value is None:
             return Result(diagnostics=diags)
-        project = prj_res.value
+
+        prj_bundle = prj_res.value
+        project = prj_bundle["project"]
+        cpu = prj_bundle["cpu"]
+        ram = prj_bundle["ram"]
+        reset_vector = prj_bundle["reset_vector"]
+        stack_percent = prj_bundle["stack_percent"]
 
         project_dir = Path(project_file).parent
 
@@ -70,6 +76,10 @@ class SystemLoader:
             project=project,
             timing=timing,
             ip_catalog=ip_catalog,
+            cpu=cpu,
+            ram=ram,
+            reset_vector=reset_vector,
+            stack_percent=stack_percent,
         )
 
         return Result(value=system, diagnostics=diags)

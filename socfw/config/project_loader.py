@@ -6,6 +6,8 @@ from socfw.config.common import load_yaml_file
 from socfw.config.project_schema import ModuleClockPortSchema, ProjectConfigSchema
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
 from socfw.core.result import Result
+from socfw.model.cpu import CpuBusMaster, CpuModel
+from socfw.model.memory import RamModel
 from socfw.model.project import (
     ClockBinding,
     GeneratedClockRequest,
@@ -16,7 +18,7 @@ from socfw.model.project import (
 
 
 class ProjectLoader:
-    def load(self, path: str) -> Result[ProjectModel]:
+    def load(self, path: str) -> Result[dict]:
         raw = load_yaml_file(path)
         if not raw.ok:
             return Result(diagnostics=raw.diagnostics)
@@ -114,4 +116,46 @@ class ProjectLoader:
                 ]
             )
 
-        return Result(value=model)
+        cpu = None
+        if doc.cpu is not None:
+            cpu = CpuModel(
+                cpu_type=doc.cpu.type,
+                module=doc.cpu.module,
+                params=doc.cpu.params,
+                clock_port=doc.cpu.clock_port,
+                reset_port=doc.cpu.reset_port,
+                irq_port=doc.cpu.irq_port,
+                bus_master=(
+                    CpuBusMaster(
+                        port_name=doc.cpu.bus_master_port,
+                        protocol=doc.cpu.bus_protocol,
+                        addr_width=doc.cpu.addr_width,
+                        data_width=doc.cpu.data_width,
+                    )
+                    if doc.cpu.bus_master_port
+                    else None
+                ),
+            )
+
+        ram = None
+        if doc.ram is not None:
+            ram = RamModel(
+                module=doc.ram.module,
+                base=doc.ram.base,
+                size=doc.ram.size,
+                data_width=doc.ram.data_width,
+                addr_width=doc.ram.addr_width,
+                latency=doc.ram.latency,
+                init_file=doc.ram.init_file,
+                image_format=doc.ram.image_format,
+            )
+
+        return Result(
+            value={
+                "project": model,
+                "cpu": cpu,
+                "ram": ram,
+                "reset_vector": doc.boot.reset_vector,
+                "stack_percent": doc.boot.stack_percent,
+            }
+        )

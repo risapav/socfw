@@ -3,7 +3,9 @@ from dataclasses import dataclass, field
 
 from .addressing import PeripheralAddressBlock
 from .board import BoardModel
+from .cpu import CpuModel
 from .ip import IpDescriptor
+from .memory import RamModel
 from .project import ProjectModel
 from .timing import TimingModel
 
@@ -15,13 +17,24 @@ class SystemModel:
     timing: TimingModel | None
     ip_catalog: dict[str, IpDescriptor]
 
-    # SoC/software-facing fields
-    ram_base: int = 0x00000000
-    ram_size: int = 0
+    cpu: CpuModel | None = None
+    ram: RamModel | None = None
+
     reset_vector: int = 0x00000000
     stack_percent: int = 25
-    cpu_type: str = "none"
     peripheral_blocks: list[PeripheralAddressBlock] = field(default_factory=list)
+
+    @property
+    def ram_base(self) -> int:
+        return 0 if self.ram is None else self.ram.base
+
+    @property
+    def ram_size(self) -> int:
+        return 0 if self.ram is None else self.ram.size
+
+    @property
+    def cpu_type(self) -> str:
+        return "none" if self.cpu is None else self.cpu.cpu_type
 
     def validate(self) -> list[str]:
         errs: list[str] = []
@@ -32,7 +45,20 @@ class SystemModel:
         for ip in self.ip_catalog.values():
             errs.extend(ip.validate())
 
+        if self.ram is not None and self.reset_vector < self.ram.base:
+            errs.append(
+                f"reset_vector 0x{self.reset_vector:08X} is below RAM base 0x{self.ram.base:08X}"
+            )
+
+        if self.ram is not None and self.reset_vector > self.ram.base + self.ram.size - 1:
+            errs.append(
+                f"reset_vector 0x{self.reset_vector:08X} is outside RAM range"
+            )
+
         seen_regions: list[tuple[str, int, int]] = []
+        if self.ram is not None:
+            seen_regions.append(("RAM", self.ram.base, self.ram.base + self.ram.size - 1))
+
         for p in self.peripheral_blocks:
             for other_name, other_base, other_end in seen_regions:
                 if not (p.end < other_base or other_end < p.base):
