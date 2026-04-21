@@ -1,0 +1,31 @@
+[project]
+name = "socfw"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.0",
+  "pyyaml>=6.0",
+  "jinja2>=3.1",
+]
+
+[project.scripts]
+socfw = "socfw.cli.main:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["socfw*"]
+
+[tool.setuptools.package-data]
+socfw = ["templates/*.j2", "templates/**/*.j2"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+  "toolchain_required: requires external compiler toolchain",
+  "sim_required: requires simulator",
+  "golden: snapshot comparison tests",
+]
