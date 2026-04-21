@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from socfw.builders.address_map_builder import AddressMapBuilder
+from socfw.builders.irq_plan_builder import IrqPlanBuilder
 from socfw.model.system import SystemModel
 from socfw.plugins.simple_bus.planner import SimpleBusPlanner
 from .board_bindings import BoardBindingResolver
@@ -15,6 +16,7 @@ class Elaborator:
         self.clocks = ClockResolver()
         self.simple_bus = SimpleBusPlanner()
         self.addr_builder = AddressMapBuilder()
+        self.irq_builder = IrqPlanBuilder()
 
     def elaborate(self, system: SystemModel) -> ElaboratedDesign:
         design = ElaboratedDesign(system=system)
@@ -37,5 +39,6 @@ class Elaborator:
             design.dependency_assets.extend(ip.artifacts.synthesis)
 
         system.peripheral_blocks = self.addr_builder.build(system, interconnect)
+        design.irq_plan = self.irq_builder.build(system)
 
         return design

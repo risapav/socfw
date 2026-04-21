@@ -1,6 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 
+from socfw.model.irq import IrqPlan
+
 from .board_bindings import ResolvedPortBinding
 from .clocks import ResolvedClockDomain
 from .bus_plan import InterconnectPlan
@@ -13,3 +15,4 @@ class ElaboratedDesign:
     clock_domains: list[ResolvedClockDomain] = field(default_factory=list)
     dependency_assets: list[str] = field(default_factory=list)
     interconnect: InterconnectPlan | None = None
+    irq_plan: IrqPlan | None = None

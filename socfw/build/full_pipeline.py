@@ -4,8 +4,10 @@ from pathlib import Path
 
 from socfw.build.context import BuildContext, BuildRequest
 from socfw.build.pipeline import BuildPipeline, BuildResult
+from socfw.builders.boot_image_builder import BootImageBuilder
 from socfw.config.system_loader import SystemLoader
 from socfw.emit.run_emitters import EmitterSuite
+from socfw.tools.bin2hex_runner import Bin2HexRunner
 
 
 class FullBuildPipeline:
@@ -15,6 +17,8 @@ class FullBuildPipeline:
         self.loader = SystemLoader()
         self.pipeline = BuildPipeline()
         self.emitters = EmitterSuite(templates_dir)
+        self.image_builder = BootImageBuilder()
+        self.bin2hex = Bin2HexRunner()
 
     def run(self, request: BuildRequest) -> BuildResult:
         loaded = self.loader.load(request.project_file)
@@ -38,4 +42,10 @@ class FullBuildPipeline:
             register_block_irs=result.register_block_irs,
         )
         result.manifest = manifest
+
+        image = self.image_builder.build(loaded.value, request.out_dir)
+        if image is not None and image.input_format == "bin" and image.output_format == "hex":
+            conv = self.bin2hex.run(image)
+            result.diagnostics.extend(conv.diagnostics)
+
         return result

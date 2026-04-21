@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from socfw.builders.rtl_bus_builder import RtlBusBuilder
 from socfw.builders.rtl_bus_connections import RtlBusConnectionResolver
+from socfw.builders.rtl_irq_builder import RtlIrqBuilder
 from socfw.elaborate.design import ElaboratedDesign
 from socfw.ir.rtl import (
     BOARD_CLOCK,
@@ -21,6 +22,7 @@ class RtlIRBuilder:
     def __init__(self) -> None:
         self.bus_builder = RtlBusBuilder()
         self.bus_conns = RtlBusConnectionResolver()
+        self.irq_builder = RtlIrqBuilder()
 
     def build(self, design: ElaboratedDesign) -> RtlModuleIR:
         system = design.system
@@ -58,14 +60,17 @@ class RtlIRBuilder:
         if design.interconnect is not None:
             for iface in self.bus_builder.build_interfaces(design.interconnect):
                 rtl.add_interface_once(iface)
+
             rtl.fabrics.extend(self.bus_builder.build_fabrics(design.interconnect))
 
+        # CPU
         if system.cpu is not None:
             cpu_conns = [
                 RtlConn(port=system.cpu.clock_port, signal=BOARD_CLOCK),
                 RtlConn(port=system.cpu.reset_port, signal=BOARD_RESET),
             ]
-            cpu_bus_conns: list[RtlBusConn] = []
+
+            cpu_bus_conns = []
             if system.cpu.bus_master is not None and design.interconnect is not None:
                 for fabric_name, endpoints in design.interconnect.fabrics.items():
                     for ep in endpoints:
@@ -77,6 +82,7 @@ class RtlIRBuilder:
                                     modport="master",
                                 )
                             )
+
             rtl.instances.append(
                 RtlInstance(
                     module=system.cpu.module,
@@ -88,11 +94,26 @@ class RtlIRBuilder:
                 )
             )
 
+        # RAM
         if system.ram is not None:
             ram_conns = [
                 RtlConn(port="SYS_CLK", signal=BOARD_CLOCK),
                 RtlConn(port="RESET_N", signal=BOARD_RESET),
             ]
+
+            ram_bus_conns = []
+            if design.interconnect is not None:
+                for fabric_name, endpoints in design.interconnect.fabrics.items():
+                    for ep in endpoints:
+                        if ep.instance == "ram":
+                            ram_bus_conns.append(
+                                RtlBusConn(
+                                    port="bus",
+                                    interface_name=f"if_ram_{fabric_name}",
+                                    modport="slave",
+                                )
+                            )
+
             rtl.instances.append(
                 RtlInstance(
                     module=system.ram.module,
@@ -102,10 +123,12 @@ class RtlIRBuilder:
                         "INIT_FILE": system.ram.init_file or "",
                     },
                     conns=ram_conns,
+                    bus_conns=ram_bus_conns,
                     comment=f"RAM @ 0x{system.ram.base:08X}",
                 )
             )
 
+        # Project modules
         for mod in system.project.modules:
             ip = system.ip_catalog.get(mod.type_name)
             if ip is None:
@@ -209,8 +232,23 @@ class RtlIRBuilder:
                 if path not in rtl.extra_sources:
                     rtl.extra_sources.append(path)
 
+        self.irq_builder.build(design, rtl)
+
+        if rtl.irq_combiner is not None:
+            for inst in rtl.instances:
+                if inst.name == "cpu" and system.cpu is not None and system.cpu.irq_port:
+                    inst.conns.append(
+                        RtlConn(
+                            port=system.cpu.irq_port,
+                            signal=rtl.irq_combiner.cpu_irq_signal,
+                        )
+                    )
+
         if rtl.fabrics and "src/ip/bus/simple_bus_fabric.sv" not in rtl.extra_sources:
             rtl.extra_sources.append("src/ip/bus/simple_bus_fabric.sv")
+
+        if rtl.irq_combiner is not None and "src/ip/irq/irq_combiner.sv" not in rtl.extra_sources:
+            rtl.extra_sources.append("src/ip/irq/irq_combiner.sv")
 
         return rtl
 

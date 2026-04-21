@@ -104,6 +104,7 @@ class RtlModuleIR:
     instances: list[RtlInstance] = field(default_factory=list)
     reset_syncs: list[RtlResetSync] = field(default_factory=list)
     extra_sources: list[str] = field(default_factory=list)
+    irq_combiner: RtlIrqCombiner | None = field(default=None)
 
     def add_port_once(self, port: RtlPort) -> None:
         if all(p.name != port.name for p in self.ports):
@@ -116,6 +117,22 @@ class RtlModuleIR:
     def add_interface_once(self, iface: RtlInterfaceInstance) -> None:
         if all(i.name != iface.name for i in self.interfaces):
             self.interfaces.append(iface)
+
+
+@dataclass(frozen=True)
+class RtlIrqSource:
+    irq_id: int
+    signal: str
+    instance: str
+
+
+@dataclass
+class RtlIrqCombiner:
+    name: str
+    width: int
+    cpu_irq_port: str
+    cpu_irq_signal: str
+    sources: list[RtlIrqSource] = field(default_factory=list)
 
 
 # Backward-compatible alias
