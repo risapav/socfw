@@ -1,0 +1,87 @@
+version: 2
+
+project:
+  name: soc_simple_bus
+  board: qmtech_ep4ce55
+  output_dir: build/gen
+
+cpu:
+  type: picorv32
+  params:
+    ENABLE_IRQ: true
+
+memory:
+  ram:
+    base: 0x00000000
+    size: 65536
+    reset_vector: 0x00000000
+    stack_percent: 25
+
+clocks:
+  - name: sys
+    source: board:SYS_CLK
+    frequency_hz: 50000000
+    reset:
+      signal: board:RESET_N
+      active_low: true
+      sync_stages: 2
+
+buses:
+  - name: main
+    protocol: simple_bus
+    data_width: 32
+    addr_width: 32
+    masters:
+      - cpu
+    slaves:
+      - uart0
+      - gpio0
+      - timer0
+
+peripherals:
+  - instance: uart0
+    kind: uart
+    bus:
+      attach: main
+      base: 0x40000000
+      size: 0x1000
+    clocks: [sys]
+    resets: [sys]
+    params:
+      baud_default: 115200
+    external_ports:
+      - top_name: UART_TX
+        port: tx
+      - top_name: UART_RX
+        port: rx
+
+  - instance: gpio0
+    kind: gpio
+    bus:
+      attach: main
+      base: 0x40001000
+      size: 0x1000
+    clocks: [sys]
+    resets: [sys]
+    params:
+      width: 8
+    external_ports:
+      - top_name: ONB_LEDS
+        port: gpio_o
+
+  - instance: timer0
+    kind: timer
+    bus:
+      attach: main
+      base: 0x40002000
+      size: 0x1000
+    clocks: [sys]
+    resets: [sys]
+
+board_overrides:
+  enable_onboard:
+    leds: true
+    uart: true
+
+artifacts:
+  emit: [rtl, timing, board, software, docs]

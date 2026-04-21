@@ -1,0 +1,28 @@
+version: 2
+
+project:
+  name: blink_minimal
+  board: qmtech_ep4ce55
+  output_dir: build/gen
+
+memory:
+  ram:
+    base: 0x00000000
+    size: 65536
+    reset_vector: 0x00000000
+
+clocks:
+  - name: sys
+    source: board:SYS_CLK
+    frequency_hz: 50000000
+    reset:
+      signal: board:RESET_N
+      active_low: true
+      sync_stages: 2
+
+board_overrides:
+  enable_onboard:
+    leds: true
+
+artifacts:
+  emit: [rtl, board, docs]

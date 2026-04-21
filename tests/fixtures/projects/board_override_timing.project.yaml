@@ -1,0 +1,42 @@
+version: 2
+
+project:
+  name: board_override_timing
+  board: qmtech_ep4ce55
+  output_dir: build/gen
+
+memory:
+  ram:
+    base: 0x00000000
+    size: 65536
+    reset_vector: 0x00000000
+    stack_percent: 25
+
+clocks:
+  - name: sys
+    source: board:SYS_CLK
+    frequency_hz: 50000000
+    reset:
+      signal: board:RESET_N
+      active_low: true
+      sync_stages: 2
+
+board_overrides:
+  enable_onboard:
+    leds: true
+    uart: true
+    buttons: false
+  pmod:
+    J10: NONE
+    J11: SEG
+
+timing:
+  derive_clock_uncertainty: true
+  false_paths: []
+  io:
+    auto: true
+    default_input_max_ns: 2.5
+    default_output_max_ns: 2.5
+
+artifacts:
+  emit: [rtl, timing, board, docs]
