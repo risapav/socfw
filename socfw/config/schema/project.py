@@ -99,6 +99,14 @@ class IpRegistryConfig(BaseModel):
     vendor_asset_roots: list[str] = Field(default_factory=list)
 
 
+class RegistriesConfig(BaseModel):
+    ip: list[str] = Field(default_factory=list)
+
+
+class FeaturesConfig(BaseModel):
+    use: list[str] = Field(default_factory=list)
+
+
 class PluginsConfig(BaseModel):
     model_config = {"extra": "allow"}
 
@@ -114,6 +122,8 @@ class ProjectV2(BaseModel):
     board_overrides: BoardOverridesConfig = Field(default_factory=BoardOverridesConfig)
     timing: TimingConfig = Field(default_factory=TimingConfig)
     artifacts: ArtifactsConfig = Field(default_factory=ArtifactsConfig)
+    features: FeaturesConfig = Field(default_factory=FeaturesConfig)
+    registries: RegistriesConfig = Field(default_factory=RegistriesConfig)
     ip: IpRegistryConfig = Field(default_factory=IpRegistryConfig)
     plugins: PluginsConfig = Field(default_factory=PluginsConfig)
 
