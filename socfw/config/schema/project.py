@@ -94,6 +94,11 @@ class ProjectMeta(BaseModel):
     output_dir: str = "build/gen"
 
 
+class IpRegistryConfig(BaseModel):
+    search_paths: list[str] = Field(default_factory=list)
+    vendor_asset_roots: list[str] = Field(default_factory=list)
+
+
 class PluginsConfig(BaseModel):
     model_config = {"extra": "allow"}
 
@@ -109,6 +114,7 @@ class ProjectV2(BaseModel):
     board_overrides: BoardOverridesConfig = Field(default_factory=BoardOverridesConfig)
     timing: TimingConfig = Field(default_factory=TimingConfig)
     artifacts: ArtifactsConfig = Field(default_factory=ArtifactsConfig)
+    ip: IpRegistryConfig = Field(default_factory=IpRegistryConfig)
     plugins: PluginsConfig = Field(default_factory=PluginsConfig)
 
     @model_validator(mode="after")

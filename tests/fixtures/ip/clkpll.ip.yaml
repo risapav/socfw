@@ -1,0 +1,44 @@
+version: 2
+kind: ip
+
+name: clkpll
+module: clkpll
+category: clock
+
+origin:
+  kind: vendor_generated
+  tool: quartus
+  packaging: qip
+
+integration:
+  bus: none
+  generate_registers: false
+  instantiate: true
+  dependency_only: false
+
+reset:
+  port: areset
+  bypass_sync: true
+  active_high: true
+
+clocking:
+  primary_input: inclk0
+  outputs:
+    - port: c0
+      domain: clk_100mhz
+      kind: generated_clock
+    - port: c1
+      domain: clk_100mhz_sh
+      kind: generated_clock
+    - port: locked
+      signal_name: pll_locked
+      kind: status
+
+artifacts:
+  synthesis:
+    - clkpll.qip
+  simulation:
+    - clkpll.v
+    - clkpll_bb.v
+  metadata:
+    - clkpll.ppf
