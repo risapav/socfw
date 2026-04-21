@@ -4,82 +4,81 @@ kind: timing
 timing:
   derive_uncertainty: true
 
-clocks:
-  - name: sys_clk
-    source: board:sys_clk
-    period_ns: 20.0
-    uncertainty_ns: 0.1
-    reset:
-      source: board:sys_reset_n
-      active_low: true
-      sync_stages: 2
+  clocks:
+    - name: sys_clk
+      source: board:sys_clk
+      period_ns: 20.0
+      uncertainty_ns: 0.1
+      reset:
+        source: board:sys_reset_n
+        active_low: true
+        sync_stages: 2
 
-generated_clocks:
-  - name: clk_100mhz
-    source:
-      instance: clkpll
-      output: c0
-    multiply_by: 2
-    divide_by: 1
-    reset:
-      sync_from: sys_clk
-      sync_stages: 2
+  generated_clocks:
+    - name: clk_100mhz
+      source:
+        instance: clkpll
+        output: c0
+      multiply_by: 2
+      divide_by: 1
+      reset_sync_from: sys_clk
+      reset_sync_stages: 2
 
-  - name: clk_100mhz_sh
-    source:
-      instance: clkpll
-      output: c1
-    multiply_by: 2
-    divide_by: 1
-    phase_shift_ps: -3000
+    - name: clk_100mhz_sh
+      source:
+        instance: clkpll
+        output: c1
+      multiply_by: 2
+      divide_by: 1
+      phase_shift_ps: -3000
 
-clock_groups:
-  - type: exclusive
-    groups:
-      - [sys_clk]
-      - [clk_100mhz, clk_100mhz_sh]
+  clock_groups:
+    - type: exclusive
+      groups:
+        - [sys_clk]
+        - [clk_100mhz, clk_100mhz_sh]
 
-io_delays:
-  auto: false
-  overrides:
-    - port: "SDRAM_ADDR[*]"
-      direction: output
-      clock: clk_100mhz_sh
-      max_ns: 1.5
-      min_ns: -0.8
+  io_delays:
+    auto: false
+    overrides:
+      - port: "SDRAM_ADDR[*]"
+        direction: output
+        clock: clk_100mhz_sh
+        max_ns: 1.5
+        min_ns: -0.8
 
-    - port: "SDRAM_BA[*]"
-      direction: output
-      clock: clk_100mhz_sh
-      max_ns: 1.5
-      min_ns: -0.8
+      - port: "SDRAM_BA[*]"
+        direction: output
+        clock: clk_100mhz_sh
+        max_ns: 1.5
+        min_ns: -0.8
 
-    - port: SDRAM_RAS_N
-      direction: output
-      clock: clk_100mhz_sh
-      max_ns: 1.5
-      min_ns: -0.8
+      - port: SDRAM_RAS_N
+        direction: output
+        clock: clk_100mhz_sh
+        max_ns: 1.5
+        min_ns: -0.8
 
-    - port: SDRAM_CAS_N
-      direction: output
-      clock: clk_100mhz_sh
-      max_ns: 1.5
-      min_ns: -0.8
+      - port: SDRAM_CAS_N
+        direction: output
+        clock: clk_100mhz_sh
+        max_ns: 1.5
+        min_ns: -0.8
 
-    - port: SDRAM_WE_N
-      direction: output
-      clock: clk_100mhz_sh
-      max_ns: 1.5
-      min_ns: -0.8
+      - port: SDRAM_WE_N
+        direction: output
+        clock: clk_100mhz_sh
+        max_ns: 1.5
+        min_ns: -0.8
 
-    - port: "SDRAM_DQ[*]"
-      direction: output
-      clock: clk_100mhz_sh
-      max_ns: 1.5
-      min_ns: -0.8
+      - port: "SDRAM_DQ[*]"
+        direction: output
+        clock: clk_100mhz_sh
+        max_ns: 1.5
+        min_ns: -0.8
 
-    - port: "SDRAM_DQ[*]"
-      direction: input
-      clock: clk_100mhz
-      max_ns: 5.8
-      min_ns: 2.2
+      - port: "SDRAM_DQ[*]"
+        direction: input
+        clock: clk_100mhz
+        max_ns: 5.8
+        min_ns: 2.2

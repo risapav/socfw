@@ -16,7 +16,7 @@ fpga:
 
 system:
   clock:
-    name: sys_clk
+    id: sys_clk
     top_name: SYS_CLK
     pin: T2
     io_standard: "3.3-V LVTTL"
@@ -24,7 +24,7 @@ system:
     period_ns: 20.0
 
   reset:
-    name: sys_reset_n
+    id: sys_reset_n
     top_name: RESET_N
     pin: W13
     io_standard: "3.3-V LVTTL"

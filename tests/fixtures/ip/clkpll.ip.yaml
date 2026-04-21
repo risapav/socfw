@@ -1,9 +1,10 @@
 version: 2
 kind: ip
 
-name: clkpll
-module: clkpll
-category: clock
+ip:
+  name: clkpll
+  module: clkpll
+  category: clock
 
 origin:
   kind: vendor_generated
@@ -11,9 +12,9 @@ origin:
   packaging: qip
 
 integration:
-  bus: none
+  needs_bus: false
   generate_registers: false
-  instantiate: true
+  instantiate_directly: true
   dependency_only: false
 
 reset:
@@ -22,7 +23,7 @@ reset:
   active_high: true
 
 clocking:
-  primary_input: inclk0
+  primary_input_port: inclk0
   outputs:
     - port: c0
       domain: clk_100mhz

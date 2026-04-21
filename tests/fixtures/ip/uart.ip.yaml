@@ -1,17 +1,18 @@
 version: 2
 kind: ip
 
-name: uart
-module: uart
-category: peripheral
+ip:
+  name: uart
+  module: uart
+  category: peripheral
 
 origin:
   kind: source
 
 integration:
-  bus: slave
+  needs_bus: true
   generate_registers: true
-  instantiate: true
+  instantiate_directly: true
   dependency_only: false
 
 reset:
@@ -20,18 +21,8 @@ reset:
   bypass_sync: false
 
 clocking:
-  primary_input: clk
-
-bus_interfaces:
-  - port_name: bus
-    protocol: simple_bus
-    role: slave
-    addr_width: 12
-    data_width: 32
+  primary_input_port: clk
 
 artifacts:
   synthesis:
     - uart.sv
-
-params:
-  baud_default: 115200

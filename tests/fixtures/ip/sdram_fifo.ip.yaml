@@ -1,9 +1,10 @@
 version: 2
 kind: ip
 
-name: sdram_fifo
-module: sdram_fifo
-category: memory
+ip:
+  name: sdram_fifo
+  module: sdram_fifo
+  category: memory
 
 origin:
   kind: vendor_generated
@@ -11,9 +12,9 @@ origin:
   packaging: qip
 
 integration:
-  bus: none
+  needs_bus: false
   generate_registers: false
-  instantiate: false
+  instantiate_directly: false
   dependency_only: true
 
 reset:
@@ -23,8 +24,8 @@ reset:
   asynchronous: true
 
 clocking:
-  primary_input: rdclk
-  additional_inputs:
+  primary_input_port: rdclk
+  additional_input_ports:
     - wrclk
 
 artifacts:
