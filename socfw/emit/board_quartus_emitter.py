@@ -1,9 +1,11 @@
 from __future__ import annotations
+
+from collections import defaultdict
 from pathlib import Path
 
 from socfw.build.context import BuildContext
 from socfw.build.manifest import GeneratedArtifact
-from socfw.ir.board import BoardIR
+from socfw.ir.board import BoardIR, BoardPinAssignment
 
 
 class QuartusBoardEmitter:
@@ -14,34 +16,57 @@ class QuartusBoardEmitter:
         out.parent.mkdir(parents=True, exist_ok=True)
 
         lines: list[str] = []
+        lines.append("# AUTO-GENERATED - DO NOT EDIT")
+        lines.append(f"# Device family: {ir.family}")
+        lines.append(f"# Device part:   {ir.device}")
+        lines.append("")
         lines.append(f'set_global_assignment -name FAMILY "{ir.family}"')
         lines.append(f"set_global_assignment -name DEVICE  {ir.device}")
         lines.append("")
 
-        grouped: dict[tuple[str, str | None, bool], list[tuple[int | None, str]]] = {}
+        grouped: dict[str, list[BoardPinAssignment]] = defaultdict(list)
         for a in ir.assignments:
-            key = (a.top_name, a.io_standard, a.weak_pull_up)
-            grouped.setdefault(key, []).append((a.index, a.pin))
+            grouped[a.top_name].append(a)
 
-        for (top_name, io_standard, weak_pull_up), pins in grouped.items():
-            if io_standard:
-                wildcard = any(idx is not None for idx, _ in pins)
-                suffix = "[*]" if wildcard else ""
-                lines.append(
-                    f'set_instance_assignment -name IO_STANDARD "{io_standard}" -to {top_name}{suffix}'
-                )
-            if weak_pull_up:
-                wildcard = any(idx is not None for idx, _ in pins)
-                suffix = "[*]" if wildcard else ""
-                lines.append(
-                    f"set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to {top_name}{suffix}"
-                )
-            for idx, pin in sorted(pins, key=lambda x: (-1 if x[0] is None else x[0])):
-                if idx is None:
-                    lines.append(f"set_location_assignment PIN_{pin} -to {top_name}")
+        for top_name in sorted(grouped.keys()):
+            pins = sorted(grouped[top_name], key=lambda a: (-1 if a.index is None else a.index))
+            sample = pins[0]
+
+            lines.append(f"# {top_name}")
+
+            if sample.io_standard:
+                if any(p.index is not None for p in pins):
+                    lines.append(
+                        f'set_instance_assignment -name IO_STANDARD "{sample.io_standard}" -to {top_name}[*]'
+                    )
                 else:
-                    lines.append(f"set_location_assignment PIN_{pin} -to {top_name}[{idx}]")
+                    lines.append(
+                        f'set_instance_assignment -name IO_STANDARD "{sample.io_standard}" -to {top_name}'
+                    )
+
+            if sample.weak_pull_up:
+                if any(p.index is not None for p in pins):
+                    lines.append(
+                        f"set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to {top_name}[*]"
+                    )
+                else:
+                    lines.append(
+                        f"set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to {top_name}"
+                    )
+
+            for pin in pins:
+                if pin.index is None:
+                    lines.append(f"set_location_assignment PIN_{pin.pin} -to {top_name}")
+                else:
+                    lines.append(f"set_location_assignment PIN_{pin.pin} -to {top_name}[{pin.index}]")
             lines.append("")
 
         out.write_text("\n".join(lines), encoding="ascii")
-        return [GeneratedArtifact(family=self.family, path=str(out), generator=self.__class__.__name__)]
+
+        return [
+            GeneratedArtifact(
+                family=self.family,
+                path=str(out),
+                generator=self.__class__.__name__,
+            )
+        ]

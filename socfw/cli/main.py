@@ -10,9 +10,16 @@ def _default_templates_dir() -> str:
 
 
 def cmd_validate(args) -> int:
-    print(f"validate: {args.project}")
-    print("(not yet implemented — system loader pending)")
-    return 0
+    from socfw.build.context import BuildRequest
+    from socfw.build.full_pipeline import FullBuildPipeline
+
+    pipeline = FullBuildPipeline()
+    result = pipeline.run(BuildRequest(project_file=args.project, out_dir="/dev/null"))
+
+    for d in result.diagnostics:
+        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+
+    return 0 if result.ok else 1
 
 
 def cmd_migrate(args) -> int:
@@ -52,9 +59,20 @@ def _detect_kind(data: dict, path: Path) -> str:
 
 
 def cmd_build(args) -> int:
-    print(f"build: {args.project} -> {args.out}")
-    print("(not yet implemented — full pipeline pending)")
-    return 0
+    from socfw.build.context import BuildRequest
+    from socfw.build.full_pipeline import FullBuildPipeline
+
+    pipeline = FullBuildPipeline(templates_dir=args.templates)
+    result = pipeline.run(BuildRequest(project_file=args.project, out_dir=args.out))
+
+    for d in result.diagnostics:
+        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+
+    if result.ok:
+        for art in result.manifest.artifacts:
+            print(f"[{art.family}] {art.path}")
+
+    return 0 if result.ok else 1
 
 
 def build_parser() -> argparse.ArgumentParser:

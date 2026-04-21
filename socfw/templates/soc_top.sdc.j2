@@ -1,0 +1,86 @@
+# AUTO-GENERATED - DO NOT EDIT
+
+# -------------------------------------------------------------------------
+# Primary clocks
+# -------------------------------------------------------------------------
+{% for c in timing.clocks -%}
+create_clock -name {{ c.name }} -period {{ "%.3f"|format(c.period_ns) }} [get_ports { {{ c.source_port }} }]
+{% if c.uncertainty_ns is not none -%}
+set_clock_uncertainty {{ "%.3f"|format(c.uncertainty_ns) }} [get_clocks { {{ c.name }} }]
+{% endif -%}
+{% endfor %}
+
+{% if timing.generated_clocks %}
+# -------------------------------------------------------------------------
+# Generated clocks
+# -------------------------------------------------------------------------
+{% for g in timing.generated_clocks -%}
+create_generated_clock \
+  -name {{ g.name }} \
+  -source [get_pins { u_{{ g.source_instance }}|{{ g.source_output }} }] \
+  -multiply_by {{ g.multiply_by }} \
+  -divide_by {{ g.divide_by }} \
+  [get_pins { u_{{ g.source_instance }}|{{ g.source_output }} }]
+{% if g.phase_shift_ps is not none -%}
+# phase_shift_ps={{ g.phase_shift_ps }}
+{% endif -%}
+{% endfor %}
+
+{% endif %}
+
+{% if timing.clock_groups %}
+# -------------------------------------------------------------------------
+# Clock groups
+# -------------------------------------------------------------------------
+{% for grp in timing.clock_groups -%}
+set_clock_groups -{{ grp.group_type }}
+{%- for group in grp.groups %}
+  -group { {% for clk in group %}{{ clk }}{% if not loop.last %} {% endif %}{% endfor %} }
+{%- endfor %}
+{% endfor %}
+
+{% endif %}
+
+{% if timing.derive_uncertainty %}
+# -------------------------------------------------------------------------
+# Derived uncertainty
+# -------------------------------------------------------------------------
+derive_clock_uncertainty
+
+{% endif %}
+
+{% if timing.false_paths %}
+# -------------------------------------------------------------------------
+# False paths
+# -------------------------------------------------------------------------
+{% for fp in timing.false_paths -%}
+{% if fp.from_port %}
+set_false_path -from [get_ports { {{ fp.from_port }} }]{% if fp.comment %} ; # {{ fp.comment }}{% endif %}
+{% elif fp.from_clock and fp.to_clock %}
+set_false_path -from [get_clocks { {{ fp.from_clock }} }] -to [get_clocks { {{ fp.to_clock }} }]{% if fp.comment %} ; # {{ fp.comment }}{% endif %}
+{% elif fp.from_cell or fp.to_cell %}
+set_false_path{% if fp.from_cell %} -from [get_cells { {{ fp.from_cell }} }]{% endif %}{% if fp.to_cell %} -to [get_cells { {{ fp.to_cell }} }]{% endif %}{% if fp.comment %} ; # {{ fp.comment }}{% endif %}
+{% endif -%}
+{% endfor %}
+
+{% endif %}
+
+{% if timing.io_delays %}
+# -------------------------------------------------------------------------
+# IO delays
+# -------------------------------------------------------------------------
+{% for d in timing.io_delays -%}
+{% if d.direction == "input" -%}
+set_input_delay -clock [get_clocks { {{ d.clock }} }] -max {{ "%.3f"|format(d.max_ns) }} [get_ports { {{ d.port }} }]
+{% if d.min_ns is not none -%}
+set_input_delay -clock [get_clocks { {{ d.clock }} }] -min {{ "%.3f"|format(d.min_ns) }} [get_ports { {{ d.port }} }]
+{% endif -%}
+{% else -%}
+set_output_delay -clock [get_clocks { {{ d.clock }} }] -max {{ "%.3f"|format(d.max_ns) }} [get_ports { {{ d.port }} }]
+{% if d.min_ns is not none -%}
+set_output_delay -clock [get_clocks { {{ d.clock }} }] -min {{ "%.3f"|format(d.min_ns) }} [get_ports { {{ d.port }} }]
+{% endif -%}
+{% endif -%}
+{% if d.comment %}# {{ d.comment }}{% endif %}
+{% endfor %}
+{% endif %}

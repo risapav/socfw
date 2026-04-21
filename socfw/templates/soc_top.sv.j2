@@ -1,0 +1,54 @@
+// AUTO-GENERATED - DO NOT EDIT
+`default_nettype none
+
+module {{ module.name }} (
+{% for p in module.ports %}
+  {{ "input " if p.direction == "input" else "output" if p.direction == "output" else "inout " }} wire{% if p.width > 1 %} [{{ p.width - 1 }}:0]{% endif %} {{ p.name }}{{ "," if not loop.last else "" }}
+{% endfor %}
+);
+
+{% if module.wires %}
+  // Internal wires
+{% for w in module.wires %}
+  wire{% if w.width > 1 %} [{{ w.width - 1 }}:0]{% endif %} {{ w.name }};{% if w.comment %} // {{ w.comment }}{% endif %}
+{% endfor %}
+{% endif %}
+{% if module.reset_syncs %}
+  // Reset synchronizers
+{% for rs in module.reset_syncs %}
+  rst_sync #(
+    .STAGES({{ rs.stages }})
+  ) {{ rs.name }} (
+    .clk_i   ({{ rs.clk_signal }}),
+    .arst_ni (RESET_N),
+    .srst_no ({{ rs.rst_out }})
+  );
+{% endfor %}
+{% endif %}
+{% if module.assigns %}
+  // Top-level / adapter assigns
+{% for a in module.assigns %}
+  assign {{ a.lhs }} = {{ a.rhs }};{% if a.comment %} // {{ a.comment }}{% endif %}
+{% endfor %}
+{% endif %}
+{% if module.instances %}
+  // Module instances
+{% for inst in module.instances %}
+{% if inst.params %}
+  {{ inst.module }} #(
+{% for k, v in inst.params.items() %}
+    .{{ k }}({{ v | sv_param }}){{ "," if not loop.last else "" }}
+{% endfor %}
+  ) u_{{ inst.name }} (
+{% else %}
+  {{ inst.module }} u_{{ inst.name }} (
+{% endif %}
+{% for c in inst.conns %}
+    .{{ c.port }}({{ c.signal }}){{ "," if not loop.last else "" }}
+{% endfor %}
+  );{% if inst.comment %} // {{ inst.comment }}{% endif %}
+{% endfor %}
+{% endif %}
+
+endmodule : {{ module.name }}
+`default_nettype wire
