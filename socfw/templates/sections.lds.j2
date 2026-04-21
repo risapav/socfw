@@ -1,0 +1,34 @@
+/* AUTO-GENERATED - DO NOT EDIT */
+/* RAM base:      0x{{ "%08X"|format(sw.ram_base) }}  size: {{ sw.ram_size }} B */
+/* Reset vector:  0x{{ "%08X"|format(sw.reset_vector) }} */
+/* Stack:         {{ sw.stack_percent }}% of RAM = {{ (sw.ram_size * sw.stack_percent // 100) }} B */
+
+OUTPUT_ARCH(riscv)
+ENTRY(_start)
+
+MEMORY {
+  RAM (rwx) : ORIGIN = 0x{{ "%08X"|format(sw.ram_base) }}, LENGTH = {{ sw.ram_size }}
+}
+
+SECTIONS {
+  .text : {
+    KEEP(*(.text.start))
+    *(.text*)
+    *(.rodata*)
+  } > RAM
+
+  .data : {
+    *(.data*)
+  } > RAM
+
+  .bss : {
+    __bss_start = .;
+    *(.bss*) *(COMMON)
+    . = ALIGN(4);
+    __bss_end = .;
+  } > RAM
+
+  _stack_top  = ORIGIN(RAM) + LENGTH(RAM);
+  _stack_size = LENGTH(RAM) * {{ sw.stack_percent }} / 100;
+  _stack_base = _stack_top - _stack_size;
+}

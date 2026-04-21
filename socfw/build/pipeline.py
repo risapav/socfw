@@ -5,7 +5,10 @@ from pathlib import Path
 from socfw.build.context import BuildContext, BuildRequest
 from socfw.build.manifest import BuildManifest
 from socfw.builders.board_ir_builder import BoardIRBuilder
+from socfw.builders.docs_ir_builder import DocsIRBuilder
+from socfw.builders.register_block_ir_builder import RegisterBlockIRBuilder
 from socfw.builders.rtl_ir_builder import RtlIRBuilder
+from socfw.builders.software_ir_builder import SoftwareIRBuilder
 from socfw.builders.timing_ir_builder import TimingIRBuilder
 from socfw.core.diagnostics import Diagnostic, Severity
 from socfw.elaborate.planner import Elaborator
@@ -21,7 +24,6 @@ from socfw.validate.rules.project_rules import (
     UnknownGeneratedClockSourceRule,
     UnknownIpTypeRule,
 )
-from socfw.validate.runner import ValidationRunner
 
 
 @dataclass
@@ -35,13 +37,11 @@ class BuildResult:
     software_ir: object | None = None
     docs_ir: object | None = None
     register_block_irs: list[object] = field(default_factory=list)
-    peripheral_shell_irs: list[object] = field(default_factory=list)
-    design: object | None = None
 
 
-def _default_validator() -> ValidationRunner:
-    return ValidationRunner(
-        rules=[
+class BuildPipeline:
+    def __init__(self) -> None:
+        self.rules = [
             DuplicateModuleInstanceRule(),
             UnknownIpTypeRule(),
             UnknownGeneratedClockSourceRule(),
@@ -50,25 +50,17 @@ def _default_validator() -> ValidationRunner:
             VendorIpArtifactExistsRule(),
             BindingWidthCompatibilityRule(),
         ]
-    )
-
-
-class BuildPipeline:
-    def __init__(
-        self,
-        validator: ValidationRunner | None = None,
-        elaborator: Elaborator | None = None,
-        ir_builders: dict | None = None,
-    ) -> None:
-        self.validator = validator or _default_validator()
-        self.elaborator = elaborator or Elaborator()
+        self.elaborator = Elaborator()
         self.board_ir_builder = BoardIRBuilder()
         self.timing_ir_builder = TimingIRBuilder()
         self.rtl_ir_builder = RtlIRBuilder()
-        self._extra_builders = ir_builders or {}
+        self.software_ir_builder = SoftwareIRBuilder()
+        self.docs_ir_builder = DocsIRBuilder()
+        self.regblk_ir_builder = RegisterBlockIRBuilder()
 
     def _validate(self, system: SystemModel) -> list[Diagnostic]:
         diags: list[Diagnostic] = []
+
         for msg in system.validate():
             diags.append(
                 Diagnostic(
@@ -78,7 +70,10 @@ class BuildPipeline:
                     subject="system",
                 )
             )
-        diags.extend(self.validator.run(system))
+
+        for rule in self.rules:
+            diags.extend(rule.validate(system))
+
         return diags
 
     def run(self, request: BuildRequest, system: SystemModel) -> BuildResult:
@@ -87,34 +82,26 @@ class BuildPipeline:
             return BuildResult(ok=False, diagnostics=diags)
 
         design = self.elaborator.elaborate(system)
-        ctx = BuildContext(out_dir=Path(request.out_dir))
 
         board_ir = self.board_ir_builder.build(design)
         timing_ir = self.timing_ir_builder.build(design)
         rtl_ir = self.rtl_ir_builder.build(design)
+        software_ir = self.software_ir_builder.build(design)
+        docs_ir = self.docs_ir_builder.build(design)
 
-        result = BuildResult(
+        regblk_irs = []
+        for p in system.peripheral_blocks:
+            regblk = self.regblk_ir_builder.build_for_peripheral(p)
+            if regblk is not None:
+                regblk_irs.append(regblk)
+
+        return BuildResult(
             ok=True,
             diagnostics=diags,
-            design=design,
             board_ir=board_ir,
             timing_ir=timing_ir,
             rtl_ir=rtl_ir,
+            software_ir=software_ir,
+            docs_ir=docs_ir,
+            register_block_irs=regblk_irs,
         )
-
-        for family, builder in self._extra_builders.items():
-            try:
-                ir = builder.build(design)
-                setattr(result, f"{family}_ir", ir)
-            except Exception as e:
-                result.diagnostics.append(
-                    Diagnostic(
-                        code="BLD001",
-                        severity=Severity.ERROR,
-                        message=f"IR builder '{family}' failed: {e}",
-                        subject=f"build.{family}",
-                    )
-                )
-                result.ok = False
-
-        return result

@@ -33,6 +33,9 @@ class FullBuildPipeline:
             board_ir=result.board_ir,
             timing_ir=result.timing_ir,
             rtl_ir=result.rtl_ir,
+            software_ir=result.software_ir,
+            docs_ir=result.docs_ir,
+            register_block_irs=result.register_block_irs,
         )
         result.manifest = manifest
         return result

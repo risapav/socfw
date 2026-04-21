@@ -1,0 +1,14 @@
+/* AUTO-GENERATED - DO NOT EDIT */
+
+#ifndef SOC_IRQ_H
+#define SOC_IRQ_H
+
+{% if sw.irqs %}
+{% for irq in sw.irqs | sort(attribute="irq_id") -%}
+#define {{ irq.peripheral.upper() }}_{{ irq.name.upper() }}_IRQ {{ irq.irq_id }}U
+{% endfor %}
+{% else %}
+ /* No interrupts configured */
+{% endif %}
+
+#endif /* SOC_IRQ_H */

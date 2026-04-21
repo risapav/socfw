@@ -3,19 +3,36 @@ from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
-class SwRegister:
+class SwRegisterIR:
     peripheral: str
+    peripheral_type: str
     name: str
-    addr: int
+    offset: int
+    address: int
     access: str
+    width: int
+    reset: int = 0
     desc: str = ""
 
 
 @dataclass(frozen=True)
-class SwIrq:
+class SwIrqIR:
     peripheral: str
     name: str
     irq_id: int
+
+
+@dataclass(frozen=True)
+class MemoryRegionIR:
+    name: str
+    base: int
+    size: int
+    module: str
+    attrs: dict[str, object] = field(default_factory=dict)
+
+    @property
+    def end(self) -> int:
+        return self.base + self.size - 1
 
 
 @dataclass
@@ -24,8 +41,8 @@ class SoftwareIR:
     sys_clk_hz: int
     ram_base: int
     ram_size: int
-    reset_vector: int = 0
-    stack_percent: int = 25
-    irq_entry_addr: int = 0x10
-    registers: list[SwRegister] = field(default_factory=list)
-    irqs: list[SwIrq] = field(default_factory=list)
+    reset_vector: int
+    stack_percent: int
+    memory_regions: list[MemoryRegionIR] = field(default_factory=list)
+    registers: list[SwRegisterIR] = field(default_factory=list)
+    irqs: list[SwIrqIR] = field(default_factory=list)

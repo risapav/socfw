@@ -1,0 +1,46 @@
+# SoC Memory Map
+
+Board: **{{ docs.board_name }}**
+Clock: **{{ docs.clock_hz // 1000000 }} MHz**
+RAM: **{{ docs.ram_size }} B @ 0x{{ "%08X"|format(docs.ram_base) }}**
+Reset vector: **0x{{ "%08X"|format(docs.reset_vector) }}**
+Stack: **{{ docs.stack_percent }}%**
+
+## Address Space
+
+| Region | Base | End | Size | Module |
+|--------|------|-----|------|--------|
+| RAM | `0x{{ "%08X"|format(docs.ram_base) }}` | `0x{{ "%08X"|format(docs.ram_base + docs.ram_size - 1) }}` | {{ docs.ram_size }} B | soc_ram |
+{% for p in docs.peripherals -%}
+| {{ p.instance }} | `0x{{ "%08X"|format(p.base) }}` | `0x{{ "%08X"|format(p.end) }}` | `0x{{ "%X"|format(p.size) }}` | {{ p.module }} |
+{% endfor %}
+
+{% if docs.peripherals %}
+## Peripherals
+
+{% for p in docs.peripherals %}
+### {{ p.instance }}
+
+- Module: `{{ p.module }}`
+- Base: `0x{{ "%08X"|format(p.base) }}`
+- End: `0x{{ "%08X"|format(p.end) }}`
+- Size: `0x{{ "%X"|format(p.size) }}`
+
+{% if p.registers %}
+#### Registers
+
+| Offset | Name | Access | Width | Reset | Description |
+|--------|------|--------|-------|-------|-------------|
+{% for r in p.registers -%}
+| `0x{{ "%02X"|format(r.offset) }}` | {{ r.name }} | {{ r.access }} | {{ r.width }} | `0x{{ "%X"|format(r.reset) }}` | {{ r.desc }} |
+{% endfor %}
+{% endif %}
+
+{% if p.irq_ids %}
+#### IRQs
+
+{{ p.irq_ids | join(", ") }}
+
+{% endif %}
+{% endfor %}
+{% endif %}

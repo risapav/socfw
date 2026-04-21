@@ -13,6 +13,10 @@ class RegisterDef:
     reset: int = 0
     desc: str = ""
 
+    @property
+    def address_word_offset(self) -> int:
+        return self.offset // 4
+
 
 @dataclass(frozen=True)
 class IrqDef:
@@ -31,6 +35,10 @@ class PeripheralAddressBlock:
     @property
     def base(self) -> int:
         return self.region.base
+
+    @property
+    def end(self) -> int:
+        return self.region.end
 
     @property
     def size(self) -> int:

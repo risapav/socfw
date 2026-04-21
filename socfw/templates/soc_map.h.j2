@@ -1,0 +1,24 @@
+/* AUTO-GENERATED - DO NOT EDIT */
+
+#ifndef SOC_MAP_H
+#define SOC_MAP_H
+
+#include <stdint.h>
+
+#define SYS_CLK_HZ       {{ sw.sys_clk_hz }}UL
+#define RAM_BASE         0x{{ "%08X"|format(sw.ram_base) }}UL
+#define RAM_SIZE_BYTES   {{ sw.ram_size }}U
+#define RESET_VECTOR     0x{{ "%08X"|format(sw.reset_vector) }}UL
+#define STACK_SIZE_BYTES ({{ sw.ram_size }}U * {{ sw.stack_percent }}U / 100U)
+
+{% for region in sw.memory_regions if region.name != "RAM" %}
+/* {{ region.name }} @ 0x{{ "%08X"|format(region.base) }} ({{ region.module }}) */
+#define {{ region.name.upper() }}_BASE 0x{{ "%08X"|format(region.base) }}UL
+
+{% set regs = sw.registers | selectattr("peripheral", "equalto", region.name) | list %}
+{% for r in regs -%}
+#define {{ r.peripheral.upper() }}_{{ r.name.upper() }}_REG (*((volatile uint32_t*)(0x{{ "%08X"|format(r.address) }}UL)))  /* {{ r.access }}  {{ r.desc }} */
+{% endfor %}
+{% endfor %}
+
+#endif /* SOC_MAP_H */
