@@ -44,7 +44,8 @@ class RtlConn:
 @dataclass(frozen=True)
 class RtlBusConn:
     port: str
-    bus_name: str
+    interface_name: str
+    modport: str
 
 
 @dataclass
@@ -65,31 +66,64 @@ class RtlResetSync:
     rst_out: str
 
 
+@dataclass(frozen=True)
+class RtlInterfaceInstance:
+    if_type: str
+    name: str
+    params: dict[str, object] = field(default_factory=dict)
+    comment: str = ""
+
+
+@dataclass(frozen=True)
+class RtlFabricPort:
+    port_name: str
+    interface_name: str
+    modport: str
+    index: int | None = None
+
+
 @dataclass
-class RtlModule:
+class RtlFabricInstance:
+    module: str
+    name: str
+    params: dict[str, object] = field(default_factory=dict)
+    clock_signal: str = BOARD_CLOCK
+    reset_signal: str = BOARD_RESET
+    ports: list[RtlFabricPort] = field(default_factory=list)
+    comment: str = ""
+
+
+@dataclass
+class RtlModuleIR:
     name: str
     ports: list[RtlPort] = field(default_factory=list)
     wires: list[RtlWire] = field(default_factory=list)
     assigns: list[RtlAssign] = field(default_factory=list)
+    interfaces: list[RtlInterfaceInstance] = field(default_factory=list)
+    fabrics: list[RtlFabricInstance] = field(default_factory=list)
     instances: list[RtlInstance] = field(default_factory=list)
     reset_syncs: list[RtlResetSync] = field(default_factory=list)
     extra_sources: list[str] = field(default_factory=list)
 
-    def add_wire_once(self, wire: RtlWire) -> None:
-        if not any(w.name == wire.name for w in self.wires):
-            self.wires.append(wire)
-
     def add_port_once(self, port: RtlPort) -> None:
-        if not any(p.name == port.name for p in self.ports):
+        if all(p.name != port.name for p in self.ports):
             self.ports.append(port)
 
+    def add_wire_once(self, wire: RtlWire) -> None:
+        if all(w.name != wire.name for w in self.wires):
+            self.wires.append(wire)
 
-# Alias used by builders
-RtlModuleIR = RtlModule
+    def add_interface_once(self, iface: RtlInterfaceInstance) -> None:
+        if all(i.name != iface.name for i in self.interfaces):
+            self.interfaces.append(iface)
+
+
+# Backward-compatible alias
+RtlModule = RtlModuleIR
 
 
 @dataclass
 class RtlIR:
-    top: RtlModule
-    support_modules: list[RtlModule] = field(default_factory=list)
+    top: RtlModuleIR
+    support_modules: list[RtlModuleIR] = field(default_factory=list)
     extra_sources: list[str] = field(default_factory=list)

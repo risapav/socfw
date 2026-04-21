@@ -13,6 +13,19 @@ module {{ module.name }} (
   wire{% if w.width > 1 %} [{{ w.width - 1 }}:0]{% endif %} {{ w.name }};{% if w.comment %} // {{ w.comment }}{% endif %}
 {% endfor %}
 {% endif %}
+
+{% if module.interfaces %}
+  // Interface instances
+{% for iface in module.interfaces %}
+  {{ iface.if_type -}}
+  {% if iface.params %} #(
+{% for k, v in iface.params.items() %}
+    .{{ k }}({{ v | sv_param }}){{ "," if not loop.last else "" }}
+{% endfor %}
+  ){% endif %} {{ iface.name }} ();{% if iface.comment %} // {{ iface.comment }}{% endif %}
+{% endfor %}
+{% endif %}
+
 {% if module.reset_syncs %}
   // Reset synchronizers
 {% for rs in module.reset_syncs %}
@@ -25,12 +38,31 @@ module {{ module.name }} (
   );
 {% endfor %}
 {% endif %}
+
 {% if module.assigns %}
   // Top-level / adapter assigns
 {% for a in module.assigns %}
   assign {{ a.lhs }} = {{ a.rhs }};{% if a.comment %} // {{ a.comment }}{% endif %}
 {% endfor %}
 {% endif %}
+
+{% if module.fabrics %}
+  // Bus fabrics
+{% for fab in module.fabrics %}
+  {{ fab.module }}{% if fab.params %} #(
+{% for k, v in fab.params.items() %}
+    .{{ k }}({{ v | sv_param }}){{ "," if not loop.last else "" }}
+{% endfor %}
+  ){% endif %} {{ fab.name }} (
+    .SYS_CLK({{ fab.clock_signal }}),
+    .RESET_N({{ fab.reset_signal }})
+{% for p in fab.ports %}
+    ,.{{ p.port_name }}{% if p.index is not none %}[{{ p.index }}]{% endif %}({{ p.interface_name }}.{{ p.modport }})
+{% endfor %}
+  );{% if fab.comment %} // {{ fab.comment }}{% endif %}
+{% endfor %}
+{% endif %}
+
 {% if module.instances %}
   // Module instances
 {% for inst in module.instances %}
@@ -44,7 +76,10 @@ module {{ module.name }} (
   {{ inst.module }} u_{{ inst.name }} (
 {% endif %}
 {% for c in inst.conns %}
-    .{{ c.port }}({{ c.signal }}){{ "," if not loop.last else "" }}
+    .{{ c.port }}({{ c.signal }}){{ "," if not loop.last or inst.bus_conns else "" }}
+{% endfor %}
+{% for bc in inst.bus_conns %}
+    .{{ bc.port }}({{ bc.interface_name }}.{{ bc.modport }}){{ "," if not loop.last else "" }}
 {% endfor %}
   );{% if inst.comment %} // {{ inst.comment }}{% endif %}
 {% endfor %}

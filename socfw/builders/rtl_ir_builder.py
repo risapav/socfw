@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+from socfw.builders.rtl_bus_builder import RtlBusBuilder
+from socfw.builders.rtl_bus_connections import RtlBusConnectionResolver
 from socfw.elaborate.design import ElaboratedDesign
 from socfw.ir.rtl import (
     BOARD_CLOCK,
     BOARD_RESET,
     RtlAssign,
-    RtlBusConn,
     RtlConn,
     RtlInstance,
-    RtlModule,
+    RtlModuleIR,
     RtlPort,
     RtlResetSync,
     RtlWire,
@@ -16,9 +17,13 @@ from socfw.ir.rtl import (
 
 
 class RtlIRBuilder:
-    def build(self, design: ElaboratedDesign) -> RtlModule:
+    def __init__(self) -> None:
+        self.bus_builder = RtlBusBuilder()
+        self.bus_conns = RtlBusConnectionResolver()
+
+    def build(self, design: ElaboratedDesign) -> RtlModuleIR:
         system = design.system
-        rtl = RtlModule(name="soc_top")
+        rtl = RtlModuleIR(name="soc_top")
 
         rtl.add_port_once(RtlPort(name=BOARD_CLOCK, direction="input", width=1))
         rtl.add_port_once(RtlPort(name=BOARD_RESET, direction="input", width=1))
@@ -49,12 +54,22 @@ class RtlIRBuilder:
             elif dom.source_kind == "generated":
                 rtl.add_wire_once(RtlWire(name=dom.name, width=1, comment="generated clock"))
 
+        if design.interconnect is not None:
+            for iface in self.bus_builder.build_interfaces(design.interconnect):
+                rtl.add_interface_once(iface)
+            rtl.fabrics.extend(self.bus_builder.build_fabrics(design.interconnect))
+
         for mod in system.project.modules:
             ip = system.ip_catalog.get(mod.type_name)
             if ip is None:
                 continue
 
             conns: list[RtlConn] = []
+            bus_conn_list = self.bus_conns.resolve_for_instance(
+                mod=mod,
+                ip=ip,
+                plan=design.interconnect,
+            )
 
             for cb in mod.clocks:
                 signal = cb.domain
@@ -75,8 +90,7 @@ class RtlIRBuilder:
             for binding in mod.port_bindings:
                 resolved = next(
                     (
-                        b
-                        for b in design.port_bindings
+                        b for b in design.port_bindings
                         if b.instance == mod.instance and b.port_name == binding.port_name
                     ),
                     None,
@@ -87,12 +101,14 @@ class RtlIRBuilder:
                 if len(resolved.resolved) == 1:
                     ext = resolved.resolved[0]
                     needs_adapter = binding.width is not None and binding.width != ext.width
+
                     if not needs_adapter:
                         conns.append(RtlConn(port=binding.port_name, signal=ext.top_name))
                     else:
                         wire_name = f"w_{mod.instance}_{binding.port_name}"
                         src_w = ext.width
                         dst_w = binding.width
+
                         rtl.add_wire_once(
                             RtlWire(
                                 name=wire_name,
@@ -104,6 +120,7 @@ class RtlIRBuilder:
                             )
                         )
                         conns.append(RtlConn(port=binding.port_name, signal=wire_name))
+
                         if ext.direction == "input":
                             rtl.assigns.append(
                                 RtlAssign(
@@ -131,37 +148,22 @@ class RtlIRBuilder:
                     for ext in resolved.resolved:
                         conns.append(RtlConn(port=ext.top_name, signal=ext.top_name))
 
-            bus_conns: list[RtlBusConn] = []
-            if design.interconnect is not None:
-                for eps in design.interconnect.fabrics.values():
-                    for ep in eps:
-                        if ep.instance != mod.instance:
-                            continue
-                        bus_wire = f"bus_{ep.fabric}"
-                        rtl.add_wire_once(
-                            RtlWire(
-                                name=bus_wire,
-                                width=1,
-                                comment=f"{ep.protocol} fabric {ep.fabric}",
-                            )
-                        )
-                        iface = ip.bus_interface()
-                        if iface is not None:
-                            bus_conns.append(RtlBusConn(port=iface.port_name, bus_name=bus_wire))
-
             rtl.instances.append(
                 RtlInstance(
                     module=ip.module,
                     name=mod.instance,
                     params=mod.params,
                     conns=conns,
-                    bus_conns=bus_conns,
+                    bus_conns=bus_conn_list,
                 )
             )
 
             for path in ip.artifacts.synthesis:
                 if path not in rtl.extra_sources:
                     rtl.extra_sources.append(path)
+
+        if rtl.fabrics and "src/ip/bus/simple_bus_fabric.sv" not in rtl.extra_sources:
+            rtl.extra_sources.append("src/ip/bus/simple_bus_fabric.sv")
 
         return rtl
 
