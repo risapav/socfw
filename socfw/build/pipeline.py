@@ -19,6 +19,12 @@ from socfw.validate.rules.board_rules import (
     UnknownBoardBindingTargetRule,
     UnknownBoardFeatureRule,
 )
+from socfw.validate.rules.bus_rules import (
+    DuplicateAddressRegionRule,
+    FabricProtocolMismatchRule,
+    MissingBusInterfaceRule,
+    UnknownBusFabricRule,
+)
 from socfw.validate.rules.project_rules import (
     DuplicateModuleInstanceRule,
     UnknownGeneratedClockSourceRule,
@@ -49,6 +55,10 @@ class BuildPipeline:
             UnknownBoardBindingTargetRule(),
             VendorIpArtifactExistsRule(),
             BindingWidthCompatibilityRule(),
+            UnknownBusFabricRule(),
+            MissingBusInterfaceRule(),
+            DuplicateAddressRegionRule(),
+            FabricProtocolMismatchRule(),
         ]
         self.elaborator = Elaborator()
         self.board_ir_builder = BoardIRBuilder()

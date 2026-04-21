@@ -5,6 +5,7 @@ from socfw.ir.rtl import (
     BOARD_CLOCK,
     BOARD_RESET,
     RtlAssign,
+    RtlBusConn,
     RtlConn,
     RtlInstance,
     RtlModule,
@@ -130,12 +131,31 @@ class RtlIRBuilder:
                     for ext in resolved.resolved:
                         conns.append(RtlConn(port=ext.top_name, signal=ext.top_name))
 
+            bus_conns: list[RtlBusConn] = []
+            if design.interconnect is not None:
+                for eps in design.interconnect.fabrics.values():
+                    for ep in eps:
+                        if ep.instance != mod.instance:
+                            continue
+                        bus_wire = f"bus_{ep.fabric}"
+                        rtl.add_wire_once(
+                            RtlWire(
+                                name=bus_wire,
+                                width=1,
+                                comment=f"{ep.protocol} fabric {ep.fabric}",
+                            )
+                        )
+                        iface = ip.bus_interface()
+                        if iface is not None:
+                            bus_conns.append(RtlBusConn(port=iface.port_name, bus_name=bus_wire))
+
             rtl.instances.append(
                 RtlInstance(
                     module=ip.module,
                     name=mod.instance,
                     params=mod.params,
                     conns=conns,
+                    bus_conns=bus_conns,
                 )
             )
 
