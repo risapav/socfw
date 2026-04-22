@@ -19,6 +19,7 @@ class EmitOrchestrator:
         software_ir=None,
         docs_ir=None,
         register_block_irs=None,
+        peripheral_shell_irs=None,
     ) -> BuildManifest:
         manifest = BuildManifest()
 
@@ -44,6 +45,12 @@ class EmitOrchestrator:
             emitter = self.registry.emitters.get("rtl_regs")
             if emitter is not None:
                 for art in emitter.emit_many(ctx, register_block_irs):
+                    manifest.artifacts.append(art)
+
+        if peripheral_shell_irs:
+            emitter = self.registry.emitters.get("rtl_shells")
+            if emitter is not None:
+                for art in emitter.emit_many(ctx, peripheral_shell_irs):
                     manifest.artifacts.append(art)
 
         return manifest

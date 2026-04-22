@@ -45,6 +45,7 @@ class FullBuildPipeline:
             software_ir=result.software_ir,
             docs_ir=result.docs_ir,
             register_block_irs=result.register_block_irs,
+            peripheral_shell_irs=result.peripheral_shell_irs,
         )
         result.manifest = manifest
 

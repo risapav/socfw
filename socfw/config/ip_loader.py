@@ -109,6 +109,29 @@ class IpLoader:
                     {"name": irq.name, "id": irq.id}
                     for irq in doc.irqs
                 ],
+                "shell": (
+                    {
+                        "module": doc.shell.module,
+                        "external_ports": [
+                            {
+                                "name": p.name,
+                                "direction": p.direction,
+                                "width": p.width,
+                            }
+                            for p in doc.shell.external_ports
+                        ],
+                        "core_ports": [
+                            {
+                                "kind": cp.kind,
+                                "reg_name": cp.reg_name,
+                                "signal_name": cp.signal_name,
+                                "port_name": cp.port_name,
+                            }
+                            for cp in doc.shell.core_ports
+                        ],
+                    }
+                    if doc.shell is not None else None
+                ),
             },
         )
 

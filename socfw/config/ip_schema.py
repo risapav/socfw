@@ -75,6 +75,25 @@ class IpIrqSchema(BaseModel):
     id: int
 
 
+class IpShellPortSchema(BaseModel):
+    name: str
+    direction: Literal["input", "output", "inout"]
+    width: int = 1
+
+
+class IpShellCorePortSchema(BaseModel):
+    kind: Literal["reg", "status", "irq", "external"]
+    reg_name: str | None = None
+    signal_name: str | None = None
+    port_name: str
+
+
+class IpShellSchema(BaseModel):
+    module: str
+    external_ports: list[IpShellPortSchema] = Field(default_factory=list)
+    core_ports: list[IpShellCorePortSchema] = Field(default_factory=list)
+
+
 class IpConfigSchema(BaseModel):
     version: Literal[2]
     kind: Literal["ip"]
@@ -88,3 +107,4 @@ class IpConfigSchema(BaseModel):
     notes: list[str] = Field(default_factory=list)
     registers: list[IpRegisterSchema] = Field(default_factory=list)
     irqs: list[IpIrqSchema] = Field(default_factory=list)
+    shell: IpShellSchema | None = None

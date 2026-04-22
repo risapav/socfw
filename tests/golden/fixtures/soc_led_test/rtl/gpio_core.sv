@@ -4,8 +4,8 @@ module gpio_core (
   input  wire        SYS_CLK,
   input  wire        RESET_N,
   input  wire [31:0] reg_value,
-  output logic [5:0] gpio_o,
-  output logic       irq_changed
+  output wire [5:0]  gpio_o,
+  output wire        irq_changed
 );
 
   logic [31:0] prev_value;
@@ -18,7 +18,7 @@ module gpio_core (
     end
   end
 
-  assign gpio_o      = reg_value[5:0];
+  assign gpio_o = reg_value[5:0];
   assign irq_changed = (reg_value != prev_value);
 
 endmodule

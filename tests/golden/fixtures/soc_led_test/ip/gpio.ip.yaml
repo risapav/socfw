@@ -3,7 +3,7 @@ kind: ip
 
 ip:
   name: gpio
-  module: gpio
+  module: gpio0_shell
   category: peripheral
 
 origin:
@@ -27,7 +27,6 @@ clocking:
 
 artifacts:
   synthesis:
-    - tests/golden/fixtures/soc_led_test/rtl/gpio.sv
     - tests/golden/fixtures/soc_led_test/rtl/gpio_core.sv
   simulation: []
   metadata: []
@@ -43,3 +42,20 @@ registers:
 irqs:
   - name: changed
     id: 0
+
+shell:
+  module: gpio_core
+  external_ports:
+    - name: gpio_o
+      direction: output
+      width: 6
+  core_ports:
+    - kind: reg
+      reg_name: value
+      port_name: reg_value
+    - kind: irq
+      signal_name: irq_changed
+      port_name: irq_changed
+    - kind: external
+      signal_name: gpio_o
+      port_name: gpio_o

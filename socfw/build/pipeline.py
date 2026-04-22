@@ -6,6 +6,7 @@ from socfw.build.context import BuildContext, BuildRequest
 from socfw.build.manifest import BuildManifest
 from socfw.builders.board_ir_builder import BoardIRBuilder
 from socfw.builders.docs_ir_builder import DocsIRBuilder
+from socfw.builders.peripheral_shell_ir_builder import PeripheralShellIRBuilder
 from socfw.builders.register_block_ir_builder import RegisterBlockIRBuilder
 from socfw.builders.rtl_ir_builder import RtlIRBuilder
 from socfw.builders.software_ir_builder import SoftwareIRBuilder
@@ -27,6 +28,7 @@ class BuildResult:
     software_ir: object | None = None
     docs_ir: object | None = None
     register_block_irs: list[object] = field(default_factory=list)
+    peripheral_shell_irs: list[object] = field(default_factory=list)
     design: object | None = None
 
 
@@ -40,6 +42,7 @@ class BuildPipeline:
         self.software_ir_builder = SoftwareIRBuilder()
         self.docs_ir_builder = DocsIRBuilder()
         self.regblk_ir_builder = RegisterBlockIRBuilder()
+        self.shell_ir_builder = PeripheralShellIRBuilder()
 
     def _validate(self, system: SystemModel) -> list[Diagnostic]:
         diags: list[Diagnostic] = []
@@ -81,6 +84,25 @@ class BuildPipeline:
             if regblk is not None:
                 regblk_irs.append(regblk)
 
+        shell_irs = []
+        for p in system.peripheral_blocks:
+            ip = system.ip_catalog.get(p.module)
+            if ip is None:
+                continue
+            shell_ir = self.shell_ir_builder.build_for_peripheral(p, ip.meta)
+            if shell_ir is not None:
+                shell_irs.append(shell_ir)
+
+        for s in shell_irs:
+            generated_path = f"rtl/{s.module_name}.sv"
+            if generated_path not in rtl_ir.extra_sources:
+                rtl_ir.extra_sources.append(generated_path)
+
+        for r in regblk_irs:
+            generated_path = f"rtl/{r.module_name}.sv"
+            if generated_path not in rtl_ir.extra_sources:
+                rtl_ir.extra_sources.append(generated_path)
+
         return BuildResult(
             ok=True,
             diagnostics=diags,
@@ -90,5 +112,6 @@ class BuildPipeline:
             software_ir=software_ir,
             docs_ir=docs_ir,
             register_block_irs=regblk_irs,
+            peripheral_shell_irs=shell_irs,
             design=design,
         )

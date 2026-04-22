@@ -1,0 +1,63 @@
+// AUTO-GENERATED - DO NOT EDIT
+`default_nettype none
+
+module {{ shell.module_name }} (
+  input  wire SYS_CLK,
+  input  wire RESET_N,
+  bus_if.slave bus
+{% for p in shell.external_ports -%}
+,
+  {{ "input" if p.direction == "input" else "output" if p.direction == "output" else "inout" }} wire{% if p.width > 1 %} [{{ p.width - 1 }}:0]{% endif %} {{ p.name }}
+{%- endfor %}
+{% for c in shell.core_conns if c.kind == "irq" -%}
+,
+  output wire {{ c.signal_name }}
+{%- endfor %}
+);
+
+{% for c in shell.core_conns if c.kind == "reg" -%}
+logic [31:0] {{ c.signal_name }};
+{% endfor %}
+logic [31:0] rdata;
+logic        ready;
+{% for c in shell.core_conns if c.kind == "status" -%}
+logic [31:0] {{ c.signal_name }};
+{% endfor %}
+
+{{ shell.regblock_module }} u_regs (
+  .SYS_CLK (SYS_CLK),
+  .RESET_N (RESET_N),
+  .addr_i  (bus.addr[11:2]),
+  .wdata_i (bus.wdata),
+  .we_i    (bus.we),
+  .valid_i (bus.valid),
+  .rdata_o (rdata),
+  .ready_o (ready)
+{% for c in shell.core_conns if c.kind == "reg" -%}
+,
+  .{{ c.signal_name }} ({{ c.signal_name }})
+{% endfor %}
+{% for c in shell.core_conns if c.kind == "status" -%}
+,
+  .{{ c.signal_name }} ({{ c.signal_name }})
+{% endfor %}
+);
+
+{{ shell.core_module }} u_core (
+  .SYS_CLK (SYS_CLK),
+  .RESET_N (RESET_N)
+{% for c in shell.core_conns -%}
+,
+  .{{ c.port_name }} ({{ c.signal_name }})
+{% endfor %}
+{% for p in shell.external_ports -%}
+,
+  .{{ p.name }} ({{ p.name }})
+{% endfor %}
+);
+
+assign bus.rdata = rdata;
+assign bus.ready = ready;
+
+endmodule : {{ shell.module_name }}
+`default_nettype wire
