@@ -30,6 +30,9 @@ class RegisterBlockIRBuilder:
                     word_addr=r.address_word_offset,
                     hw_source=r.hw_source,
                     write_pulse=r.write_pulse,
+                    clear_on_write=r.clear_on_write,
+                    set_by_hw=r.set_by_hw,
+                    sticky=r.sticky,
                 )
                 for r in p.registers
             ],

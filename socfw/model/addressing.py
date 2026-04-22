@@ -14,6 +14,9 @@ class RegisterDef:
     desc: str = ""
     hw_source: str | None = None
     write_pulse: bool = False
+    clear_on_write: bool = False
+    set_by_hw: bool = False
+    sticky: bool = False
 
     @property
     def address_word_offset(self) -> int:

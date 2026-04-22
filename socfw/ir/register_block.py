@@ -13,6 +13,9 @@ class RegFieldIR:
     word_addr: int
     hw_source: str | None = None
     write_pulse: bool = False
+    clear_on_write: bool = False
+    set_by_hw: bool = False
+    sticky: bool = False
 
 
 @dataclass

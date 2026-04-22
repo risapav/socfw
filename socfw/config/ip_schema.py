@@ -68,6 +68,11 @@ class IpRegisterSchema(BaseModel):
     access: str = "rw"
     reset: int = 0
     desc: str = ""
+    hw_source: str | None = None
+    write_pulse: bool = False
+    clear_on_write: bool = False
+    set_by_hw: bool = False
+    sticky: bool = False
 
 
 class IpIrqSchema(BaseModel):

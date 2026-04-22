@@ -15,6 +15,7 @@ class ShellCoreConnIR:
     kind: str
     port_name: str
     signal_name: str
+    width: int = 1
 
 
 @dataclass

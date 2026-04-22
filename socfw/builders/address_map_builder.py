@@ -35,6 +35,9 @@ class AddressMapBuilder:
                             desc=str(r.get("desc", "")),
                             hw_source=r.get("hw_source"),
                             write_pulse=bool(r.get("write_pulse", False)),
+                            clear_on_write=bool(r.get("clear_on_write", False)),
+                            set_by_hw=bool(r.get("set_by_hw", False)),
+                            sticky=bool(r.get("sticky", False)),
                         )
                     )
 

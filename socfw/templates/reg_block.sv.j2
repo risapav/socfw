@@ -17,6 +17,10 @@ module {{ regblk.module_name }} (
 {% else %}
   output logic{% if r.width > 1 %} [{{ r.width - 1 }}:0]{% endif %} reg_{{ r.name.lower() }}
 {% endif %}
+{% if r.set_by_hw and r.access != "ro" %}
+,
+  input  wire hw_{{ r.name.lower() }}
+{% endif %}
 {% if r.write_pulse %}
 ,
   output logic reg_{{ r.name.lower() }}_we
@@ -51,13 +55,30 @@ always_ff @(posedge SYS_CLK or negedge RESET_N) begin
 {% for r in writable -%}
     r_{{ r.name.lower() }} <= {{ r.width }}'h{{ "%X"|format(r.reset) }};
 {% endfor %}
-  end else if (valid_i && we_i) begin
-    case (addr_i)
-{% for r in writable if r.access in ["rw", "wo"] -%}
-      {{ regblk.addr_width }}'h{{ "%X"|format(r.word_addr) }}: r_{{ r.name.lower() }} <= wdata_i[{{ r.width - 1 }}:0];
+  end else begin
+
+    // HW-driven set (sticky)
+{% for r in writable if r.set_by_hw -%}
+    if (hw_{{ r.name.lower() }})
+      r_{{ r.name.lower() }} <= {{ r.width }}'h{{ "%X"|format((2 ** r.width) - 1) }};
 {% endfor %}
-      default: ;
-    endcase
+
+    // SW write
+    if (valid_i && we_i) begin
+      case (addr_i)
+{% for r in writable if r.access in ["rw", "wo"] -%}
+        {{ regblk.addr_width }}'h{{ "%X"|format(r.word_addr) }}: begin
+{% if r.clear_on_write -%}
+          r_{{ r.name.lower() }} <= r_{{ r.name.lower() }} & ~wdata_i[{{ r.width - 1 }}:0];
+{% else -%}
+          r_{{ r.name.lower() }} <= wdata_i[{{ r.width - 1 }}:0];
+{% endif %}
+        end
+{% endfor %}
+        default: ;
+      endcase
+    end
+
   end
 end
 {% endif %}

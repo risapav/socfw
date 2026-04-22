@@ -25,15 +25,27 @@ class PeripheralShellIRBuilder:
             for ep in shell.get("external_ports", [])
         ]
 
+        regs_by_name = {
+            str(r["name"]): r
+            for r in ip_meta.get("registers", [])
+        }
+
         core_conns: list[ShellCoreConnIR] = []
         for cp in shell.get("core_ports", []):
             kind = cp["kind"]
             port_name = cp["port_name"]
+            width = 1
 
             if kind == "reg":
                 signal_name = f"reg_{cp['reg_name']}"
+                reg = regs_by_name.get(str(cp["reg_name"]))
+                if reg:
+                    width = int(reg.get("width", 32))
             elif kind == "status":
                 signal_name = f"hw_{cp['signal_name']}"
+                reg = regs_by_name.get(str(cp["signal_name"]))
+                if reg:
+                    width = int(reg.get("width", 1))
             elif kind == "irq":
                 signal_name = cp["signal_name"]
             elif kind == "external":
@@ -46,6 +58,7 @@ class PeripheralShellIRBuilder:
                     kind=kind,
                     port_name=port_name,
                     signal_name=signal_name,
+                    width=width,
                 )
             )
 

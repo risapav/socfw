@@ -16,12 +16,12 @@ module {{ shell.module_name }} (
 );
 
 {% for c in shell.core_conns if c.kind == "reg" -%}
-logic [31:0] {{ c.signal_name }};
+logic{% if c.width > 1 %} [{{ c.width - 1 }}:0]{% endif %} {{ c.signal_name }};
 {% endfor %}
 logic [31:0] rdata;
 logic        ready;
 {% for c in shell.core_conns if c.kind == "status" -%}
-logic [31:0] {{ c.signal_name }};
+logic{% if c.width > 1 %} [{{ c.width - 1 }}:0]{% endif %} {{ c.signal_name }};
 {% endfor %}
 
 {{ shell.regblock_module }} u_regs (

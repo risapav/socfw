@@ -39,6 +39,15 @@ registers:
     reset: 0
     desc: GPIO output value
 
+  - name: irq_pending
+    offset: 4
+    width: 1
+    access: rw
+    reset: 0
+    set_by_hw: true
+    clear_on_write: true
+    desc: IRQ pending flag
+
 irqs:
   - name: changed
     id: 0
@@ -53,9 +62,15 @@ shell:
     - kind: reg
       reg_name: value
       port_name: reg_value
+
+    - kind: status
+      signal_name: irq_pending
+      port_name: irq_pending
+
     - kind: irq
       signal_name: irq_changed
       port_name: irq_changed
+
     - kind: external
       signal_name: gpio_o
       port_name: gpio_o

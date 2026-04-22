@@ -102,6 +102,11 @@ class IpLoader:
                         "access": r.access,
                         "reset": r.reset,
                         "desc": r.desc,
+                        "hw_source": r.hw_source,
+                        "write_pulse": r.write_pulse,
+                        "clear_on_write": r.clear_on_write,
+                        "set_by_hw": r.set_by_hw,
+                        "sticky": r.sticky,
                     }
                     for r in doc.registers
                 ],
