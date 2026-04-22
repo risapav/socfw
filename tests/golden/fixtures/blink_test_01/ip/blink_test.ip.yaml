@@ -1,0 +1,33 @@
+version: 2
+kind: ip
+
+ip:
+  name: blink_test
+  module: blink_test
+  category: peripheral
+
+origin:
+  kind: source
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_n
+  active_high: false
+  bypass_sync: false
+
+clocking:
+  primary_input_port: clk
+
+ports:
+  - name: gpio_o
+    direction: output
+    width: 6
+
+artifacts:
+  synthesis:
+    - blink_test.sv
