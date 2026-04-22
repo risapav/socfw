@@ -43,6 +43,7 @@ class BuildResult:
     software_ir: object | None = None
     docs_ir: object | None = None
     register_block_irs: list[object] = field(default_factory=list)
+    design: object | None = None
 
 
 class BuildPipeline:
@@ -114,4 +115,5 @@ class BuildPipeline:
             software_ir=software_ir,
             docs_ir=docs_ir,
             register_block_irs=regblk_irs,
+            design=design,
         )
