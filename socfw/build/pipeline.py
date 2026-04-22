@@ -13,23 +13,7 @@ from socfw.builders.timing_ir_builder import TimingIRBuilder
 from socfw.core.diagnostics import Diagnostic, Severity
 from socfw.elaborate.planner import Elaborator
 from socfw.model.system import SystemModel
-from socfw.validate.rules.asset_rules import VendorIpArtifactExistsRule
-from socfw.validate.rules.binding_rules import BindingWidthCompatibilityRule
-from socfw.validate.rules.board_rules import (
-    UnknownBoardBindingTargetRule,
-    UnknownBoardFeatureRule,
-)
-from socfw.validate.rules.bus_rules import (
-    DuplicateAddressRegionRule,
-    FabricProtocolMismatchRule,
-    MissingBusInterfaceRule,
-    UnknownBusFabricRule,
-)
-from socfw.validate.rules.project_rules import (
-    DuplicateModuleInstanceRule,
-    UnknownGeneratedClockSourceRule,
-    UnknownIpTypeRule,
-)
+from socfw.plugins.registry import PluginRegistry
 
 
 @dataclass
@@ -47,20 +31,8 @@ class BuildResult:
 
 
 class BuildPipeline:
-    def __init__(self) -> None:
-        self.rules = [
-            DuplicateModuleInstanceRule(),
-            UnknownIpTypeRule(),
-            UnknownGeneratedClockSourceRule(),
-            UnknownBoardFeatureRule(),
-            UnknownBoardBindingTargetRule(),
-            VendorIpArtifactExistsRule(),
-            BindingWidthCompatibilityRule(),
-            UnknownBusFabricRule(),
-            MissingBusInterfaceRule(),
-            DuplicateAddressRegionRule(),
-            FabricProtocolMismatchRule(),
-        ]
+    def __init__(self, registry: PluginRegistry) -> None:
+        self.registry = registry
         self.elaborator = Elaborator()
         self.board_ir_builder = BoardIRBuilder()
         self.timing_ir_builder = TimingIRBuilder()
@@ -82,7 +54,7 @@ class BuildPipeline:
                 )
             )
 
-        for rule in self.rules:
+        for rule in self.registry.validators:
             diags.extend(rule.validate(system))
 
         return diags

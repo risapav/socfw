@@ -6,6 +6,8 @@ from socfw.reports.model import BuildReport
 
 
 class MarkdownReportEmitter:
+    name = "markdown"
+
     def emit(self, report: BuildReport, out_dir: str) -> str:
         out = Path(out_dir) / "reports" / "build_report.md"
         out.parent.mkdir(parents=True, exist_ok=True)

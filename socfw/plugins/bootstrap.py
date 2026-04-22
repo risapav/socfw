@@ -1,7 +1,17 @@
 from __future__ import annotations
 
+from socfw.emit.board_quartus_emitter import QuartusBoardEmitter
+from socfw.emit.docs_emitter import DocsEmitter
+from socfw.emit.files_tcl_emitter import QuartusFilesEmitter
+from socfw.emit.register_block_emitter import RegisterBlockEmitter
+from socfw.emit.rtl_emitter import RtlEmitter
+from socfw.emit.software_emitter import SoftwareEmitter
+from socfw.emit.timing_emitter import TimingEmitter
 from socfw.plugins.registry import PluginRegistry
 from socfw.plugins.simple_bus.planner import SimpleBusPlanner
+from socfw.reports.graphviz_emitter import GraphvizEmitter
+from socfw.reports.json_emitter import JsonReportEmitter
+from socfw.reports.markdown_emitter import MarkdownReportEmitter
 from socfw.validate.rules.asset_rules import VendorIpArtifactExistsRule
 from socfw.validate.rules.binding_rules import BindingWidthCompatibilityRule
 from socfw.validate.rules.board_rules import (
@@ -21,10 +31,22 @@ from socfw.validate.rules.project_rules import (
 )
 
 
-def create_builtin_registry() -> PluginRegistry:
+def create_builtin_registry(templates_dir: str) -> PluginRegistry:
     reg = PluginRegistry()
 
     reg.register_bus_planner(SimpleBusPlanner())
+
+    reg.register_emitter(QuartusBoardEmitter())
+    reg.register_emitter(RtlEmitter(templates_dir))
+    reg.register_emitter(TimingEmitter(templates_dir))
+    reg.register_emitter(QuartusFilesEmitter())
+    reg.register_emitter(SoftwareEmitter(templates_dir))
+    reg.register_emitter(DocsEmitter(templates_dir))
+    reg.register_emitter(RegisterBlockEmitter(templates_dir))
+
+    reg.register_report(JsonReportEmitter())
+    reg.register_report(MarkdownReportEmitter())
+    reg.register_report(GraphvizEmitter())
 
     reg.register_validator(DuplicateModuleInstanceRule())
     reg.register_validator(UnknownIpTypeRule())

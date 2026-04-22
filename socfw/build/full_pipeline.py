@@ -6,8 +6,9 @@ from socfw.build.context import BuildContext, BuildRequest
 from socfw.build.pipeline import BuildPipeline, BuildResult
 from socfw.builders.boot_image_builder import BootImageBuilder
 from socfw.config.system_loader import SystemLoader
-from socfw.emit.run_emitters import EmitterSuite
-from socfw.reports.run_reports import ReportSuite
+from socfw.emit.orchestrator import EmitOrchestrator
+from socfw.plugins.bootstrap import create_builtin_registry
+from socfw.reports.orchestrator import ReportOrchestrator
 from socfw.tools.bin2hex_runner import Bin2HexRunner
 
 
@@ -15,12 +16,13 @@ class FullBuildPipeline:
     def __init__(self, templates_dir: str | None = None) -> None:
         if templates_dir is None:
             templates_dir = str(Path(__file__).resolve().parents[1] / "templates")
+        self.registry = create_builtin_registry(templates_dir)
         self.loader = SystemLoader()
-        self.pipeline = BuildPipeline()
-        self.emitters = EmitterSuite(templates_dir)
+        self.pipeline = BuildPipeline(self.registry)
+        self.emitters = EmitOrchestrator(self.registry)
+        self.reports = ReportOrchestrator(self.registry)
         self.image_builder = BootImageBuilder()
         self.bin2hex = Bin2HexRunner()
-        self.reports = ReportSuite()
 
     def run(self, request: BuildRequest) -> BuildResult:
         loaded = self.loader.load(request.project_file)
@@ -58,6 +60,6 @@ class FullBuildPipeline:
             out_dir=request.out_dir,
         )
         for p in report_paths:
-            result.manifest.add("report", p, "ReportSuite")
+            result.manifest.add("report", p, "ReportOrchestrator")
 
         return result

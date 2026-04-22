@@ -6,6 +6,8 @@ from socfw.reports.graph_model import SystemGraph
 
 
 class GraphvizEmitter:
+    name = "graphviz"
+
     def emit(self, graph: SystemGraph, out_dir: str) -> str:
         out = Path(out_dir) / "reports" / "soc_graph.dot"
         out.parent.mkdir(parents=True, exist_ok=True)

@@ -12,6 +12,13 @@ class BusPlannerPlugin(Protocol):
         ...
 
 
+class LoaderPlugin(Protocol):
+    kind: str
+
+    def load(self, *args, **kwargs) -> Any:
+        ...
+
+
 class EmitterPlugin(Protocol):
     family: str
 
@@ -29,12 +36,16 @@ class ReportPlugin(Protocol):
 @dataclass
 class PluginRegistry:
     bus_planners: dict[str, BusPlannerPlugin] = field(default_factory=dict)
+    loaders: dict[str, LoaderPlugin] = field(default_factory=dict)
     emitters: dict[str, EmitterPlugin] = field(default_factory=dict)
     reports: dict[str, ReportPlugin] = field(default_factory=dict)
     validators: list[ValidationRule] = field(default_factory=list)
 
     def register_bus_planner(self, plugin: BusPlannerPlugin) -> None:
         self.bus_planners[plugin.protocol] = plugin
+
+    def register_loader(self, plugin: LoaderPlugin) -> None:
+        self.loaders[plugin.kind] = plugin
 
     def register_emitter(self, plugin: EmitterPlugin) -> None:
         self.emitters[plugin.family] = plugin

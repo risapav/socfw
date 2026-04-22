@@ -9,17 +9,84 @@ def _default_templates_dir() -> str:
     return str(Path(__file__).resolve().parents[1] / "templates")
 
 
-def cmd_validate(args) -> int:
+def cmd_build(args) -> int:
     from socfw.build.context import BuildRequest
     from socfw.build.full_pipeline import FullBuildPipeline
 
-    pipeline = FullBuildPipeline()
-    result = pipeline.run(BuildRequest(project_file=args.project, out_dir="/dev/null"))
+    pipeline = FullBuildPipeline(templates_dir=args.templates)
+    result = pipeline.run(BuildRequest(project_file=args.project, out_dir=args.out))
 
     for d in result.diagnostics:
         print(f"{d.severity.value.upper()} {d.code}: {d.message}")
 
+    if result.ok:
+        for art in result.manifest.artifacts:
+            print(f"[{art.family}] {art.path}")
+
     return 0 if result.ok else 1
+
+
+def cmd_validate(args) -> int:
+    from socfw.config.system_loader import SystemLoader
+
+    loader = SystemLoader()
+    loaded = loader.load(args.project)
+
+    for d in loaded.diagnostics:
+        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+
+    return 0 if loaded.ok else 1
+
+
+def cmd_explain(args) -> int:
+    from socfw.config.system_loader import SystemLoader
+    from socfw.elaborate.planner import Elaborator
+    from socfw.reports.explain import ExplainService
+
+    loader = SystemLoader()
+    loaded = loader.load(args.project)
+
+    for d in loaded.diagnostics:
+        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+
+    if not loaded.ok or loaded.value is None:
+        return 1
+
+    system = loaded.value
+    design = Elaborator().elaborate(system)
+    expl = ExplainService()
+
+    if args.topic == "clocks":
+        print(expl.explain_clocks(design))
+    elif args.topic == "address-map":
+        print(expl.explain_address_map(system))
+    elif args.topic == "irqs":
+        print(expl.explain_irqs(design))
+    else:
+        print(f"Unknown explain topic: {args.topic}", file=sys.stderr)
+        return 1
+
+    return 0
+
+
+def cmd_graph(args) -> int:
+    from socfw.build.context import BuildRequest
+    from socfw.build.full_pipeline import FullBuildPipeline
+
+    pipeline = FullBuildPipeline(templates_dir=args.templates)
+    result = pipeline.run(BuildRequest(project_file=args.project, out_dir=args.out))
+
+    for d in result.diagnostics:
+        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+
+    if not result.ok:
+        return 1
+
+    for art in result.manifest.artifacts:
+        if art.family == "report" and art.path.endswith(".dot"):
+            print(art.path)
+
+    return 0
 
 
 def cmd_migrate(args) -> int:
@@ -58,23 +125,6 @@ def _detect_kind(data: dict, path: Path) -> str:
     return "project"
 
 
-def cmd_build(args) -> int:
-    from socfw.build.context import BuildRequest
-    from socfw.build.full_pipeline import FullBuildPipeline
-
-    pipeline = FullBuildPipeline(templates_dir=args.templates)
-    result = pipeline.run(BuildRequest(project_file=args.project, out_dir=args.out))
-
-    for d in result.diagnostics:
-        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
-
-    if result.ok:
-        for art in result.manifest.artifacts:
-            print(f"[{art.family}] {art.path}")
-
-    return 0 if result.ok else 1
-
-
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="socfw", description="SoC Framework — config-driven FPGA generator")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -88,6 +138,17 @@ def build_parser() -> argparse.ArgumentParser:
     v = sub.add_parser("validate", help="Validate project config only")
     v.add_argument("project")
     v.set_defaults(func=cmd_validate)
+
+    e = sub.add_parser("explain", help="Explain a design aspect in plain text")
+    e.add_argument("topic", choices=["clocks", "address-map", "irqs"])
+    e.add_argument("project")
+    e.set_defaults(func=cmd_explain)
+
+    g = sub.add_parser("graph", help="Build and emit the topology graph")
+    g.add_argument("project")
+    g.add_argument("--out", default="build/gen")
+    g.add_argument("--templates", default=_default_templates_dir())
+    g.set_defaults(func=cmd_graph)
 
     m = sub.add_parser("migrate", help="Migrate legacy YAML config to v2 format")
     m.add_argument("input", help="Legacy YAML file to migrate")

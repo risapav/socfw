@@ -8,6 +8,8 @@ from socfw.reports.model import BuildReport
 
 
 class JsonReportEmitter:
+    name = "json"
+
     def emit(self, report: BuildReport, out_dir: str) -> str:
         out = Path(out_dir) / "reports" / "build_report.json"
         out.parent.mkdir(parents=True, exist_ok=True)
