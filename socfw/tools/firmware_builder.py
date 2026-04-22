@@ -37,13 +37,15 @@ class FirmwareBuilder:
         objcopy = f"{fw.tool_prefix}objcopy"
 
         c_sources = sorted(str(p) for p in Path(fw.src_dir).glob("*.c"))
-        if not c_sources:
+        asm_sources = sorted(str(p) for p in Path(fw.src_dir).glob("*.S"))
+        sources = c_sources + asm_sources
+        if not sources:
             return Result(
                 diagnostics=[
                     Diagnostic(
                         code="FW002",
                         severity=Severity.ERROR,
-                        message=f"No C sources found in firmware.src_dir={fw.src_dir}",
+                        message=f"No firmware sources found in firmware.src_dir={fw.src_dir}",
                         subject="project.firmware",
                     )
                 ]
@@ -59,7 +61,7 @@ class FirmwareBuilder:
             "-Wl,-Bstatic",
             "-Wl,--strip-debug",
             "-o", elf,
-            *c_sources,
+            *sources,
         ]
 
         if fw.linker_script:

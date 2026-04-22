@@ -27,6 +27,11 @@ module picorv32_simple_bus_wrapper #(
   logic [3:0]  mem_wstrb;
   logic [31:0] mem_rdata;
 
+  logic        req_active;
+  logic [31:0] req_addr;
+  logic [31:0] req_wdata;
+  logic [3:0]  req_wstrb;
+
   picorv32 #(
     .ENABLE_IRQ        (ENABLE_IRQ),
     .ENABLE_COUNTERS   (ENABLE_COUNTERS),
@@ -61,11 +66,29 @@ module picorv32_simple_bus_wrapper #(
     .look_wstrb  ()
   );
 
-  assign bus.addr  = mem_addr;
-  assign bus.wdata = mem_wdata;
-  assign bus.be    = (mem_wstrb == 4'b0000) ? 4'hF : mem_wstrb;
-  assign bus.we    = |mem_wstrb;
-  assign bus.valid = mem_valid;
+  always_ff @(posedge SYS_CLK or negedge RESET_N) begin
+    if (!RESET_N) begin
+      req_active <= 1'b0;
+      req_addr   <= 32'h0;
+      req_wdata  <= 32'h0;
+      req_wstrb  <= 4'h0;
+    end else begin
+      if (!req_active && mem_valid) begin
+        req_active <= 1'b1;
+        req_addr   <= mem_addr;
+        req_wdata  <= mem_wdata;
+        req_wstrb  <= mem_wstrb;
+      end else if (req_active && bus.ready) begin
+        req_active <= 1'b0;
+      end
+    end
+  end
+
+  assign bus.addr  = req_active ? req_addr  : mem_addr;
+  assign bus.wdata = req_active ? req_wdata : mem_wdata;
+  assign bus.be    = ((req_active ? req_wstrb : mem_wstrb) == 4'b0000) ? 4'hF : (req_active ? req_wstrb : mem_wstrb);
+  assign bus.we    = |(req_active ? req_wstrb : mem_wstrb);
+  assign bus.valid = req_active | mem_valid;
 
   assign mem_ready = bus.ready;
   assign mem_rdata = bus.rdata;

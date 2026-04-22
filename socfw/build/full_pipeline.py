@@ -4,6 +4,8 @@ from pathlib import Path
 
 from socfw.build.context import BuildContext, BuildRequest
 from socfw.build.pipeline import BuildPipeline, BuildResult
+from dataclasses import replace
+
 from socfw.builders.boot_image_builder import BootImageBuilder
 from socfw.config.system_loader import SystemLoader
 from socfw.emit.orchestrator import EmitOrchestrator
@@ -66,16 +68,7 @@ class FullBuildPipeline:
             conv = self.bin2hex.run(fw_boot)
             result.diagnostics.extend(conv.diagnostics)
             if conv.ok and conv.value is not None:
-                system.ram = type(system.ram)(
-                    module=system.ram.module,
-                    base=system.ram.base,
-                    size=system.ram.size,
-                    data_width=system.ram.data_width,
-                    addr_width=system.ram.addr_width,
-                    latency=system.ram.latency,
-                    init_file=conv.value,
-                    image_format="hex",
-                )
+                system.ram = replace(system.ram, init_file=conv.value, image_format="hex")
 
         image = self.image_builder.build(system, request.out_dir)
         if image is not None and image.input_format == "bin" and image.output_format == "hex":

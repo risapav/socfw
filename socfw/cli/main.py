@@ -89,6 +89,23 @@ def cmd_graph(args) -> int:
     return 0
 
 
+def cmd_build_fw(args) -> int:
+    from socfw.build.context import BuildRequest
+    from socfw.build.two_pass_flow import TwoPassBuildFlow
+
+    flow = TwoPassBuildFlow(templates_dir=args.templates)
+    result = flow.run(BuildRequest(project_file=args.project, out_dir=args.out))
+
+    for d in result.diagnostics:
+        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+
+    if result.ok:
+        for art in result.manifest.artifacts:
+            print(f"[{art.family}] {art.path}")
+
+    return 0 if result.ok else 1
+
+
 def cmd_migrate(args) -> int:
     import yaml
     from socfw.config.migrate.v1_to_v2 import migrate_project, migrate_board, migrate_timing, migrate_ip
@@ -149,6 +166,12 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--out", default="build/gen")
     g.add_argument("--templates", default=_default_templates_dir())
     g.set_defaults(func=cmd_graph)
+
+    bf = sub.add_parser("build-fw", help="Two-pass build with firmware compilation")
+    bf.add_argument("project")
+    bf.add_argument("--out", default="build/gen")
+    bf.add_argument("--templates", default=_default_templates_dir())
+    bf.set_defaults(func=cmd_build_fw)
 
     m = sub.add_parser("migrate", help="Migrate legacy YAML config to v2 format")
     m.add_argument("input", help="Legacy YAML file to migrate")
