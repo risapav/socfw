@@ -7,6 +7,7 @@ from socfw.config.project_schema import ModuleClockPortSchema, ProjectConfigSche
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
 from socfw.core.result import Result
 from socfw.model.cpu import CpuInstance
+from socfw.model.firmware import FirmwareModel
 from socfw.model.memory import RamModel
 from socfw.model.project import (
     BusAttach,
@@ -159,11 +160,27 @@ class ProjectLoader:
                 image_format=doc.ram.image_format,
             )
 
+        firmware = None
+        if doc.firmware is not None:
+            firmware = FirmwareModel(
+                enabled=doc.firmware.enabled,
+                src_dir=doc.firmware.src_dir,
+                out_dir=doc.firmware.out_dir,
+                linker_script=doc.firmware.linker_script,
+                elf_file=doc.firmware.elf_file,
+                bin_file=doc.firmware.bin_file,
+                hex_file=doc.firmware.hex_file,
+                tool_prefix=doc.firmware.tool_prefix,
+                cflags=list(doc.firmware.cflags),
+                ldflags=list(doc.firmware.ldflags),
+            )
+
         return Result(
             value={
                 "project": model,
                 "cpu": cpu,
                 "ram": ram,
+                "firmware": firmware,
                 "reset_vector": doc.boot.reset_vector,
                 "stack_percent": doc.boot.stack_percent,
             }

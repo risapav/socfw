@@ -6,6 +6,7 @@ from .addressing import PeripheralAddressBlock
 from .board import BoardModel
 from .cpu import CpuInstance
 from .cpu_desc import CpuDescriptor
+from .firmware import FirmwareModel
 from .ip import IpDescriptor
 from .memory import RamModel
 from .project import ProjectModel
@@ -22,6 +23,7 @@ class SystemModel:
 
     cpu: CpuInstance | None = None
     ram: RamModel | None = None
+    firmware: FirmwareModel | None = None
 
     reset_vector: int = 0x00000000
     stack_percent: int = 25

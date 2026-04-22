@@ -7,9 +7,11 @@ from socfw.build.pipeline import BuildPipeline, BuildResult
 from socfw.builders.boot_image_builder import BootImageBuilder
 from socfw.config.system_loader import SystemLoader
 from socfw.emit.orchestrator import EmitOrchestrator
+from socfw.model.image import BootImage
 from socfw.plugins.bootstrap import create_builtin_registry
 from socfw.reports.orchestrator import ReportOrchestrator
 from socfw.tools.bin2hex_runner import Bin2HexRunner
+from socfw.tools.firmware_builder import FirmwareBuilder
 
 
 class FullBuildPipeline:
@@ -23,6 +25,7 @@ class FullBuildPipeline:
         self.reports = ReportOrchestrator(self.registry)
         self.image_builder = BootImageBuilder()
         self.bin2hex = Bin2HexRunner()
+        self.firmware_builder = FirmwareBuilder()
 
     def run(self, request: BuildRequest) -> BuildResult:
         loaded = self.loader.load(request.project_file)
@@ -48,6 +51,31 @@ class FullBuildPipeline:
             peripheral_shell_irs=result.peripheral_shell_irs,
         )
         result.manifest = manifest
+
+        fw_res = self.firmware_builder.build(system, request.out_dir)
+        result.diagnostics.extend(fw_res.diagnostics)
+        if fw_res.ok and fw_res.value is not None and system.ram is not None:
+            fw_boot = BootImage(
+                input_file=fw_res.value.bin,
+                output_file=fw_res.value.hex,
+                input_format="bin",
+                output_format="hex",
+                size_bytes=system.ram.size,
+                endian="little",
+            )
+            conv = self.bin2hex.run(fw_boot)
+            result.diagnostics.extend(conv.diagnostics)
+            if conv.ok and conv.value is not None:
+                system.ram = type(system.ram)(
+                    module=system.ram.module,
+                    base=system.ram.base,
+                    size=system.ram.size,
+                    data_width=system.ram.data_width,
+                    addr_width=system.ram.addr_width,
+                    latency=system.ram.latency,
+                    init_file=conv.value,
+                    image_format="hex",
+                )
 
         image = self.image_builder.build(system, request.out_dir)
         if image is not None and image.input_format == "bin" and image.output_format == "hex":

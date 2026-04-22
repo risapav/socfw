@@ -1,0 +1,37 @@
+version: 2
+kind: cpu
+
+cpu:
+  name: picorv32_min
+  module: picorv32_simple_bus_wrapper
+  family: riscv32
+
+clock_port: SYS_CLK
+reset_port: RESET_N
+irq_port: irq
+
+bus_master:
+  port_name: bus
+  protocol: simple_bus
+  addr_width: 32
+  data_width: 32
+
+default_params:
+  ENABLE_IRQ: true
+  ENABLE_COUNTERS: false
+  ENABLE_COUNTERS64: false
+  TWO_STAGE_SHIFT: true
+  BARREL_SHIFTER: false
+  TWO_CYCLE_COMPARE: false
+  TWO_CYCLE_ALU: false
+  LATCHED_MEM_RDATA: false
+  PROGADDR_RESET: 0x00000000
+  PROGADDR_IRQ: 0x00000010
+  STACKADDR: 0x00010000
+
+artifacts:
+  - tests/golden/fixtures/picorv32_soc/rtl/picorv32_simple_bus_wrapper.sv
+  - tests/golden/fixtures/picorv32_soc/rtl/picorv32.v
+
+notes:
+  - PicoRV32 wrapped to simple_bus

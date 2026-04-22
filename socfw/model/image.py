@@ -1,6 +1,14 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Literal
+
+
+@dataclass(frozen=True)
+class FirmwareArtifacts:
+    elf: str
+    bin: str
+    hex: str
 
 
 @dataclass(frozen=True)

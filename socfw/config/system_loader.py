@@ -32,6 +32,7 @@ class SystemLoader:
         project = prj_bundle["project"]
         cpu = prj_bundle["cpu"]
         ram = prj_bundle["ram"]
+        firmware = prj_bundle.get("firmware")
         reset_vector = prj_bundle["reset_vector"]
         stack_percent = prj_bundle["stack_percent"]
 
@@ -85,6 +86,7 @@ class SystemLoader:
             cpu_catalog=cpu_catalog,
             cpu=cpu,
             ram=ram,
+            firmware=firmware,
             reset_vector=reset_vector,
             stack_percent=stack_percent,
         )

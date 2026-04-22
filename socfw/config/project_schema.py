@@ -92,6 +92,19 @@ class TimingRefSchema(BaseModel):
     file: str
 
 
+class FirmwareSchema(BaseModel):
+    enabled: bool = False
+    src_dir: str | None = None
+    out_dir: str = "build/fw"
+    linker_script: str | None = None
+    elf_file: str = "firmware.elf"
+    bin_file: str = "firmware.bin"
+    hex_file: str = "firmware.hex"
+    tool_prefix: str = "riscv32-unknown-elf-"
+    cflags: list[str] = Field(default_factory=list)
+    ldflags: list[str] = Field(default_factory=list)
+
+
 class ArtifactsSchema(BaseModel):
     emit: list[str] = Field(default_factory=lambda: ["rtl", "timing", "board", "docs"])
 
@@ -133,6 +146,7 @@ class ProjectConfigSchema(BaseModel):
     buses: list[BusFabricSchema] = Field(default_factory=list)
     modules: list[ModuleSchema] = Field(default_factory=list)
     timing: TimingRefSchema | None = None
+    firmware: FirmwareSchema | None = None
     artifacts: ArtifactsSchema = Field(default_factory=ArtifactsSchema)
 
     @model_validator(mode="after")
