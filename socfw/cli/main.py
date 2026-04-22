@@ -106,6 +106,27 @@ def cmd_build_fw(args) -> int:
     return 0 if result.ok else 1
 
 
+def cmd_sim_smoke(args) -> int:
+    from socfw.build.context import BuildRequest
+    from socfw.build.two_pass_flow import TwoPassBuildFlow
+    from socfw.tools.sim_runner import SimRunner
+
+    flow = TwoPassBuildFlow(templates_dir=args.templates)
+    result = flow.run(BuildRequest(project_file=args.project, out_dir=args.out))
+
+    for d in result.diagnostics:
+        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+
+    if not result.ok:
+        return 1
+
+    sim = SimRunner().run_iverilog(args.out)
+    for d in sim.diagnostics:
+        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+
+    return 0 if sim.ok else 1
+
+
 def cmd_migrate(args) -> int:
     import yaml
     from socfw.config.migrate.v1_to_v2 import migrate_project, migrate_board, migrate_timing, migrate_ip
@@ -172,6 +193,12 @@ def build_parser() -> argparse.ArgumentParser:
     bf.add_argument("--out", default="build/gen")
     bf.add_argument("--templates", default=_default_templates_dir())
     bf.set_defaults(func=cmd_build_fw)
+
+    s = sub.add_parser("sim-smoke", help="Two-pass build + iverilog smoke simulation")
+    s.add_argument("project")
+    s.add_argument("--out", default="build/gen")
+    s.add_argument("--templates", default=_default_templates_dir())
+    s.set_defaults(func=cmd_sim_smoke)
 
     m = sub.add_parser("migrate", help="Migrate legacy YAML config to v2 format")
     m.add_argument("input", help="Legacy YAML file to migrate")
