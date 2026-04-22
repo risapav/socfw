@@ -66,12 +66,26 @@ class ModuleClockPortSchema(BaseModel):
     no_reset: bool = False
 
 
+class BusAttachSchema(BaseModel):
+    fabric: str
+    base: int | None = None
+    size: int | None = None
+
+
+class BusFabricSchema(BaseModel):
+    name: str
+    protocol: str
+    addr_width: int = 32
+    data_width: int = 32
+
+
 class ModuleSchema(BaseModel):
     instance: str
     type: str
     params: dict[str, Any] = Field(default_factory=dict)
     clocks: dict[str, str | ModuleClockPortSchema] = Field(default_factory=dict)
     bind: ModuleBindSchema = Field(default_factory=ModuleBindSchema)
+    bus: BusAttachSchema | None = None
 
 
 class TimingRefSchema(BaseModel):
@@ -121,6 +135,7 @@ class ProjectConfigSchema(BaseModel):
     cpu: CpuSchema | None = None
     ram: RamSchema | None = None
     boot: BootSchema = Field(default_factory=BootSchema)
+    buses: list[BusFabricSchema] = Field(default_factory=list)
     modules: list[ModuleSchema] = Field(default_factory=list)
     timing: TimingRefSchema | None = None
     artifacts: ArtifactsSchema = Field(default_factory=ArtifactsSchema)

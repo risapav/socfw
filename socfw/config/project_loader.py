@@ -9,6 +9,8 @@ from socfw.core.result import Result
 from socfw.model.cpu import CpuBusMaster, CpuModel
 from socfw.model.memory import RamModel
 from socfw.model.project import (
+    BusAttach,
+    BusFabricRequest,
     ClockBinding,
     GeneratedClockRequest,
     ModuleInstance,
@@ -71,6 +73,15 @@ class ProjectLoader:
                     params=m.params,
                     clocks=clocks,
                     port_bindings=port_bindings,
+                    bus=(
+                        BusAttach(
+                            fabric=m.bus.fabric,
+                            base=m.bus.base,
+                            size=m.bus.size,
+                        )
+                        if m.bus
+                        else None
+                    ),
                 )
             )
 
@@ -99,6 +110,15 @@ class ProjectLoader:
             generated_clocks=gen_clocks,
             timing_file=(doc.timing.file if doc.timing else None),
             debug=doc.project.debug,
+            bus_fabrics=[
+                BusFabricRequest(
+                    name=b.name,
+                    protocol=b.protocol,
+                    addr_width=b.addr_width,
+                    data_width=b.data_width,
+                )
+                for b in doc.buses
+            ],
         )
 
         errs = model.validate()
