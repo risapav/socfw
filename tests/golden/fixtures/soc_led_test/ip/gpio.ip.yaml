@@ -1,0 +1,40 @@
+version: 2
+kind: ip
+
+ip:
+  name: gpio
+  module: gpio
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: true
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: RESET_N
+  active_high: false
+
+clocking:
+  primary_input_port: SYS_CLK
+  additional_input_ports: []
+  outputs: []
+
+artifacts:
+  synthesis:
+    - tests/golden/fixtures/soc_led_test/rtl/gpio.sv
+  simulation: []
+  metadata: []
+
+registers:
+  - name: value
+    offset: 0
+    width: 32
+    access: rw
+    reset: 0
+    desc: GPIO output value

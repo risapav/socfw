@@ -10,6 +10,7 @@ from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
 from socfw.core.result import Result
 from socfw.model.ip import (
     IpArtifactBundle,
+    IpBusInterface,
     IpClockOutput,
     IpClocking,
     IpDescriptor,
@@ -77,7 +78,38 @@ class IpLoader:
                 simulation=tuple(doc.artifacts.simulation),
                 metadata=tuple(doc.artifacts.metadata),
             ),
-            meta={"notes": doc.notes},
+            bus_interfaces=tuple(
+                IpBusInterface(
+                    port_name=b.port_name,
+                    protocol=b.protocol,
+                    role=b.role,
+                    addr_width=b.addr_width,
+                    data_width=b.data_width,
+                )
+                for b in doc.bus_interfaces
+            ) or (
+                (IpBusInterface(port_name="bus", protocol="simple_bus", role="slave"),)
+                if doc.integration.needs_bus
+                else ()
+            ),
+            meta={
+                "notes": doc.notes,
+                "registers": [
+                    {
+                        "name": r.name,
+                        "offset": r.offset,
+                        "width": r.width,
+                        "access": r.access,
+                        "reset": r.reset,
+                        "desc": r.desc,
+                    }
+                    for r in doc.registers
+                ],
+                "irqs": [
+                    {"name": irq.name, "id": irq.id}
+                    for irq in doc.irqs
+                ],
+            },
         )
 
         errs = ip.validate()

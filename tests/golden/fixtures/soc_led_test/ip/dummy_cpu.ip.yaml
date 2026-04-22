@@ -1,0 +1,39 @@
+version: 2
+kind: ip
+
+ip:
+  name: dummy_cpu
+  module: dummy_cpu
+  category: cpu
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: RESET_N
+  active_high: false
+
+clocking:
+  primary_input_port: SYS_CLK
+  additional_input_ports: []
+  outputs: []
+
+bus_interfaces:
+  - port_name: bus
+    protocol: simple_bus
+    role: master
+    addr_width: 32
+    data_width: 32
+
+artifacts:
+  synthesis:
+    - tests/golden/fixtures/soc_led_test/rtl/dummy_cpu.sv
+  simulation: []
+  metadata: []

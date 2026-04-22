@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -53,6 +53,28 @@ class IpArtifactsSchema(BaseModel):
     metadata: list[str] = Field(default_factory=list)
 
 
+class IpBusInterfaceSchema(BaseModel):
+    port_name: str
+    protocol: str
+    role: Literal["slave", "master"]
+    addr_width: int = 32
+    data_width: int = 32
+
+
+class IpRegisterSchema(BaseModel):
+    name: str
+    offset: int
+    width: int = 32
+    access: str = "rw"
+    reset: int = 0
+    desc: str = ""
+
+
+class IpIrqSchema(BaseModel):
+    name: str
+    id: int
+
+
 class IpConfigSchema(BaseModel):
     version: Literal[2]
     kind: Literal["ip"]
@@ -62,4 +84,7 @@ class IpConfigSchema(BaseModel):
     reset: IpResetSchema = Field(default_factory=IpResetSchema)
     clocking: IpClockingSchema = Field(default_factory=IpClockingSchema)
     artifacts: IpArtifactsSchema = Field(default_factory=IpArtifactsSchema)
+    bus_interfaces: list[IpBusInterfaceSchema] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+    registers: list[IpRegisterSchema] = Field(default_factory=list)
+    irqs: list[IpIrqSchema] = Field(default_factory=list)

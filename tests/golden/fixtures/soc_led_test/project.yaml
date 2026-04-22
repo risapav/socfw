@@ -1,0 +1,68 @@
+version: 2
+kind: project
+
+project:
+  name: soc_led_test
+  mode: soc
+  board: qmtech_ep4ce55
+  board_file: board.yaml
+  output_dir: build/gen
+  debug: true
+
+registries:
+  ip:
+    - ip
+
+features:
+  use:
+    - board:onboard.leds
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+  generated: []
+
+cpu:
+  type: dummy_cpu
+  module: dummy_cpu
+  clock_port: SYS_CLK
+  reset_port: RESET_N
+  bus_master_port: bus
+  bus_protocol: simple_bus
+  params: {}
+
+ram:
+  module: soc_ram
+  base: 0x00000000
+  size: 65536
+  latency: registered
+  init_file: ""
+  image_format: hex
+
+boot:
+  reset_vector: 0x00000000
+  stack_percent: 25
+
+buses:
+  - name: main
+    protocol: simple_bus
+    addr_width: 32
+    data_width: 32
+
+modules:
+  - instance: gpio0
+    type: gpio
+    bus:
+      fabric: main
+      base: 0x40000000
+      size: 0x1000
+    clocks:
+      SYS_CLK: sys_clk
+    bind:
+      ports:
+        gpio_o:
+          target: board:onboard.leds
+
+artifacts:
+  emit: [rtl, timing, board, software, docs]
