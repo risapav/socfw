@@ -12,6 +12,8 @@ class RegisterDef:
     access: str
     reset: int = 0
     desc: str = ""
+    hw_source: str | None = None
+    write_pulse: bool = False
 
     @property
     def address_word_offset(self) -> int:

@@ -12,7 +12,7 @@ origin:
 
 integration:
   needs_bus: true
-  generate_registers: false
+  generate_registers: true
   instantiate_directly: true
   dependency_only: false
 
@@ -28,6 +28,7 @@ clocking:
 artifacts:
   synthesis:
     - tests/golden/fixtures/soc_led_test/rtl/gpio.sv
+    - tests/golden/fixtures/soc_led_test/rtl/gpio_core.sv
   simulation: []
   metadata: []
 

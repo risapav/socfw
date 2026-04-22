@@ -7,27 +7,53 @@ module {{ regblk.module_name }} (
   input  wire [{{ regblk.addr_width + 1 }}:2] addr_i,
   input  wire [31:0] wdata_i,
   input  wire        we_i,
-  output logic [31:0] rdata_o
+  input  wire        valid_i,
+  output logic [31:0] rdata_o,
+  output logic       ready_o
 {% for r in regblk.regs -%}
 ,
+{% if r.access == "ro" and r.hw_source %}
+  input  wire{% if r.width > 1 %} [{{ r.width - 1 }}:0]{% endif %} hw_{{ r.name.lower() }}
+{% else %}
   output logic{% if r.width > 1 %} [{{ r.width - 1 }}:0]{% endif %} reg_{{ r.name.lower() }}
-{% endfor %}
+{% endif %}
+{% if r.write_pulse %}
+,
+  output logic reg_{{ r.name.lower() }}_we
+{% endif %}
+{%- endfor %}
 );
 
-{% for r in regblk.regs -%}
+{% for r in regblk.regs if not (r.access == "ro" and r.hw_source) -%}
 logic{% if r.width > 1 %} [{{ r.width - 1 }}:0]{% endif %} r_{{ r.name.lower() }}; // 0x{{ "%02X"|format(r.offset) }} {{ r.access }} {{ r.desc }}
 {% endfor %}
 
-{% set writable = regblk.regs | selectattr("access", "in", ["rw", "wo"]) | list %}
+{% if regblk.regs | selectattr("write_pulse") | list %}
+always_comb begin
+{% for r in regblk.regs if r.write_pulse -%}
+  reg_{{ r.name.lower() }}_we = 1'b0;
+{% endfor %}
+  if (valid_i && we_i) begin
+    case (addr_i)
+{% for r in regblk.regs if r.write_pulse -%}
+      {{ regblk.addr_width }}'h{{ "%X"|format(r.word_addr) }}: reg_{{ r.name.lower() }}_we = 1'b1;
+{% endfor %}
+      default: ;
+    endcase
+  end
+end
+{% endif %}
+
+{% set writable = regblk.regs | rejectattr("access", "equalto", "ro") | list %}
 {% if writable %}
 always_ff @(posedge SYS_CLK or negedge RESET_N) begin
   if (!RESET_N) begin
 {% for r in writable -%}
     r_{{ r.name.lower() }} <= {{ r.width }}'h{{ "%X"|format(r.reset) }};
 {% endfor %}
-  end else if (we_i) begin
+  end else if (valid_i && we_i) begin
     case (addr_i)
-{% for r in writable -%}
+{% for r in writable if r.access in ["rw", "wo"] -%}
       {{ regblk.addr_width }}'h{{ "%X"|format(r.word_addr) }}: r_{{ r.name.lower() }} <= wdata_i[{{ r.width - 1 }}:0];
 {% endfor %}
       default: ;
@@ -40,13 +66,21 @@ always_comb begin
   rdata_o = 32'h0;
   case (addr_i)
 {% for r in regblk.regs if r.access in ["rw", "ro"] -%}
+{% if r.access == "ro" and r.hw_source -%}
+    {{ regblk.addr_width }}'h{{ "%X"|format(r.word_addr) }}: rdata_o = { {{ 32 - r.width }}'b0, hw_{{ r.name.lower() }} };
+{% else -%}
     {{ regblk.addr_width }}'h{{ "%X"|format(r.word_addr) }}: rdata_o = { {{ 32 - r.width }}'b0, r_{{ r.name.lower() }} };
+{% endif -%}
 {% endfor %}
     default: rdata_o = 32'h0;
   endcase
 end
 
-{% for r in regblk.regs -%}
+always_comb begin
+  ready_o = valid_i;
+end
+
+{% for r in regblk.regs if not (r.access == "ro" and r.hw_source) -%}
 assign reg_{{ r.name.lower() }} = r_{{ r.name.lower() }};
 {% endfor %}
 

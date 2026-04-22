@@ -74,6 +74,9 @@ class BuildPipeline:
 
         regblk_irs = []
         for p in system.peripheral_blocks:
+            ip = system.ip_catalog.get(p.module)
+            if ip is None or not ip.generate_registers:
+                continue
             regblk = self.regblk_ir_builder.build_for_peripheral(p)
             if regblk is not None:
                 regblk_irs.append(regblk)

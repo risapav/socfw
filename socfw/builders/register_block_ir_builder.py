@@ -15,7 +15,7 @@ class RegisterBlockIRBuilder:
         addr_width = max(1, math.ceil(math.log2(word_count)))
 
         return RegisterBlockIR(
-            module_name=f"{p.module}_regs",
+            module_name=f"{p.instance}_regs",
             peripheral_instance=p.instance,
             base=p.base,
             addr_width=addr_width,
@@ -28,6 +28,8 @@ class RegisterBlockIRBuilder:
                     reset=r.reset,
                     desc=r.desc,
                     word_addr=r.address_word_offset,
+                    hw_source=r.hw_source,
+                    write_pulse=r.write_pulse,
                 )
                 for r in p.registers
             ],

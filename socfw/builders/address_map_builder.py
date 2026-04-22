@@ -33,6 +33,8 @@ class AddressMapBuilder:
                             access=str(r.get("access", "rw")),
                             reset=int(r.get("reset", 0)),
                             desc=str(r.get("desc", "")),
+                            hw_source=r.get("hw_source"),
+                            write_pulse=bool(r.get("write_pulse", False)),
                         )
                     )
 
