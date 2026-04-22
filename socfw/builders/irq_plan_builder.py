@@ -6,7 +6,10 @@ from socfw.model.system import SystemModel
 
 class IrqPlanBuilder:
     def build(self, system: SystemModel) -> IrqPlan | None:
-        if system.cpu is None or system.cpu.irq_port is None:
+        if system.cpu is None:
+            return None
+        cpu_desc = system.cpu_desc()
+        if cpu_desc is None or cpu_desc.irq_port is None:
             return None
 
         sources: list[IrqSource] = []

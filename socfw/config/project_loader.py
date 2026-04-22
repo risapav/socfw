@@ -6,7 +6,7 @@ from socfw.config.common import load_yaml_file
 from socfw.config.project_schema import ModuleClockPortSchema, ProjectConfigSchema
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
 from socfw.core.result import Result
-from socfw.model.cpu import CpuBusMaster, CpuModel
+from socfw.model.cpu import CpuInstance
 from socfw.model.memory import RamModel
 from socfw.model.project import (
     BusAttach,
@@ -138,23 +138,12 @@ class ProjectLoader:
 
         cpu = None
         if doc.cpu is not None:
-            cpu = CpuModel(
-                cpu_type=doc.cpu.type,
-                module=doc.cpu.module,
+            cpu = CpuInstance(
+                instance=doc.cpu.instance,
+                type_name=doc.cpu.type,
+                fabric=doc.cpu.fabric,
+                reset_vector=doc.cpu.reset_vector,
                 params=doc.cpu.params,
-                clock_port=doc.cpu.clock_port,
-                reset_port=doc.cpu.reset_port,
-                irq_port=doc.cpu.irq_port,
-                bus_master=(
-                    CpuBusMaster(
-                        port_name=doc.cpu.bus_master_port,
-                        protocol=doc.cpu.bus_protocol,
-                        addr_width=doc.cpu.addr_width,
-                        data_width=doc.cpu.data_width,
-                    )
-                    if doc.cpu.bus_master_port
-                    else None
-                ),
             )
 
         ram = None

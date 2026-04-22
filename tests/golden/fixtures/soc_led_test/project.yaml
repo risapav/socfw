@@ -24,13 +24,10 @@ clocks:
   generated: []
 
 cpu:
+  instance: cpu0
   type: dummy_cpu
-  module: dummy_cpu
-  clock_port: SYS_CLK
-  reset_port: RESET_N
-  irq_port: irq_i
-  bus_master_port: bus
-  bus_protocol: simple_bus
+  fabric: main
+  reset_vector: 0x00000000
   params: {}
 
 ram:

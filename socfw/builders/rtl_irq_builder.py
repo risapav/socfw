@@ -9,7 +9,10 @@ class RtlIrqBuilder:
         system = design.system
         irq_plan = design.irq_plan
 
-        if system.cpu is None or system.cpu.irq_port is None:
+        if system.cpu is None:
+            return
+        cpu_desc = system.cpu_desc()
+        if cpu_desc is None or cpu_desc.irq_port is None:
             return
         if irq_plan is None:
             return
@@ -26,7 +29,7 @@ class RtlIrqBuilder:
         rtl.irq_combiner = RtlIrqCombiner(
             name="u_irq_combiner",
             width=irq_plan.width,
-            cpu_irq_port=system.cpu.irq_port,
+            cpu_irq_port=cpu_desc.irq_port,
             cpu_irq_signal=irq_bus_name,
             sources=[
                 RtlIrqSource(

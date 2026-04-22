@@ -1,9 +1,11 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 
 from .addressing import PeripheralAddressBlock
 from .board import BoardModel
-from .cpu import CpuModel
+from .cpu import CpuInstance
+from .cpu_desc import CpuDescriptor
 from .ip import IpDescriptor
 from .memory import RamModel
 from .project import ProjectModel
@@ -16,13 +18,19 @@ class SystemModel:
     project: ProjectModel
     timing: TimingModel | None
     ip_catalog: dict[str, IpDescriptor]
+    cpu_catalog: dict[str, CpuDescriptor] = field(default_factory=dict)
 
-    cpu: CpuModel | None = None
+    cpu: CpuInstance | None = None
     ram: RamModel | None = None
 
     reset_vector: int = 0x00000000
     stack_percent: int = 25
     peripheral_blocks: list[PeripheralAddressBlock] = field(default_factory=list)
+
+    def cpu_desc(self) -> CpuDescriptor | None:
+        if self.cpu is None:
+            return None
+        return self.cpu_catalog.get(self.cpu.type_name)
 
     @property
     def ram_base(self) -> int:
@@ -34,7 +42,7 @@ class SystemModel:
 
     @property
     def cpu_type(self) -> str:
-        return "none" if self.cpu is None else self.cpu.cpu_type
+        return "none" if self.cpu is None else self.cpu.type_name
 
     def validate(self) -> list[str]:
         errs: list[str] = []

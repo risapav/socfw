@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -20,3 +21,12 @@ class CpuModel:
     reset_port: str = "RESET_N"
     bus_master: CpuBusMaster | None = None
     irq_port: str | None = None
+
+
+@dataclass
+class CpuInstance:
+    instance: str
+    type_name: str
+    fabric: str
+    reset_vector: int = 0
+    params: dict[str, Any] = field(default_factory=dict)

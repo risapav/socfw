@@ -64,35 +64,43 @@ class RtlIRBuilder:
             rtl.fabrics.extend(self.bus_builder.build_fabrics(design.interconnect))
 
         # CPU
-        if system.cpu is not None:
+        cpu_desc = system.cpu_desc()
+        if system.cpu is not None and cpu_desc is not None:
+            cpu_params = dict(cpu_desc.default_params)
+            cpu_params.update(system.cpu.params)
+
             cpu_conns = [
-                RtlConn(port=system.cpu.clock_port, signal=BOARD_CLOCK),
-                RtlConn(port=system.cpu.reset_port, signal=BOARD_RESET),
+                RtlConn(port=cpu_desc.clock_port, signal=BOARD_CLOCK),
+                RtlConn(port=cpu_desc.reset_port, signal=BOARD_RESET),
             ]
 
             cpu_bus_conns = []
-            if system.cpu.bus_master is not None and design.interconnect is not None:
+            if cpu_desc.bus_master is not None and design.interconnect is not None:
                 for fabric_name, endpoints in design.interconnect.fabrics.items():
                     for ep in endpoints:
-                        if ep.instance == "cpu":
+                        if ep.instance == system.cpu.instance:
                             cpu_bus_conns.append(
                                 RtlBusConn(
-                                    port=system.cpu.bus_master.port_name,
-                                    interface_name=f"if_cpu_{fabric_name}",
+                                    port=cpu_desc.bus_master.port_name,
+                                    interface_name=f"if_{ep.instance}_{fabric_name}",
                                     modport="master",
                                 )
                             )
 
             rtl.instances.append(
                 RtlInstance(
-                    module=system.cpu.module,
-                    name="cpu",
-                    params=system.cpu.params,
+                    module=cpu_desc.module,
+                    name=system.cpu.instance,
+                    params=cpu_params,
                     conns=cpu_conns,
                     bus_conns=cpu_bus_conns,
-                    comment=system.cpu.cpu_type,
+                    comment=system.cpu.type_name,
                 )
             )
+
+            for art in cpu_desc.artifacts:
+                if art not in rtl.extra_sources:
+                    rtl.extra_sources.append(art)
 
         # RAM
         if system.ram is not None:
@@ -239,12 +247,12 @@ class RtlIRBuilder:
 
         self.irq_builder.build(design, rtl)
 
-        if rtl.irq_combiner is not None:
+        if rtl.irq_combiner is not None and system.cpu is not None and cpu_desc is not None and cpu_desc.irq_port:
             for inst in rtl.instances:
-                if inst.name == "cpu" and system.cpu is not None and system.cpu.irq_port:
+                if inst.name == system.cpu.instance:
                     inst.conns.append(
                         RtlConn(
-                            port=system.cpu.irq_port,
+                            port=cpu_desc.irq_port,
                             signal=rtl.irq_combiner.cpu_irq_signal,
                         )
                     )

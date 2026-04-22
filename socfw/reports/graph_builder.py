@@ -10,8 +10,8 @@ class GraphBuilder:
         if system.cpu is not None:
             graph.nodes.append(
                 GraphNode(
-                    id="cpu",
-                    label=system.cpu.cpu_type,
+                    id=system.cpu.instance,
+                    label=system.cpu.type_name,
                     kind="cpu",
                 )
             )
@@ -69,7 +69,7 @@ class GraphBuilder:
                 graph.edges.append(
                     GraphEdge(
                         src=src.instance,
-                        dst="cpu",
+                        dst=system.cpu.instance,
                         label=f"IRQ {src.irq_id}",
                         style="dashed",
                     )

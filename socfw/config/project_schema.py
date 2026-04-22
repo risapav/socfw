@@ -96,17 +96,12 @@ class ArtifactsSchema(BaseModel):
     emit: list[str] = Field(default_factory=lambda: ["rtl", "timing", "board", "docs"])
 
 
-class CpuSchema(BaseModel):
+class CpuInstanceSchema(BaseModel):
+    instance: str = "cpu0"
     type: str
-    module: str
+    fabric: str
+    reset_vector: int = 0
     params: dict[str, Any] = Field(default_factory=dict)
-    clock_port: str = "SYS_CLK"
-    reset_port: str = "RESET_N"
-    irq_port: str | None = None
-    bus_master_port: str | None = None
-    bus_protocol: str = "simple_bus"
-    addr_width: int = 32
-    data_width: int = 32
 
 
 class RamSchema(BaseModel):
@@ -132,7 +127,7 @@ class ProjectConfigSchema(BaseModel):
     registries: RegistriesSchema = Field(default_factory=RegistriesSchema)
     features: FeaturesSchema = Field(default_factory=FeaturesSchema)
     clocks: ClocksSchema
-    cpu: CpuSchema | None = None
+    cpu: CpuInstanceSchema | None = None
     ram: RamSchema | None = None
     boot: BootSchema = Field(default_factory=BootSchema)
     buses: list[BusFabricSchema] = Field(default_factory=list)

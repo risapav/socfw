@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from socfw.config.board_loader import BoardLoader
+from socfw.config.cpu_loader import CpuLoader
 from socfw.config.ip_loader import IpLoader
 from socfw.config.project_loader import ProjectLoader
 from socfw.config.timing_loader import TimingLoader
@@ -17,6 +18,7 @@ class SystemLoader:
         self.project_loader = ProjectLoader()
         self.timing_loader = TimingLoader()
         self.ip_loader = IpLoader()
+        self.cpu_loader = CpuLoader()
 
     def load(self, project_file: str) -> Result[SystemModel]:
         diags: list[Diagnostic] = []
@@ -62,6 +64,10 @@ class SystemLoader:
         diags.extend(catalog_res.diagnostics)
         ip_catalog = catalog_res.value or {}
 
+        cpu_catalog_res = self.cpu_loader.load_catalog(resolved_ip_dirs)
+        diags.extend(cpu_catalog_res.diagnostics)
+        cpu_catalog = cpu_catalog_res.value or {}
+
         timing = None
         if project.timing_file:
             timing_path = str(project_dir / project.timing_file)
@@ -76,6 +82,7 @@ class SystemLoader:
             project=project,
             timing=timing,
             ip_catalog=ip_catalog,
+            cpu_catalog=cpu_catalog,
             cpu=cpu,
             ram=ram,
             reset_vector=reset_vector,

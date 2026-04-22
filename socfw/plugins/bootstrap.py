@@ -25,6 +25,11 @@ from socfw.validate.rules.bus_rules import (
     MissingBusInterfaceRule,
     UnknownBusFabricRule,
 )
+from socfw.validate.rules.cpu_rules import (
+    CpuDescriptorBusMissingRule,
+    UnknownCpuFabricRule,
+    UnknownCpuTypeRule,
+)
 from socfw.validate.rules.project_rules import (
     DuplicateModuleInstanceRule,
     UnknownGeneratedClockSourceRule,
@@ -61,5 +66,8 @@ def create_builtin_registry(templates_dir: str) -> PluginRegistry:
     reg.register_validator(MissingBusInterfaceRule())
     reg.register_validator(DuplicateAddressRegionRule())
     reg.register_validator(FabricProtocolMismatchRule())
+    reg.register_validator(UnknownCpuTypeRule())
+    reg.register_validator(UnknownCpuFabricRule())
+    reg.register_validator(CpuDescriptorBusMissingRule())
 
     return reg
