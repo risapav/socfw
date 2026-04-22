@@ -30,6 +30,7 @@ class EmitOrchestrator:
             ("files", rtl_ir),
             ("software", software_ir),
             ("docs", docs_ir),
+            ("sim", rtl_ir),
         ]
 
         for family, ir in ordered:

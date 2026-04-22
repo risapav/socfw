@@ -1,0 +1,32 @@
+version: 2
+kind: ip
+
+ip:
+  name: wait_state_slave
+  module: wait_state_slave
+  category: test
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: true
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: RESET_N
+  active_high: false
+
+clocking:
+  primary_input_port: SYS_CLK
+  additional_input_ports: []
+  outputs: []
+
+artifacts:
+  synthesis:
+    - tests/golden/fixtures/picorv32_soc/rtl/wait_state_slave.sv
+  simulation: []
+  metadata: []

@@ -77,5 +77,16 @@ modules:
         gpio_o:
           target: board:onboard.leds
 
+  - instance: slow0
+    type: wait_state_slave
+    params:
+      DELAY: 4
+    bus:
+      fabric: main
+      base: 0x50000000
+      size: 0x1000
+    clocks:
+      SYS_CLK: sys_clk
+
 artifacts:
   emit: [rtl, timing, board, software, docs]

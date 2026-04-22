@@ -5,6 +5,7 @@ class _FakeSystem:
     class project:
         modules = []
     ip_catalog = {}
+    ram = None
 
 
 def test_duplicate_address_region_rule_no_overlap():

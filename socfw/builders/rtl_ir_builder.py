@@ -63,6 +63,23 @@ class RtlIRBuilder:
 
             rtl.fabrics.extend(self.bus_builder.build_fabrics(design.interconnect))
 
+            for fabric_name in design.interconnect.fabrics.keys():
+                rtl.instances.append(
+                    RtlInstance(
+                        module="simple_bus_error_slave",
+                        name=f"error_{fabric_name}",
+                        conns=[],
+                        bus_conns=[
+                            RtlBusConn(
+                                port="bus",
+                                interface_name=f"if_error_{fabric_name}",
+                                modport="slave",
+                            )
+                        ],
+                        comment=f"error slave for {fabric_name}",
+                    )
+                )
+
         # CPU
         cpu_desc = system.cpu_desc()
         if system.cpu is not None and cpu_desc is not None:
@@ -259,6 +276,9 @@ class RtlIRBuilder:
 
         if rtl.fabrics and "src/ip/bus/simple_bus_fabric.sv" not in rtl.extra_sources:
             rtl.extra_sources.append("src/ip/bus/simple_bus_fabric.sv")
+
+        if rtl.fabrics and "src/ip/bus/simple_bus_error_slave.sv" not in rtl.extra_sources:
+            rtl.extra_sources.append("src/ip/bus/simple_bus_error_slave.sv")
 
         if rtl.irq_combiner is not None and "src/ip/irq/irq_combiner.sv" not in rtl.extra_sources:
             rtl.extra_sources.append("src/ip/irq/irq_combiner.sv")

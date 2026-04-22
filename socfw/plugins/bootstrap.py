@@ -4,6 +4,7 @@ from socfw.emit.board_quartus_emitter import QuartusBoardEmitter
 from socfw.emit.docs_emitter import DocsEmitter
 from socfw.emit.files_tcl_emitter import QuartusFilesEmitter
 from socfw.emit.peripheral_shell_emitter import PeripheralShellEmitter
+from socfw.emit.sim_filelist_emitter import SimFilelistEmitter
 from socfw.emit.register_block_emitter import RegisterBlockEmitter
 from socfw.emit.rtl_emitter import RtlEmitter
 from socfw.emit.software_emitter import SoftwareEmitter
@@ -50,6 +51,7 @@ def create_builtin_registry(templates_dir: str) -> PluginRegistry:
     reg.register_emitter(DocsEmitter(templates_dir))
     reg.register_emitter(RegisterBlockEmitter(templates_dir))
     reg.register_emitter(PeripheralShellEmitter(templates_dir))
+    reg.register_emitter(SimFilelistEmitter())
 
     reg.register_report(JsonReportEmitter())
     reg.register_report(MarkdownReportEmitter())

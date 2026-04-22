@@ -58,6 +58,9 @@ class DuplicateAddressRegionRule(ValidationRule):
         diags: list[Diagnostic] = []
 
         regs = []
+        if system.ram is not None:
+            regs.append(("ram", system.ram.base, system.ram.base + system.ram.size - 1))
+
         for mod in system.project.modules:
             if mod.bus and mod.bus.base is not None and mod.bus.size is not None:
                 regs.append((mod.instance, mod.bus.base, mod.bus.base + mod.bus.size - 1))

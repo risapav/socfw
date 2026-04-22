@@ -8,6 +8,7 @@ from socfw.build.full_pipeline import FullBuildPipeline
 from socfw.model.image import BootImage
 from socfw.tools.bin2hex_runner import Bin2HexRunner
 from socfw.tools.firmware_builder import FirmwareBuilder
+from socfw.tools.testbench_stager import TestbenchStager
 
 
 class TwoPassBuildFlow:
@@ -15,8 +16,11 @@ class TwoPassBuildFlow:
         self.pipeline = FullBuildPipeline(templates_dir=templates_dir)
         self.firmware_builder = FirmwareBuilder()
         self.bin2hex = Bin2HexRunner()
+        self.tb_stager = TestbenchStager()
 
     def run(self, request: BuildRequest):
+        self.tb_stager.stage(request.project_file, request.out_dir)
+
         # pass 1: generate headers/linker/docs/top without final RAM init
         first = self.pipeline.run(request)
         if not first.ok:

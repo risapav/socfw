@@ -24,6 +24,13 @@ class RtlBusBuilder:
                             comment=f"{ep.role} endpoint on {fabric_name}",
                         )
                     )
+            result.append(
+                RtlInterfaceInstance(
+                    if_type="bus_if",
+                    name=f"if_error_{fabric_name}",
+                    comment=f"error slave for {fabric_name}",
+                )
+            )
         return result
 
     def build_fabrics(self, plan: InterconnectPlan) -> list[RtlFabricInstance]:
@@ -80,6 +87,15 @@ class RtlBusBuilder:
                         index=idx,
                     )
                 )
+
+            fabric.ports.append(
+                RtlFabricPort(
+                    port_name="err_bus",
+                    interface_name=f"if_error_{fabric_name}",
+                    modport="master",
+                    index=None,
+                )
+            )
 
             fabrics.append(fabric)
 
