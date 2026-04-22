@@ -3,7 +3,8 @@
 module dummy_cpu (
   input  wire SYS_CLK,
   input  wire RESET_N,
-  bus_if.master bus
+  bus_if.master bus,
+  input  wire irq_i
 );
 
   typedef enum logic [1:0] {

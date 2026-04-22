@@ -218,6 +218,11 @@ class RtlIRBuilder:
                     for ext in resolved.resolved:
                         conns.append(RtlConn(port=ext.top_name, signal=ext.top_name))
 
+            for irq in ip.meta.get("irqs", []):
+                irq_name = str(irq["name"])
+                sig = f"irq_{mod.instance}_{irq_name}"
+                conns.append(RtlConn(port=f"irq_{irq_name}", signal=sig))
+
             rtl.instances.append(
                 RtlInstance(
                     module=ip.module,

@@ -28,6 +28,7 @@ cpu:
   module: dummy_cpu
   clock_port: SYS_CLK
   reset_port: RESET_N
+  irq_port: irq_i
   bus_master_port: bus
   bus_protocol: simple_bus
   params: {}

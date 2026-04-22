@@ -38,3 +38,7 @@ registers:
     access: rw
     reset: 0
     desc: GPIO output value
+
+irqs:
+  - name: changed
+    id: 0

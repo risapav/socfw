@@ -68,11 +68,12 @@ module {{ module.name }} (
   irq_combiner #(
     .WIDTH({{ module.irq_combiner.width }})
   ) {{ module.irq_combiner.name }} (
-    .irq_o({{ module.irq_combiner.cpu_irq_signal }})
-{%- for src in module.irq_combiner.sources %}
-    ,
-    .irq_i[{{ src.irq_id }}]({{ src.signal }})
+    .irq_i({
+{%- for src in module.irq_combiner.sources | sort(attribute="irq_id", reverse=True) %}
+      {{ src.signal }}{{ "," if not loop.last else "" }}
 {%- endfor %}
+    }),
+    .irq_o({{ module.irq_combiner.cpu_irq_signal }})
   );
 
 {% endif %}
