@@ -1,0 +1,22 @@
+version: 2
+kind: cpu
+
+cpu:
+  name: dummy_cpu
+  module: dummy_cpu
+  family: test
+
+clock_port: SYS_CLK
+reset_port: RESET_N
+irq_port: irq
+
+bus_master:
+  port_name: bus
+  protocol: simple_bus
+  addr_width: 32
+  data_width: 32
+
+default_params: {}
+
+artifacts:
+  - tests/golden/fixtures/wishbone_bridge_soc/rtl/dummy_cpu.sv

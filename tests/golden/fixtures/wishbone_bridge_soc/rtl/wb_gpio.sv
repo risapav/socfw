@@ -1,0 +1,28 @@
+`default_nettype none
+
+module wb_gpio (
+  input  wire SYS_CLK,
+  input  wire RESET_N,
+  wishbone_if.slave wb,
+  output logic [5:0] gpio_o
+);
+
+  logic [31:0] reg_value;
+
+  always_ff @(posedge SYS_CLK or negedge RESET_N) begin
+    if (!RESET_N)
+      reg_value <= 32'h0;
+    else if (wb.cyc && wb.stb && wb.we)
+      reg_value <= wb.dat_w;
+  end
+
+  always_comb begin
+    wb.ack   = wb.cyc && wb.stb;
+    wb.dat_r = reg_value;
+  end
+
+  assign gpio_o = reg_value[5:0];
+
+endmodule
+
+`default_nettype wire

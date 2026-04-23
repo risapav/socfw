@@ -181,6 +181,16 @@ class RtlIRBuilder:
                                     modport="slave",
                                 )
                             )
+                elif iface.protocol == "wishbone":
+                    for br in design.interconnect.bridges:
+                        if br.dst_instance == mod.instance:
+                            bus_conn_list.append(
+                                RtlBusConn(
+                                    port=iface.port_name,
+                                    interface_name=f"if_{mod.instance}_wb",
+                                    modport="slave",
+                                )
+                            )
 
             for cb in mod.clocks:
                 signal = cb.domain
@@ -339,10 +349,16 @@ class RtlIRBuilder:
             rtl.extra_sources.append("src/ip/bus/simple_bus_error_slave.sv")
 
         if design.interconnect is not None and design.interconnect.bridges:
-            if "src/ip/bus/axi_lite_if.sv" not in rtl.extra_sources:
-                rtl.extra_sources.append("src/ip/bus/axi_lite_if.sv")
-            if "src/ip/bus/simple_bus_to_axi_lite_bridge.sv" not in rtl.extra_sources:
-                rtl.extra_sources.append("src/ip/bus/simple_bus_to_axi_lite_bridge.sv")
+            if any(br.dst_protocol == "axi_lite" for br in design.interconnect.bridges):
+                if "src/ip/bus/axi_lite_if.sv" not in rtl.extra_sources:
+                    rtl.extra_sources.append("src/ip/bus/axi_lite_if.sv")
+                if "src/ip/bus/simple_bus_to_axi_lite_bridge.sv" not in rtl.extra_sources:
+                    rtl.extra_sources.append("src/ip/bus/simple_bus_to_axi_lite_bridge.sv")
+            if any(br.dst_protocol == "wishbone" for br in design.interconnect.bridges):
+                if "src/ip/bus/wishbone_if.sv" not in rtl.extra_sources:
+                    rtl.extra_sources.append("src/ip/bus/wishbone_if.sv")
+                if "src/ip/bus/simple_bus_to_wishbone_bridge.sv" not in rtl.extra_sources:
+                    rtl.extra_sources.append("src/ip/bus/simple_bus_to_wishbone_bridge.sv")
 
         if rtl.irq_combiner is not None and "src/ip/irq/irq_combiner.sv" not in rtl.extra_sources:
             rtl.extra_sources.append("src/ip/irq/irq_combiner.sv")

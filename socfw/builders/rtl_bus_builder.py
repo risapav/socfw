@@ -35,13 +35,22 @@ class RtlBusBuilder:
             )
 
         for br in plan.bridges:
-            result.append(
-                RtlInterfaceInstance(
-                    if_type="axi_lite_if",
-                    name=f"if_{br.dst_instance}_axil",
-                    comment=f"AXI-lite side for {br.instance}",
+            if br.dst_protocol == "axi_lite":
+                result.append(
+                    RtlInterfaceInstance(
+                        if_type="axi_lite_if",
+                        name=f"if_{br.dst_instance}_axil",
+                        comment=f"AXI-lite side for {br.instance}",
+                    )
                 )
-            )
+            elif br.dst_protocol == "wishbone":
+                result.append(
+                    RtlInterfaceInstance(
+                        if_type="wishbone_if",
+                        name=f"if_{br.dst_instance}_wb",
+                        comment=f"Wishbone side for {br.instance}",
+                    )
+                )
 
         return result
 
@@ -117,6 +126,15 @@ class RtlBusBuilder:
         result: list[RtlInstance] = []
 
         for br in plan.bridges:
+            if br.dst_protocol == "axi_lite":
+                dst_port = "m_axil"
+                dst_if = f"if_{br.dst_instance}_axil"
+            elif br.dst_protocol == "wishbone":
+                dst_port = "m_wb"
+                dst_if = f"if_{br.dst_instance}_wb"
+            else:
+                continue
+
             result.append(
                 RtlInstance(
                     module=br.module,
@@ -129,8 +147,8 @@ class RtlBusBuilder:
                             modport="slave",
                         ),
                         RtlBusConn(
-                            port="m_axil",
-                            interface_name=f"if_{br.dst_instance}_axil",
+                            port=dst_port,
+                            interface_name=dst_if,
                             modport="master",
                         ),
                     ],
