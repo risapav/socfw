@@ -1,0 +1,34 @@
+version: 2
+kind: ip
+
+ip:
+  name: apb_gpio
+  module: apb_gpio
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: true
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: RESET_N
+  active_high: false
+
+clocking:
+  primary_input_port: SYS_CLK
+
+bus_interfaces:
+  - port_name: apb
+    protocol: apb
+    role: slave
+    addr_width: 32
+    data_width: 32
+
+artifacts:
+  synthesis: []

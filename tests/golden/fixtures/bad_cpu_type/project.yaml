@@ -1,0 +1,35 @@
+version: 2
+kind: project
+
+project:
+  name: bad_cpu_type
+  mode: soc
+  board: qmtech_ep4ce55
+  board_file: board.yaml
+  output_dir: build/gen
+
+registries:
+  ip:
+    - ip
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+  generated: []
+
+cpu:
+  instance: cpu0
+  type: nonexistent_cpu_xyz
+  fabric: main
+
+buses:
+  - name: main
+    protocol: simple_bus
+    addr_width: 32
+    data_width: 32
+
+modules: []
+
+artifacts:
+  emit: [rtl]

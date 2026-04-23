@@ -1,0 +1,20 @@
+name: Golden Extended
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *"
+
+jobs:
+  extended:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+      - run: pip install pytest
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y iverilog
+      - run: pytest tests/integration -m "not toolchain_required or sim_required"

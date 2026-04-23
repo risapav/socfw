@@ -1,0 +1,47 @@
+version: 2
+kind: project
+
+project:
+  name: bad_board_ref
+  mode: soc
+  board: qmtech_ep4ce55
+  board_file: board.yaml
+  output_dir: build/gen
+
+registries:
+  ip:
+    - ip
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+  generated: []
+
+cpu:
+  instance: cpu0
+  type: dummy_cpu
+  fabric: main
+
+buses:
+  - name: main
+    protocol: simple_bus
+    addr_width: 32
+    data_width: 32
+
+modules:
+  - instance: gpio0
+    type: gpio
+    bus:
+      fabric: main
+      base: 0x40000000
+      size: 0x1000
+    clocks:
+      SYS_CLK: sys_clk
+    bind:
+      ports:
+        gpio_o:
+          target: board:onboard.nonexistent_connector
+
+artifacts:
+  emit: [rtl]

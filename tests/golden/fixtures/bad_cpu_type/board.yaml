@@ -1,0 +1,33 @@
+version: 2
+kind: board
+
+board:
+  id: qmtech_ep4ce55
+  vendor: QMTech
+  title: QMTech EP4CE55F23C8
+
+fpga:
+  family: "Cyclone IV E"
+  part: EP4CE55F23C8
+  package: FBGA
+  pins: 484
+  speed: 8
+  hdl_default: SystemVerilog_2005
+
+system:
+  clock:
+    id: sys_clk
+    top_name: SYS_CLK
+    pin: T2
+    io_standard: "3.3-V LVTTL"
+    frequency_hz: 50000000
+    period_ns: 20.0
+
+  reset:
+    id: sys_reset_n
+    top_name: RESET_N
+    pin: W13
+    io_standard: "3.3-V LVTTL"
+    active_low: true
+
+resources: {}

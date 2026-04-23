@@ -1,0 +1,60 @@
+version: 2
+kind: project
+
+project:
+  name: bad_overlap_soc
+  mode: soc
+  board: qmtech_ep4ce55
+  board_file: board.yaml
+  output_dir: build/gen
+
+registries:
+  ip:
+    - ip
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+  generated: []
+
+cpu:
+  instance: cpu0
+  type: dummy_cpu
+  fabric: main
+
+ram:
+  module: soc_ram
+  base: 0x00000000
+  size: 65536
+  latency: registered
+  init_file: ""
+  image_format: hex
+
+buses:
+  - name: main
+    protocol: simple_bus
+    addr_width: 32
+    data_width: 32
+
+modules:
+  - instance: gpio0
+    type: gpio
+    bus:
+      fabric: main
+      base: 0x40000000
+      size: 0x1000
+    clocks:
+      SYS_CLK: sys_clk
+
+  - instance: gpio1
+    type: gpio
+    bus:
+      fabric: main
+      base: 0x40000800
+      size: 0x1000
+    clocks:
+      SYS_CLK: sys_clk
+
+artifacts:
+  emit: [rtl]
