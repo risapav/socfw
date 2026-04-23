@@ -1,0 +1,8 @@
+version: 1
+kind: pack
+name: vendor-intel
+title: Intel Quartus generated IP pack
+description: Reusable generated IP blocks for Intel/Quartus flows
+provides:
+  - ip
+  - vendor

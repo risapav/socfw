@@ -36,8 +36,8 @@ default_params:
   STACKADDR: 0x00010000
 
 artifacts:
-  - tests/golden/fixtures/picorv32_soc/rtl/picorv32_simple_bus_wrapper.sv
-  - tests/golden/fixtures/picorv32_soc/rtl/picorv32.v
+  - ../../picorv32_soc/rtl/picorv32_simple_bus_wrapper.sv
+  - ../../picorv32_soc/rtl/picorv32.v
 
 notes:
   - PicoRV32 wrapped to simple_bus

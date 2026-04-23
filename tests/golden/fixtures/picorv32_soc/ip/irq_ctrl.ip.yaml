@@ -27,7 +27,7 @@ clocking:
 
 artifacts:
   synthesis:
-    - tests/golden/fixtures/picorv32_soc/rtl/irq_ctrl.sv
+    - ../rtl/irq_ctrl.sv
   simulation: []
   metadata: []
 

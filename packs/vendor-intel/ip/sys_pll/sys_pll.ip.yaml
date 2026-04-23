@@ -1,0 +1,49 @@
+version: 2
+kind: ip
+
+ip:
+  name: sys_pll
+  module: sys_pll
+  category: clocking
+
+origin:
+  kind: generated
+  packaging: quartus_ip
+
+vendor:
+  vendor: intel
+  tool: quartus
+  generator: ip_catalog
+  family: cyclone_iv_e
+  qip: files/sys_pll.qip
+  sdc:
+    - files/sys_pll.sdc
+  filesets:
+    - quartus_qip
+    - timing_sdc
+    - generated_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: areset
+  active_high: true
+
+clocking:
+  primary_input_port: inclk0
+  additional_input_ports: []
+  outputs:
+    - port: c0
+      kind: generated_clock
+      default_domain: sys_clk
+
+artifacts:
+  synthesis:
+    - files/sys_pll.qip
+    - files/sys_pll.v
+  simulation: []
+  metadata: []

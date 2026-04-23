@@ -1,0 +1,45 @@
+version: 2
+kind: project
+
+project:
+  name: vendor_pll_soc
+  mode: standalone
+  board: qmtech_ep4ce55
+  output_dir: build/gen
+  debug: true
+
+registries:
+  packs:
+    - ../../../../packs/vendor-intel
+  ip:
+    - ip
+
+features:
+  use:
+    - board:onboard.leds
+
+clocks:
+  primary:
+    domain: ref_clk
+    source: board:sys_clk
+  generated: []
+
+modules:
+  - instance: pll0
+    type: sys_pll
+    clocks:
+      inclk0: ref_clk
+
+  - instance: blink_test
+    type: blink_test
+    params:
+      CLK_FREQ: 100000000
+    clocks:
+      clk: ref_clk
+    bind:
+      ports:
+        gpio_o:
+          target: board:onboard.leds
+
+artifacts:
+  emit: [rtl, timing, board, docs]

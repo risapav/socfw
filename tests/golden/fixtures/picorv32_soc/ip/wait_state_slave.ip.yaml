@@ -27,6 +27,6 @@ clocking:
 
 artifacts:
   synthesis:
-    - tests/golden/fixtures/picorv32_soc/rtl/wait_state_slave.sv
+    - ../rtl/wait_state_slave.sv
   simulation: []
   metadata: []

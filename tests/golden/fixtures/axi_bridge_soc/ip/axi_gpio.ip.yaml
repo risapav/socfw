@@ -27,7 +27,7 @@ clocking:
 
 artifacts:
   synthesis:
-    - tests/golden/fixtures/axi_bridge_soc/rtl/axi_gpio.sv
+    - ../rtl/axi_gpio.sv
   simulation: []
   metadata: []
 

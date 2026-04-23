@@ -27,7 +27,7 @@ clocking:
 
 artifacts:
   synthesis:
-    - tests/golden/fixtures/picorv32_soc/rtl/gpio_core.sv
+    - ../rtl/gpio_core.sv
   simulation: []
   metadata: []
 

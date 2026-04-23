@@ -19,4 +19,4 @@ bus_master:
 default_params: {}
 
 artifacts:
-  - ../rtl/dummy_cpu.sv
+  - dummy_cpu.sv

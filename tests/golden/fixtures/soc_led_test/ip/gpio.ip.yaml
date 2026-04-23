@@ -27,7 +27,7 @@ clocking:
 
 artifacts:
   synthesis:
-    - tests/golden/fixtures/soc_led_test/rtl/gpio_core.sv
+    - ../rtl/gpio_core.sv
   simulation: []
   metadata: []
 

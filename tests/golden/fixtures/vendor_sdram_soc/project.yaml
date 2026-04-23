@@ -1,0 +1,63 @@
+version: 2
+kind: project
+
+project:
+  name: vendor_sdram_soc
+  mode: soc
+  board: qmtech_ep4ce55
+  output_dir: build/gen
+  debug: true
+
+registries:
+  packs:
+    - ../../../../packs/vendor-intel
+  ip:
+    - ip
+
+features:
+  use:
+    - board:onboard.leds
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+  generated: []
+
+cpu:
+  instance: cpu0
+  type: dummy_cpu
+  fabric: main
+  reset_vector: 0x00000000
+  params: {}
+
+ram:
+  module: soc_ram
+  base: 0x00000000
+  size: 32768
+  latency: registered
+  init_file: ""
+  image_format: hex
+
+boot:
+  reset_vector: 0x00000000
+  stack_percent: 25
+
+buses:
+  - name: main
+    protocol: simple_bus
+    addr_width: 32
+    data_width: 32
+
+modules:
+  - instance: sdram0
+    type: sdram_ctrl
+    bus:
+      fabric: main
+      base: 0x80000000
+      size: 0x01000000
+    clocks:
+      clk: sys_clk
+
+artifacts:
+  emit: [rtl, timing, board, docs]

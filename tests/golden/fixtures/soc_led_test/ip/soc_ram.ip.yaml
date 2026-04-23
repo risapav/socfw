@@ -34,6 +34,6 @@ bus_interfaces:
 
 artifacts:
   synthesis:
-    - tests/golden/fixtures/soc_led_test/rtl/soc_ram.sv
+    - ../rtl/soc_ram.sv
   simulation: []
   metadata: []

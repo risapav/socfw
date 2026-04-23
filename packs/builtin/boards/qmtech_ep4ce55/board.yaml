@@ -1,0 +1,215 @@
+version: 2
+kind: board
+
+board:
+  id: qmtech_ep4ce55
+  vendor: QMTech
+  title: QMTech EP4CE55F23C8
+
+fpga:
+  family: "Cyclone IV E"
+  part: EP4CE55F23C8
+  package: FBGA
+  pins: 484
+  speed: 8
+  hdl_default: SystemVerilog_2005
+
+system:
+  clock:
+    id: sys_clk
+    top_name: SYS_CLK
+    pin: T2
+    io_standard: "3.3-V LVTTL"
+    frequency_hz: 50000000
+    period_ns: 20.0
+
+  reset:
+    id: sys_reset_n
+    top_name: RESET_N
+    pin: W13
+    io_standard: "3.3-V LVTTL"
+    active_low: true
+
+resources:
+  onboard:
+    leds:
+      top_name: ONB_LEDS
+      direction: output
+      width: 6
+      io_standard: "3.3-V LVTTL"
+      pins:
+        5: A6
+        4: B7
+        3: A7
+        2: B8
+        1: A8
+        0: E4
+
+    seg:
+      top_name: ONB_SEG
+      direction: output
+      width: 8
+      io_standard: "3.3-V LVTTL"
+      pins:
+        7: A4
+        6: B1
+        5: B4
+        4: A5
+        3: C3
+        2: A3
+        1: B2
+        0: C4
+
+    dig:
+      top_name: ONB_DIG
+      direction: output
+      width: 6
+      io_standard: "3.3-V LVTTL"
+      pins:
+        5: A9
+        4: B9
+        3: C7
+        2: C8
+        1: C9
+        0: C10
+
+    buttons:
+      top_name: ONB_BTN
+      direction: input
+      width: 4
+      io_standard: "3.3-V LVTTL"
+      pins:
+        3: V14
+        2: U14
+        1: V13
+        0: U13
+
+    uart:
+      io_standard: "3.3-V LVTTL"
+      signals:
+        rx:
+          top_name: UART_RX
+          direction: input
+          pin: J2
+          io_standard: "3.3-V LVTTL"
+        tx:
+          top_name: UART_TX
+          direction: output
+          pin: J1
+          io_standard: "3.3-V LVTTL"
+
+    sdram:
+      io_standard: "3.3-V SSTL-2 Class I"
+      signal_groups:
+        addr:
+          top_name: SDRAM_ADDR
+          direction: output
+          width: 13
+          pins:
+            12: P8
+            11: P7
+            10: N8
+            9: N6
+            8: U6
+            7: U7
+            6: V6
+            5: V7
+            4: P6
+            3: P5
+            2: R5
+            1: R6
+            0: T6
+        dq:
+          top_name: SDRAM_DQ
+          direction: inout
+          width: 16
+          pins:
+            15: T4
+            14: T5
+            13: R3
+            12: R4
+            11: R1
+            10: R2
+            9: P4
+            8: P3
+            7: T7
+            6: T8
+            5: U8
+            4: U9
+            3: V9
+            2: V10
+            1: T9
+            0: T10
+        ba:
+          top_name: SDRAM_BA
+          direction: output
+          width: 2
+          pins:
+            1: P9
+            0: N9
+        dqm:
+          top_name: SDRAM_DQM
+          direction: output
+          width: 2
+          pins:
+            1: R0
+            0: V11
+        cas_n:
+          top_name: SDRAM_CAS_N
+          direction: output
+          width: 1
+          pins:
+            0: U1
+        ras_n:
+          top_name: SDRAM_RAS_N
+          direction: output
+          width: 1
+          pins:
+            0: U2
+        we_n:
+          top_name: SDRAM_WE_N
+          direction: output
+          width: 1
+          pins:
+            0: V1
+        cs_n:
+          top_name: SDRAM_CS_N
+          direction: output
+          width: 1
+          pins:
+            0: V2
+        cke:
+          top_name: SDRAM_CKE
+          direction: output
+          width: 1
+          pins:
+            0: V3
+        clk:
+          top_name: SDRAM_CLK
+          direction: output
+          width: 1
+          pins:
+            0: V4
+
+  connectors:
+    pmod:
+      J10:
+        pins:
+          1: H1
+          2: F1
+          3: E1
+          4: C1
+          7: H2
+          8: F2
+          9: D2
+          10: C2
+      J11:
+        pins:
+          1: R1
+          2: P1
+          3: N1
+          4: M1
+          7: R2
+          8: P2
+          9: N2
+          10: M2

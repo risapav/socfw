@@ -19,7 +19,7 @@ bus_master:
 default_params: {}
 
 artifacts:
-  - tests/golden/fixtures/soc_led_test/rtl/dummy_cpu.sv
+  - ../rtl/dummy_cpu.sv
 
 notes:
   - Minimal demo CPU descriptor

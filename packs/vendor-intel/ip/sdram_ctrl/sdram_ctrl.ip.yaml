@@ -1,0 +1,53 @@
+version: 2
+kind: ip
+
+ip:
+  name: sdram_ctrl
+  module: sdram_ctrl
+  category: memory
+
+origin:
+  kind: generated
+  packaging: quartus_ip
+
+vendor:
+  vendor: intel
+  tool: quartus
+  generator: megawizard
+  family: cyclone_iv_e
+  qip: files/sdram_ctrl.qip
+  sdc:
+    - files/sdram_ctrl.sdc
+  filesets:
+    - quartus_qip
+    - timing_sdc
+    - generated_rtl
+
+integration:
+  needs_bus: true
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: reset_n
+  active_high: false
+
+clocking:
+  primary_input_port: clk
+  additional_input_ports: []
+  outputs: []
+
+bus_interfaces:
+  - port_name: wb
+    protocol: wishbone
+    role: slave
+    addr_width: 32
+    data_width: 32
+
+artifacts:
+  synthesis:
+    - files/sdram_ctrl.qip
+    - files/sdram_ctrl.v
+  simulation: []
+  metadata: []

@@ -27,7 +27,7 @@ clocking:
 
 artifacts:
   synthesis:
-    - tests/golden/fixtures/wishbone_bridge_soc/rtl/wb_gpio.sv
+    - ../rtl/wb_gpio.sv
   simulation: []
   metadata: []
 

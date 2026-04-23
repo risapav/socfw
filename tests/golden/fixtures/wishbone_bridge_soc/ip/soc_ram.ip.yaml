@@ -34,6 +34,6 @@ bus_interfaces:
 
 artifacts:
   synthesis:
-    - tests/golden/fixtures/picorv32_soc/rtl/soc_ram.sv
+    - ../../picorv32_soc/rtl/soc_ram.sv
   simulation: []
   metadata: []
