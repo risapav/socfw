@@ -10,6 +10,9 @@ class ReportDiagnostic:
     severity: str
     message: str
     subject: str
+    category: str = "general"
+    detail: str | None = None
+    hints: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

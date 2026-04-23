@@ -1,6 +1,7 @@
 from socfw.validate.rules.bridge_rules import MissingBridgeRule
 from socfw.validate.rules.bus_rules import DuplicateAddressRegionRule
 from socfw.validate.rules.cpu_rules import UnknownCpuTypeRule
+from socfw.model.source_context import SourceContext
 
 
 class _FakeRegistry:
@@ -65,6 +66,8 @@ class _SystemStub:
         self.ip_catalog = ip_catalog
         self.ram = ram
         self.cpu = cpu
+        self.sources = SourceContext()
+        self.cpu_catalog = {}
 
     def cpu_desc(self):
         return None
@@ -123,6 +126,7 @@ def test_unknown_cpu_type_rule():
     class _Sys:
         cpu = _CpuRef()
         cpu_catalog: dict = {}
+        sources = SourceContext()
 
         class ip_catalog:
             @staticmethod

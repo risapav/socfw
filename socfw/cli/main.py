@@ -9,6 +9,14 @@ def _default_templates_dir() -> str:
     return str(Path(__file__).resolve().parents[1] / "templates")
 
 
+def _print_diags(diags) -> None:
+    from socfw.reports.diagnostic_formatter import DiagnosticFormatter
+    fmt = DiagnosticFormatter()
+    for d in diags:
+        print(fmt.format_text(d))
+        print()
+
+
 def cmd_build(args) -> int:
     from socfw.build.context import BuildRequest
     from socfw.build.full_pipeline import FullBuildPipeline
@@ -16,8 +24,7 @@ def cmd_build(args) -> int:
     pipeline = FullBuildPipeline(templates_dir=args.templates)
     result = pipeline.run(BuildRequest(project_file=args.project, out_dir=args.out))
 
-    for d in result.diagnostics:
-        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+    _print_diags(result.diagnostics)
 
     if result.ok:
         for art in result.manifest.artifacts:
@@ -32,8 +39,7 @@ def cmd_validate(args) -> int:
     loader = SystemLoader()
     loaded = loader.load(args.project)
 
-    for d in loaded.diagnostics:
-        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+    _print_diags(loaded.diagnostics)
 
     return 0 if loaded.ok else 1
 
@@ -46,8 +52,7 @@ def cmd_explain(args) -> int:
     loader = SystemLoader()
     loaded = loader.load(args.project)
 
-    for d in loaded.diagnostics:
-        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+    _print_diags(loaded.diagnostics)
 
     if not loaded.ok or loaded.value is None:
         return 1
@@ -64,6 +69,10 @@ def cmd_explain(args) -> int:
         print(expl.explain_irqs(design))
     elif args.topic == "cpu-irq":
         print(expl.explain_cpu_irq(system))
+    elif args.topic == "bus":
+        print(expl.explain_bus(design))
+    elif args.topic == "diagnostics":
+        print(expl.explain_diagnostics(loaded.diagnostics))
     else:
         print(f"Unknown explain topic: {args.topic}", file=sys.stderr)
         return 1
@@ -78,8 +87,7 @@ def cmd_graph(args) -> int:
     pipeline = FullBuildPipeline(templates_dir=args.templates)
     result = pipeline.run(BuildRequest(project_file=args.project, out_dir=args.out))
 
-    for d in result.diagnostics:
-        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+    _print_diags(result.diagnostics)
 
     if not result.ok:
         return 1
@@ -98,8 +106,7 @@ def cmd_build_fw(args) -> int:
     flow = TwoPassBuildFlow(templates_dir=args.templates)
     result = flow.run(BuildRequest(project_file=args.project, out_dir=args.out))
 
-    for d in result.diagnostics:
-        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+    _print_diags(result.diagnostics)
 
     if result.ok:
         for art in result.manifest.artifacts:
@@ -116,15 +123,13 @@ def cmd_sim_smoke(args) -> int:
     flow = TwoPassBuildFlow(templates_dir=args.templates)
     result = flow.run(BuildRequest(project_file=args.project, out_dir=args.out))
 
-    for d in result.diagnostics:
-        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+    _print_diags(result.diagnostics)
 
     if not result.ok:
         return 1
 
     sim = SimRunner().run_iverilog(args.out)
-    for d in sim.diagnostics:
-        print(f"{d.severity.value.upper()} {d.code}: {d.message}")
+    _print_diags(sim.diagnostics)
 
     return 0 if sim.ok else 1
 
@@ -198,7 +203,7 @@ def build_parser() -> argparse.ArgumentParser:
     v.set_defaults(func=cmd_validate)
 
     e = sub.add_parser("explain", help="Explain a design aspect in plain text")
-    e.add_argument("topic", choices=["clocks", "address-map", "irqs", "cpu-irq"])
+    e.add_argument("topic", choices=["clocks", "address-map", "irqs", "cpu-irq", "bus", "diagnostics"])
     e.add_argument("project")
     e.set_defaults(func=cmd_explain)
 

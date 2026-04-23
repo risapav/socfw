@@ -10,11 +10,27 @@ class Severity(str, Enum):
 
 
 @dataclass(frozen=True)
-class SourceLocation:
+class SourceSpan:  # alias: SourceLocation
     file: str
+    path: str | None = None
     line: int | None = None
     column: int | None = None
+    end_line: int | None = None
+    end_column: int | None = None
+
+
+@dataclass(frozen=True)
+class SuggestedFix:
+    message: str
+    replacement: str | None = None
     path: str | None = None
+
+
+@dataclass(frozen=True)
+class RelatedDiagnosticRef:
+    code: str
+    message: str
+    subject: str
 
 
 @dataclass(frozen=True)
@@ -23,17 +39,32 @@ class Diagnostic:
     severity: Severity
     message: str
     subject: str
-    locations: tuple[SourceLocation, ...] = ()
+    spans: tuple[SourceSpan, ...] = ()
     hints: tuple[str, ...] = ()
-    related: tuple[str, ...] = ()
+    suggested_fixes: tuple[SuggestedFix, ...] = ()
+    related: tuple[RelatedDiagnosticRef, ...] = ()
+    category: str = "general"
+    detail: str | None = None
+
+    # backward compat alias
+    @property
+    def locations(self) -> tuple[SourceSpan, ...]:
+        return self.spans
 
     def pretty(self) -> str:
         parts = [f"{self.severity.value.upper()} {self.code}: {self.message}"]
-        if self.locations:
-            for loc in self.locations:
-                line_info = f":{loc.line}" if loc.line is not None else ""
-                parts.append(f"  at {loc.file}{line_info}")
+        for span in self.spans:
+            loc = span.file
+            if span.path:
+                loc += f" :: {span.path}"
+            if span.line is not None:
+                loc += f":{span.line}"
+            parts.append(f"  at {loc}")
         if self.hints:
             for hint in self.hints:
                 parts.append(f"  hint: {hint}")
         return "\n".join(parts)
+
+
+# backward-compat alias
+SourceLocation = SourceSpan

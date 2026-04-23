@@ -29,6 +29,31 @@ class ExplainService:
             lines.append(f"- irq[{src.irq_id}] <- {src.instance}.{src.signal_name}")
         return "\n".join(lines)
 
+    def explain_bus(self, design) -> str:
+        if design.interconnect is None or not design.interconnect.fabrics:
+            return "No bus fabrics."
+
+        lines = ["Bus fabrics:"]
+        for fabric in sorted(design.interconnect.fabrics.keys()):
+            lines.append(f"- {fabric}")
+            for ep in sorted(design.interconnect.fabrics[fabric], key=lambda x: (x.role, x.instance)):
+                rng = ""
+                if ep.base is not None and ep.end is not None:
+                    rng = f" @ 0x{ep.base:08X}-0x{ep.end:08X}"
+                lines.append(f"  - {ep.role}: {ep.instance} ({ep.protocol}){rng}")
+        return "\n".join(lines)
+
+    def explain_diagnostics(self, diagnostics) -> str:
+        if not diagnostics:
+            return "No diagnostics."
+
+        lines = ["Diagnostics summary:"]
+        for d in diagnostics:
+            lines.append(f"- {d.severity.value.upper()} {d.code}: {d.message}")
+            for h in d.hints:
+                lines.append(f"    hint: {h}")
+        return "\n".join(lines)
+
     def explain_cpu_irq(self, system) -> str:
         cpu = system.cpu
         desc = system.cpu_desc()

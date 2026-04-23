@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from socfw.reports.diagnostic_groups import DiagnosticGrouper
 from socfw.reports.model import BuildReport
 
 
@@ -22,10 +23,14 @@ class MarkdownReportEmitter:
 
         lines.append("## Diagnostics\n")
         if report.diagnostics:
-            lines.append("| Severity | Code | Subject | Message |")
-            lines.append("|----------|------|---------|---------|")
-            for d in report.diagnostics:
-                lines.append(f"| {d.severity} | {d.code} | {d.subject} | {d.message} |")
+            groups = DiagnosticGrouper().group_by_category(report.diagnostics)
+            for category in sorted(groups.keys()):
+                lines.append(f"### {category}\n")
+                lines.append("| Severity | Code | Subject | Message |")
+                lines.append("|----------|------|---------|---------|")
+                for d in groups[category]:
+                    lines.append(f"| {d.severity} | {d.code} | {d.subject} | {d.message} |")
+                lines.append("")
         else:
             lines.append("No diagnostics.")
         lines.append("")

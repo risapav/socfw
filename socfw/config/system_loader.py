@@ -9,6 +9,7 @@ from socfw.config.project_loader import ProjectLoader
 from socfw.config.timing_loader import TimingLoader
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
 from socfw.core.result import Result
+from socfw.model.source_context import SourceContext
 from socfw.model.system import SystemModel
 
 
@@ -89,6 +90,13 @@ class SystemLoader:
             firmware=firmware,
             reset_vector=reset_vector,
             stack_percent=stack_percent,
+            sources=SourceContext(
+                project_file=project_file,
+                board_file=board_path,
+                timing_file=str(project_dir / project.timing_file) if project.timing_file else None,
+                ip_files={k: "" for k in ip_catalog.keys()},
+                cpu_files={k: "" for k in cpu_catalog.keys()},
+            ),
         )
 
         return Result(value=system, diagnostics=diags)

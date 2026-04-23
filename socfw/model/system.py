@@ -10,6 +10,7 @@ from .firmware import FirmwareModel
 from .ip import IpDescriptor
 from .memory import RamModel
 from .project import ProjectModel
+from .source_context import SourceContext
 from .timing import TimingModel
 
 
@@ -24,6 +25,7 @@ class SystemModel:
     cpu: CpuInstance | None = None
     ram: RamModel | None = None
     firmware: FirmwareModel | None = None
+    sources: SourceContext = field(default_factory=SourceContext)
 
     reset_vector: int = 0x00000000
     stack_percent: int = 25

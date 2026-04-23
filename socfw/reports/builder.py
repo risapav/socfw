@@ -38,6 +38,9 @@ class BuildReportBuilder:
                     severity=d.severity.value if hasattr(d.severity, "value") else str(d.severity),
                     message=d.message,
                     subject=d.subject,
+                    category=getattr(d, "category", "general"),
+                    detail=getattr(d, "detail", None),
+                    hints=tuple(getattr(d, "hints", ())),
                 )
             )
 

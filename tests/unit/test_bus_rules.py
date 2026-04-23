@@ -1,4 +1,5 @@
 from socfw.validate.rules.bus_rules import DuplicateAddressRegionRule
+from socfw.model.source_context import SourceContext
 
 
 class _FakeSystem:
@@ -6,6 +7,7 @@ class _FakeSystem:
         modules = []
     ip_catalog = {}
     ram = None
+    sources = SourceContext()
 
 
 def test_duplicate_address_region_rule_no_overlap():
