@@ -1,8 +1,4 @@
 /* AUTO-GENERATED - DO NOT EDIT */
-/* RAM base:      0x{{ "%08X"|format(sw.ram_base) }}  size: {{ sw.ram_size }} B */
-/* Reset vector:  0x{{ "%08X"|format(sw.reset_vector) }} */
-/* Stack:         {{ sw.stack_percent }}% of RAM = {{ (sw.ram_size * sw.stack_percent // 100) }} B */
-
 OUTPUT_ARCH(riscv)
 ENTRY(_start)
 
@@ -11,8 +7,21 @@ MEMORY {
 }
 
 SECTIONS {
-  .text : {
+  . = ORIGIN(RAM);
+
+  .text.reset : {
     KEEP(*(.text.start))
+  } > RAM
+
+  . = ORIGIN(RAM) + 0x10;
+
+  .text.irq : {
+    KEEP(*(.text.irq))
+  } > RAM
+
+  . = ALIGN(4);
+
+  .text : {
     *(.text*)
     *(.rodata*)
   } > RAM

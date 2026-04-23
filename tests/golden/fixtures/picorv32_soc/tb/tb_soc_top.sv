@@ -15,7 +15,7 @@ module tb_soc_top;
 
   initial begin
     SYS_CLK = 1'b0;
-    forever #10 SYS_CLK = ~SYS_CLK; // 50 MHz
+    forever #10 SYS_CLK = ~SYS_CLK;
   end
 
   initial begin
@@ -29,13 +29,13 @@ module tb_soc_top;
   initial begin
     $display("[TB] starting simulation");
 
-    repeat (3000) @(posedge SYS_CLK);
+    repeat (4000) @(posedge SYS_CLK);
     leds_a = ONB_LEDS;
 
-    repeat (3000) @(posedge SYS_CLK);
+    repeat (4000) @(posedge SYS_CLK);
     leds_b = ONB_LEDS;
 
-    repeat (3000) @(posedge SYS_CLK);
+    repeat (4000) @(posedge SYS_CLK);
     leds_c = ONB_LEDS;
 
     $display("[TB] LED states: %b %b %b", leds_a, leds_b, leds_c);
