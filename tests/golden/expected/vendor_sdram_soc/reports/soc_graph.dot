@@ -1,0 +1,12 @@
+digraph soc {
+  graph [rankdir=LR, fontname="Helvetica", bgcolor="#fafafa"];
+  node  [fontname="Helvetica"];
+  edge  [fontname="Helvetica"];
+  cpu0 [label="dummy_cpu", shape=box3d];
+  ram [label="RAM\n0x00000000..0x00007FFF", shape=cylinder];
+  ram [label="ram\n0x00000000", shape=box];
+  fabric_main [label="main\n(simple_bus)", shape=ellipse];
+  cpu0 -> fabric_main [label="simple_bus"];
+  fabric_main -> ram [label="simple_bus"];
+  fabric_main -> bridge_sdram0 [label="simple_bus"];
+}

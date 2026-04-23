@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 
-from socfw.model.board import BoardResource, BoardConnectorRole
+from socfw.model.board import BoardResource, BoardConnectorRole, BoardScalarSignal, BoardVectorSignal
 from socfw.model.system import SystemModel
 
 
@@ -36,7 +36,29 @@ class BoardBindingResolver:
 
                 target = system.board.resolve_ref(binding.target)
 
-                if isinstance(target, BoardConnectorRole):
+                if isinstance(target, BoardVectorSignal):
+                    resolved = (
+                        ResolvedExternalPort(
+                            top_name=binding.top_name or target.top_name,
+                            direction=target.direction.value,
+                            width=binding.width or target.width,
+                            io_standard=target.io_standard,
+                            pins=target.pins,
+                            weak_pull_up=target.weak_pull_up,
+                        ),
+                    )
+                elif isinstance(target, BoardScalarSignal):
+                    resolved = (
+                        ResolvedExternalPort(
+                            top_name=binding.top_name or target.top_name,
+                            direction=target.direction.value,
+                            width=1,
+                            io_standard=target.io_standard,
+                            pin=target.pin,
+                            weak_pull_up=target.weak_pull_up,
+                        ),
+                    )
+                elif isinstance(target, BoardConnectorRole):
                     resolved: tuple[ResolvedExternalPort, ...] = (
                         ResolvedExternalPort(
                             top_name=binding.top_name or target.top_name,

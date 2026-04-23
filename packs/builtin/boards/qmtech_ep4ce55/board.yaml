@@ -100,7 +100,7 @@ resources:
 
     sdram:
       io_standard: "3.3-V SSTL-2 Class I"
-      signal_groups:
+      groups:
         addr:
           top_name: SDRAM_ADDR
           direction: output
@@ -154,42 +154,31 @@ resources:
           pins:
             1: R0
             0: V11
+      signals:
         cas_n:
           top_name: SDRAM_CAS_N
           direction: output
-          width: 1
-          pins:
-            0: U1
+          pin: U1
         ras_n:
           top_name: SDRAM_RAS_N
           direction: output
-          width: 1
-          pins:
-            0: U2
+          pin: U2
         we_n:
           top_name: SDRAM_WE_N
           direction: output
-          width: 1
-          pins:
-            0: V1
+          pin: V1
         cs_n:
           top_name: SDRAM_CS_N
           direction: output
-          width: 1
-          pins:
-            0: V2
+          pin: V2
         cke:
           top_name: SDRAM_CKE
           direction: output
-          width: 1
-          pins:
-            0: V3
+          pin: V3
         clk:
           top_name: SDRAM_CLK
           direction: output
-          width: 1
-          pins:
-            0: V4
+          pin: V4
 
   connectors:
     pmod:

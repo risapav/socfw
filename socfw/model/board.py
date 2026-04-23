@@ -105,10 +105,13 @@ class BoardModel:
     connectors: dict[str, BoardConnector] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def resolve_ref(self, ref: str) -> BoardResource | BoardConnectorRole:
+    def resolve_ref(
+        self, ref: str
+    ) -> "BoardResource | BoardConnectorRole | BoardScalarSignal | BoardVectorSignal":
         """
         Supported refs:
           board:onboard.leds
+          board:onboard.sdram.addr           (sub-signal path)
           board:connector.pmod.J10.role.led8
         """
         if not ref.startswith("board:"):
@@ -117,11 +120,22 @@ class BoardModel:
         path = ref[len("board:"):]
         parts = path.split(".")
 
-        if len(parts) == 2 and parts[0] == "onboard":
+        if parts[0] == "onboard" and len(parts) == 2:
             key = parts[1]
             if key not in self.onboard:
                 raise KeyError(f"Unknown onboard resource '{key}'")
             return self.onboard[key]
+
+        if parts[0] == "onboard" and len(parts) == 3:
+            res_key, sig_key = parts[1], parts[2]
+            if res_key not in self.onboard:
+                raise KeyError(f"Unknown onboard resource '{res_key}'")
+            res = self.onboard[res_key]
+            if sig_key in res.scalars:
+                return res.scalars[sig_key]
+            if sig_key in res.vectors:
+                return res.vectors[sig_key]
+            raise KeyError(f"Unknown signal '{sig_key}' in onboard.{res_key}")
 
         if len(parts) == 5 and parts[0] == "connector" and parts[1] == "pmod" and parts[3] == "role":
             conn = parts[2]

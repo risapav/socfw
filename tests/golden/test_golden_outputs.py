@@ -18,6 +18,9 @@ EXPECTED_02 = Path("tests/golden/expected/blink_test_02")
 FIXTURE_VENDOR_PLL = Path("tests/golden/fixtures/vendor_pll_soc/project.yaml")
 EXPECTED_VENDOR_PLL = Path("tests/golden/expected/vendor_pll_soc")
 
+FIXTURE_VENDOR_SDRAM = Path("tests/golden/fixtures/vendor_sdram_soc/project.yaml")
+EXPECTED_VENDOR_SDRAM = Path("tests/golden/expected/vendor_sdram_soc")
+
 
 @pytest.mark.golden
 def test_blink_test_01_golden(tmp_path):
@@ -47,6 +50,22 @@ def test_vendor_pll_soc_golden(tmp_path):
 
     for rel in ["rtl/soc_top.sv", "hal/board.tcl", "files.tcl"]:
         expected_file = EXPECTED_VENDOR_PLL / rel
+        if expected_file.exists():
+            assert _read(out_dir / rel) == _read(expected_file), f"Golden mismatch: {rel}"
+
+
+@pytest.mark.golden
+def test_vendor_sdram_soc_golden(tmp_path):
+    templates = "socfw/templates"
+    out_dir = tmp_path / "gen"
+
+    pipeline = FullBuildPipeline(templates_dir=templates)
+    result = pipeline.run(BuildRequest(project_file=str(FIXTURE_VENDOR_SDRAM), out_dir=str(out_dir)))
+
+    assert result.ok, [str(d) for d in result.diagnostics]
+
+    for rel in ["rtl/soc_top.sv", "hal/board.tcl", "files.tcl"]:
+        expected_file = EXPECTED_VENDOR_SDRAM / rel
         if expected_file.exists():
             assert _read(out_dir / rel) == _read(expected_file), f"Golden mismatch: {rel}"
 

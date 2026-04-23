@@ -1,0 +1,153 @@
+{
+  "project_name": "vendor_sdram_soc",
+  "board_name": "qmtech_ep4ce55",
+  "cpu_type": "dummy_cpu",
+  "ram_base": 0,
+  "ram_size": 32768,
+  "reset_vector": 0,
+  "diagnostics": [],
+  "artifacts": [
+    {
+      "family": "board",
+      "path": "tests/golden/expected/vendor_sdram_soc/hal/board.tcl",
+      "generator": "QuartusBoardEmitter"
+    },
+    {
+      "family": "rtl",
+      "path": "tests/golden/expected/vendor_sdram_soc/rtl/soc_top.sv",
+      "generator": "RtlEmitter"
+    },
+    {
+      "family": "timing",
+      "path": "tests/golden/expected/vendor_sdram_soc/timing/soc_top.sdc",
+      "generator": "TimingEmitter"
+    },
+    {
+      "family": "files",
+      "path": "tests/golden/expected/vendor_sdram_soc/files.tcl",
+      "generator": "QuartusFilesEmitter"
+    },
+    {
+      "family": "software",
+      "path": "tests/golden/expected/vendor_sdram_soc/sw/soc_map.h",
+      "generator": "SoftwareEmitter"
+    },
+    {
+      "family": "software",
+      "path": "tests/golden/expected/vendor_sdram_soc/sw/soc_irq.h",
+      "generator": "SoftwareEmitter"
+    },
+    {
+      "family": "software",
+      "path": "tests/golden/expected/vendor_sdram_soc/sw/sections.lds",
+      "generator": "SoftwareEmitter"
+    },
+    {
+      "family": "docs",
+      "path": "tests/golden/expected/vendor_sdram_soc/docs/soc_map.md",
+      "generator": "DocsEmitter"
+    },
+    {
+      "family": "tests/golden/expected/vendor_sdram_soc/sim/files.f",
+      "path": "sim",
+      "generator": "SimFilelistEmitter"
+    }
+  ],
+  "clocks": [
+    {
+      "name": "sys_clk",
+      "frequency_hz": 50000000,
+      "source_kind": "board",
+      "source_ref": "SYS_CLK",
+      "reset_policy": "synced",
+      "sync_from": null,
+      "sync_stages": 2
+    }
+  ],
+  "address_regions": [
+    {
+      "name": "RAM",
+      "base": 0,
+      "end": 32767,
+      "size": 32768,
+      "kind": "memory",
+      "module": "soc_ram"
+    },
+    {
+      "name": "ram",
+      "base": 0,
+      "end": 32767,
+      "size": 32768,
+      "kind": "peripheral",
+      "module": "soc_ram"
+    }
+  ],
+  "irq_sources": [],
+  "bus_endpoints": [
+    {
+      "fabric": "main",
+      "instance": "cpu0",
+      "module_type": "dummy_cpu",
+      "protocol": "simple_bus",
+      "role": "master",
+      "port_name": "bus",
+      "base": null,
+      "end": null,
+      "size": null
+    },
+    {
+      "fabric": "main",
+      "instance": "ram",
+      "module_type": "soc_ram",
+      "protocol": "simple_bus",
+      "role": "slave",
+      "port_name": "bus",
+      "base": 0,
+      "end": 32767,
+      "size": 32768
+    },
+    {
+      "fabric": "main",
+      "instance": "bridge_sdram0",
+      "module_type": "simple_bus_to_wishbone_bridge",
+      "protocol": "simple_bus",
+      "role": "slave",
+      "port_name": "sbus",
+      "base": 2147483648,
+      "end": 2164260863,
+      "size": 16777216
+    }
+  ],
+  "decisions": [
+    {
+      "category": "bus",
+      "message": "Built fabric 'main' with protocol 'simple_bus'",
+      "rationale": "Fabric protocol selected from project bus_fabrics configuration",
+      "related": [
+        "main",
+        "simple_bus"
+      ]
+    },
+    {
+      "category": "clock",
+      "message": "Resolved clock domain 'sys_clk' from board",
+      "rationale": "Clock domain source resolved from 'SYS_CLK'",
+      "related": [
+        "sys_clk",
+        "SYS_CLK"
+      ]
+    },
+    {
+      "category": "memory",
+      "message": "Configured RAM region at 0x00000000 size 32768",
+      "rationale": "RAM model taken from project memory configuration",
+      "related": [
+        "RAM",
+        "soc_ram"
+      ]
+    }
+  ],
+  "metadata": {},
+  "stages": [],
+  "artifact_provenance": []
+}

@@ -58,6 +58,28 @@ modules:
       size: 0x01000000
     clocks:
       clk: sys_clk
+    bind:
+      ports:
+        zs_addr:
+          target: board:onboard.sdram.addr
+        zs_ba:
+          target: board:onboard.sdram.ba
+        zs_dq:
+          target: board:onboard.sdram.dq
+        zs_dqm:
+          target: board:onboard.sdram.dqm
+        zs_cs_n:
+          target: board:onboard.sdram.cs_n
+        zs_we_n:
+          target: board:onboard.sdram.we_n
+        zs_ras_n:
+          target: board:onboard.sdram.ras_n
+        zs_cas_n:
+          target: board:onboard.sdram.cas_n
+        zs_cke:
+          target: board:onboard.sdram.cke
+        zs_clk:
+          target: board:onboard.sdram.clk
 
 artifacts:
-  emit: [rtl, timing, board, docs]
+  emit: [rtl, timing, board, files, docs]
