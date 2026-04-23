@@ -1,0 +1,5 @@
+digraph soc {
+  graph [rankdir=LR, fontname="Helvetica", bgcolor="#fafafa"];
+  node  [fontname="Helvetica"];
+  edge  [fontname="Helvetica"];
+}

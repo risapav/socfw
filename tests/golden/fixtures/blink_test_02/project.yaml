@@ -5,7 +5,6 @@ project:
   name: blink_test_02
   mode: standalone
   board: qmtech_ep4ce55
-  board_file: board.yaml
   output_dir: build/gen
 
 registries:

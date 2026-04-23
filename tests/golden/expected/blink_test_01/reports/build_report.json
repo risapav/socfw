@@ -1,0 +1,64 @@
+{
+  "project_name": "blink_test_01",
+  "board_name": "qmtech_ep4ce55",
+  "cpu_type": "none",
+  "ram_base": 0,
+  "ram_size": 0,
+  "reset_vector": 0,
+  "diagnostics": [],
+  "artifacts": [
+    {
+      "family": "board",
+      "path": "tests/golden/expected/blink_test_01/hal/board.tcl",
+      "generator": "QuartusBoardEmitter"
+    },
+    {
+      "family": "rtl",
+      "path": "tests/golden/expected/blink_test_01/rtl/soc_top.sv",
+      "generator": "RtlEmitter"
+    },
+    {
+      "family": "timing",
+      "path": "tests/golden/expected/blink_test_01/timing/soc_top.sdc",
+      "generator": "TimingEmitter"
+    },
+    {
+      "family": "files",
+      "path": "tests/golden/expected/blink_test_01/files.tcl",
+      "generator": "QuartusFilesEmitter"
+    },
+    {
+      "family": "tests/golden/expected/blink_test_01/sim/files.f",
+      "path": "sim",
+      "generator": "SimFilelistEmitter"
+    }
+  ],
+  "clocks": [
+    {
+      "name": "sys_clk",
+      "frequency_hz": 50000000,
+      "source_kind": "board",
+      "source_ref": "SYS_CLK",
+      "reset_policy": "synced",
+      "sync_from": null,
+      "sync_stages": 2
+    }
+  ],
+  "address_regions": [],
+  "irq_sources": [],
+  "bus_endpoints": [],
+  "decisions": [
+    {
+      "category": "clock",
+      "message": "Resolved clock domain 'sys_clk' from board",
+      "rationale": "Clock domain source resolved from 'SYS_CLK'",
+      "related": [
+        "sys_clk",
+        "SYS_CLK"
+      ]
+    }
+  ],
+  "metadata": {},
+  "stages": [],
+  "artifact_provenance": []
+}
