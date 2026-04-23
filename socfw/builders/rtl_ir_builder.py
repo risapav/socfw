@@ -262,17 +262,59 @@ class RtlIRBuilder:
                 if path not in rtl.extra_sources:
                     rtl.extra_sources.append(path)
 
-        self.irq_builder.build(design, rtl)
+        has_irq_ctrl = any(mod.type_name == "irq_ctrl" for mod in system.project.modules)
 
-        if rtl.irq_combiner is not None and system.cpu is not None and cpu_desc is not None and cpu_desc.irq_port:
-            for inst in rtl.instances:
-                if inst.name == system.cpu.instance:
-                    inst.conns.append(
-                        RtlConn(
-                            port=cpu_desc.irq_port,
-                            signal=rtl.irq_combiner.cpu_irq_signal,
+        if has_irq_ctrl:
+            irq_plan = design.irq_plan
+            if irq_plan is not None:
+                for src in irq_plan.sources:
+                    rtl.add_wire_once(RtlWire(name=src.signal_name, width=1, comment=f"IRQ source {src.instance}"))
+
+            irq_sources = []
+            for mod in system.project.modules:
+                ip = system.ip_catalog.get(mod.type_name)
+                if ip is None:
+                    continue
+                for irq in ip.meta.get("irqs", []):
+                    irq_name = str(irq["name"])
+                    irq_id = int(irq["id"])
+                    sig = f"irq_{mod.instance}_{irq_name}"
+                    irq_sources.append((irq_id, sig))
+
+            if irq_sources:
+                max_irq = max(i for i, _ in irq_sources)
+                rtl.add_wire_once(RtlWire(name="irq_vector", width=max_irq + 1, comment="aggregated irq vector"))
+                for irq_id, sig in irq_sources:
+                    rtl.assigns.append(
+                        RtlAssign(
+                            lhs=f"irq_vector[{irq_id}]",
+                            rhs=sig,
+                            comment=f"IRQ source bit {irq_id}",
                         )
                     )
+
+            for inst in rtl.instances:
+                if inst.name == "irq0":
+                    inst.conns.append(RtlConn(port="src_irq_i", signal="irq_vector"))
+                    inst.conns.append(RtlConn(port="cpu_irq_o", signal="cpu_irq"))
+
+            if irq_sources and system.cpu is not None and cpu_desc is not None and cpu_desc.irq_port:
+                rtl.add_wire_once(RtlWire(name="cpu_irq", width=32, comment="CPU IRQ from controller"))
+                for inst in rtl.instances:
+                    if inst.name == system.cpu.instance:
+                        inst.conns.append(RtlConn(port=cpu_desc.irq_port, signal="cpu_irq"))
+        else:
+            self.irq_builder.build(design, rtl)
+
+            if rtl.irq_combiner is not None and system.cpu is not None and cpu_desc is not None and cpu_desc.irq_port:
+                for inst in rtl.instances:
+                    if inst.name == system.cpu.instance:
+                        inst.conns.append(
+                            RtlConn(
+                                port=cpu_desc.irq_port,
+                                signal=rtl.irq_combiner.cpu_irq_signal,
+                            )
+                        )
 
         if rtl.fabrics and "src/ip/bus/simple_bus_fabric.sv" not in rtl.extra_sources:
             rtl.extra_sources.append("src/ip/bus/simple_bus_fabric.sv")

@@ -1,0 +1,55 @@
+version: 2
+kind: ip
+
+ip:
+  name: irq_ctrl
+  module: irq_ctrl
+  category: interrupt
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: true
+  generate_registers: true
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: RESET_N
+  active_high: false
+
+clocking:
+  primary_input_port: SYS_CLK
+  additional_input_ports: []
+  outputs: []
+
+artifacts:
+  synthesis:
+    - tests/golden/fixtures/picorv32_soc/rtl/irq_ctrl.sv
+  simulation: []
+  metadata: []
+
+registers:
+  - name: pending
+    offset: 0
+    width: 32
+    access: ro
+    hw_source: pending
+    desc: latched interrupt pending bits
+
+  - name: enable
+    offset: 4
+    width: 32
+    access: rw
+    reset: 0
+    desc: interrupt enable bits
+
+  - name: ack
+    offset: 12
+    width: 32
+    access: wo
+    reset: 0
+    write_pulse: true
+    desc: write-1-to-clear pending bits

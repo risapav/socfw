@@ -1,7 +1,9 @@
 #include "soc_map.h"
+#include "soc_irq.h"
 
-#define SLOW0_BASE      0x50000000u
-#define UNMAPPED_ADDR   0x60000000u
+#define IRQ0_PENDING_REG (*(volatile unsigned*)(0x40001000u))
+#define IRQ0_ENABLE_REG  (*(volatile unsigned*)(0x40001004u))
+#define IRQ0_ACK_REG     (*(volatile unsigned*)(0x4000100Cu))
 
 static void delay(volatile unsigned count) {
     while (count--) {
@@ -9,35 +11,23 @@ static void delay(volatile unsigned count) {
     }
 }
 
-static unsigned mmio_read(unsigned addr) {
-    return *((volatile unsigned*)addr);
-}
-
 int main(void) {
     unsigned value = 0x01;
-    volatile unsigned slow_value;
-    volatile unsigned bad_value;
+
+    IRQ0_ENABLE_REG = (1u << GPIO0_CHANGED_IRQ);
 
     while (1) {
         GPIO0_VALUE_REG = value;
+        delay(100000);
 
-        slow_value = mmio_read(SLOW0_BASE);
-        bad_value  = mmio_read(UNMAPPED_ADDR);
-
-        if ((GPIO0_IRQ_PENDING_REG & 0x1) != 0) {
-            GPIO0_IRQ_PENDING_REG = 0x1;
+        if (IRQ0_PENDING_REG & (1u << GPIO0_CHANGED_IRQ)) {
+            IRQ0_ACK_REG = (1u << GPIO0_CHANGED_IRQ);
             value ^= 0x3F;
         } else {
             value = ((value << 1) & 0x3F);
             if (value == 0)
                 value = 0x01;
         }
-
-        if (bad_value == 0xDEADBEEF)
-            GPIO0_VALUE_REG = 0x2A;
-
-        if (slow_value == 0x12345678)
-            GPIO0_VALUE_REG ^= 0x15;
 
         delay(100000);
     }

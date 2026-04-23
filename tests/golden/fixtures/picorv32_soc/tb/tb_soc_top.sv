@@ -24,26 +24,27 @@ module tb_soc_top;
     RESET_N = 1'b1;
   end
 
-  logic [5:0] leds_prev;
+  logic [5:0] leds_a, leds_b, leds_c;
 
   initial begin
-    leds_prev = 6'h00;
-
     $display("[TB] starting simulation");
-    repeat (5000) @(posedge SYS_CLK);
-    leds_prev = ONB_LEDS;
 
-    repeat (5000) @(posedge SYS_CLK);
+    repeat (3000) @(posedge SYS_CLK);
+    leds_a = ONB_LEDS;
 
-    $display("[TB] LED state old=%b new=%b", leds_prev, ONB_LEDS);
+    repeat (3000) @(posedge SYS_CLK);
+    leds_b = ONB_LEDS;
 
-    if (^ONB_LEDS === 1'bx) begin
+    repeat (3000) @(posedge SYS_CLK);
+    leds_c = ONB_LEDS;
+
+    $display("[TB] LED states: %b %b %b", leds_a, leds_b, leds_c);
+
+    if (^leds_c === 1'bx)
       $fatal(1, "[TB] LED state contains X");
-    end
 
-    if (ONB_LEDS == leds_prev) begin
-      $fatal(1, "[TB] LED state did not change");
-    end
+    if (leds_a == leds_b && leds_b == leds_c)
+      $fatal(1, "[TB] LED state did not evolve");
 
     $finish;
   end

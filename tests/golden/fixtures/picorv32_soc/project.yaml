@@ -77,6 +77,15 @@ modules:
         gpio_o:
           target: board:onboard.leds
 
+  - instance: irq0
+    type: irq_ctrl
+    bus:
+      fabric: main
+      base: 0x40001000
+      size: 0x1000
+    clocks:
+      SYS_CLK: sys_clk
+
   - instance: slow0
     type: wait_state_slave
     params:
