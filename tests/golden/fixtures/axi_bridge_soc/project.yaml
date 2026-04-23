@@ -1,0 +1,79 @@
+version: 2
+kind: project
+
+project:
+  name: axi_bridge_soc
+  mode: soc
+  board: qmtech_ep4ce55
+  board_file: board.yaml
+  output_dir: build/gen
+  debug: true
+
+registries:
+  ip:
+    - ip
+
+features:
+  use:
+    - board:onboard.leds
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+  generated: []
+
+cpu:
+  instance: cpu0
+  type: picorv32_min
+  fabric: main
+  reset_vector: 0x00000000
+  params:
+    ENABLE_IRQ: false
+    PROGADDR_RESET: 0x00000000
+    STACKADDR: 0x00010000
+
+ram:
+  module: soc_ram
+  base: 0x00000000
+  size: 65536
+  latency: registered
+  init_file: ""
+  image_format: hex
+
+boot:
+  reset_vector: 0x00000000
+  stack_percent: 25
+
+buses:
+  - name: main
+    protocol: simple_bus
+    addr_width: 32
+    data_width: 32
+
+firmware:
+  enabled: false
+  src_dir: fw
+  out_dir: build/fw
+  linker_script: build/gen/sw/sections.lds
+  elf_file: firmware.elf
+  bin_file: firmware.bin
+  hex_file: firmware.hex
+  tool_prefix: riscv32-unknown-elf-
+
+modules:
+  - instance: axigpio0
+    type: axi_gpio
+    bus:
+      fabric: main
+      base: 0x40002000
+      size: 0x1000
+    clocks:
+      SYS_CLK: sys_clk
+    bind:
+      ports:
+        gpio_o:
+          target: board:onboard.leds
+
+artifacts:
+  emit: [rtl, timing, board, software, docs]

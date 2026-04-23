@@ -63,6 +63,9 @@ class RtlIRBuilder:
 
             rtl.fabrics.extend(self.bus_builder.build_fabrics(design.interconnect))
 
+            for inst in self.bus_builder.build_bridge_instances(design.interconnect):
+                rtl.instances.append(inst)
+
             for fabric_name in design.interconnect.fabrics.keys():
                 rtl.instances.append(
                     RtlInstance(
@@ -160,11 +163,24 @@ class RtlIRBuilder:
                 continue
 
             conns: list[RtlConn] = []
-            bus_conn_list = self.bus_conns.resolve_for_instance(
-                mod=mod,
-                ip=ip,
-                plan=design.interconnect,
-            )
+            iface = ip.bus_interface(role="slave")
+            bus_conn_list: list[RtlBusConn] = []
+
+            if iface is not None and design.interconnect is not None:
+                if iface.protocol == "simple_bus":
+                    bus_conn_list = self.bus_conns.resolve_for_instance(
+                        mod=mod, ip=ip, plan=design.interconnect,
+                    )
+                elif iface.protocol == "axi_lite":
+                    for br in design.interconnect.bridges:
+                        if br.dst_instance == mod.instance:
+                            bus_conn_list.append(
+                                RtlBusConn(
+                                    port=iface.port_name,
+                                    interface_name=f"if_{mod.instance}_axil",
+                                    modport="slave",
+                                )
+                            )
 
             for cb in mod.clocks:
                 signal = cb.domain
@@ -321,6 +337,12 @@ class RtlIRBuilder:
 
         if rtl.fabrics and "src/ip/bus/simple_bus_error_slave.sv" not in rtl.extra_sources:
             rtl.extra_sources.append("src/ip/bus/simple_bus_error_slave.sv")
+
+        if design.interconnect is not None and design.interconnect.bridges:
+            if "src/ip/bus/axi_lite_if.sv" not in rtl.extra_sources:
+                rtl.extra_sources.append("src/ip/bus/axi_lite_if.sv")
+            if "src/ip/bus/simple_bus_to_axi_lite_bridge.sv" not in rtl.extra_sources:
+                rtl.extra_sources.append("src/ip/bus/simple_bus_to_axi_lite_bridge.sv")
 
         if rtl.irq_combiner is not None and "src/ip/irq/irq_combiner.sv" not in rtl.extra_sources:
             rtl.extra_sources.append("src/ip/irq/irq_combiner.sv")

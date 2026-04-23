@@ -83,6 +83,11 @@ class DuplicateAddressRegionRule(ValidationRule):
         return diags
 
 
+_BRIDGEABLE_PAIRS: frozenset[tuple[str, str]] = frozenset({
+    ("simple_bus", "axi_lite"),
+})
+
+
 class FabricProtocolMismatchRule(ValidationRule):
     def validate(self, system: SystemModel) -> list[Diagnostic]:
         diags: list[Diagnostic] = []
@@ -103,17 +108,21 @@ class FabricProtocolMismatchRule(ValidationRule):
             if fabric is None:
                 continue
 
-            if iface.protocol != fabric.protocol:
-                diags.append(
-                    Diagnostic(
-                        code="BUS004",
-                        severity=Severity.ERROR,
-                        message=(
-                            f"Instance '{mod.instance}' uses protocol '{iface.protocol}', "
-                            f"but fabric '{fabric.name}' uses '{fabric.protocol}'"
-                        ),
-                        subject="project.modules.bus",
-                    )
+            if iface.protocol == fabric.protocol:
+                continue
+            if (fabric.protocol, iface.protocol) in _BRIDGEABLE_PAIRS:
+                continue
+
+            diags.append(
+                Diagnostic(
+                    code="BUS004",
+                    severity=Severity.ERROR,
+                    message=(
+                        f"Instance '{mod.instance}' uses protocol '{iface.protocol}', "
+                        f"but fabric '{fabric.name}' uses '{fabric.protocol}'"
+                    ),
+                    subject="project.modules.bus",
                 )
+            )
 
         return diags

@@ -4,8 +4,10 @@ from socfw.elaborate.bus_plan import InterconnectPlan
 from socfw.ir.rtl import (
     BOARD_CLOCK,
     BOARD_RESET,
+    RtlBusConn,
     RtlFabricInstance,
     RtlFabricPort,
+    RtlInstance,
     RtlInterfaceInstance,
 )
 
@@ -31,6 +33,16 @@ class RtlBusBuilder:
                     comment=f"error slave for {fabric_name}",
                 )
             )
+
+        for br in plan.bridges:
+            result.append(
+                RtlInterfaceInstance(
+                    if_type="axi_lite_if",
+                    name=f"if_{br.dst_instance}_axil",
+                    comment=f"AXI-lite side for {br.instance}",
+                )
+            )
+
         return result
 
     def build_fabrics(self, plan: InterconnectPlan) -> list[RtlFabricInstance]:
@@ -100,6 +112,33 @@ class RtlBusBuilder:
             fabrics.append(fabric)
 
         return fabrics
+
+    def build_bridge_instances(self, plan: InterconnectPlan) -> list[RtlInstance]:
+        result: list[RtlInstance] = []
+
+        for br in plan.bridges:
+            result.append(
+                RtlInstance(
+                    module=br.module,
+                    name=br.instance,
+                    conns=[],
+                    bus_conns=[
+                        RtlBusConn(
+                            port="sbus",
+                            interface_name=f"if_{br.instance}_{br.src_fabric}",
+                            modport="slave",
+                        ),
+                        RtlBusConn(
+                            port="m_axil",
+                            interface_name=f"if_{br.dst_instance}_axil",
+                            modport="master",
+                        ),
+                    ],
+                    comment=f"{br.src_protocol} -> {br.dst_protocol} bridge",
+                )
+            )
+
+        return result
 
     @staticmethod
     def _if_name(instance: str, fabric: str) -> str:

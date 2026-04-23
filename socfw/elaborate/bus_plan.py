@@ -24,7 +24,8 @@ class PlannedBusBridge:
     src_protocol: str
     dst_protocol: str
     src_fabric: str
-    dst_fabric: str
+    dst_instance: str
+    dst_port: str
 
 
 @dataclass
