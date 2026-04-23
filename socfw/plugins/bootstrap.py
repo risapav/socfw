@@ -9,6 +9,8 @@ from socfw.emit.register_block_emitter import RegisterBlockEmitter
 from socfw.emit.rtl_emitter import RtlEmitter
 from socfw.emit.software_emitter import SoftwareEmitter
 from socfw.emit.timing_emitter import TimingEmitter
+from socfw.plugins.bridges.simple_to_axi import SimpleBusToAxiLiteBridgePlanner
+from socfw.plugins.bridges.simple_to_wishbone import SimpleBusToWishboneBridgePlanner
 from socfw.plugins.registry import PluginRegistry
 from socfw.plugins.simple_bus.planner import SimpleBusPlanner
 from socfw.reports.graphviz_emitter import GraphvizEmitter
@@ -20,9 +22,9 @@ from socfw.validate.rules.board_rules import (
     UnknownBoardBindingTargetRule,
     UnknownBoardFeatureRule,
 )
+from socfw.validate.rules.bridge_rules import MissingBridgeRule
 from socfw.validate.rules.bus_rules import (
     DuplicateAddressRegionRule,
-    FabricProtocolMismatchRule,
     MissingBusInterfaceRule,
     UnknownBusFabricRule,
 )
@@ -41,7 +43,10 @@ from socfw.validate.rules.project_rules import (
 def create_builtin_registry(templates_dir: str) -> PluginRegistry:
     reg = PluginRegistry()
 
-    reg.register_bus_planner(SimpleBusPlanner())
+    reg.register_bridge_planner(SimpleBusToAxiLiteBridgePlanner())
+    reg.register_bridge_planner(SimpleBusToWishboneBridgePlanner())
+
+    reg.register_bus_planner(SimpleBusPlanner(reg))
 
     reg.register_emitter(QuartusBoardEmitter())
     reg.register_emitter(RtlEmitter(templates_dir))
@@ -67,7 +72,7 @@ def create_builtin_registry(templates_dir: str) -> PluginRegistry:
     reg.register_validator(UnknownBusFabricRule())
     reg.register_validator(MissingBusInterfaceRule())
     reg.register_validator(DuplicateAddressRegionRule())
-    reg.register_validator(FabricProtocolMismatchRule())
+    reg.register_validator(MissingBridgeRule(reg))
     reg.register_validator(UnknownCpuTypeRule())
     reg.register_validator(UnknownCpuFabricRule())
     reg.register_validator(CpuDescriptorBusMissingRule())

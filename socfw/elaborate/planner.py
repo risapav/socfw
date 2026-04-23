@@ -11,10 +11,10 @@ from .design import ElaboratedDesign
 
 
 class Elaborator:
-    def __init__(self) -> None:
+    def __init__(self, registry=None) -> None:
         self.board_bindings = BoardBindingResolver()
         self.clocks = ClockResolver()
-        self.simple_bus = SimpleBusPlanner()
+        self.simple_bus = SimpleBusPlanner(registry)
         self.addr_builder = AddressMapBuilder()
         self.irq_builder = IrqPlanBuilder()
 

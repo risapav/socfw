@@ -40,6 +40,7 @@ class PluginRegistry:
     emitters: dict[str, EmitterPlugin] = field(default_factory=dict)
     reports: dict[str, ReportPlugin] = field(default_factory=dict)
     validators: list[ValidationRule] = field(default_factory=list)
+    bridge_planners: list[object] = field(default_factory=list)
 
     def register_bus_planner(self, plugin: BusPlannerPlugin) -> None:
         self.bus_planners[plugin.protocol] = plugin
@@ -55,3 +56,12 @@ class PluginRegistry:
 
     def register_validator(self, rule: ValidationRule) -> None:
         self.validators.append(rule)
+
+    def register_bridge_planner(self, plugin: object) -> None:
+        self.bridge_planners.append(plugin)
+
+    def find_bridge(self, *, src_protocol: str, dst_protocol: str):
+        for p in self.bridge_planners:
+            if p.src_protocol == src_protocol and p.dst_protocol == dst_protocol:
+                return p
+        return None

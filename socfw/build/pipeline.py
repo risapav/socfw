@@ -35,7 +35,7 @@ class BuildResult:
 class BuildPipeline:
     def __init__(self, registry: PluginRegistry) -> None:
         self.registry = registry
-        self.elaborator = Elaborator()
+        self.elaborator = Elaborator(registry)
         self.board_ir_builder = BoardIRBuilder()
         self.timing_ir_builder = TimingIRBuilder()
         self.rtl_ir_builder = RtlIRBuilder()

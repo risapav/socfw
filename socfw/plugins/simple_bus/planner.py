@@ -1,8 +1,7 @@
 from __future__ import annotations
 
+from socfw.elaborate.bridge_resolver import BridgeResolver
 from socfw.elaborate.bus_plan import InterconnectPlan, ResolvedBusEndpoint
-from socfw.model.system import SystemModel
-from socfw.plugins.bridges.simple_to_axi import SimpleBusToAxiLiteBridgePlanner
 from socfw.plugins.bus_api import BusPlanner
 from socfw.plugins.simple_bus.cpu_endpoint import CpuMasterEndpointBuilder
 from socfw.plugins.simple_bus.ram_endpoint import RamSlaveEndpointBuilder
@@ -11,12 +10,12 @@ from socfw.plugins.simple_bus.ram_endpoint import RamSlaveEndpointBuilder
 class SimpleBusPlanner(BusPlanner):
     protocol = "simple_bus"
 
-    def __init__(self) -> None:
+    def __init__(self, registry=None) -> None:
         self.cpu_builder = CpuMasterEndpointBuilder()
         self.ram_builder = RamSlaveEndpointBuilder()
-        self.bridge_planner = SimpleBusToAxiLiteBridgePlanner()
+        self.bridge_resolver = BridgeResolver(registry) if registry is not None else None
 
-    def plan(self, system: SystemModel) -> InterconnectPlan:
+    def plan(self, system) -> InterconnectPlan:
         plan = InterconnectPlan()
 
         for fabric in system.project.bus_fabrics:
@@ -45,10 +44,6 @@ class SimpleBusPlanner(BusPlanner):
                 if iface is None:
                     continue
 
-                base = mod.bus.base
-                size = mod.bus.size
-                end = None if (base is None or size is None) else (base + size - 1)
-
                 if iface.protocol == "simple_bus":
                     endpoints.append(
                         ResolvedBusEndpoint(
@@ -60,17 +55,18 @@ class SimpleBusPlanner(BusPlanner):
                             port_name=iface.port_name,
                             addr_width=iface.addr_width,
                             data_width=iface.data_width,
-                            base=base,
-                            size=size,
-                            end=end,
+                            base=mod.bus.base,
+                            size=mod.bus.size,
+                            end=None if (mod.bus.base is None or mod.bus.size is None)
+                            else (mod.bus.base + mod.bus.size - 1),
                         )
                     )
                 else:
-                    bridge = self.bridge_planner.maybe_plan_bridge(
-                        fabric=fabric,
-                        mod=mod,
-                        ip=ip,
-                    )
+                    bridge = None
+                    if self.bridge_resolver is not None:
+                        bridge = self.bridge_resolver.resolve(
+                            fabric=fabric, mod=mod, ip=ip, iface=iface,
+                        )
                     if bridge is not None:
                         plan.bridges.append(bridge)
                         endpoints.append(
@@ -83,9 +79,10 @@ class SimpleBusPlanner(BusPlanner):
                                 port_name="sbus",
                                 addr_width=fabric.addr_width,
                                 data_width=fabric.data_width,
-                                base=base,
-                                size=size,
-                                end=end,
+                                base=mod.bus.base,
+                                size=mod.bus.size,
+                                end=None if (mod.bus.base is None or mod.bus.size is None)
+                                else (mod.bus.base + mod.bus.size - 1),
                             )
                         )
 
