@@ -3,12 +3,17 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
+from socfw.build.cache_store import CacheStore
+from socfw.build.cache_version import SOCFW_CACHE_VERSION
 from socfw.build.context import BuildContext, BuildRequest
 from socfw.build.full_pipeline import FullBuildPipeline
-from socfw.model.image import BootImage
+from socfw.build.stage_cache import StageCache
+from socfw.model.image import BootImage, FirmwareArtifacts
 from socfw.tools.bin2hex_runner import Bin2HexRunner
 from socfw.tools.firmware_builder import FirmwareBuilder
 from socfw.tools.testbench_stager import TestbenchStager
+
+_FW_STAGE = "firmware_build"
 
 
 class TwoPassBuildFlow:
@@ -38,15 +43,35 @@ class TwoPassBuildFlow:
         if system.firmware is None or not system.firmware.enabled or system.ram is None:
             return first
 
-        fw_res = self.firmware_builder.build(system, request.out_dir)
-        first.diagnostics.extend(fw_res.diagnostics)
-        if not fw_res.ok or fw_res.value is None:
-            first.ok = False
-            return first
+        cache = StageCache(CacheStore(request.out_dir))
+        fw_fp = self.firmware_builder.fingerprint(system, request.out_dir)
+        fw_out_dir = Path(request.out_dir) / "fw"
+        fw_outputs = [
+            str(fw_out_dir / system.firmware.elf_file),
+            str(fw_out_dir / system.firmware.bin_file),
+            str(fw_out_dir / system.firmware.hex_file),
+        ]
+
+        if fw_fp and cache.check(_FW_STAGE, fw_fp) and all(Path(p).exists() for p in fw_outputs):
+            fw_artifacts = FirmwareArtifacts(
+                elf=fw_outputs[0],
+                bin=fw_outputs[1],
+                hex=fw_outputs[2],
+            )
+            cache.update(_FW_STAGE, fw_fp, outputs=fw_outputs, hit=True, note="cache hit")
+        else:
+            fw_res = self.firmware_builder.build(system, request.out_dir)
+            first.diagnostics.extend(fw_res.diagnostics)
+            if not fw_res.ok or fw_res.value is None:
+                first.ok = False
+                return first
+            fw_artifacts = fw_res.value
+            if fw_fp:
+                cache.update(_FW_STAGE, fw_fp, outputs=[fw_artifacts.elf, fw_artifacts.bin, fw_artifacts.hex], note="rebuilt")
 
         fw_boot = BootImage(
-            input_file=fw_res.value.bin,
-            output_file=fw_res.value.hex,
+            input_file=fw_artifacts.bin,
+            output_file=fw_artifacts.hex,
             input_format="bin",
             output_format="hex",
             size_bytes=system.ram.size,
@@ -88,8 +113,8 @@ class TwoPassBuildFlow:
         for p in report_paths:
             second.manifest.add("report", p, "ReportOrchestrator")
 
-        second.manifest.add("firmware", fw_res.value.elf, "FirmwareBuilder")
-        second.manifest.add("firmware", fw_res.value.bin, "FirmwareBuilder")
-        second.manifest.add("firmware", fw_res.value.hex, "Bin2HexRunner")
+        second.manifest.add("firmware", fw_artifacts.elf, "FirmwareBuilder")
+        second.manifest.add("firmware", fw_artifacts.bin, "FirmwareBuilder")
+        second.manifest.add("firmware", fw_artifacts.hex, "Bin2HexRunner")
 
         return second

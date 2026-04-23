@@ -3,9 +3,11 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+from socfw.build.cache_version import SOCFW_CACHE_VERSION
 from socfw.core.diagnostics import Diagnostic, Severity
 from socfw.core.result import Result
 from socfw.model.image import FirmwareArtifacts
+from socfw.tools.fingerprint import fingerprint_files, fingerprint_obj
 
 
 class FirmwareBuilder:
@@ -97,3 +99,25 @@ class FirmwareBuilder:
             )
 
         return Result(value=FirmwareArtifacts(elf=elf, bin=binf, hex=hexf))
+
+    def fingerprint(self, system, out_dir: str) -> str:
+        fw = system.firmware
+        if fw is None or fw.src_dir is None:
+            return ""
+
+        src_dir = Path(fw.src_dir)
+        sources = [str(p) for p in src_dir.glob("*.c")] + [str(p) for p in src_dir.glob("*.S")]
+        generated_inputs = [
+            str(Path(out_dir) / "sw" / "soc_map.h"),
+            str(Path(out_dir) / "sw" / "sections.lds"),
+        ]
+
+        return fingerprint_obj({
+            "cache_version": SOCFW_CACHE_VERSION,
+            "stage": "firmware_build",
+            "files": fingerprint_files(sorted(sources + generated_inputs)),
+            "tool_prefix": fw.tool_prefix,
+            "cflags": list(fw.cflags),
+            "ldflags": list(fw.ldflags),
+            "linker_script": fw.linker_script,
+        })

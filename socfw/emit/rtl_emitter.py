@@ -21,7 +21,9 @@ class RtlEmitter:
             "soc_top.sv.j2",
             module=ir,
         )
-        self.renderer.write_text(out, content, encoding="utf-8")
+        old = out.read_text(encoding="utf-8") if out.exists() else None
+        if old != content:
+            self.renderer.write_text(out, content, encoding="utf-8")
 
         return [
             GeneratedArtifact(
