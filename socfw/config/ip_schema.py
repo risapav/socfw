@@ -99,11 +99,22 @@ class IpShellSchema(BaseModel):
     core_ports: list[IpShellCorePortSchema] = Field(default_factory=list)
 
 
+class IpVendorSchema(BaseModel):
+    vendor: str
+    tool: str
+    generator: str | None = None
+    family: str | None = None
+    qip: str | None = None
+    sdc: list[str] = Field(default_factory=list)
+    filesets: list[str] = Field(default_factory=list)
+
+
 class IpConfigSchema(BaseModel):
     version: Literal[2]
     kind: Literal["ip"]
     ip: IpMetaSchema
     origin: IpOriginSchema = Field(default_factory=lambda: IpOriginSchema(kind="source"))
+    vendor: IpVendorSchema | None = None
     integration: IpIntegrationSchema = Field(default_factory=IpIntegrationSchema)
     reset: IpResetSchema = Field(default_factory=IpResetSchema)
     clocking: IpClockingSchema = Field(default_factory=IpClockingSchema)

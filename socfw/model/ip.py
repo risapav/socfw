@@ -60,6 +60,17 @@ class IpBusInterface:
 
 
 @dataclass(frozen=True)
+class IpVendorInfo:
+    vendor: str
+    tool: str
+    generator: str | None = None
+    family: str | None = None
+    qip: str | None = None
+    sdc: tuple[str, ...] = ()
+    filesets: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class IpDescriptor:
     name: str
     module: str
@@ -73,6 +84,7 @@ class IpDescriptor:
     clocking: IpClocking
     artifacts: IpArtifactBundle
     bus_interfaces: tuple[IpBusInterface, ...] = ()
+    vendor_info: IpVendorInfo | None = None
     meta: dict[str, Any] = field(default_factory=dict)
 
     def bus_interface(self, role: str | None = None) -> IpBusInterface | None:

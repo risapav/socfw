@@ -16,6 +16,7 @@ from socfw.model.ip import (
     IpDescriptor,
     IpOrigin,
     IpResetSemantics,
+    IpVendorInfo,
 )
 
 
@@ -79,6 +80,18 @@ class IpLoader:
                 synthesis=tuple(str((base_dir / p).resolve()) for p in doc.artifacts.synthesis),
                 simulation=tuple(str((base_dir / p).resolve()) for p in doc.artifacts.simulation),
                 metadata=tuple(str((base_dir / p).resolve()) for p in doc.artifacts.metadata),
+            ),
+            vendor_info=(
+                IpVendorInfo(
+                    vendor=doc.vendor.vendor,
+                    tool=doc.vendor.tool,
+                    generator=doc.vendor.generator,
+                    family=doc.vendor.family,
+                    qip=str((base_dir / doc.vendor.qip).resolve()) if doc.vendor.qip else None,
+                    sdc=tuple(str((base_dir / p).resolve()) for p in doc.vendor.sdc),
+                    filesets=tuple(doc.vendor.filesets),
+                )
+                if doc.vendor is not None else None
             ),
             bus_interfaces=tuple(
                 IpBusInterface(

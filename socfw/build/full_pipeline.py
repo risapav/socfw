@@ -7,6 +7,7 @@ from socfw.build.pipeline import BuildPipeline, BuildResult
 from dataclasses import replace
 
 from socfw.builders.boot_image_builder import BootImageBuilder
+from socfw.builders.files_ir_builder import FilesIRBuilder
 from socfw.config.system_loader import SystemLoader
 from socfw.emit.orchestrator import EmitOrchestrator
 from socfw.model.image import BootImage
@@ -28,6 +29,7 @@ class FullBuildPipeline:
         self.image_builder = BootImageBuilder()
         self.bin2hex = Bin2HexRunner()
         self.firmware_builder = FirmwareBuilder()
+        self.files_ir_builder = FilesIRBuilder()
 
     def run(self, request: BuildRequest) -> BuildResult:
         loaded = self.loader.load(request.project_file)
@@ -42,11 +44,17 @@ class FullBuildPipeline:
             return result
 
         ctx = BuildContext(out_dir=Path(request.out_dir))
+        files_ir = (
+            self.files_ir_builder.build(result.design, result.rtl_ir)
+            if result.design is not None and result.rtl_ir is not None
+            else None
+        )
         manifest = self.emitters.emit_all(
             ctx,
             board_ir=result.board_ir,
             timing_ir=result.timing_ir,
             rtl_ir=result.rtl_ir,
+            files_ir=files_ir,
             software_ir=result.software_ir,
             docs_ir=result.docs_ir,
             register_block_irs=result.register_block_irs,
