@@ -129,6 +129,24 @@ def cmd_sim_smoke(args) -> int:
     return 0 if sim.ok else 1
 
 
+def cmd_schema_export(args) -> int:
+    from socfw.tools.schema_exporter import SchemaExporter
+
+    paths = SchemaExporter().export_all(args.out)
+    for p in paths:
+        print(p)
+    return 0
+
+
+def cmd_docs_export(args) -> int:
+    from socfw.tools.config_docs_exporter import ConfigDocsExporter
+
+    paths = ConfigDocsExporter().export_all(args.out)
+    for p in paths:
+        print(p)
+    return 0
+
+
 def cmd_migrate(args) -> int:
     import yaml
     from socfw.config.migrate.v1_to_v2 import migrate_project, migrate_board, migrate_timing, migrate_ip
@@ -207,6 +225,20 @@ def build_parser() -> argparse.ArgumentParser:
     m.add_argument("--kind", choices=["project", "board", "timing", "ip"], default=None,
                    help="Force YAML kind (auto-detected if omitted)")
     m.set_defaults(func=cmd_migrate)
+
+    schema = sub.add_parser("schema", help="Schema export commands")
+    schema_sub = schema.add_subparsers(dest="schema_cmd", required=True)
+
+    schema_export = schema_sub.add_parser("export", help="Export JSON schemas for all config types")
+    schema_export.add_argument("--out", default="build/schema")
+    schema_export.set_defaults(func=cmd_schema_export)
+
+    docs = sub.add_parser("docs", help="Documentation export commands")
+    docs_sub = docs.add_subparsers(dest="docs_cmd", required=True)
+
+    docs_export = docs_sub.add_parser("export", help="Export human-readable config reference docs")
+    docs_export.add_argument("--out", default="build/docs")
+    docs_export.set_defaults(func=cmd_docs_export)
 
     return ap
 

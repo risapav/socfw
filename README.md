@@ -69,3 +69,13 @@ Peripherals: `simple_bus`, `axi_lite`, `wishbone` (via bridge plugins)
 
 Bridge plugins are registered in the plugin registry and injected automatically
 by the bus planner when a protocol mismatch is detected.
+
+## Schema and docs
+
+```bash
+socfw schema export --out build/schema
+socfw docs export --out build/docs
+```
+
+- `schema export` — JSON Schema for all config types (board, project, ip, cpu, timing); enables IDE autocomplete via YAML extension
+- `docs export` — human-readable Markdown reference tables + examples catalog from test fixtures

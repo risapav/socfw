@@ -1,0 +1,9 @@
+{
+  "yaml.schemas": {
+    "build/schema/project.schema.json": "tests/golden/fixtures/*/project.yaml",
+    "build/schema/board.schema.json": "tests/golden/fixtures/*/board.yaml",
+    "build/schema/ip.schema.json": "tests/golden/fixtures/*/ip/*.ip.yaml",
+    "build/schema/cpu.schema.json": "tests/golden/fixtures/*/ip/*.cpu.yaml",
+    "build/schema/timing.schema.json": "tests/golden/fixtures/*/timing.yaml"
+  }
+}
