@@ -1,0 +1,23 @@
+# AUTO-GENERATED - DO NOT EDIT
+# Device family: Cyclone IV E
+# Device part:   EP4CE55F23C8
+
+set_global_assignment -name FAMILY "Cyclone IV E"
+set_global_assignment -name DEVICE  EP4CE55F23C8
+
+# ONB_LEDS
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ONB_LEDS[*]
+set_location_assignment PIN_E4 -to ONB_LEDS[0]
+set_location_assignment PIN_A8 -to ONB_LEDS[1]
+set_location_assignment PIN_B8 -to ONB_LEDS[2]
+set_location_assignment PIN_A7 -to ONB_LEDS[3]
+set_location_assignment PIN_B7 -to ONB_LEDS[4]
+set_location_assignment PIN_A6 -to ONB_LEDS[5]
+
+# RESET_N
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to RESET_N
+set_location_assignment PIN_W13 -to RESET_N
+
+# SYS_CLK
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SYS_CLK
+set_location_assignment PIN_T2 -to SYS_CLK

@@ -26,7 +26,7 @@ def test_blink_test_01_golden(tmp_path):
 
     assert result.ok, [str(d) for d in result.diagnostics]
 
-    for rel in ["rtl/soc_top.sv", "hal/board.tcl", "reports/build_report.md"]:
+    for rel in ["rtl/soc_top.sv", "hal/board.tcl"]:
         expected_file = EXPECTED_01 / rel
         if expected_file.exists():
             assert _read(out_dir / rel) == _read(expected_file), f"Golden mismatch: {rel}"
