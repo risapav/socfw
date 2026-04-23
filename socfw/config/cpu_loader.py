@@ -8,7 +8,7 @@ from socfw.config.common import load_yaml_file
 from socfw.config.cpu_schema import CpuDescriptorSchema
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
 from socfw.core.result import Result
-from socfw.model.cpu_desc import CpuBusMasterDesc, CpuDescriptor
+from socfw.model.cpu_desc import CpuBusMasterDesc, CpuDescriptor, CpuIrqAbi
 
 
 class CpuLoader:
@@ -47,6 +47,15 @@ class CpuLoader:
                     data_width=doc.bus_master.data_width,
                 )
                 if doc.bus_master else None
+            ),
+            irq_abi=(
+                CpuIrqAbi(
+                    kind=doc.irq_abi.kind,
+                    irq_entry_addr=doc.irq_abi.irq_entry_addr,
+                    enable_mechanism=doc.irq_abi.enable_mechanism,
+                    return_instruction=doc.irq_abi.return_instruction,
+                )
+                if doc.irq_abi is not None else None
             ),
             default_params=dict(doc.default_params),
             artifacts=tuple(doc.artifacts),

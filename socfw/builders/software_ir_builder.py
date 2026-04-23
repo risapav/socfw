@@ -16,6 +16,11 @@ class SoftwareIRBuilder:
         if system.ram_size <= 0:
             return None
 
+        cpu_desc = system.cpu_desc()
+        irq_entry_addr = 0x10
+        if cpu_desc is not None and cpu_desc.irq_abi is not None:
+            irq_entry_addr = cpu_desc.irq_abi.irq_entry_addr
+
         ir = SoftwareIR(
             board_name=system.board.board_id,
             sys_clk_hz=system.board.sys_clock.frequency_hz,
@@ -23,6 +28,7 @@ class SoftwareIRBuilder:
             ram_size=system.ram_size,
             reset_vector=system.reset_vector,
             stack_percent=system.stack_percent,
+            irq_entry_addr=irq_entry_addr,
         )
 
         ir.memory_regions.append(

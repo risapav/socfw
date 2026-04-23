@@ -16,6 +16,12 @@ bus_master:
   addr_width: 32
   data_width: 32
 
+irq_abi:
+  kind: wrapper_minimal
+  irq_entry_addr: 0x10
+  enable_mechanism: wrapper_hook
+  return_instruction: reti
+
 default_params:
   ENABLE_IRQ: true
   ENABLE_COUNTERS: false

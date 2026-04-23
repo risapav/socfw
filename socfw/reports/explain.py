@@ -28,3 +28,19 @@ class ExplainService:
         for src in design.irq_plan.sources:
             lines.append(f"- irq[{src.irq_id}] <- {src.instance}.{src.signal_name}")
         return "\n".join(lines)
+
+    def explain_cpu_irq(self, system) -> str:
+        cpu = system.cpu
+        desc = system.cpu_desc()
+        if cpu is None or desc is None or desc.irq_abi is None:
+            return "No CPU IRQ ABI configured."
+
+        abi = desc.irq_abi
+        return (
+            f"CPU IRQ ABI:\n"
+            f"- CPU type: {cpu.type_name}\n"
+            f"- ABI kind: {abi.kind}\n"
+            f"- IRQ entry address: 0x{abi.irq_entry_addr:08X}\n"
+            f"- Enable mechanism: {abi.enable_mechanism}\n"
+            f"- Return instruction: {abi.return_instruction}"
+        )

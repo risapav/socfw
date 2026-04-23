@@ -6,6 +6,8 @@ _start:
 1:
   j 1b
 
+/* Minimal wrapper-defined IRQ ABI entry.
+   This is a bring-up runtime, not yet a full general-purpose ABI layer. */
 .section .text.irq
 .global irq_entry
 irq_entry:

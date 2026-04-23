@@ -62,6 +62,8 @@ def cmd_explain(args) -> int:
         print(expl.explain_address_map(system))
     elif args.topic == "irqs":
         print(expl.explain_irqs(design))
+    elif args.topic == "cpu-irq":
+        print(expl.explain_cpu_irq(system))
     else:
         print(f"Unknown explain topic: {args.topic}", file=sys.stderr)
         return 1
@@ -178,7 +180,7 @@ def build_parser() -> argparse.ArgumentParser:
     v.set_defaults(func=cmd_validate)
 
     e = sub.add_parser("explain", help="Explain a design aspect in plain text")
-    e.add_argument("topic", choices=["clocks", "address-map", "irqs"])
+    e.add_argument("topic", choices=["clocks", "address-map", "irqs", "cpu-irq"])
     e.add_argument("project")
     e.set_defaults(func=cmd_explain)
 

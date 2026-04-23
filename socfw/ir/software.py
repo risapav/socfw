@@ -43,6 +43,7 @@ class SoftwareIR:
     ram_size: int
     reset_vector: int
     stack_percent: int
+    irq_entry_addr: int = 0x10
     memory_regions: list[MemoryRegionIR] = field(default_factory=list)
     registers: list[SwRegisterIR] = field(default_factory=list)
     irqs: list[SwIrqIR] = field(default_factory=list)

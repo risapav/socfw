@@ -13,7 +13,7 @@ SECTIONS {
     KEEP(*(.text.start))
   } > RAM
 
-  . = ORIGIN(RAM) + 0x10;
+  . = ORIGIN(RAM) + 0x{{ "%X"|format(sw.irq_entry_addr) }};
 
   .text.irq : {
     KEEP(*(.text.irq))
