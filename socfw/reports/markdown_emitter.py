@@ -102,5 +102,25 @@ class MarkdownReportEmitter:
             lines.append("No planning decisions.")
         lines.append("")
 
+        lines.append("## Stage Timings\n")
+        if report.stages:
+            lines.append("| Stage | Status | Duration (ms) | Note |")
+            lines.append("|-------|--------|---------------|------|")
+            for s in report.stages:
+                lines.append(f"| {s.name} | {s.status} | {s.duration_ms:.1f} | {s.note} |")
+        else:
+            lines.append("No stage data.")
+        lines.append("")
+
+        lines.append("## Artifact Provenance\n")
+        if report.artifact_provenance:
+            lines.append("| Path | Family | Generator | Stage |")
+            lines.append("|------|--------|-----------|-------|")
+            for a in report.artifact_provenance:
+                lines.append(f"| `{a.path}` | {a.family} | {a.generator} | {a.stage} |")
+        else:
+            lines.append("No artifact provenance.")
+        lines.append("")
+
         out.write_text("\n".join(lines), encoding="utf-8")
         return str(out)

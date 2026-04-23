@@ -4,6 +4,7 @@ from pathlib import Path
 
 from socfw.build.context import BuildContext, BuildRequest
 from socfw.build.manifest import BuildManifest
+from socfw.build.provenance_model import BuildProvenance
 from socfw.builders.board_ir_builder import BoardIRBuilder
 from socfw.builders.docs_ir_builder import DocsIRBuilder
 from socfw.builders.peripheral_shell_ir_builder import PeripheralShellIRBuilder
@@ -30,6 +31,7 @@ class BuildResult:
     register_block_irs: list[object] = field(default_factory=list)
     peripheral_shell_irs: list[object] = field(default_factory=list)
     design: object | None = None
+    provenance: BuildProvenance | None = None
 
 
 class BuildPipeline:

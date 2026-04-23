@@ -71,6 +71,22 @@ class PlanningDecision:
     related: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class ReportStage:
+    name: str
+    status: str
+    duration_ms: float
+    note: str = ""
+
+
+@dataclass(frozen=True)
+class ReportArtifactProvenance:
+    path: str
+    family: str
+    generator: str
+    stage: str
+
+
 @dataclass
 class BuildReport:
     project_name: str
@@ -87,3 +103,5 @@ class BuildReport:
     bus_endpoints: list[ReportBusEndpoint] = field(default_factory=list)
     decisions: list[PlanningDecision] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
+    stages: list[ReportStage] = field(default_factory=list)
+    artifact_provenance: list[ReportArtifactProvenance] = field(default_factory=list)

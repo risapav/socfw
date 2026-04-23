@@ -17,6 +17,12 @@ def _print_diags(diags) -> None:
         print()
 
 
+def _print_summary(result) -> None:
+    from socfw.reports.build_summary_formatter import BuildSummaryFormatter
+    if getattr(result, "provenance", None) is not None:
+        print(BuildSummaryFormatter().format_text(result.provenance))
+
+
 def cmd_build(args) -> int:
     from socfw.build.context import BuildRequest
     from socfw.build.full_pipeline import FullBuildPipeline
@@ -29,6 +35,7 @@ def cmd_build(args) -> int:
     if result.ok:
         for art in result.manifest.artifacts:
             print(f"[{art.family}] {art.path}")
+        _print_summary(result)
 
     return 0 if result.ok else 1
 
@@ -111,6 +118,12 @@ def cmd_build_fw(args) -> int:
     if result.ok:
         for art in result.manifest.artifacts:
             print(f"[{art.family}] {art.path}")
+        _print_summary(result)
+
+    if getattr(args, "provenance_json", None) and getattr(result, "provenance", None) is not None:
+        from socfw.tools.provenance_json_exporter import ProvenanceJsonExporter
+        path = ProvenanceJsonExporter().export(result.provenance, args.provenance_json)
+        print(path)
 
     return 0 if result.ok else 1
 
@@ -217,6 +230,7 @@ def build_parser() -> argparse.ArgumentParser:
     bf.add_argument("project")
     bf.add_argument("--out", default="build/gen")
     bf.add_argument("--templates", default=_default_templates_dir())
+    bf.add_argument("--provenance-json", default=None, help="Export build provenance to JSON file")
     bf.set_defaults(func=cmd_build_fw)
 
     s = sub.add_parser("sim-smoke", help="Two-pass build + iverilog smoke simulation")

@@ -7,10 +7,12 @@ from socfw.reports.model import (
     PlanningDecision,
     ReportAddressRegion,
     ReportArtifact,
+    ReportArtifactProvenance,
     ReportBusEndpoint,
     ReportClockDomain,
     ReportDiagnostic,
     ReportIrqSource,
+    ReportStage,
 )
 
 
@@ -119,6 +121,27 @@ class BuildReportBuilder:
                         )
 
             report.decisions.extend(self._build_decisions(system, design))
+
+        if getattr(result, "provenance", None) is not None:
+            for s in result.provenance.stages:
+                report.stages.append(
+                    ReportStage(
+                        name=s.name,
+                        status=s.status,
+                        duration_ms=s.duration_ms,
+                        note=s.note,
+                    )
+                )
+
+            for a in result.provenance.artifacts:
+                report.artifact_provenance.append(
+                    ReportArtifactProvenance(
+                        path=a.path,
+                        family=a.family,
+                        generator=a.generator,
+                        stage=a.stage,
+                    )
+                )
 
         return report
 
