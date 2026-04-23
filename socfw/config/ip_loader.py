@@ -40,6 +40,8 @@ class IpLoader:
                 ]
             )
 
+        base_dir = Path(path).parent
+
         ip = IpDescriptor(
             name=doc.ip.name,
             module=doc.ip.module,
@@ -74,9 +76,9 @@ class IpLoader:
                 ),
             ),
             artifacts=IpArtifactBundle(
-                synthesis=tuple(doc.artifacts.synthesis),
-                simulation=tuple(doc.artifacts.simulation),
-                metadata=tuple(doc.artifacts.metadata),
+                synthesis=tuple(str((base_dir / p).resolve()) for p in doc.artifacts.synthesis),
+                simulation=tuple(str((base_dir / p).resolve()) for p in doc.artifacts.simulation),
+                metadata=tuple(str((base_dir / p).resolve()) for p in doc.artifacts.metadata),
             ),
             bus_interfaces=tuple(
                 IpBusInterface(

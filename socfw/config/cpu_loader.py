@@ -58,7 +58,7 @@ class CpuLoader:
                 if doc.irq_abi is not None else None
             ),
             default_params=dict(doc.default_params),
-            artifacts=tuple(doc.artifacts),
+            artifacts=tuple(str((Path(path).parent / p).resolve()) for p in doc.artifacts),
             meta={"notes": doc.notes},
         )
 

@@ -1,0 +1,9 @@
+version: 1
+kind: pack
+name: builtin
+title: Built-in socfw pack
+description: Default boards, IP, and CPU descriptors bundled with socfw
+provides:
+  - boards
+  - ip
+  - cpu

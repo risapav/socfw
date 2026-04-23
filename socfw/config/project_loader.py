@@ -105,6 +105,8 @@ class ProjectLoader:
             board_ref=doc.project.board,
             board_file=doc.project.board_file,
             registries_ip=doc.registries.ip,
+            registries_packs=doc.registries.packs,
+            registries_cpu=doc.registries.cpu,
             feature_refs=doc.features.use,
             modules=modules,
             primary_clock_domain=doc.clocks.primary.domain,

@@ -70,6 +70,8 @@ class ProjectModel:
     board_ref: str
     board_file: str | None = None
     registries_ip: list[str] = field(default_factory=list)
+    registries_packs: list[str] = field(default_factory=list)
+    registries_cpu: list[str] = field(default_factory=list)
     feature_refs: list[str] = field(default_factory=list)
     modules: list[ModuleInstance] = field(default_factory=list)
     primary_clock_domain: str = "sys_clk"

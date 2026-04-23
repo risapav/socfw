@@ -15,7 +15,9 @@ class ProjectMetaSchema(BaseModel):
 
 
 class RegistriesSchema(BaseModel):
+    packs: list[str] = Field(default_factory=list)
     ip: list[str] = Field(default_factory=list)
+    cpu: list[str] = Field(default_factory=list)
 
 
 class FeaturesSchema(BaseModel):
