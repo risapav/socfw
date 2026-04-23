@@ -1,0 +1,17 @@
+#include "soc_map.h"
+
+static void delay(volatile unsigned count) {
+    while (count--) {
+        __asm__ volatile ("nop");
+    }
+}
+
+int main(void) {
+    while (1) {
+        GPIO0_VALUE_REG = 0x15;
+        delay(200000);
+        GPIO0_VALUE_REG = 0x2A;
+        delay(200000);
+    }
+    return 0;
+}

@@ -1,0 +1,28 @@
+`default_nettype none
+
+module gpio_core (
+  input  wire SYS_CLK,
+  input  wire RESET_N,
+  bus_if.slave bus,
+  output logic [7:0] gpio_o
+);
+
+  logic [31:0] reg_value;
+
+  always_ff @(posedge SYS_CLK or negedge RESET_N) begin
+    if (!RESET_N)
+      reg_value <= 32'h0;
+    else if (bus.valid && bus.we)
+      reg_value <= bus.wdata;
+  end
+
+  always_comb begin
+    bus.rdata = reg_value;
+    bus.ready = 1'b1;
+  end
+
+  assign gpio_o = reg_value[7:0];
+
+endmodule
+
+`default_nettype wire

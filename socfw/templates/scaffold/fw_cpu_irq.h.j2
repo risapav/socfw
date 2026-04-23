@@ -1,0 +1,8 @@
+#ifndef CPU_IRQ_H
+#define CPU_IRQ_H
+
+static inline void cpu_enable_irqs(void) {
+    __asm__ volatile ("" ::: "memory");
+}
+
+#endif

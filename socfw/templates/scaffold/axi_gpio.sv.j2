@@ -1,0 +1,34 @@
+`default_nettype none
+
+module axi_gpio (
+  input  wire SYS_CLK,
+  input  wire RESET_N,
+  axi_lite_if.slave s_axil,
+  output logic [7:0] gpio_o
+);
+
+  logic [31:0] reg_value;
+
+  always_ff @(posedge SYS_CLK or negedge RESET_N) begin
+    if (!RESET_N)
+      reg_value <= 32'h0;
+    else if (s_axil.awvalid && s_axil.wvalid)
+      reg_value <= s_axil.wdata;
+  end
+
+  always_comb begin
+    s_axil.awready = 1'b1;
+    s_axil.wready  = 1'b1;
+    s_axil.bvalid  = 1'b1;
+    s_axil.bresp   = 2'b00;
+    s_axil.arready = 1'b1;
+    s_axil.rvalid  = 1'b1;
+    s_axil.rdata   = reg_value;
+    s_axil.rresp   = 2'b00;
+  end
+
+  assign gpio_o = reg_value[7:0];
+
+endmodule
+
+`default_nettype wire

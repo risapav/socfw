@@ -79,3 +79,20 @@ socfw docs export --out build/docs
 
 - `schema export` — JSON Schema for all config types (board, project, ip, cpu, timing); enables IDE autocomplete via YAML extension
 - `docs export` — human-readable Markdown reference tables + examples catalog from test fixtures
+
+## Project scaffolding
+
+List templates:
+```bash
+socfw list-templates
+```
+
+List boards:
+```bash
+socfw list-boards
+```
+
+Initialize a new project:
+```bash
+socfw init my_soc --template picorv32-soc --board qmtech_ep4ce55
+```

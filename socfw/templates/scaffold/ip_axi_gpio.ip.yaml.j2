@@ -1,0 +1,36 @@
+version: 2
+kind: ip
+
+ip:
+  name: axi_gpio
+  module: axi_gpio
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: true
+  generate_registers: false
+  instantiate_directly: true
+
+reset:
+  port: RESET_N
+  active_high: false
+
+clocking:
+  primary_input_port: SYS_CLK
+  additional_input_ports: []
+  outputs: []
+
+bus_interfaces:
+  - protocol: axi_lite
+    role: slave
+    port_name: s_axil
+
+artifacts:
+  synthesis:
+    - rtl/axi_gpio.sv
+  simulation: []
+  metadata: []

@@ -1,0 +1,39 @@
+version: 2
+kind: project
+
+project:
+  name: {{ project_name }}
+  mode: standalone
+  board: {{ board }}
+  board_file: boards/{{ board }}/board.yaml
+  output_dir: build/gen
+  debug: true
+
+registries:
+  ip:
+    - ip
+
+features:
+  use:
+    - board:onboard.leds
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+  generated: []
+
+modules:
+  - instance: blink_test
+    type: blink_test
+    params:
+      CLK_FREQ: 50000000
+    clocks:
+      SYS_CLK: sys_clk
+    bind:
+      ports:
+        ONB_LEDS:
+          target: board:onboard.leds
+
+artifacts:
+  emit: [rtl, timing, board, docs]

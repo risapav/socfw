@@ -165,6 +165,47 @@ def cmd_docs_export(args) -> int:
     return 0
 
 
+def cmd_init(args) -> int:
+    from socfw.scaffold.generator import ScaffoldGenerator
+    from socfw.scaffold.model import InitRequest
+
+    gen = ScaffoldGenerator(templates_dir=args.templates)
+    req = InitRequest(
+        name=args.name,
+        out_dir=args.out,
+        template=args.template,
+        board=args.board,
+        cpu=args.cpu,
+        force=args.force,
+    )
+
+    try:
+        created = gen.generate(req)
+    except Exception as exc:
+        print(f"ERROR INIT001: {exc}", file=sys.stderr)
+        return 1
+
+    for p in created:
+        print(p)
+    return 0
+
+
+def cmd_list_templates(args) -> int:
+    from socfw.scaffold.template_registry import TemplateRegistry
+
+    for t in TemplateRegistry().all():
+        print(f"{t.key}: {t.title} [{t.mode}] - {t.description}")
+    return 0
+
+
+def cmd_list_boards(args) -> int:
+    from socfw.scaffold.board_catalog import BoardCatalog
+
+    for b in BoardCatalog().all():
+        print(f"{b.key}: {b.title} ({b.family})")
+    return 0
+
+
 def cmd_migrate(args) -> int:
     import yaml
     from socfw.config.migrate.v1_to_v2 import migrate_project, migrate_board, migrate_timing, migrate_ip
@@ -258,6 +299,23 @@ def build_parser() -> argparse.ArgumentParser:
     docs_export = docs_sub.add_parser("export", help="Export human-readable config reference docs")
     docs_export.add_argument("--out", default="build/docs")
     docs_export.set_defaults(func=cmd_docs_export)
+
+    from socfw.scaffold.template_registry import TemplateRegistry as _TR
+    i = sub.add_parser("init", help="Initialize a new project from a scaffold template")
+    i.add_argument("name")
+    i.add_argument("--template", required=True, choices=[t.key for t in _TR().all()])
+    i.add_argument("--board", default=None)
+    i.add_argument("--cpu", default=None)
+    i.add_argument("--out", default=".")
+    i.add_argument("--force", action="store_true")
+    i.add_argument("--templates", default=_default_templates_dir())
+    i.set_defaults(func=cmd_init)
+
+    lt = sub.add_parser("list-templates", help="List available scaffold templates")
+    lt.set_defaults(func=cmd_list_templates)
+
+    lb = sub.add_parser("list-boards", help="List known boards in the catalog")
+    lb.set_defaults(func=cmd_list_boards)
 
     return ap
 

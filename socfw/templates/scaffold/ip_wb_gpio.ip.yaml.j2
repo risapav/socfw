@@ -1,0 +1,36 @@
+version: 2
+kind: ip
+
+ip:
+  name: wb_gpio
+  module: wb_gpio
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: true
+  generate_registers: false
+  instantiate_directly: true
+
+reset:
+  port: RESET_N
+  active_high: false
+
+clocking:
+  primary_input_port: SYS_CLK
+  additional_input_ports: []
+  outputs: []
+
+bus_interfaces:
+  - protocol: wishbone
+    role: slave
+    port_name: wb
+
+artifacts:
+  synthesis:
+    - rtl/wb_gpio.sv
+  simulation: []
+  metadata: []

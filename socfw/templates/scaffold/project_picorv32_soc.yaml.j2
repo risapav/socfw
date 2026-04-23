@@ -1,0 +1,70 @@
+version: 2
+kind: project
+
+project:
+  name: {{ project_name }}
+  mode: soc
+  board: {{ board }}
+  board_file: boards/{{ board }}/board.yaml
+  output_dir: build/gen
+  debug: true
+
+registries:
+  ip:
+    - ip
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+  generated: []
+
+cpu:
+  instance: cpu0
+  type: {{ cpu }}
+  fabric: main
+  reset_vector: 0x00000000
+  params: {}
+
+ram:
+  module: soc_ram
+  base: 0x00000000
+  size: 65536
+  latency: registered
+  init_file: ""
+  image_format: hex
+
+boot:
+  reset_vector: 0x00000000
+  stack_percent: 25
+
+buses:
+  - name: main
+    protocol: simple_bus
+    addr_width: 32
+    data_width: 32
+
+firmware:
+  enabled: true
+  src_dir: fw
+  out_dir: build/fw
+  linker_script: build/gen/sw/sections.lds
+  elf_file: firmware.elf
+  bin_file: firmware.bin
+  hex_file: firmware.hex
+  tool_prefix: riscv32-unknown-elf-
+  cflags:
+    - -Ibuild/gen/sw
+
+modules:
+  - instance: gpio0
+    type: gpio
+    bus:
+      fabric: main
+      base: 0x40000000
+      size: 0x1000
+    clocks:
+      SYS_CLK: sys_clk
+
+artifacts:
+  emit: [rtl, timing, board, software, docs]

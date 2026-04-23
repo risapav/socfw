@@ -1,0 +1,46 @@
+version: 2
+kind: project
+
+project:
+  name: {{ project_name }}
+  mode: soc
+  board: {{ board }}
+  board_file: boards/{{ board }}/board.yaml
+  output_dir: build/gen
+
+registries:
+  ip:
+    - ip
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+  generated: []
+
+buses:
+  - name: main
+    protocol: simple_bus
+    addr_width: 32
+    data_width: 32
+
+ram:
+  module: soc_ram
+  base: 0x00000000
+  size: 65536
+  latency: registered
+  init_file: ""
+  image_format: hex
+
+modules:
+  - instance: gpio0
+    type: gpio
+    bus:
+      fabric: main
+      base: 0x40000000
+      size: 0x1000
+    clocks:
+      SYS_CLK: sys_clk
+
+artifacts:
+  emit: [rtl, timing, board, docs]

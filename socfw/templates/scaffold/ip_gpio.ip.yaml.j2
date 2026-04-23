@@ -1,0 +1,36 @@
+version: 2
+kind: ip
+
+ip:
+  name: gpio
+  module: gpio_core
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: true
+  generate_registers: false
+  instantiate_directly: true
+
+reset:
+  port: RESET_N
+  active_high: false
+
+clocking:
+  primary_input_port: SYS_CLK
+  additional_input_ports: []
+  outputs: []
+
+bus_interfaces:
+  - protocol: simple_bus
+    role: slave
+    port_name: bus
+
+artifacts:
+  synthesis:
+    - rtl/gpio_core.sv
+  simulation: []
+  metadata: []
