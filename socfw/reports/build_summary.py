@@ -31,14 +31,14 @@ class BuildSummaryReport:
         lines.append("## Modules and IP")
         lines.append("")
         if provenance.module_instances:
-            for name in provenance.module_instances:
+            for name in sorted(provenance.module_instances):
                 lines.append(f"- Module instance: `{name}`")
         else:
             lines.append("- Module instances: none")
         lines.append("")
 
         if provenance.ip_types:
-            for name in provenance.ip_types:
+            for name in sorted(provenance.ip_types):
                 lines.append(f"- IP type: `{name}`")
         else:
             lines.append("- IP types: none")
@@ -53,13 +53,13 @@ class BuildSummaryReport:
         lines.append("## Vendor Artifacts")
         lines.append("")
         if provenance.vendor_qip_files:
-            for qip in provenance.vendor_qip_files:
+            for qip in sorted(provenance.vendor_qip_files):
                 lines.append(f"- QIP: `{qip}`")
         else:
             lines.append("- QIP: none")
 
         if provenance.vendor_sdc_files:
-            for sdc in provenance.vendor_sdc_files:
+            for sdc in sorted(provenance.vendor_sdc_files):
                 lines.append(f"- SDC: `{sdc}`")
         else:
             lines.append("- Vendor SDC: none")
@@ -68,7 +68,7 @@ class BuildSummaryReport:
         lines.append("## Bridges")
         lines.append("")
         if provenance.bridge_pairs:
-            for pair in provenance.bridge_pairs:
+            for pair in sorted(provenance.bridge_pairs):
                 lines.append(f"- `{pair}`")
         else:
             lines.append("- none")
@@ -77,13 +77,13 @@ class BuildSummaryReport:
         lines.append("## Generated Files")
         lines.append("")
         if provenance.generated_files:
-            for fp in provenance.generated_files:
+            for fp in sorted(provenance.generated_files):
                 lines.append(f"- `{fp}`")
         else:
             lines.append("- none")
         lines.append("")
 
-        return "\n".join(lines)
+        return "\n".join(lines).rstrip() + "\n"
 
     def write(self, out_dir: str, provenance: SocBuildProvenance) -> str:
         reports_dir = Path(out_dir) / "reports"

@@ -31,6 +31,7 @@ def test_vendor_sdram_soc_golden(tmp_path):
     _assert_same(out_dir / "rtl" / "soc_top.sv", expected_root / "rtl" / "soc_top.sv")
     _assert_same(out_dir / "files.tcl", expected_root / "files.tcl")
     _assert_same(out_dir / "reports" / "bridge_summary.txt", expected_root / "reports" / "bridge_summary.txt")
+    _assert_same(out_dir / "reports" / "build_summary.md", expected_root / "reports" / "build_summary.md")
 
     timing_expected = expected_root / "timing" / "soc_top.sdc"
     timing_generated = out_dir / "timing" / "soc_top.sdc"

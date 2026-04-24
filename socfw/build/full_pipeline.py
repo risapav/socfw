@@ -151,7 +151,20 @@ def _build_soc_provenance(system, result: BuildResult, out_dir: str) -> SocBuild
         for src, dst, inst in _collect_bridge_pairs(system)
     ]
 
-    generated = sorted(a.path for a in result.manifest.artifacts) if result.manifest is not None else []
+    out_root = Path(out_dir).resolve()
+
+    def _rel(abs_path: str) -> str:
+        try:
+            return str(Path(abs_path).resolve().relative_to(out_root))
+        except ValueError:
+            return Path(abs_path).name
+
+    generated = sorted(
+        _rel(a.path) for a in result.manifest.artifacts
+    ) if result.manifest is not None else []
+
+    vendor_qip = sorted(Path(p).name for p in (vendor_bundle.qip_files if vendor_bundle else []))
+    vendor_sdc = sorted(Path(p).name for p in (vendor_bundle.sdc_files if vendor_bundle else []))
 
     return SocBuildProvenance(
         project_name=system.project.name,
@@ -163,8 +176,8 @@ def _build_soc_provenance(system, result: BuildResult, out_dir: str) -> SocBuild
         module_instances=sorted(m.instance for m in system.project.modules),
         timing_generated_clocks=len(system.timing.generated_clocks) if system.timing is not None else 0,
         timing_false_paths=len(system.timing.false_paths) if system.timing is not None else 0,
-        vendor_qip_files=vendor_bundle.qip_files if vendor_bundle is not None else [],
-        vendor_sdc_files=vendor_bundle.sdc_files if vendor_bundle is not None else [],
+        vendor_qip_files=vendor_qip,
+        vendor_sdc_files=vendor_sdc,
         bridge_pairs=bridge_pairs,
         generated_files=generated,
     )
