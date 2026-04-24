@@ -67,7 +67,6 @@ module soc_top (
     .wb(if_sdram0_wb.slave)
   );
 
-
   // socfw compatibility bridge scaffold
   // NOTE: temporary Phase-1/Phase-2 insertion until full bridge RTL planning is implemented.
   simple_bus_to_wishbone_bridge u_bridge_sdram0 (
@@ -90,5 +89,4 @@ module soc_top (
     .wb_ack(1'b0)
   );
 
-endmodule : soc_top
-`default_nettype wire
+endmodule

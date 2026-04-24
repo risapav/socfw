@@ -129,7 +129,7 @@ def _write_bridge_summary(system, out_dir: str) -> str | None:
         if iface is None:
             continue
         if fabric.protocol != iface.protocol:
-            pairs.append(f"{mod.instance}: {fabric.protocol} -> {iface.protocol}")
+            pairs.append((fabric.protocol, iface.protocol, mod.instance))
 
     if not pairs:
         return None
@@ -137,5 +137,6 @@ def _write_bridge_summary(system, out_dir: str) -> str | None:
     reports_dir = Path(out_dir) / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
     fp = reports_dir / "bridge_summary.txt"
-    fp.write_text("\n".join(pairs) + "\n", encoding="utf-8")
+    lines = [f"{inst}: {src} -> {dst}" for src, dst, inst in sorted(pairs, key=lambda x: (x[2], x[0], x[1]))]
+    fp.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return str(fp)

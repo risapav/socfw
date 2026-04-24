@@ -69,6 +69,6 @@ def patch_soc_top_with_bridge_scaffold(out_dir: str, system) -> str | None:
     if idx == -1:
         return None
 
-    patched = text[:idx] + insert_block + "\n" + text[idx:]
+    patched = text[:idx].rstrip() + insert_block + "\nendmodule\n"
     soc_top.write_text(patched, encoding="utf-8")
     return str(soc_top)
