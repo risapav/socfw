@@ -42,6 +42,7 @@
 - `reports/soc_graph.dot`
 - `rtl/simple_bus_to_wishbone_bridge.sv`
 - `rtl/soc_top.sv`
+- `rtl/soc_top.sv`
 - `sim`
 - `sw/sections.lds`
 - `sw/soc_irq.h`

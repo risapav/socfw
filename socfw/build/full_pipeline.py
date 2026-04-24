@@ -11,6 +11,7 @@ from socfw.builders.files_ir_builder import FilesIRBuilder
 from socfw.builders.vendor_artifact_collector import VendorArtifactCollector
 from socfw.build.provenance import SocBuildProvenance
 from socfw.config.system_loader import SystemLoader
+from socfw.build.top_injection import inject_bridge_instances
 from socfw.elaborate.bridge_planner import BridgePlanner
 from socfw.core.result import Result
 from socfw.emit.orchestrator import EmitOrchestrator
@@ -117,6 +118,10 @@ class FullBuildPipeline:
         bridge_files = _copy_bridge_artifacts(request.out_dir, planned_bridges)
         for bf in bridge_files:
             result.manifest.add("rtl", bf, "BridgePlanner")
+
+        injected_top = inject_bridge_instances(request.out_dir, planned_bridges)
+        if injected_top is not None:
+            result.manifest.add("rtl", injected_top, "TopInjection")
 
         soc_provenance = _build_soc_provenance(system, result, request.out_dir, planned_bridges)
         summary_path = self.build_summary.write(request.out_dir, soc_provenance)
