@@ -1,5 +1,18 @@
-# Legacy
+# legacy/
 
-This directory is reserved for deprecated code, old scripts, and legacy build artifacts that are no longer part of the active framework core but are preserved for reference.
+This directory contains deprecated build flow components kept temporarily for compatibility and migration fallback.
 
-Do not build new features on anything in this directory.
+## Rules
+
+- No new features added to anything in this directory
+- Critical fixes only, with explicit justification
+- All new work must target `socfw/`
+- Legacy entrypoints should emit deprecation warnings where feasible
+
+## Status
+
+Legacy freeze is active. The `socfw` CLI (`socfw build`, `socfw validate`, `socfw init`, etc.) is the official default entrypoint for all new and migrating projects.
+
+## Migration
+
+Projects still on the legacy flow should be migrated using the project classification in `docs/dev_notes/cutover_status.md`.
