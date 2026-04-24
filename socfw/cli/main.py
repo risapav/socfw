@@ -41,14 +41,38 @@ def cmd_build(args) -> int:
 
 
 def cmd_validate(args) -> int:
-    from socfw.config.system_loader import SystemLoader
+    from socfw.build.full_pipeline import FullBuildPipeline
 
-    loader = SystemLoader()
-    loaded = loader.load(args.project)
-
+    loaded = FullBuildPipeline().validate(args.project)
     _print_diags(loaded.diagnostics)
 
-    return 0 if loaded.ok else 1
+    if loaded.ok and loaded.value is not None:
+        timing_info = "timing=none"
+        if loaded.value.timing is not None:
+            timing_info = (
+                f"timing=generated_clocks:{len(loaded.value.timing.generated_clocks)} "
+                f"false_paths:{len(loaded.value.timing.false_paths)}"
+            )
+
+        cpu_info = "cpu=none"
+        if loaded.value.cpu is not None:
+            resolved = loaded.value.cpu_desc()
+            cpu_info = f"cpu={loaded.value.cpu.type_name}"
+            if resolved is None:
+                cpu_info += "(unresolved)"
+            else:
+                cpu_info += f"(module={resolved.module})"
+
+        print(
+            f"OK: project={loaded.value.project.name} "
+            f"board={loaded.value.board.board_id} "
+            f"ip_catalog={len(loaded.value.ip_catalog)} "
+            f"cpu_catalog={len(loaded.value.cpu_catalog)} "
+            f"{cpu_info} "
+            f"{timing_info}"
+        )
+        return 0
+    return 1
 
 
 def cmd_explain(args) -> int:

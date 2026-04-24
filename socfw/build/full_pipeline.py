@@ -9,6 +9,7 @@ from dataclasses import replace
 from socfw.builders.boot_image_builder import BootImageBuilder
 from socfw.builders.files_ir_builder import FilesIRBuilder
 from socfw.config.system_loader import SystemLoader
+from socfw.core.result import Result
 from socfw.emit.orchestrator import EmitOrchestrator
 from socfw.model.image import BootImage
 from socfw.plugins.bootstrap import create_builtin_registry
@@ -30,6 +31,22 @@ class FullBuildPipeline:
         self.bin2hex = Bin2HexRunner()
         self.firmware_builder = FirmwareBuilder()
         self.files_ir_builder = FilesIRBuilder()
+
+    def validate(self, project_file: str) -> Result:
+        from socfw.validate.rules.cpu_rules import UnknownCpuTypeRule
+        from socfw.validate.rules.ip_rules import UnknownIpTypeRule
+        from socfw.validate.rules.project_rules import DuplicateModuleInstanceRule
+        from socfw.validate.runner import ValidationRunner
+
+        loaded = self.loader.load(project_file)
+        if loaded.ok and loaded.value is not None:
+            runner = ValidationRunner(rules=[
+                DuplicateModuleInstanceRule(),
+                UnknownCpuTypeRule(),
+                UnknownIpTypeRule(),
+            ])
+            loaded.extend(runner.run(loaded.value))
+        return loaded
 
     def run(self, request: BuildRequest) -> BuildResult:
         loaded = self.loader.load(request.project_file)
