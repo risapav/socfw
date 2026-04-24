@@ -106,6 +106,11 @@ class FullBuildPipeline:
         if bridge_summary is not None:
             result.manifest.add("report", bridge_summary, "BridgeSummary")
 
+        from socfw.build.compat_top_patch import patch_soc_top_with_bridge_scaffold
+        patched_top = patch_soc_top_with_bridge_scaffold(request.out_dir, system)
+        if patched_top is not None:
+            result.manifest.add("rtl", patched_top, "CompatTopPatch")
+
         return result
 
 
