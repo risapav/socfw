@@ -61,25 +61,25 @@ modules:
     bind:
       ports:
         zs_addr:
-          target: board:onboard.sdram.addr
+          target: board:external.sdram.addr
         zs_ba:
-          target: board:onboard.sdram.ba
+          target: board:external.sdram.ba
         zs_dq:
-          target: board:onboard.sdram.dq
+          target: board:external.sdram.dq
         zs_dqm:
-          target: board:onboard.sdram.dqm
+          target: board:external.sdram.dqm
         zs_cs_n:
-          target: board:onboard.sdram.cs_n
+          target: board:external.sdram.cs_n
         zs_we_n:
-          target: board:onboard.sdram.we_n
+          target: board:external.sdram.we_n
         zs_ras_n:
-          target: board:onboard.sdram.ras_n
+          target: board:external.sdram.ras_n
         zs_cas_n:
-          target: board:onboard.sdram.cas_n
+          target: board:external.sdram.cas_n
         zs_cke:
-          target: board:onboard.sdram.cke
+          target: board:external.sdram.cke
         zs_clk:
-          target: board:onboard.sdram.clk
+          target: board:external.sdram.clk
 
 artifacts:
   emit: [rtl, timing, board, files, docs]

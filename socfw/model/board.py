@@ -147,6 +147,11 @@ class BoardModel:
                 raise KeyError(f"Unknown role '{role}' on connector '{conn}'")
             return self.connectors[conn].roles[role]
 
+        path_no_prefix = path
+        resolved = self.resolve_resource_path(path_no_prefix)
+        if resolved is not None:
+            return resolved
+
         raise KeyError(f"Unsupported board ref '{ref}'")
 
     def resolve_resource_path(self, dotted_path: str):

@@ -118,6 +118,34 @@ class BoardBindingResolver:
                                 )
                             )
                         resolved = tuple(parts)
+                elif isinstance(target, dict):
+                    kind = target.get("kind", "scalar")
+                    top_name = binding.top_name or target.get("top_name", "")
+                    if kind in {"vector", "inout"}:
+                        raw_pins = target.get("pins", [])
+                        pins_dict: dict[int, str] = (
+                            {i: p for i, p in enumerate(raw_pins)}
+                            if isinstance(raw_pins, list)
+                            else {int(k): v for k, v in raw_pins.items()}
+                        )
+                        direction = "inout" if kind == "inout" else "output"
+                        resolved = (
+                            ResolvedExternalPort(
+                                top_name=top_name,
+                                direction=direction,
+                                width=binding.width or target.get("width", len(pins_dict)),
+                                pins=pins_dict,
+                            ),
+                        )
+                    else:
+                        resolved = (
+                            ResolvedExternalPort(
+                                top_name=top_name,
+                                direction="output",
+                                width=1,
+                                pin=target.get("pin"),
+                            ),
+                        )
                 else:
                     raise TypeError(f"Unsupported board target type: {type(target)}")
 

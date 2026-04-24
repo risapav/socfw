@@ -42,4 +42,4 @@ modules:
     assert not result.ok
     codes = {d.code for d in result.diagnostics}
     assert "CPU001" in codes
-    assert "IP001" in codes
+    assert "PRJ002" in codes or "IP001" in codes

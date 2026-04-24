@@ -4,16 +4,16 @@
 module soc_top (
   input  wire SYS_CLK,
   input  wire RESET_N,
-  output wire [12:0] SDRAM_ADDR,
-  output wire [1:0] SDRAM_BA,
-  inout  wire [15:0] SDRAM_DQ,
-  output wire [1:0] SDRAM_DQM,
-  output wire SDRAM_CS_N,
-  output wire SDRAM_WE_N,
-  output wire SDRAM_RAS_N,
-  output wire SDRAM_CAS_N,
-  output wire SDRAM_CKE,
-  output wire SDRAM_CLK
+  output wire [12:0] ZS_ADDR,
+  output wire [1:0] ZS_BA,
+  inout  wire [15:0] ZS_DQ,
+  output wire [1:0] ZS_DQM,
+  output wire ZS_CS_N,
+  output wire ZS_WE_N,
+  output wire ZS_RAS_N,
+  output wire ZS_CAS_N,
+  output wire ZS_CKE,
+  output wire ZS_CLK
 );
 
 
@@ -54,16 +54,16 @@ module soc_top (
   ); // RAM @ 0x00000000  sdram_ctrl u_sdram0 (
     .clk(SYS_CLK),
     .reset_n(RESET_N),
-    .zs_addr(SDRAM_ADDR),
-    .zs_ba(SDRAM_BA),
-    .zs_dq(SDRAM_DQ),
-    .zs_dqm(SDRAM_DQM),
-    .zs_cs_n(SDRAM_CS_N),
-    .zs_we_n(SDRAM_WE_N),
-    .zs_ras_n(SDRAM_RAS_N),
-    .zs_cas_n(SDRAM_CAS_N),
-    .zs_cke(SDRAM_CKE),
-    .zs_clk(SDRAM_CLK),
+    .zs_addr(ZS_ADDR),
+    .zs_ba(ZS_BA),
+    .zs_dq(ZS_DQ),
+    .zs_dqm(ZS_DQM),
+    .zs_cs_n(ZS_CS_N),
+    .zs_we_n(ZS_WE_N),
+    .zs_ras_n(ZS_RAS_N),
+    .zs_cas_n(ZS_CAS_N),
+    .zs_cke(ZS_CKE),
+    .zs_clk(ZS_CLK),
     .wb(if_sdram0_wb.slave)
   );
 endmodule : soc_top

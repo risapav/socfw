@@ -33,18 +33,11 @@ class FullBuildPipeline:
         self.files_ir_builder = FilesIRBuilder()
 
     def validate(self, project_file: str) -> Result:
-        from socfw.validate.rules.cpu_rules import UnknownCpuTypeRule
-        from socfw.validate.rules.ip_rules import UnknownIpTypeRule
-        from socfw.validate.rules.project_rules import DuplicateModuleInstanceRule
         from socfw.validate.runner import ValidationRunner
 
         loaded = self.loader.load(project_file)
         if loaded.ok and loaded.value is not None:
-            runner = ValidationRunner(rules=[
-                DuplicateModuleInstanceRule(),
-                UnknownCpuTypeRule(),
-                UnknownIpTypeRule(),
-            ])
+            runner = ValidationRunner(rules=list(self.registry.validators))
             loaded.extend(runner.run(loaded.value))
         return loaded
 
