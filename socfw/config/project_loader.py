@@ -36,7 +36,7 @@ class ProjectLoader:
                         severity=Severity.ERROR,
                         message=f"Invalid project YAML: {exc}",
                         subject="project",
-                        locations=(SourceLocation(file=path),),
+                        spans=(SourceLocation(file=path),),
                     )
                 ]
             )
@@ -133,7 +133,7 @@ class ProjectLoader:
                         severity=Severity.ERROR,
                         message=msg,
                         subject="project",
-                        locations=(SourceLocation(file=path),),
+                        spans=(SourceLocation(file=path),),
                     )
                     for msg in errs
                 ]

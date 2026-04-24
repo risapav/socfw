@@ -29,7 +29,7 @@ class ConfigLoader:
                         severity=Severity.ERROR,
                         message=f"Project file not found: {project_file}",
                         subject="project config",
-                        locations=(SourceLocation(file=project_file),),
+                        spans=(SourceLocation(file=project_file),),
                     )
                 ]
             )
@@ -45,7 +45,7 @@ class ConfigLoader:
                         severity=Severity.ERROR,
                         message=f"Failed to parse YAML: {e}",
                         subject="project config",
-                        locations=(SourceLocation(file=project_file),),
+                        spans=(SourceLocation(file=project_file),),
                     )
                 ]
             )
@@ -59,7 +59,7 @@ class ConfigLoader:
                         severity=Severity.ERROR,
                         message=f"Unsupported config version: {version!r}. Expected version: 2",
                         subject="project config",
-                        locations=(SourceLocation(file=project_file),),
+                        spans=(SourceLocation(file=project_file),),
                     )
                 ]
             )
@@ -74,7 +74,7 @@ class ConfigLoader:
                         severity=Severity.ERROR,
                         message=f"Schema validation failed: {e}",
                         subject="project config",
-                        locations=(SourceLocation(file=project_file),),
+                        spans=(SourceLocation(file=project_file),),
                     )
                 ]
             )

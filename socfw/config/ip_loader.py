@@ -36,7 +36,7 @@ class IpLoader:
                         severity=Severity.ERROR,
                         message=f"Invalid IP YAML: {exc}",
                         subject="ip",
-                        locations=(SourceLocation(file=path),),
+                        spans=(SourceLocation(file=path),),
                     )
                 ]
             )
@@ -164,7 +164,7 @@ class IpLoader:
                         severity=Severity.ERROR,
                         message=msg,
                         subject="ip",
-                        locations=(SourceLocation(file=path),),
+                        spans=(SourceLocation(file=path),),
                     )
                     for msg in errs
                 ]
@@ -185,7 +185,7 @@ class IpLoader:
                         severity=Severity.WARNING,
                         message=f"IP registry path does not exist: {root}",
                         subject="ip.registry",
-                        locations=(SourceLocation(file=root),),
+                        spans=(SourceLocation(file=root),),
                     )
                 )
                 continue
@@ -202,7 +202,7 @@ class IpLoader:
                                 severity=Severity.ERROR,
                                 message=f"Duplicate IP descriptor name '{ip.name}'",
                                 subject="ip.registry",
-                                locations=(SourceLocation(file=str(fp)),),
+                                spans=(SourceLocation(file=str(fp)),),
                             )
                         )
                     else:

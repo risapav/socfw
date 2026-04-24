@@ -27,7 +27,7 @@ class CpuLoader:
                         severity=Severity.ERROR,
                         message=f"Invalid CPU YAML: {exc}",
                         subject="cpu",
-                        locations=(SourceLocation(file=path),),
+                        spans=(SourceLocation(file=path),),
                     )
                 ]
             )
@@ -84,7 +84,7 @@ class CpuLoader:
                                 severity=Severity.ERROR,
                                 message=f"Duplicate CPU descriptor '{res.value.name}'",
                                 subject="cpu.registry",
-                                locations=(SourceLocation(file=str(fp)),),
+                                spans=(SourceLocation(file=str(fp)),),
                             )
                         )
                     else:

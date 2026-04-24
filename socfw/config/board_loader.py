@@ -41,7 +41,7 @@ class BoardLoader:
                         severity=Severity.ERROR,
                         message=f"Invalid board YAML: {exc}",
                         subject="board",
-                        locations=(SourceLocation(file=path),),
+                        spans=(SourceLocation(file=path),),
                     )
                 ]
             )
@@ -162,7 +162,7 @@ class BoardLoader:
                         severity=Severity.ERROR,
                         message=msg,
                         subject="board",
-                        locations=(SourceLocation(file=path),),
+                        spans=(SourceLocation(file=path),),
                     )
                     for msg in errs
                 ]

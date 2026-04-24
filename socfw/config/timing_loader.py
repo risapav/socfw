@@ -32,7 +32,7 @@ class TimingLoader:
                         severity=Severity.ERROR,
                         message=f"Invalid timing YAML: {exc}",
                         subject="timing",
-                        locations=(SourceLocation(file=path),),
+                        spans=(SourceLocation(file=path),),
                     )
                 ]
             )
@@ -106,7 +106,7 @@ class TimingLoader:
                         severity=Severity.ERROR,
                         message=msg,
                         subject="timing",
-                        locations=(SourceLocation(file=path),),
+                        spans=(SourceLocation(file=path),),
                     )
                     for msg in errs
                 ]

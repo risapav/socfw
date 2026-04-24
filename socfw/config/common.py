@@ -20,7 +20,7 @@ def load_yaml_file(path: str | Path) -> Result[dict[str, Any]]:
                     severity=Severity.ERROR,
                     message=f"Configuration file not found: {p}",
                     subject="config",
-                    locations=(SourceLocation(file=str(p)),),
+                    spans=(SourceLocation(file=str(p)),),
                 )
             ]
         )
@@ -36,7 +36,7 @@ def load_yaml_file(path: str | Path) -> Result[dict[str, Any]]:
                     severity=Severity.ERROR,
                     message=f"Failed to parse YAML file '{p}': {exc}",
                     subject="config",
-                    locations=(SourceLocation(file=str(p)),),
+                    spans=(SourceLocation(file=str(p)),),
                 )
             ]
         )
@@ -49,7 +49,7 @@ def load_yaml_file(path: str | Path) -> Result[dict[str, Any]]:
                     severity=Severity.ERROR,
                     message=f"Top-level YAML document in '{p}' must be a mapping",
                     subject="config",
-                    locations=(SourceLocation(file=str(p)),),
+                    spans=(SourceLocation(file=str(p)),),
                 )
             ]
         )
