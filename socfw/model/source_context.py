@@ -9,3 +9,6 @@ class SourceContext:
     timing_file: str | None = None
     ip_files: dict[str, str] = field(default_factory=dict)
     cpu_files: dict[str, str] = field(default_factory=dict)
+    pack_roots: list[str] = field(default_factory=list)
+    ip_search_dirs: list[str] = field(default_factory=list)
+    cpu_search_dirs: list[str] = field(default_factory=list)

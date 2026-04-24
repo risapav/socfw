@@ -86,6 +86,7 @@ class IpDescriptor:
     bus_interfaces: tuple[IpBusInterface, ...] = ()
     vendor_info: IpVendorInfo | None = None
     meta: dict[str, Any] = field(default_factory=dict)
+    source_file: str | None = None
 
     def bus_interface(self, role: str | None = None) -> IpBusInterface | None:
         for b in self.bus_interfaces:

@@ -144,6 +144,7 @@ class IpLoader:
                     if doc.shell is not None else None
                 ),
             },
+            source_file=str(Path(path).resolve()),
         )
 
         errs = ip.validate()

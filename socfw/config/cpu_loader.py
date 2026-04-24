@@ -60,6 +60,7 @@ class CpuLoader:
             default_params=dict(doc.default_params),
             artifacts=tuple(str((Path(path).parent / p).resolve()) for p in doc.artifacts),
             meta={"notes": doc.notes},
+            source_file=str(Path(path).resolve()),
         )
 
         return Result(value=desc)

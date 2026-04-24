@@ -21,6 +21,7 @@ class CpuModel:
     reset_port: str = "RESET_N"
     bus_master: CpuBusMaster | None = None
     irq_port: str | None = None
+    source_file: str | None = None
 
 
 @dataclass

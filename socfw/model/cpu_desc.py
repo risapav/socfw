@@ -33,3 +33,4 @@ class CpuDescriptor:
     default_params: dict[str, Any] = field(default_factory=dict)
     artifacts: tuple[str, ...] = ()
     meta: dict[str, Any] = field(default_factory=dict)
+    source_file: str | None = None

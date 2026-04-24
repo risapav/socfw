@@ -126,8 +126,11 @@ class SystemLoader:
                 project_file=project_file,
                 board_file=board_path,
                 timing_file=str(project_dir / project.timing_file) if project.timing_file else None,
-                ip_files={k: "" for k in ip_catalog.keys()},
-                cpu_files={k: "" for k in cpu_catalog.keys()},
+                ip_files={k: getattr(v, "source_file", "") or "" for k, v in ip_catalog.items()},
+                cpu_files={k: getattr(v, "source_file", "") or "" for k, v in cpu_catalog.items()},
+                pack_roots=resolved_pack_roots,
+                ip_search_dirs=ip_search_dirs,
+                cpu_search_dirs=cpu_search_dirs,
             ),
         )
 

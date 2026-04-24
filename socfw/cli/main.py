@@ -40,6 +40,20 @@ def cmd_build(args) -> int:
     return 0 if result.ok else 1
 
 
+def cmd_doctor(args) -> int:
+    from socfw.build.full_pipeline import FullBuildPipeline
+    from socfw.diagnostics.doctor import DoctorReport
+
+    loaded = FullBuildPipeline().validate(args.project)
+    _print_diags(loaded.diagnostics)
+
+    if loaded.value is None:
+        return 1
+
+    print(DoctorReport().build(loaded.value))
+    return 0 if loaded.ok else 1
+
+
 def cmd_validate(args) -> int:
     from socfw.build.full_pipeline import FullBuildPipeline
 
@@ -301,6 +315,10 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--out", default="build/gen")
     b.add_argument("--templates", default=_default_templates_dir())
     b.set_defaults(func=cmd_build)
+
+    p_doc = sub.add_parser("doctor", help="Inspect resolved project configuration")
+    p_doc.add_argument("project")
+    p_doc.set_defaults(func=cmd_doctor)
 
     v = sub.add_parser("validate", help="Validate project config only")
     v.add_argument("project")
