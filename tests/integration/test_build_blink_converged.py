@@ -27,3 +27,5 @@ def test_build_blink_converged(tmp_path):
     rtl_text = rtl.read_text(encoding="utf-8")
     assert "module soc_top" in rtl_text
     assert "blink_test" in rtl_text
+    assert "ONB_LEDS" in rtl_text
+    assert "blink_test blink_test" in rtl_text

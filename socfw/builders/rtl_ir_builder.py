@@ -377,15 +377,103 @@ class RtlIRBuilder:
 
 
 class RtlIrBuilder:
-    """Minimal native RTL IR builder — assembles RtlTop from planned bridges."""
+    """Native RTL IR builder — assembles RtlTop from planned bridges and project modules."""
 
-    def build(self, *, system, planned_bridges) -> "RtlTop":
+    def build(self, *, system, planned_bridges, design=None) -> "RtlTop":
         from socfw.ir.rtl import RtlConnection, RtlInstance, RtlTop
 
         top = RtlTop(module_name="soc_top")
+
+        if system is not None:
+            self._add_board_bound_ports(system, top, design)
+            self._add_project_module_instances(system, top, design)
         self._add_bridge_instances(planned_bridges, top)
+
+        top.ports = sorted(top.ports, key=lambda p: p.name)
         top.instances = sorted(top.instances, key=lambda i: i.instance)
         return top
+
+    def _add_board_bound_ports(self, system, top, design) -> None:
+        from socfw.ir.rtl import RtlPort
+
+        seen: set[str] = set()
+
+        if design is not None:
+            for binding in design.port_bindings:
+                for ext in binding.resolved:
+                    if ext.top_name not in seen:
+                        top.ports.append(
+                            RtlPort(
+                                name=ext.top_name,
+                                direction=ext.direction,
+                                width=ext.width,
+                            )
+                        )
+                        seen.add(ext.top_name)
+        else:
+            for mod in system.project.modules:
+                for pb in mod.port_bindings:
+                    if not pb.target.startswith("board:"):
+                        continue
+                    board_path = pb.target[len("board:"):]
+                    resource = system.board.resolve_resource_path(board_path)
+                    if not isinstance(resource, dict):
+                        continue
+                    name = resource.get("top_name")
+                    if not name or name in seen:
+                        continue
+                    kind = resource.get("kind", "scalar")
+                    width = int(resource.get("width", 1))
+                    direction = "inout" if kind == "inout" else "output"
+                    top.ports.append(RtlPort(name=name, direction=direction, width=width))
+                    seen.add(name)
+
+    def _add_project_module_instances(self, system, top, design) -> None:
+        from socfw.ir.rtl import RtlConnection, RtlInstance
+
+        for mod in system.project.modules:
+            ip = system.ip_catalog.get(mod.type_name)
+            if ip is None:
+                continue
+
+            conns: list[RtlConnection] = []
+
+            for cb in mod.clocks:
+                conns.append(RtlConnection(cb.port_name, self._clock_expr(system, cb.domain)))
+
+            for pb in mod.port_bindings:
+                if design is not None:
+                    resolved = next(
+                        (
+                            b for b in design.port_bindings
+                            if b.instance == mod.instance and b.port_name == pb.port_name
+                        ),
+                        None,
+                    )
+                    if resolved and resolved.resolved:
+                        ext = resolved.resolved[0]
+                        conns.append(RtlConnection(pb.port_name, ext.top_name))
+                elif pb.target.startswith("board:"):
+                    board_path = pb.target[len("board:"):]
+                    resource = system.board.resolve_resource_path(board_path)
+                    if isinstance(resource, dict) and resource.get("top_name"):
+                        conns.append(RtlConnection(pb.port_name, resource["top_name"]))
+
+            top.instances.append(
+                RtlInstance(
+                    module=ip.module,
+                    instance=mod.instance,
+                    connections=tuple(conns),
+                )
+            )
+
+    def _clock_expr(self, system, domain: str) -> str:
+        if domain in {"sys_clk", "ref_clk"}:
+            return system.board.sys_clock.top_name
+        if ":" in domain:
+            inst, output = domain.split(":", 1)
+            return f"{inst}_{output}"
+        return domain
 
     def _add_bridge_instances(self, planned_bridges, top) -> None:
         from socfw.ir.rtl import RtlConnection, RtlInstance

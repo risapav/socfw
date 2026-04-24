@@ -10,6 +10,7 @@ class RtlPort:
     name: str
     direction: str
     width: int = 1
+    kind: str = "wire"
 
     @property
     def width_str(self) -> str:

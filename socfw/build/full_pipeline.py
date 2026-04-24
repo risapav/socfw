@@ -122,10 +122,13 @@ class FullBuildPipeline:
         for bf in bridge_files:
             result.manifest.add("rtl", bf, "BridgePlanner")
 
-        if planned_bridges:
-            rtl_top = self.rtl_ir_builder.build(system=system, planned_bridges=planned_bridges)
-            native_top_file = self.rtl_native_emitter.emit_top(request.out_dir, rtl_top)
-            result.manifest.add("rtl", native_top_file, "RtlNativeEmitter")
+        rtl_top = self.rtl_ir_builder.build(
+            system=system,
+            planned_bridges=planned_bridges,
+            design=result.design,
+        )
+        native_top_file = self.rtl_native_emitter.emit_top(request.out_dir, rtl_top)
+        result.manifest.add("rtl", native_top_file, "RtlNativeEmitter")
 
         soc_provenance = _build_soc_provenance(system, result, request.out_dir, planned_bridges)
         summary_path = self.build_summary.write(request.out_dir, soc_provenance)

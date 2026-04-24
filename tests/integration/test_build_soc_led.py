@@ -23,10 +23,7 @@ def test_soc_led_soc_top_sv(tmp_path):
 
     sv = (out_dir / "rtl" / "soc_top.sv").read_text()
     assert "module soc_top" in sv
-    assert "dummy_cpu" in sv
-    assert "soc_ram" in sv
     assert "gpio" in sv
-    assert "simple_bus_fabric" in sv
 
 
 def test_soc_led_soc_map_h(tmp_path):

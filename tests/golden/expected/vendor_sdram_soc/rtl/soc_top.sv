@@ -1,6 +1,31 @@
 `default_nettype none
 
-module soc_top;
+module soc_top (
+  output wire [12:0] ZS_ADDR,
+  output wire [1:0] ZS_BA,
+  output wire ZS_CAS_N,
+  output wire ZS_CKE,
+  output wire ZS_CLK,
+  output wire ZS_CS_N,
+  inout wire [15:0] ZS_DQ,
+  output wire [1:0] ZS_DQM,
+  output wire ZS_RAS_N,
+  output wire ZS_WE_N
+);
+
+  sdram_ctrl sdram0 (
+    .clk(SYS_CLK),
+    .zs_addr(ZS_ADDR),
+    .zs_ba(ZS_BA),
+    .zs_dq(ZS_DQ),
+    .zs_dqm(ZS_DQM),
+    .zs_cs_n(ZS_CS_N),
+    .zs_we_n(ZS_WE_N),
+    .zs_ras_n(ZS_RAS_N),
+    .zs_cas_n(ZS_CAS_N),
+    .zs_cke(ZS_CKE),
+    .zs_clk(ZS_CLK)
+  );
 
   simple_bus_to_wishbone_bridge u_bridge_sdram0 (
     .clk(1'b0),
