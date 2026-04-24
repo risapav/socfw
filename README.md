@@ -136,3 +136,16 @@ New projects should use:
 ```bash
 socfw init <project_dir> --template blink
 ```
+
+## Release status
+
+Current cutover target:
+
+```text
+v1.0.0-cutover
+```
+
+See:
+
+- `docs/releases/v1.0.0-cutover.md`
+- `docs/dev_notes/release_candidate_checklist.md`

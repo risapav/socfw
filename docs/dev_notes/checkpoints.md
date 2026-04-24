@@ -88,3 +88,15 @@ All green:
 **Next:**
 - release candidate tag
 - final cutover review
+
+## m9-v1.0-rc (file 91)
+
+**Status: complete**
+
+- release notes added (`docs/releases/v1.0.0-cutover.md`)
+- RC checklist added
+- cutover tag procedure documented
+
+**Next:**
+- run full CI
+- create `v1.0.0-cutover` tag

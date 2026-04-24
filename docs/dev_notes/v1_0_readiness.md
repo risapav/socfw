@@ -28,7 +28,7 @@
 
 ## Release candidate
 
-- [ ] release notes added
-- [ ] RC checklist added
+- [x] release notes added (`docs/releases/v1.0.0-cutover.md`)
+- [x] RC checklist added (`docs/dev_notes/release_candidate_checklist.md`)
 - [ ] all required tests green
 - [ ] tag candidate reviewed
