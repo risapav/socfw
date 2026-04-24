@@ -75,3 +75,16 @@ socfw build <project.yaml> --out <dir>
 ```
 
 Legacy flow is retained only as fallback during migration.
+
+## CI status
+
+Required lane:
+- unit tests
+- integration tests (non-firmware)
+- new-flow fixture validation
+- new-flow fixture builds
+- golden tests
+
+Compatibility lane:
+- legacy smoke
+- non-blocking (`continue-on-error: true`)

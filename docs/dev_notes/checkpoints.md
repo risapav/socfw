@@ -48,3 +48,17 @@ All green:
 **Next:**
 - CI required lane switch
 - legacy compatibility lane
+
+## m6-ci-default-switch (file 88)
+
+**Status: complete**
+
+- new-flow fixtures run in required CI lane
+- unit tests run in required CI lane
+- integration tests run in required CI lane
+- golden tests run in required CI lane
+- legacy smoke moved to compatibility lane (`continue-on-error: true`)
+
+**Next:**
+- default project scaffolding
+- legacy freeze enforcement

@@ -5,35 +5,70 @@ on:
   pull_request:
 
 jobs:
-  unit:
+  new-flow-required:
+    name: new-flow required
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install -e .
-      - run: pip install pytest
-      - run: pytest tests/unit
 
-  integration:
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install -e .
-      - run: pip install pytest
-      - run: pytest tests/integration -k "not picorv32 and not sim" -v
 
-  golden:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -e .
-      - run: pip install pytest
-      - run: pytest tests/golden
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest
+
+      - name: Unit tests
+        run: |
+          pytest tests/unit
+
+      - name: Integration tests
+        run: |
+          pytest tests/integration -k "not picorv32 and not sim"
+
+      - name: Validate new-flow anchors
+        run: |
+          socfw validate tests/golden/fixtures/blink_converged/project.yaml
+          socfw validate tests/golden/fixtures/pll_converged/project.yaml
+          socfw validate tests/golden/fixtures/vendor_pll_soc/project.yaml
+          socfw validate tests/golden/fixtures/vendor_sdram_soc/project.yaml
+
+      - name: Build new-flow anchors
+        run: |
+          socfw build tests/golden/fixtures/blink_converged/project.yaml --out build/ci/blink_converged
+          socfw build tests/golden/fixtures/pll_converged/project.yaml --out build/ci/pll_converged
+          socfw build tests/golden/fixtures/vendor_pll_soc/project.yaml --out build/ci/vendor_pll_soc
+          socfw build tests/golden/fixtures/vendor_sdram_soc/project.yaml --out build/ci/vendor_sdram_soc
+
+      - name: Golden tests
+        run: |
+          pytest tests/golden
+
+  legacy-compatibility:
+    name: legacy compatibility
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest
+
+      - name: Legacy compatibility smoke
+        run: |
+          socfw validate project_config.yaml || true
+          socfw build project_config.yaml --out build/ci/legacy_smoke || true
