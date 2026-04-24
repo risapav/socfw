@@ -22,12 +22,13 @@ def test_build_vendor_sdram_soc(tmp_path):
     assert files_tcl.exists()
     assert bridge_summary.exists()
 
-    rtl_text = rtl.read_text(encoding="utf-8")
+    bridge_rtl = out_dir / "rtl" / "simple_bus_to_wishbone_bridge.sv"
+
+    assert bridge_rtl.exists()
+    assert "module simple_bus_to_wishbone_bridge" in bridge_rtl.read_text(encoding="utf-8")
+
     files_tcl_text = files_tcl.read_text(encoding="utf-8")
     bridge_summary_text = bridge_summary.read_text(encoding="utf-8")
-
-    assert "simple_bus_to_wishbone_bridge" in rtl_text
-    assert "u_bridge_sdram0" in rtl_text
 
     assert "QIP_FILE" in files_tcl_text
     assert "sdram_ctrl.qip" in files_tcl_text

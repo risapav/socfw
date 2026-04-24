@@ -11,6 +11,7 @@ from socfw.builders.files_ir_builder import FilesIRBuilder
 from socfw.builders.vendor_artifact_collector import VendorArtifactCollector
 from socfw.build.provenance import SocBuildProvenance
 from socfw.config.system_loader import SystemLoader
+from socfw.elaborate.bridge_planner import BridgePlanner
 from socfw.core.result import Result
 from socfw.emit.orchestrator import EmitOrchestrator
 from socfw.model.image import BootImage
@@ -36,6 +37,7 @@ class FullBuildPipeline:
         self.files_ir_builder = FilesIRBuilder()
         self.vendor_collector = VendorArtifactCollector()
         self.build_summary = BuildSummaryReport()
+        self.bridge_planner = BridgePlanner()
 
     def validate(self, project_file: str) -> Result:
         from socfw.validate.runner import ValidationRunner
@@ -111,16 +113,30 @@ class FullBuildPipeline:
         if bridge_summary is not None:
             result.manifest.add("report", bridge_summary, "BridgeSummary")
 
-        from socfw.build.compat_top_patch import patch_soc_top_with_bridge_scaffold
-        patched_top = patch_soc_top_with_bridge_scaffold(request.out_dir, system)
-        if patched_top is not None:
-            result.manifest.add("rtl", patched_top, "CompatTopPatch")
+        planned_bridges = self.bridge_planner.plan(system)
+        bridge_files = _copy_bridge_artifacts(request.out_dir, planned_bridges)
+        for bf in bridge_files:
+            result.manifest.add("rtl", bf, "BridgePlanner")
 
-        soc_provenance = _build_soc_provenance(system, result, request.out_dir)
+        soc_provenance = _build_soc_provenance(system, result, request.out_dir, planned_bridges)
         summary_path = self.build_summary.write(request.out_dir, soc_provenance)
         result.manifest.add("report", summary_path, "BuildSummary")
 
         return result
+
+
+def _copy_bridge_artifacts(out_dir: str, planned_bridges) -> list[str]:
+    if not planned_bridges:
+        return []
+    rtl_dir = Path(out_dir) / "rtl"
+    rtl_dir.mkdir(parents=True, exist_ok=True)
+    copied = []
+    for bridge in planned_bridges:
+        src = Path(bridge.rtl_file)
+        dst = rtl_dir / src.name
+        dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+        copied.append(str(dst))
+    return sorted(dict.fromkeys(copied))
 
 
 def _collect_bridge_pairs(system) -> list[tuple[str, str, str]]:
@@ -142,14 +158,20 @@ def _collect_bridge_pairs(system) -> list[tuple[str, str, str]]:
     return sorted(pairs, key=lambda x: (x[2], x[0], x[1]))
 
 
-def _build_soc_provenance(system, result: BuildResult, out_dir: str) -> SocBuildProvenance:
+def _build_soc_provenance(system, result: BuildResult, out_dir: str, planned_bridges=None) -> SocBuildProvenance:
     cpu_desc = system.cpu_desc()
     vendor_bundle = VendorArtifactCollector().collect(result.design) if result.design is not None else None
 
-    bridge_pairs = [
-        f"{inst}: {src} -> {dst}"
-        for src, dst, inst in _collect_bridge_pairs(system)
-    ]
+    if planned_bridges:
+        bridge_pairs = sorted(
+            f"{b.target_module}: {b.src_protocol} -> {b.dst_protocol}"
+            for b in planned_bridges
+        )
+    else:
+        bridge_pairs = [
+            f"{inst}: {src} -> {dst}"
+            for src, dst, inst in _collect_bridge_pairs(system)
+        ]
 
     out_root = Path(out_dir).resolve()
 
