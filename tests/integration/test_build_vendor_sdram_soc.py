@@ -1,0 +1,31 @@
+from socfw.build.context import BuildRequest
+from socfw.build.full_pipeline import FullBuildPipeline
+
+
+def test_build_vendor_sdram_soc(tmp_path):
+    out_dir = tmp_path / "out"
+
+    result = FullBuildPipeline().run(
+        BuildRequest(
+            project_file="tests/golden/fixtures/vendor_sdram_soc/project.yaml",
+            out_dir=str(out_dir),
+        )
+    )
+
+    assert result.ok, [f"{d.code}: {d.message}" for d in result.diagnostics]
+
+    files_tcl = out_dir / "files.tcl"
+    bridge_summary = out_dir / "reports" / "bridge_summary.txt"
+
+    assert files_tcl.exists()
+    assert bridge_summary.exists()
+
+    files_tcl_text = files_tcl.read_text(encoding="utf-8")
+    bridge_summary_text = bridge_summary.read_text(encoding="utf-8")
+
+    assert "QIP_FILE" in files_tcl_text
+    assert "sdram_ctrl.qip" in files_tcl_text
+    assert "SDC_FILE" in files_tcl_text
+    assert "sdram_ctrl.sdc" in files_tcl_text
+
+    assert "sdram0: simple_bus -> wishbone" in bridge_summary_text

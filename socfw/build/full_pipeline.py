@@ -102,4 +102,35 @@ class FullBuildPipeline:
         for p in report_paths:
             result.manifest.add("report", p, "ReportOrchestrator")
 
+        bridge_summary = _write_bridge_summary(system, request.out_dir)
+        if bridge_summary is not None:
+            result.manifest.add("report", bridge_summary, "BridgeSummary")
+
         return result
+
+
+def _write_bridge_summary(system, out_dir: str) -> str | None:
+    pairs = []
+    for mod in system.project.modules:
+        if mod.bus is None:
+            continue
+        fabric = system.project.fabric_by_name(mod.bus.fabric)
+        if fabric is None:
+            continue
+        ip = system.ip_catalog.get(mod.type_name)
+        if ip is None:
+            continue
+        iface = ip.bus_interface(role="slave")
+        if iface is None:
+            continue
+        if fabric.protocol != iface.protocol:
+            pairs.append(f"{mod.instance}: {fabric.protocol} -> {iface.protocol}")
+
+    if not pairs:
+        return None
+
+    reports_dir = Path(out_dir) / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    fp = reports_dir / "bridge_summary.txt"
+    fp.write_text("\n".join(pairs) + "\n", encoding="utf-8")
+    return str(fp)
