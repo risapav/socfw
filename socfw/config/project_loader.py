@@ -5,6 +5,7 @@ from pydantic import ValidationError
 from socfw.config.aliases import normalize_project_aliases
 from socfw.config.common import load_yaml_file
 from socfw.config.project_schema import ModuleClockPortSchema, ProjectConfigSchema
+from socfw.config.schema_errors import project_schema_error
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
 from socfw.core.result import Result
 from socfw.model.cpu import CpuInstance
@@ -33,17 +34,7 @@ class ProjectLoader:
         try:
             doc = ProjectConfigSchema.model_validate(data)
         except ValidationError as exc:
-            return Result(
-                diagnostics=[
-                    Diagnostic(
-                        code="PRJ100",
-                        severity=Severity.ERROR,
-                        message=f"Invalid project YAML: {exc}",
-                        subject="project",
-                        spans=(SourceLocation(file=path),),
-                    )
-                ]
-            )
+            return Result(diagnostics=[project_schema_error(exc, file=path)])
 
         modules: list[ModuleInstance] = []
         for m in doc.modules:

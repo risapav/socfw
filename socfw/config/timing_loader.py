@@ -4,6 +4,7 @@ from pydantic import ValidationError
 
 from socfw.config.aliases import normalize_timing_aliases
 from socfw.config.common import load_yaml_file
+from socfw.config.schema_errors import timing_schema_error
 from socfw.config.timing_schema import TimingDocumentSchema
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
 from socfw.core.result import Result
@@ -29,17 +30,7 @@ class TimingLoader:
         try:
             doc = TimingDocumentSchema.model_validate(data)
         except ValidationError as exc:
-            return Result(
-                diagnostics=[
-                    Diagnostic(
-                        code="TIM100",
-                        severity=Severity.ERROR,
-                        message=f"Invalid timing YAML: {exc}",
-                        subject="timing",
-                        spans=(SourceLocation(file=path),),
-                    )
-                ]
-            )
+            return Result(diagnostics=[timing_schema_error(exc, file=path)])
 
         timing = TimingModel(
             primary_clocks=[

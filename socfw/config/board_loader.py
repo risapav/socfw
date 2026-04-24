@@ -10,6 +10,7 @@ from socfw.config.board_schema import (
     BoardConnectorSchema,
 )
 from socfw.config.common import load_yaml_file
+from socfw.config.schema_errors import board_schema_error
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
 from socfw.core.result import Result
 from socfw.model.board import (
@@ -97,17 +98,7 @@ class BoardLoader:
         try:
             doc = BoardConfigSchema.model_validate(raw.value)
         except ValidationError as exc:
-            return Result(
-                diagnostics=[
-                    Diagnostic(
-                        code="BRD100",
-                        severity=Severity.ERROR,
-                        message=f"Invalid board YAML: {exc}",
-                        subject="board",
-                        spans=(SourceLocation(file=path),),
-                    )
-                ]
-            )
+            return Result(diagnostics=[board_schema_error(exc, file=path)])
 
         onboard: dict[str, BoardResource] = {}
         for key, res in doc.resources.onboard.items():

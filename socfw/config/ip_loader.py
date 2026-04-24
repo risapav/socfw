@@ -6,6 +6,7 @@ from pydantic import ValidationError
 
 from socfw.config.common import load_yaml_file
 from socfw.config.ip_schema import IpConfigSchema
+from socfw.config.schema_errors import ip_schema_error
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
 from socfw.core.result import Result
 from socfw.model.ip import (
@@ -29,17 +30,7 @@ class IpLoader:
         try:
             doc = IpConfigSchema.model_validate(raw.value)
         except ValidationError as exc:
-            return Result(
-                diagnostics=[
-                    Diagnostic(
-                        code="IP100",
-                        severity=Severity.ERROR,
-                        message=f"Invalid IP YAML: {exc}",
-                        subject="ip",
-                        spans=(SourceLocation(file=path),),
-                    )
-                ]
-            )
+            return Result(diagnostics=[ip_schema_error(exc, file=path)])
 
         base_dir = Path(path).parent
 
