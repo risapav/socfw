@@ -18,10 +18,19 @@ def test_build_vendor_pll_soc(tmp_path):
 
     rtl = out_dir / "rtl" / "soc_top.sv"
     board_tcl = out_dir / "hal" / "board.tcl"
+    files_tcl = out_dir / "files.tcl"
 
     assert rtl.exists()
     assert board_tcl.exists()
+    assert files_tcl.exists()
 
     rtl_text = rtl.read_text(encoding="utf-8")
+    files_tcl_text = files_tcl.read_text(encoding="utf-8")
+
     assert "sys_pll" in rtl_text
     assert "blink_test" in rtl_text
+
+    assert "QIP_FILE" in files_tcl_text
+    assert "sys_pll.qip" in files_tcl_text
+    assert "SDC_FILE" in files_tcl_text
+    assert "sys_pll.sdc" in files_tcl_text
