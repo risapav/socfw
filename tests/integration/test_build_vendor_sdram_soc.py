@@ -32,6 +32,9 @@ def test_build_vendor_sdram_soc(tmp_path):
     assert "u_bridge_sdram0" in rtl_text
     assert "ZS_DQ" in rtl_text
     assert "sdram_ctrl sdram0" in rtl_text
+    assert "input wire SYS_CLK" in rtl_text
+    assert "wire reset_n;" in rtl_text
+    assert ".reset_n(reset_n)" in rtl_text
 
     files_tcl_text = files_tcl.read_text(encoding="utf-8")
     bridge_summary_text = bridge_summary.read_text(encoding="utf-8")

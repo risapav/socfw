@@ -62,6 +62,13 @@ class RtlModuleInstance:
 # Native RTL IR — lightweight frozen types for the new native emitter path
 
 @dataclass(frozen=True)
+class RtlSignal:
+    name: str
+    width: int = 1
+    kind: str = "wire"
+
+
+@dataclass(frozen=True)
 class RtlConnection:
     port: str
     expr: str
@@ -155,6 +162,7 @@ class RtlIrqCombiner:
 class RtlTop:
     module_name: str = "soc_top"
     ports: list[RtlPort] = field(default_factory=list)
+    signals: list[RtlSignal] = field(default_factory=list)
     instances: list[RtlInstance] = field(default_factory=list)
 
 

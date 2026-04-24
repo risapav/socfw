@@ -55,6 +55,13 @@ class RtlEmitter:
 
         lines.append("")
 
+        signals = getattr(top, "signals", [])
+        for sig in sorted(signals, key=lambda s: s.name):
+            width = "" if sig.width == 1 else f"[{sig.width - 1}:0] "
+            lines.append(f"  {sig.kind} {width}{sig.name};")
+        if signals:
+            lines.append("")
+
         for inst in sorted(top.instances, key=lambda i: i.instance):
             lines.append(f"  {inst.module} {inst.instance} (")
             conns = list(inst.connections)

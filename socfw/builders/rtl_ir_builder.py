@@ -385,13 +385,36 @@ class RtlIrBuilder:
         top = RtlTop(module_name="soc_top")
 
         if system is not None:
+            self._add_basic_clock_reset_nets(system, top)
             self._add_board_bound_ports(system, top, design)
             self._add_project_module_instances(system, top, design)
-        self._add_bridge_instances(planned_bridges, top)
+        self._add_bridge_instances(planned_bridges, top, system)
 
         top.ports = sorted(top.ports, key=lambda p: p.name)
+        top.signals = self._dedup_signals(top.signals)
         top.instances = sorted(top.instances, key=lambda i: i.instance)
         return top
+
+    def _dedup_signals(self, signals) -> list:
+        by_name: dict = {}
+        for s in signals:
+            by_name[s.name] = s
+        return sorted(by_name.values(), key=lambda s: s.name)
+
+    def _add_basic_clock_reset_nets(self, system, top) -> None:
+        from socfw.ir.rtl import RtlPort, RtlSignal
+
+        clk_name = system.board.sys_clock.top_name
+        top.ports.append(RtlPort(name=clk_name, direction="input", width=1))
+
+        if system.board.sys_reset is not None:
+            rst_name = system.board.sys_reset.top_name
+            top.ports.append(RtlPort(name=rst_name, direction="input", width=1))
+            top.signals.append(RtlSignal(name="reset_n", width=1))
+            if system.board.sys_reset.active_low:
+                top.signals.append(RtlSignal(name="reset_active", width=1))
+        else:
+            top.signals.append(RtlSignal(name="reset_n", width=1))
 
     def _add_board_bound_ports(self, system, top, design) -> None:
         from socfw.ir.rtl import RtlPort
@@ -441,6 +464,9 @@ class RtlIrBuilder:
             for cb in mod.clocks:
                 conns.append(RtlConnection(cb.port_name, self._clock_expr(system, cb.domain)))
 
+            if ip.reset.port:
+                conns.append(RtlConnection(ip.reset.port, "reset_n"))
+
             for pb in mod.port_bindings:
                 if design is not None:
                     resolved = next(
@@ -475,8 +501,10 @@ class RtlIrBuilder:
             return f"{inst}_{output}"
         return domain
 
-    def _add_bridge_instances(self, planned_bridges, top) -> None:
+    def _add_bridge_instances(self, planned_bridges, top, system=None) -> None:
         from socfw.ir.rtl import RtlConnection, RtlInstance
+
+        clk_expr = system.board.sys_clock.top_name if system is not None else "SYS_CLK"
 
         for bridge in sorted(planned_bridges, key=lambda b: b.instance):
             top.instances.append(
@@ -484,8 +512,8 @@ class RtlIrBuilder:
                     module=f"{bridge.kind}_bridge",
                     instance=bridge.instance,
                     connections=(
-                        RtlConnection("clk", "1'b0"),
-                        RtlConnection("reset_n", "1'b1"),
+                        RtlConnection("clk", clk_expr),
+                        RtlConnection("reset_n", "reset_n"),
                         RtlConnection("sb_addr", "32'h0"),
                         RtlConnection("sb_wdata", "32'h0"),
                         RtlConnection("sb_be", "4'h0"),

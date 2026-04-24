@@ -1,6 +1,8 @@
 `default_nettype none
 
 module soc_top (
+  input wire RESET_N,
+  input wire SYS_CLK,
   output wire [12:0] ZS_ADDR,
   output wire [1:0] ZS_BA,
   output wire ZS_CAS_N,
@@ -13,8 +15,12 @@ module soc_top (
   output wire ZS_WE_N
 );
 
+  wire reset_active;
+  wire reset_n;
+
   sdram_ctrl sdram0 (
     .clk(SYS_CLK),
+    .reset_n(reset_n),
     .zs_addr(ZS_ADDR),
     .zs_ba(ZS_BA),
     .zs_dq(ZS_DQ),
@@ -28,8 +34,8 @@ module soc_top (
   );
 
   simple_bus_to_wishbone_bridge u_bridge_sdram0 (
-    .clk(1'b0),
-    .reset_n(1'b1),
+    .clk(SYS_CLK),
+    .reset_n(reset_n),
     .sb_addr(32'h0),
     .sb_wdata(32'h0),
     .sb_be(4'h0),
