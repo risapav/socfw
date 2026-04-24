@@ -14,6 +14,16 @@ def test_build_blink_converged(tmp_path):
         )
     )
 
-    assert result.ok, [str(d) for d in result.diagnostics]
-    assert (out_dir / "rtl" / "soc_top.sv").exists()
-    assert (out_dir / "hal" / "board.tcl").exists()
+    assert result.ok, [f"{d.code}: {d.message}" for d in result.diagnostics]
+
+    rtl = out_dir / "rtl" / "soc_top.sv"
+    board_tcl = out_dir / "hal" / "board.tcl"
+    timing_sdc = out_dir / "timing" / "soc_top.sdc"
+
+    assert rtl.exists()
+    assert board_tcl.exists()
+    assert timing_sdc.exists()
+
+    rtl_text = rtl.read_text(encoding="utf-8")
+    assert "module soc_top" in rtl_text
+    assert "blink_test" in rtl_text
