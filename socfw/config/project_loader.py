@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pydantic import ValidationError
 
+from socfw.config.aliases import normalize_project_aliases
 from socfw.config.common import load_yaml_file
 from socfw.config.project_schema import ModuleClockPortSchema, ProjectConfigSchema
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
@@ -26,8 +27,11 @@ class ProjectLoader:
         if not raw.ok:
             return Result(diagnostics=raw.diagnostics)
 
+        data = raw.value or {}
+        data, alias_diags = normalize_project_aliases(data, file=path)
+
         try:
-            doc = ProjectConfigSchema.model_validate(raw.value)
+            doc = ProjectConfigSchema.model_validate(data)
         except ValidationError as exc:
             return Result(
                 diagnostics=[
@@ -185,5 +189,6 @@ class ProjectLoader:
                 "firmware": firmware,
                 "reset_vector": doc.boot.reset_vector,
                 "stack_percent": doc.boot.stack_percent,
-            }
+            },
+            diagnostics=list(alias_diags),
         )
