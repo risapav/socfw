@@ -8,11 +8,14 @@ from dataclasses import replace
 
 from socfw.builders.boot_image_builder import BootImageBuilder
 from socfw.builders.files_ir_builder import FilesIRBuilder
+from socfw.builders.vendor_artifact_collector import VendorArtifactCollector
+from socfw.build.provenance import SocBuildProvenance
 from socfw.config.system_loader import SystemLoader
 from socfw.core.result import Result
 from socfw.emit.orchestrator import EmitOrchestrator
 from socfw.model.image import BootImage
 from socfw.plugins.bootstrap import create_builtin_registry
+from socfw.reports.build_summary import BuildSummaryReport
 from socfw.reports.orchestrator import ReportOrchestrator
 from socfw.tools.bin2hex_runner import Bin2HexRunner
 from socfw.tools.firmware_builder import FirmwareBuilder
@@ -31,6 +34,8 @@ class FullBuildPipeline:
         self.bin2hex = Bin2HexRunner()
         self.firmware_builder = FirmwareBuilder()
         self.files_ir_builder = FilesIRBuilder()
+        self.vendor_collector = VendorArtifactCollector()
+        self.build_summary = BuildSummaryReport()
 
     def validate(self, project_file: str) -> Result:
         from socfw.validate.runner import ValidationRunner
@@ -111,10 +116,14 @@ class FullBuildPipeline:
         if patched_top is not None:
             result.manifest.add("rtl", patched_top, "CompatTopPatch")
 
+        soc_provenance = _build_soc_provenance(system, result, request.out_dir)
+        summary_path = self.build_summary.write(request.out_dir, soc_provenance)
+        result.manifest.add("report", summary_path, "BuildSummary")
+
         return result
 
 
-def _write_bridge_summary(system, out_dir: str) -> str | None:
+def _collect_bridge_pairs(system) -> list[tuple[str, str, str]]:
     pairs = []
     for mod in system.project.modules:
         if mod.bus is None:
@@ -130,13 +139,45 @@ def _write_bridge_summary(system, out_dir: str) -> str | None:
             continue
         if fabric.protocol != iface.protocol:
             pairs.append((fabric.protocol, iface.protocol, mod.instance))
+    return sorted(pairs, key=lambda x: (x[2], x[0], x[1]))
 
+
+def _build_soc_provenance(system, result: BuildResult, out_dir: str) -> SocBuildProvenance:
+    cpu_desc = system.cpu_desc()
+    vendor_bundle = VendorArtifactCollector().collect(result.design) if result.design is not None else None
+
+    bridge_pairs = [
+        f"{inst}: {src} -> {dst}"
+        for src, dst, inst in _collect_bridge_pairs(system)
+    ]
+
+    generated = sorted(a.path for a in result.manifest.artifacts) if result.manifest is not None else []
+
+    return SocBuildProvenance(
+        project_name=system.project.name,
+        project_mode=system.project.mode,
+        board_id=system.board.board_id,
+        cpu_type=system.cpu.type_name if system.cpu is not None else None,
+        cpu_module=cpu_desc.module if cpu_desc is not None else None,
+        ip_types=sorted({m.type_name for m in system.project.modules}),
+        module_instances=sorted(m.instance for m in system.project.modules),
+        timing_generated_clocks=len(system.timing.generated_clocks) if system.timing is not None else 0,
+        timing_false_paths=len(system.timing.false_paths) if system.timing is not None else 0,
+        vendor_qip_files=vendor_bundle.qip_files if vendor_bundle is not None else [],
+        vendor_sdc_files=vendor_bundle.sdc_files if vendor_bundle is not None else [],
+        bridge_pairs=bridge_pairs,
+        generated_files=generated,
+    )
+
+
+def _write_bridge_summary(system, out_dir: str) -> str | None:
+    pairs = _collect_bridge_pairs(system)
     if not pairs:
         return None
 
     reports_dir = Path(out_dir) / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
     fp = reports_dir / "bridge_summary.txt"
-    lines = [f"{inst}: {src} -> {dst}" for src, dst, inst in sorted(pairs, key=lambda x: (x[2], x[0], x[1]))]
+    lines = [f"{inst}: {src} -> {dst}" for src, dst, inst in pairs]
     fp.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return str(fp)
