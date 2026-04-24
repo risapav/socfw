@@ -7,7 +7,7 @@ from socfw.ir.rtl import (
     RtlBusConn,
     RtlFabricInstance,
     RtlFabricPort,
-    RtlInstance,
+    RtlModuleInstance,
     RtlInterfaceInstance,
 )
 
@@ -122,8 +122,8 @@ class RtlBusBuilder:
 
         return fabrics
 
-    def build_bridge_instances(self, plan: InterconnectPlan) -> list[RtlInstance]:
-        result: list[RtlInstance] = []
+    def build_bridge_instances(self, plan: InterconnectPlan) -> list[RtlModuleInstance]:
+        result: list[RtlModuleInstance] = []
 
         for br in plan.bridges:
             if br.dst_protocol == "axi_lite":
@@ -136,7 +136,7 @@ class RtlBusBuilder:
                 continue
 
             result.append(
-                RtlInstance(
+                RtlModuleInstance(
                     module=br.module,
                     name=br.instance,
                     conns=[],

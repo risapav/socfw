@@ -30,7 +30,6 @@ def test_build_vendor_sdram_soc(tmp_path):
     rtl_text = rtl.read_text(encoding="utf-8")
     assert "simple_bus_to_wishbone_bridge" in rtl_text
     assert "u_bridge_sdram0" in rtl_text
-    assert "socfw planned bridge instance" in rtl_text
 
     files_tcl_text = files_tcl.read_text(encoding="utf-8")
     bridge_summary_text = bridge_summary.read_text(encoding="utf-8")

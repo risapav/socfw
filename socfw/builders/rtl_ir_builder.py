@@ -10,7 +10,7 @@ from socfw.ir.rtl import (
     RtlAssign,
     RtlBusConn,
     RtlConn,
-    RtlInstance,
+    RtlModuleInstance,
     RtlModuleIR,
     RtlPort,
     RtlResetSync,
@@ -68,7 +68,7 @@ class RtlIRBuilder:
 
             for fabric_name in design.interconnect.fabrics.keys():
                 rtl.instances.append(
-                    RtlInstance(
+                    RtlModuleInstance(
                         module="simple_bus_error_slave",
                         name=f"error_{fabric_name}",
                         conns=[],
@@ -108,7 +108,7 @@ class RtlIRBuilder:
                             )
 
             rtl.instances.append(
-                RtlInstance(
+                RtlModuleInstance(
                     module=cpu_desc.module,
                     name=system.cpu.instance,
                     params=cpu_params,
@@ -143,7 +143,7 @@ class RtlIRBuilder:
                             )
 
             rtl.instances.append(
-                RtlInstance(
+                RtlModuleInstance(
                     module=system.ram.module,
                     name="ram",
                     params={
@@ -275,7 +275,7 @@ class RtlIRBuilder:
                 conns.append(RtlConn(port=f"irq_{irq_name}", signal=sig))
 
             rtl.instances.append(
-                RtlInstance(
+                RtlModuleInstance(
                     module=ip.module,
                     name=mod.instance,
                     params=mod.params,
@@ -374,3 +374,45 @@ class RtlIRBuilder:
                 return f"{{ {pad}'bz, {wire} }}"
             return f"{{ {pad}'b0, {wire} }}"
         return f"{wire}[{dst_w - 1}:0]"
+
+
+class RtlIrBuilder:
+    """Minimal native RTL IR builder — assembles RtlTop from planned bridges."""
+
+    def build(self, *, system, planned_bridges) -> "RtlTop":
+        from socfw.ir.rtl import RtlConnection, RtlInstance, RtlTop
+
+        top = RtlTop(module_name="soc_top")
+        self._add_bridge_instances(planned_bridges, top)
+        top.instances = sorted(top.instances, key=lambda i: i.instance)
+        return top
+
+    def _add_bridge_instances(self, planned_bridges, top) -> None:
+        from socfw.ir.rtl import RtlConnection, RtlInstance
+
+        for bridge in sorted(planned_bridges, key=lambda b: b.instance):
+            top.instances.append(
+                RtlInstance(
+                    module=f"{bridge.kind}_bridge",
+                    instance=bridge.instance,
+                    connections=(
+                        RtlConnection("clk", "1'b0"),
+                        RtlConnection("reset_n", "1'b1"),
+                        RtlConnection("sb_addr", "32'h0"),
+                        RtlConnection("sb_wdata", "32'h0"),
+                        RtlConnection("sb_be", "4'h0"),
+                        RtlConnection("sb_we", "1'b0"),
+                        RtlConnection("sb_valid", "1'b0"),
+                        RtlConnection("sb_rdata", ""),
+                        RtlConnection("sb_ready", ""),
+                        RtlConnection("wb_adr", ""),
+                        RtlConnection("wb_dat_w", ""),
+                        RtlConnection("wb_dat_r", "32'h0"),
+                        RtlConnection("wb_sel", ""),
+                        RtlConnection("wb_we", ""),
+                        RtlConnection("wb_cyc", ""),
+                        RtlConnection("wb_stb", ""),
+                        RtlConnection("wb_ack", "1'b0"),
+                    ),
+                )
+            )

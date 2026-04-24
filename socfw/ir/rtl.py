@@ -49,13 +49,28 @@ class RtlBusConn:
 
 
 @dataclass
-class RtlInstance:
+class RtlModuleInstance:
     module: str
     name: str
     params: dict[str, object] = field(default_factory=dict)
     conns: list[RtlConn] = field(default_factory=list)
     bus_conns: list[RtlBusConn] = field(default_factory=list)
     comment: str = ""
+
+
+# Native RTL IR — lightweight frozen types for the new native emitter path
+
+@dataclass(frozen=True)
+class RtlConnection:
+    port: str
+    expr: str
+
+
+@dataclass(frozen=True)
+class RtlInstance:
+    module: str
+    instance: str
+    connections: tuple[RtlConnection, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -101,7 +116,7 @@ class RtlModuleIR:
     assigns: list[RtlAssign] = field(default_factory=list)
     interfaces: list[RtlInterfaceInstance] = field(default_factory=list)
     fabrics: list[RtlFabricInstance] = field(default_factory=list)
-    instances: list[RtlInstance] = field(default_factory=list)
+    instances: list[RtlModuleInstance] = field(default_factory=list)
     reset_syncs: list[RtlResetSync] = field(default_factory=list)
     extra_sources: list[str] = field(default_factory=list)
     irq_combiner: RtlIrqCombiner | None = field(default=None)
@@ -135,7 +150,14 @@ class RtlIrqCombiner:
     sources: list[RtlIrqSource] = field(default_factory=list)
 
 
-# Backward-compatible alias
+@dataclass
+class RtlTop:
+    module_name: str = "soc_top"
+    ports: list[RtlPort] = field(default_factory=list)
+    instances: list[RtlInstance] = field(default_factory=list)
+
+
+# Backward-compatible aliases
 RtlModule = RtlModuleIR
 
 

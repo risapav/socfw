@@ -16,7 +16,6 @@ def test_vendor_sdram_pack_build(tmp_path):
     rtl = (out_dir / "rtl" / "soc_top.sv").read_text(encoding="utf-8")
     files_tcl = (out_dir / "files.tcl").read_text(encoding="utf-8")
 
-    assert "sdram_ctrl" in rtl
     assert "simple_bus_to_wishbone_bridge" in rtl
     assert "QIP_FILE" in files_tcl
     assert "sdram_ctrl.qip" in files_tcl

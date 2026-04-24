@@ -8,11 +8,12 @@ from dataclasses import replace
 
 from socfw.builders.boot_image_builder import BootImageBuilder
 from socfw.builders.files_ir_builder import FilesIRBuilder
+from socfw.builders.rtl_ir_builder import RtlIrBuilder
 from socfw.builders.vendor_artifact_collector import VendorArtifactCollector
 from socfw.build.provenance import SocBuildProvenance
 from socfw.config.system_loader import SystemLoader
-from socfw.build.top_injection import inject_bridge_instances
 from socfw.elaborate.bridge_planner import BridgePlanner
+from socfw.emit.rtl_emitter import RtlEmitter
 from socfw.core.result import Result
 from socfw.emit.orchestrator import EmitOrchestrator
 from socfw.model.image import BootImage
@@ -39,6 +40,8 @@ class FullBuildPipeline:
         self.vendor_collector = VendorArtifactCollector()
         self.build_summary = BuildSummaryReport()
         self.bridge_planner = BridgePlanner()
+        self.rtl_ir_builder = RtlIrBuilder()
+        self.rtl_native_emitter = RtlEmitter()
 
     def validate(self, project_file: str) -> Result:
         from socfw.validate.runner import ValidationRunner
@@ -119,9 +122,10 @@ class FullBuildPipeline:
         for bf in bridge_files:
             result.manifest.add("rtl", bf, "BridgePlanner")
 
-        injected_top = inject_bridge_instances(request.out_dir, planned_bridges)
-        if injected_top is not None:
-            result.manifest.add("rtl", injected_top, "TopInjection")
+        if planned_bridges:
+            rtl_top = self.rtl_ir_builder.build(system=system, planned_bridges=planned_bridges)
+            native_top_file = self.rtl_native_emitter.emit_top(request.out_dir, rtl_top)
+            result.manifest.add("rtl", native_top_file, "RtlNativeEmitter")
 
         soc_provenance = _build_soc_provenance(system, result, request.out_dir, planned_bridges)
         summary_path = self.build_summary.write(request.out_dir, soc_provenance)

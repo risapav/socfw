@@ -11,8 +11,8 @@ from socfw.ir.rtl import RtlModuleIR
 class RtlEmitter:
     family = "rtl"
 
-    def __init__(self, templates_dir: str) -> None:
-        self.renderer = Renderer(templates_dir)
+    def __init__(self, templates_dir: str | None = None) -> None:
+        self.renderer = Renderer(templates_dir) if templates_dir is not None else None
 
     def emit(self, ctx: BuildContext, ir: RtlModuleIR) -> list[GeneratedArtifact]:
         out = Path(ctx.out_dir) / "rtl" / "soc_top.sv"
@@ -32,3 +32,45 @@ class RtlEmitter:
                 generator=self.__class__.__name__,
             )
         ]
+
+    def emit_top(self, out_dir: str, top) -> str:
+        rtl_dir = Path(out_dir) / "rtl"
+        rtl_dir.mkdir(parents=True, exist_ok=True)
+
+        out = rtl_dir / f"{top.module_name}.sv"
+
+        lines: list[str] = []
+        lines.append("`default_nettype none")
+        lines.append("")
+
+        if top.ports:
+            lines.append(f"module {top.module_name} (")
+            for idx, p in enumerate(top.ports):
+                comma = "," if idx < len(top.ports) - 1 else ""
+                width = "" if p.width == 1 else f"[{p.width - 1}:0] "
+                lines.append(f"  {p.direction} wire {width}{p.name}{comma}")
+            lines.append(");")
+        else:
+            lines.append(f"module {top.module_name};")
+
+        lines.append("")
+
+        for inst in sorted(top.instances, key=lambda i: i.instance):
+            lines.append(f"  {inst.module} {inst.instance} (")
+            conns = list(inst.connections)
+            for idx, c in enumerate(conns):
+                comma = "," if idx < len(conns) - 1 else ""
+                if c.expr:
+                    lines.append(f"    .{c.port}({c.expr}){comma}")
+                else:
+                    lines.append(f"    .{c.port}(){comma}")
+            lines.append("  );")
+            lines.append("")
+
+        lines.append("endmodule")
+        lines.append("")
+        lines.append("`default_nettype wire")
+        lines.append("")
+
+        out.write_text("\n".join(lines), encoding="utf-8")
+        return str(out)

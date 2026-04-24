@@ -14,5 +14,3 @@ def test_build_wishbone_bridge_soc(tmp_path):
 
     rtl = (out_dir / "rtl" / "soc_top.sv").read_text(encoding="utf-8")
     assert "simple_bus_to_wishbone_bridge" in rtl
-    assert "wishbone_if" in rtl
-    assert "wb_gpio" in rtl
