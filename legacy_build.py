@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from socfw.utils.deprecation import print_legacy_warning
+
 
 def _collect_generated(out_dir: str) -> list[str]:
     root = Path(out_dir)
@@ -16,6 +18,7 @@ def _collect_generated(out_dir: str) -> list[str]:
 
 
 def build_legacy(project_file: str, out_dir: str) -> list[str]:
+    print_legacy_warning()
     from pathlib import Path as _Path
 
     from socfw.build.context import BuildRequest
