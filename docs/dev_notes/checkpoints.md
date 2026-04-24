@@ -75,3 +75,16 @@ All green:
 **Next:**
 - freeze legacy feature additions
 - prepare cutover tag
+
+## m8-legacy-freeze (file 90)
+
+**Status: complete**
+
+- legacy feature path frozen
+- v1.0 readiness checklist added
+- new work targets `socfw/`
+- legacy retained only as compatibility fallback
+
+**Next:**
+- release candidate tag
+- final cutover review

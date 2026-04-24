@@ -88,3 +88,10 @@ Required lane:
 Compatibility lane:
 - legacy smoke
 - non-blocking (`continue-on-error: true`)
+
+## Legacy freeze
+
+Status: active
+
+Legacy is now frozen for feature development.
+All new project work should use `socfw init` or an existing new-flow fixture.

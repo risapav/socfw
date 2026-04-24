@@ -1,5 +1,7 @@
 # legacy/
 
+> Status: frozen. No new features should be added here.
+
 This directory contains deprecated build flow components kept temporarily for compatibility and migration fallback.
 
 ## Rules

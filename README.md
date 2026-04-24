@@ -126,3 +126,13 @@ Reference fixtures:
 - `tests/golden/fixtures/vendor_sdram_soc`
 
 Legacy scripts are kept only for migration fallback.
+
+## Legacy status
+
+The legacy build flow is frozen and kept only as a migration fallback.
+
+New projects should use:
+
+```bash
+socfw init <project_dir> --template blink
+```
