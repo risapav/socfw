@@ -96,3 +96,21 @@ Initialize a new project:
 ```bash
 socfw init my_soc --template picorv32-soc --board qmtech_ep4ce55
 ```
+
+## New `socfw` flow
+
+The converged flow uses:
+
+```bash
+socfw validate <project.yaml>
+socfw build <project.yaml> --out build/gen
+```
+
+Reference fixtures:
+
+- `tests/golden/fixtures/blink_converged`
+- `tests/golden/fixtures/pll_converged`
+- `tests/golden/fixtures/vendor_pll_soc`
+- `tests/golden/fixtures/vendor_sdram_soc`
+
+Legacy scripts are kept only for migration fallback.

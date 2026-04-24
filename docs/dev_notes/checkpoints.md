@@ -18,3 +18,19 @@ All green:
 - Descriptor-relative artifact path normalization
 
 **Next sprint:** vendor_sdram convergence + firmware-heavy fixtures
+
+## m4-new-flow-anchors (files 77–85)
+
+**Status: complete**
+
+- `blink_converged` added
+- `pll_converged` added
+- `vendor_pll_soc` added
+- `vendor_sdram_soc` added
+- build summary reporting added
+- vendor PLL and SDRAM golden anchors added
+
+**Next:**
+- default CLI documentation
+- legacy warning messages
+- CI lane split
