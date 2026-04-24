@@ -25,6 +25,69 @@ from socfw.model.board import (
 )
 
 
+def _validate_resources_shape(resources: dict, *, file: str) -> list[Diagnostic]:
+    diags: list[Diagnostic] = []
+
+    def walk(node: Any, path: str) -> None:
+        if not isinstance(node, dict):
+            return
+
+        if "kind" in node and "top_name" in node:
+            kind = node.get("kind")
+            if kind not in {"scalar", "vector", "inout"}:
+                diags.append(
+                    Diagnostic(
+                        code="BRD201",
+                        severity=Severity.ERROR,
+                        message=f"Invalid board resource kind '{kind}'",
+                        subject="board.resources",
+                        spans=(SourceLocation(file=file),),
+                    )
+                )
+                return
+
+            if kind == "scalar" and "pin" not in node:
+                diags.append(
+                    Diagnostic(
+                        code="BRD202",
+                        severity=Severity.ERROR,
+                        message="Scalar board resource requires 'pin'",
+                        subject="board.resources",
+                        spans=(SourceLocation(file=file),),
+                    )
+                )
+
+            if kind in {"vector", "inout"}:
+                if "pins" not in node or not isinstance(node.get("pins"), list):
+                    diags.append(
+                        Diagnostic(
+                            code="BRD203",
+                            severity=Severity.ERROR,
+                            message=f"{kind} board resource requires 'pins' list",
+                            subject="board.resources",
+                            spans=(SourceLocation(file=file),),
+                        )
+                    )
+                elif "width" in node:
+                    if int(node["width"]) != len(node["pins"]):
+                        diags.append(
+                            Diagnostic(
+                                code="BRD204",
+                                severity=Severity.ERROR,
+                                message="Board resource width does not match number of pins",
+                                subject="board.resources",
+                                spans=(SourceLocation(file=file),),
+                            )
+                        )
+            return
+
+        for k, v in node.items():
+            walk(v, f"{path}.{k}" if path else k)
+
+    walk(resources, "resources")
+    return diags
+
+
 class BoardLoader:
     def load(self, path: str) -> Result[BoardModel]:
         raw = load_yaml_file(path)
@@ -126,6 +189,11 @@ class BoardLoader:
             }
             connectors[conn_key] = BoardConnector(key=conn_key, roles=roles)
 
+        external_raw = dict(doc.resources.external)
+        resource_diags = _validate_resources_shape(
+            {"external": external_raw}, file=path
+        )
+
         model = BoardModel(
             board_id=doc.board.id,
             vendor=doc.board.vendor,
@@ -151,21 +219,21 @@ class BoardLoader:
             onboard=onboard,
             connectors=connectors,
             metadata={"toolchains": doc.toolchains},
+            resources={"external": external_raw},
         )
 
         errs = model.validate()
-        if errs:
-            return Result(
-                diagnostics=[
-                    Diagnostic(
-                        code="BRD101",
-                        severity=Severity.ERROR,
-                        message=msg,
-                        subject="board",
-                        spans=(SourceLocation(file=path),),
-                    )
-                    for msg in errs
-                ]
+        all_diags = resource_diags + [
+            Diagnostic(
+                code="BRD101",
+                severity=Severity.ERROR,
+                message=msg,
+                subject="board",
+                spans=(SourceLocation(file=path),),
             )
+            for msg in errs
+        ]
+        if all_diags:
+            return Result(diagnostics=all_diags)
 
         return Result(value=model)

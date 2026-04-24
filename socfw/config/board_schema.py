@@ -97,6 +97,7 @@ class FpgaSchema(BaseModel):
 class BoardResourcesSchema(BaseModel):
     onboard: dict[str, BoardResourceSchema] = Field(default_factory=dict)
     connectors: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    external: dict[str, Any] = Field(default_factory=dict)
 
 
 class BoardSystemSchema(BaseModel):

@@ -104,6 +104,7 @@ class BoardModel:
     onboard: dict[str, BoardResource] = field(default_factory=dict)
     connectors: dict[str, BoardConnector] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
+    resources: dict[str, Any] = field(default_factory=dict)
 
     def resolve_ref(
         self, ref: str
@@ -147,6 +148,14 @@ class BoardModel:
             return self.connectors[conn].roles[role]
 
         raise KeyError(f"Unsupported board ref '{ref}'")
+
+    def resolve_resource_path(self, dotted_path: str):
+        cur = self.resources
+        for part in dotted_path.split("."):
+            if not isinstance(cur, dict) or part not in cur:
+                return None
+            cur = cur[part]
+        return cur
 
     def validate(self) -> list[str]:
         errs: list[str] = []

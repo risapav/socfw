@@ -180,6 +180,53 @@ resources:
           direction: output
           pin: V4
 
+  external:
+    sdram:
+      addr:
+        kind: vector
+        top_name: ZS_ADDR
+        width: 13
+        pins: [T6, R6, R5, P5, P6, V7, V6, U7, U6, N6, N8, P7, P8]
+      ba:
+        kind: vector
+        top_name: ZS_BA
+        width: 2
+        pins: [N9, P9]
+      dq:
+        kind: inout
+        top_name: ZS_DQ
+        width: 16
+        pins: [T10, T9, V10, V9, U9, U8, T8, T7, P3, P4, R2, R1, R4, R3, T5, T4]
+      dqm:
+        kind: vector
+        top_name: ZS_DQM
+        width: 2
+        pins: [V11, R0]
+      cs_n:
+        kind: scalar
+        top_name: ZS_CS_N
+        pin: V2
+      we_n:
+        kind: scalar
+        top_name: ZS_WE_N
+        pin: V1
+      ras_n:
+        kind: scalar
+        top_name: ZS_RAS_N
+        pin: U2
+      cas_n:
+        kind: scalar
+        top_name: ZS_CAS_N
+        pin: U1
+      cke:
+        kind: scalar
+        top_name: ZS_CKE
+        pin: V3
+      clk:
+        kind: scalar
+        top_name: ZS_CLK
+        pin: V4
+
   connectors:
     pmod:
       J10:
