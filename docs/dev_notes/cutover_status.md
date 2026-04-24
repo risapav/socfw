@@ -64,3 +64,14 @@ From the default switch point forward:
 - Copying old project skeletons is not allowed
 - New board definitions must go through the pack system
 - New vendor IP must have a descriptor (`.ip.yaml` with `vendor:` section)
+
+## Current default
+
+The documented default flow is now:
+
+```bash
+socfw validate <project.yaml>
+socfw build <project.yaml> --out <dir>
+```
+
+Legacy flow is retained only as fallback during migration.

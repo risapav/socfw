@@ -34,3 +34,17 @@ All green:
 - default CLI documentation
 - legacy warning messages
 - CI lane split
+
+## m5-docs-default-switch (files 86–87)
+
+**Status: complete**
+
+- README quickstart uses `socfw`
+- user getting started guide uses `socfw` and converged fixtures
+- examples guide uses converged fixtures
+- legacy flow is documented only as migration fallback
+- deprecation warning added to `legacy_build.py`
+
+**Next:**
+- CI required lane switch
+- legacy compatibility lane

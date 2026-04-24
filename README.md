@@ -8,16 +8,28 @@ Config-driven SoC/FPGA framework for:
 - Firmware-aware two-pass build flows
 - Protocol bridge insertion (simple_bus → AXI-lite, extensible)
 
-## Quick start
+## Quickstart
 
-```sh
-pip install -e .
+Validate a project:
 
-socfw validate <project.yaml>
-socfw build <project.yaml> --out build/gen
-socfw build-fw <project.yaml> --out build/gen
-socfw sim-smoke <project.yaml> --out build/gen
+```bash
+socfw validate tests/golden/fixtures/blink_converged/project.yaml
 ```
+
+Build a project:
+
+```bash
+socfw build tests/golden/fixtures/blink_converged/project.yaml --out build/blink_converged
+```
+
+Reference new-flow fixtures:
+
+- `tests/golden/fixtures/blink_converged`
+- `tests/golden/fixtures/pll_converged`
+- `tests/golden/fixtures/vendor_pll_soc`
+- `tests/golden/fixtures/vendor_sdram_soc`
+
+Legacy scripts are kept only as migration fallback.
 
 ## Supported configurations
 

@@ -1,5 +1,7 @@
 # Getting Started
 
+The default flow is the `socfw` CLI.
+
 ## Installation
 
 ```sh
@@ -8,47 +10,66 @@ cd socfw
 pip install -e .
 ```
 
-## Validate a project
+## Validate
 
-```sh
-socfw validate tests/golden/fixtures/soc_led_test/project.yaml
+```bash
+socfw validate <project.yaml>
 ```
 
-## Build RTL
+## Build
 
-```sh
-socfw build tests/golden/fixtures/soc_led_test/project.yaml --out build/gen
+```bash
+socfw build <project.yaml> --out build/gen
+```
+
+## Example
+
+```bash
+socfw validate tests/golden/fixtures/blink_converged/project.yaml
+socfw build tests/golden/fixtures/blink_converged/project.yaml --out build/blink_converged
 ```
 
 Outputs:
-- `build/gen/rtl/soc_top.sv` — top-level SystemVerilog
-- `build/gen/timing/soc_top.sdc` — timing constraints
-- `build/gen/hal/board.tcl` — Quartus board TCL
-- `build/gen/sw/soc_map.h` — peripheral address map header
-- `build/gen/docs/soc_top.md` — block diagram docs
+- `build/blink_converged/rtl/soc_top.sv` — top-level SystemVerilog
+- `build/blink_converged/timing/soc_top.sdc` — timing constraints
+- `build/blink_converged/hal/board.tcl` — Quartus board TCL
+- `build/blink_converged/sw/soc_map.h` — peripheral address map header
+- `build/blink_converged/reports/build_summary.md` — build provenance report
 
-## Build with firmware (PicoRV32)
+## Project shape
 
-```sh
-socfw build-fw tests/golden/fixtures/picorv32_soc/project.yaml --out build/gen
+```yaml
+version: 2
+kind: project
+
+project:
+  name: my_project
+  mode: standalone
+  board: qmtech_ep4ce55
+
+registries:
+  packs:
+    - packs/builtin
+  ip:
+    - ip
+
+modules:
+  - instance: blink_test
+    type: blink_test
 ```
 
-Requires `riscv32-unknown-elf-gcc` in PATH.
+## Notes
 
-## Run simulation smoke test
+- Boards are resolved through packs.
+- IP descriptors are loaded from registered IP paths or packs.
+- Vendor IP should use descriptor metadata rather than ad-hoc project scripts.
 
-```sh
-socfw sim-smoke tests/golden/fixtures/picorv32_soc/project.yaml --out build/gen
-```
-
-Requires `iverilog` + `vvp` in PATH.
-
-## CLI reference
+## Additional CLI commands
 
 ```
-socfw validate <project.yaml>           — validate project config
-socfw build <project.yaml> [--out DIR]  — full RTL/docs/software build
+socfw validate <project.yaml>             — validate project config
+socfw build <project.yaml> [--out DIR]    — full RTL/docs/software build
 socfw build-fw <project.yaml> [--out DIR] — firmware-aware two-pass build
 socfw sim-smoke <project.yaml> [--out DIR] — build + run simulation smoke test
-socfw explain <topic>                   — show explanation for a topic
+socfw explain <topic>                     — show explanation for a topic
 ```
