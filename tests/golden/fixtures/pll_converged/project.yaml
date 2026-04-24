@@ -1,0 +1,40 @@
+version: 2
+kind: project
+
+project:
+  name: pll_converged
+  mode: standalone
+  board: qmtech_ep4ce55
+  output_dir: build/gen
+
+registries:
+  ip:
+    - ip
+
+clocks:
+  primary:
+    domain: ref_clk
+    source: board:SYS_CLK
+
+timing:
+  file: timing_config.yaml
+
+modules:
+  - instance: pll0
+    type: clkpll
+    clocks:
+      inclk0: ref_clk
+
+  - instance: blink_test
+    type: blink_test
+    params:
+      CLK_FREQ: 100000000
+    clocks:
+      SYS_CLK: ref_clk
+    bind:
+      ports:
+        ONB_LEDS:
+          target: board:onboard.leds
+
+artifacts:
+  emit: [rtl, board, timing]

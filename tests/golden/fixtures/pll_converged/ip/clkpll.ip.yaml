@@ -1,0 +1,37 @@
+version: 2
+kind: ip
+
+ip:
+  name: clkpll
+  module: clkpll
+  category: clocking
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: areset
+  active_high: true
+
+clocking:
+  primary_input_port: inclk0
+  additional_input_ports: []
+  outputs:
+    - port: c0
+      kind: generated_clock
+      domain: sys_clk
+    - port: locked
+      kind: status
+
+artifacts:
+  synthesis:
+    - ../rtl/clkpll.sv
+  simulation: []
+  metadata: []

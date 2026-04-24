@@ -1,0 +1,14 @@
+version: 2
+kind: timing
+
+timing:
+  generated_clocks:
+    - name: pll0_c0
+      source:
+        instance: pll0
+        output: c0
+      multiply_by: 2
+      divide_by: 1
+
+  false_paths:
+    - comment: "reset false path"
