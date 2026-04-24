@@ -62,3 +62,16 @@ All green:
 **Next:**
 - default project scaffolding
 - legacy freeze enforcement
+
+## m7-new-flow-scaffolding (file 89)
+
+**Status: complete**
+
+- `socfw init --template blink` creates pack-aware projects via `ProjectInitializer`
+- generated blink project validates through new flow
+- new projects include `rtl/blink_test.sv` alongside `project.yaml` and IP descriptor
+- new projects no longer need legacy skeleton copying
+
+**Next:**
+- freeze legacy feature additions
+- prepare cutover tag

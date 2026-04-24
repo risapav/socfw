@@ -190,6 +190,32 @@ def cmd_docs_export(args) -> int:
 
 
 def cmd_init(args) -> int:
+    import os
+
+    board = args.board or "qmtech_ep4ce55"
+
+    if args.template == "blink":
+        from socfw.scaffold.init_project import ProjectInitializer
+        out_dir = os.path.join(args.out, args.name)
+        try:
+            created = ProjectInitializer().init_blink(
+                target_dir=out_dir,
+                name=args.name,
+                board=board,
+            )
+        except Exception as exc:
+            print(f"ERROR INIT001: {exc}", file=sys.stderr)
+            return 1
+
+        print(f"OK: initialized project in {out_dir}")
+        for p in created:
+            print(p)
+        print("")
+        print("Next:")
+        print(f"  socfw validate {out_dir}/project.yaml")
+        print(f"  socfw build {out_dir}/project.yaml --out {out_dir}/build/gen")
+        return 0
+
     from socfw.scaffold.generator import ScaffoldGenerator
     from socfw.scaffold.model import InitRequest
 

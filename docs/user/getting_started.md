@@ -64,6 +64,16 @@ modules:
 - IP descriptors are loaded from registered IP paths or packs.
 - Vendor IP should use descriptor metadata rather than ad-hoc project scripts.
 
+## Create a new project
+
+```bash
+socfw init my_blink --template blink --name my_blink --board qmtech_ep4ce55
+socfw validate my_blink/project.yaml
+socfw build my_blink/project.yaml --out my_blink/build/gen
+```
+
+The generated project uses the new pack-aware `project.yaml` format.
+
 ## Additional CLI commands
 
 ```
