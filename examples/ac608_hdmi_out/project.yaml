@@ -5,7 +5,6 @@ project:
   name: ac608_hdmi_out
   mode: standalone
   board: ac608_ep4ce15
-  board_file: boards/ac608_ep4ce15.yaml
   output_dir: build/gen
 
 registries:
@@ -20,7 +19,7 @@ features:
     - board:onboard.hdmi.tmds_n
 
 timing:
-  file: timing.yaml
+  file: timing_config.yaml
 
 clocks:
   primary:

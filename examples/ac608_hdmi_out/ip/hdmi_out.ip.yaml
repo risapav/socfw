@@ -1,0 +1,43 @@
+version: 2
+kind: ip
+
+ip:
+  name: hdmi_out
+  module: hdmi_out
+  category: standalone
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: null
+  active_high: false
+
+clocking:
+  primary_input_port: PIXEL_CLK
+  additional_input_ports: []
+  outputs: []
+
+ports:
+  - name: PIXEL_CLK
+    direction: input
+    width: 1
+  - name: TMDS_P
+    direction: output
+    width: 4
+  - name: TMDS_N
+    direction: output
+    width: 4
+
+artifacts:
+  synthesis:
+    - ../rtl/hdmi_out_stub.sv
+  simulation: []
+  metadata: []
