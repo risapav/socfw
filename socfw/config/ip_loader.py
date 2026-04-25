@@ -19,6 +19,7 @@ from socfw.model.ip import (
     IpResetSemantics,
     IpVendorInfo,
 )
+from socfw.model.ports import PortDescriptor
 
 
 class IpLoader:
@@ -97,6 +98,14 @@ class IpLoader:
                 (IpBusInterface(port_name="bus", protocol="simple_bus", role="slave"),)
                 if doc.integration.needs_bus
                 else ()
+            ),
+            ports=tuple(
+                PortDescriptor(
+                    name=p.name,
+                    direction=p.direction,
+                    width=p.width,
+                )
+                for p in doc.ports
             ),
             meta={
                 "notes": doc.notes,

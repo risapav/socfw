@@ -30,3 +30,11 @@ artifacts:
     - ../rtl/blink_test.sv
   simulation: []
   metadata: []
+
+ports:
+  - name: SYS_CLK
+    direction: input
+    width: 1
+  - name: ONB_LEDS
+    direction: output
+    width: 6

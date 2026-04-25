@@ -51,3 +51,41 @@ artifacts:
     - files/sdram_ctrl.v
   simulation: []
   metadata: []
+
+ports:
+  - name: clk
+    direction: input
+    width: 1
+  - name: reset_n
+    direction: input
+    width: 1
+  - name: zs_addr
+    direction: output
+    width: 13
+  - name: zs_ba
+    direction: output
+    width: 2
+  - name: zs_dq
+    direction: inout
+    width: 16
+  - name: zs_dqm
+    direction: output
+    width: 2
+  - name: zs_cs_n
+    direction: output
+    width: 1
+  - name: zs_we_n
+    direction: output
+    width: 1
+  - name: zs_ras_n
+    direction: output
+    width: 1
+  - name: zs_cas_n
+    direction: output
+    width: 1
+  - name: zs_cke
+    direction: output
+    width: 1
+  - name: zs_clk
+    direction: output
+    width: 1

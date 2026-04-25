@@ -17,7 +17,7 @@ from socfw.reports.graphviz_emitter import GraphvizEmitter
 from socfw.reports.json_emitter import JsonReportEmitter
 from socfw.reports.markdown_emitter import MarkdownReportEmitter
 from socfw.validate.rules.asset_rules import VendorIpArtifactExistsRule
-from socfw.validate.rules.binding_rules import BindingWidthCompatibilityRule
+from socfw.validate.rules.binding_rules import BindingWidthCompatibilityRule, BoardBindingRule
 from socfw.validate.rules.board_rules import (
     UnknownBoardBindingTargetRule,
     UnknownBoardFeatureRule,
@@ -69,6 +69,7 @@ def create_builtin_registry(templates_dir: str) -> PluginRegistry:
     reg.register_validator(UnknownBoardBindingTargetRule())
     reg.register_validator(VendorIpArtifactExistsRule())
     reg.register_validator(BindingWidthCompatibilityRule())
+    reg.register_validator(BoardBindingRule())
     reg.register_validator(UnknownBusFabricRule())
     reg.register_validator(MissingBusInterfaceRule())
     reg.register_validator(DuplicateAddressRegionRule())

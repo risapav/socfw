@@ -2,6 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from socfw.model.ports import PortDescriptor
+
 
 @dataclass(frozen=True)
 class IpOrigin:
@@ -84,9 +86,16 @@ class IpDescriptor:
     clocking: IpClocking
     artifacts: IpArtifactBundle
     bus_interfaces: tuple[IpBusInterface, ...] = ()
+    ports: tuple[PortDescriptor, ...] = ()
     vendor_info: IpVendorInfo | None = None
     meta: dict[str, Any] = field(default_factory=dict)
     source_file: str | None = None
+
+    def port_by_name(self, name: str) -> PortDescriptor | None:
+        for p in self.ports:
+            if p.name == name:
+                return p
+        return None
 
     def bus_interface(self, role: str | None = None) -> IpBusInterface | None:
         for b in self.bus_interfaces:

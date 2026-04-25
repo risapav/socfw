@@ -99,6 +99,12 @@ class IpShellSchema(BaseModel):
     core_ports: list[IpShellCorePortSchema] = Field(default_factory=list)
 
 
+class IpPortSchema(BaseModel):
+    name: str
+    direction: str
+    width: int = 1
+
+
 class IpVendorSchema(BaseModel):
     vendor: str
     tool: str
@@ -120,6 +126,7 @@ class IpConfigSchema(BaseModel):
     clocking: IpClockingSchema = Field(default_factory=IpClockingSchema)
     artifacts: IpArtifactsSchema = Field(default_factory=IpArtifactsSchema)
     bus_interfaces: list[IpBusInterfaceSchema] = Field(default_factory=list)
+    ports: list[IpPortSchema] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
     registers: list[IpRegisterSchema] = Field(default_factory=list)
     irqs: list[IpIrqSchema] = Field(default_factory=list)
