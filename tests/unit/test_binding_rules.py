@@ -100,3 +100,66 @@ def test_missing_ip_port_passes_no_error():
         _system(PortDescriptor(name="OTHER", direction="output", width=6))
     )
     assert not any(d.code in {"BIND002", "BIND003"} for d in diags)
+
+
+def _system_adapt(ip_port, adapt):
+    return SystemModel(
+        board=_board(),
+        project=ProjectModel(
+            name="demo",
+            mode="standalone",
+            board_ref="demo",
+            modules=[
+                ModuleInstance(
+                    instance="blink",
+                    type_name="blink_test",
+                    port_bindings=[
+                        PortBinding(
+                            port_name="ONB_LEDS",
+                            target="board:onboard.leds",
+                            adapt=adapt,
+                        )
+                    ],
+                )
+            ],
+        ),
+        timing=None,
+        ip_catalog={"blink_test": _ip(ip_port)},
+    )
+
+
+def test_width_mismatch_with_valid_adapt_no_bind003():
+    diags = BoardBindingRule().validate(
+        _system_adapt(PortDescriptor(name="ONB_LEDS", direction="output", width=4), adapt="zero_extend")
+    )
+    assert not any(d.code == "BIND003" for d in diags)
+
+
+def test_invalid_adapt_mode_reports_bind006():
+    diags = BoardBindingRule().validate(
+        _system_adapt(PortDescriptor(name="ONB_LEDS", direction="output", width=4), adapt="stretch")
+    )
+    assert any(d.code == "BIND006" for d in diags)
+
+
+def test_valid_adapt_modes_accepted():
+    for mode in ("zero_extend", "truncate", "replicate"):
+        diags = BoardBindingRule().validate(
+            _system_adapt(PortDescriptor(name="ONB_LEDS", direction="output", width=4), adapt=mode)
+        )
+        assert not any(d.code == "BIND006" for d in diags), f"mode {mode} incorrectly rejected"
+
+
+def test_adapt_on_inout_reports_bind007():
+    diags = BoardBindingRule().validate(
+        _system_adapt(PortDescriptor(name="ONB_LEDS", direction="inout", width=4), adapt="zero_extend")
+    )
+    assert any(d.code == "BIND007" for d in diags)
+
+
+def test_bind003_hint_mentions_adapt():
+    diags = BoardBindingRule().validate(
+        _system(PortDescriptor(name="ONB_LEDS", direction="output", width=4))
+    )
+    bind003 = next(d for d in diags if d.code == "BIND003")
+    assert "adapt" in bind003.message

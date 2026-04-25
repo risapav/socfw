@@ -5,6 +5,8 @@ from socfw.model.board import BoardResource, BoardConnectorRole, BoardScalarSign
 from socfw.model.system import SystemModel
 from .base import ValidationRule
 
+_VALID_ADAPT_MODES = frozenset({"zero_extend", "truncate", "replicate"})
+
 
 class BindingWidthCompatibilityRule(ValidationRule):
     def validate(self, system: SystemModel) -> list[Diagnostic]:
@@ -82,13 +84,36 @@ class BoardBindingRule(ValidationRule):
                     continue
 
                 res_width = _resource_width(target)
-                if res_width is not None and ip_port.width != res_width:
+
+                if b.adapt is not None:
+                    if b.adapt not in _VALID_ADAPT_MODES:
+                        diags.append(Diagnostic(
+                            code="BIND006",
+                            severity=Severity.ERROR,
+                            message=(
+                                f"Invalid adapt mode '{b.adapt}' for bind {mod.instance}.{b.port_name}; "
+                                f"valid modes: {', '.join(sorted(_VALID_ADAPT_MODES))}"
+                            ),
+                            subject="project.bind",
+                        ))
+                    elif ip_port.direction not in ("input", "output"):
+                        diags.append(Diagnostic(
+                            code="BIND007",
+                            severity=Severity.ERROR,
+                            message=(
+                                f"Adapt mode '{b.adapt}' not allowed for inout port "
+                                f"{mod.instance}.{b.port_name}"
+                            ),
+                            subject="project.bind",
+                        ))
+                elif res_width is not None and ip_port.width != res_width:
                     diags.append(Diagnostic(
                         code="BIND003",
                         severity=Severity.ERROR,
                         message=(
                             f"Width mismatch for bind {mod.instance}.{b.port_name}: "
-                            f"IP port width {ip_port.width}, board resource width {res_width}"
+                            f"IP port width {ip_port.width}, board resource width {res_width}; "
+                            f"use `adapt: zero_extend`, `adapt: truncate`, or `adapt: replicate`"
                         ),
                         subject="project.bind",
                     ))
