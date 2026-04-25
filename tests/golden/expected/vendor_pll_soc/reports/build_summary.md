@@ -40,6 +40,7 @@
 
 - `files.tcl`
 - `hal/board.tcl`
+- `hal/board.tcl`
 - `hal/files.tcl`
 - `reports/build_report.json`
 - `reports/build_report.md`
