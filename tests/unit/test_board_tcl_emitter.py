@@ -42,7 +42,7 @@ def _make_system() -> SystemModel:
             )
         },
     )
-    project = ProjectModel(name="demo", mode="standalone", board_ref="demo")
+    project = ProjectModel(name="demo", mode="standalone", board_ref="demo", feature_refs=["board:onboard.leds"])
     return SystemModel(board=board, project=project, timing=None, ip_catalog={})
 
 

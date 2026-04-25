@@ -16,8 +16,7 @@ class BoardTclEmitter:
 
         self._emit_device(lines, system.board)
         self._emit_system_pins(lines, system.board)
-        self._emit_resources(lines, system.board)
-        self._emit_external_resources(lines, system)
+        self._emit_selected_resources(lines, system)
 
         out.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
         return str(out)
@@ -43,69 +42,107 @@ class BoardTclEmitter:
 
         lines.append("")
 
-    def _emit_resources(self, lines: list[str], board) -> None:
-        if not board.onboard:
-            return
-
-        lines.append("# Board resources")
-        for _, resource in sorted(board.onboard.items()):
-            for sig in sorted(resource.scalars.values(), key=lambda s: s.top_name):
-                lines.append(f"set_location_assignment {sig.pin} -to {sig.top_name}")
-
-            for vec in sorted(resource.vectors.values(), key=lambda v: v.top_name):
-                for idx in sorted(vec.pins):
-                    lines.append(
-                        f"set_location_assignment {vec.pins[idx]} -to {vec.top_name}[{idx}]"
-                    )
-
-        lines.append("")
-
-    def _emit_external_resources(self, lines: list[str], system) -> None:
-        from socfw.board.resource_tree import iter_resource_leaves, resource_width, resource_direction
+    def _emit_selected_resources(self, lines: list[str], system) -> None:
+        from socfw.board.feature_expansion import expand_features
+        from socfw.board.pin_ownership import collect_pin_ownership
 
         board = system.board
-        feature_refs = getattr(system.project, "feature_refs", [])
-        bind_targets = []
-        for mod in system.project.modules:
+        project = system.project
+
+        profile = getattr(project, "feature_profile", None)
+        use_refs = list(project.feature_refs or [])
+        selected = expand_features(board, profile, use_refs)
+
+        # Add bind targets not already covered
+        for mod in project.modules:
             for pb in mod.port_bindings:
-                if pb.target.startswith("board:"):
-                    bind_targets.append(pb.target)
+                if not pb.target.startswith("board:"):
+                    continue
+                path = pb.target[len("board:"):]
+                if path not in selected.paths:
+                    selected.paths.append(path)
 
-        active_external_paths: set[str] = set()
-        for ref in feature_refs + bind_targets:
-            path = ref[len("board:"):] if ref.startswith("board:") else ref
-            if path.startswith("external."):
-                active_external_paths.add(path)
-
-        if not active_external_paths:
+        if not selected.paths:
             return
 
-        lines.append("# External resources")
-        emitted: set[str] = set()
-        for path in sorted(active_external_paths):
-            for leaf_path, node in iter_resource_leaves(board, path):
-                if not isinstance(node, dict):
-                    continue
-                top_name = node.get("top_name")
-                if not top_name or top_name in emitted:
-                    continue
-                emitted.add(top_name)
-                kind = node.get("kind", "scalar")
-                io_std = node.get("io_standard")
-                if kind == "scalar":
-                    pin = node.get("pin")
-                    if pin:
-                        lines.append(f"set_location_assignment {pin} -to {top_name}")
-                        if io_std:
-                            lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}")
-                elif kind in ("vector", "inout"):
-                    pins = node.get("pins") or []
-                    if isinstance(pins, dict):
-                        sorted_pins = [(k, pins[k]) for k in sorted(pins)]
-                    else:
-                        sorted_pins = list(enumerate(pins))
-                    for idx, pin in sorted_pins:
-                        lines.append(f"set_location_assignment {pin} -to {top_name}[{idx}]")
-                    if io_std and sorted_pins:
-                        lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}")
-        lines.append("")
+        pin_uses = collect_pin_ownership(board, selected)
+        if not pin_uses:
+            return
+
+        # Group by top_name to emit io_standard once per signal
+        from collections import defaultdict
+        top_to_uses: dict[str, list] = defaultdict(list)
+        for use in pin_uses:
+            top_to_uses[use.top_name].append(use)
+
+        # Separate onboard from external for ordering
+        onboard_tops: list[str] = []
+        external_tops: list[str] = []
+        for use in pin_uses:
+            if use.resource_path.startswith("onboard."):
+                if use.top_name not in onboard_tops:
+                    onboard_tops.append(use.top_name)
+            else:
+                if use.top_name not in external_tops:
+                    external_tops.append(use.top_name)
+
+        if onboard_tops:
+            lines.append("# Board resources")
+            for top_name in sorted(onboard_tops):
+                uses = top_to_uses[top_name]
+                self._emit_pin_uses(lines, top_name, uses, board)
+            lines.append("")
+
+        if external_tops:
+            lines.append("# External resources")
+            for top_name in sorted(external_tops):
+                uses = top_to_uses[top_name]
+                self._emit_pin_uses(lines, top_name, uses, board)
+            lines.append("")
+
+    def _emit_pin_uses(self, lines: list[str], top_name: str, uses, board) -> None:
+        from socfw.board.resource_tree import iter_resource_leaves
+
+        scalar_uses = [u for u in uses if u.bit is None]
+        vector_uses = [u for u in uses if u.bit is not None]
+
+        if scalar_uses:
+            u = scalar_uses[0]
+            lines.append(f"set_location_assignment {u.pin} -to {top_name}")
+            io_std = self._get_io_standard(u, board)
+            if io_std:
+                lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}")
+
+        if vector_uses:
+            for u in sorted(vector_uses, key=lambda x: x.bit):
+                lines.append(f"set_location_assignment {u.pin} -to {top_name}[{u.bit}]")
+            io_std = self._get_io_standard(vector_uses[0], board)
+            if io_std:
+                lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}")
+
+    def _get_io_standard(self, use, board) -> str | None:
+        path = use.resource_path
+        if path.startswith("onboard."):
+            sub = path[len("onboard."):]
+            res_key = sub.split(".")[0]
+            res = board.onboard.get(res_key)
+            if res is None:
+                return None
+            for sig in res.scalars.values():
+                if sig.top_name == use.top_name:
+                    return sig.io_standard
+            for vec in res.vectors.values():
+                if vec.top_name == use.top_name:
+                    return vec.io_standard
+        elif path.startswith("external."):
+            sub = path[len("external."):]
+            external = board.resources.get("external") or {}
+            parts = sub.split(".")
+            cur = external
+            for p in parts:
+                if not isinstance(cur, dict) or p not in cur:
+                    return None
+                cur = cur[p]
+            if isinstance(cur, dict):
+                return cur.get("io_standard")
+        return None
