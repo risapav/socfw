@@ -15,6 +15,7 @@ from socfw.config.system_loader import SystemLoader
 from socfw.elaborate.bridge_planner import BridgePlanner
 from socfw.emit.rtl_emitter import RtlEmitter
 from socfw.emit.files_tcl_emitter import FilesTclEmitter
+from socfw.emit.sdc_emitter import SdcEmitter
 from socfw.core.result import Result
 from socfw.emit.orchestrator import EmitOrchestrator
 from socfw.model.image import BootImage
@@ -44,6 +45,7 @@ class FullBuildPipeline:
         self.rtl_ir_builder = RtlIrBuilder()
         self.rtl_native_emitter = RtlEmitter()
         self.files_tcl_emitter = FilesTclEmitter()
+        self.sdc_emitter = SdcEmitter()
 
     def validate(self, project_file: str) -> Result:
         from socfw.validate.runner import ValidationRunner
@@ -138,6 +140,9 @@ class FullBuildPipeline:
             planned_bridges=planned_bridges,
         )
         result.manifest.add("hal", files_tcl, "FilesTclEmitter")
+
+        sdc_file = self.sdc_emitter.emit(out_dir=request.out_dir, system=system)
+        result.manifest.add("timing", sdc_file, "SdcEmitter")
 
         soc_provenance = _build_soc_provenance(system, result, request.out_dir, planned_bridges)
         summary_path = self.build_summary.write(request.out_dir, soc_provenance)

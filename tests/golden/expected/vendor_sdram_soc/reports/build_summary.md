@@ -53,3 +53,4 @@
 - `sw/soc_irq.h`
 - `sw/soc_map.h`
 - `timing/soc_top.sdc`
+- `timing/soc_top.sdc`

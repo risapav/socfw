@@ -48,3 +48,4 @@
 - `rtl/soc_top.sv`
 - `sim`
 - `timing/soc_top.sdc`
+- `timing/soc_top.sdc`
