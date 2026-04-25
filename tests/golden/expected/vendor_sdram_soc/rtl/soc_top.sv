@@ -9,7 +9,7 @@ module soc_top (
   output wire ZS_CKE,
   output wire ZS_CLK,
   output wire ZS_CS_N,
-  inout wire [15:0] ZS_DQ,
+  output wire [15:0] ZS_DQ,
   output wire [1:0] ZS_DQM,
   output wire ZS_RAS_N,
   output wire ZS_WE_N

@@ -14,6 +14,7 @@ class BuildRequest:
     out_dir: str = "build/gen"
     artifact_families: list[str] | None = None
     profile: str = "default"
+    legacy_backend: bool = False
 
     def __post_init__(self) -> None:
         if self.artifact_families is None:

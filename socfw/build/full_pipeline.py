@@ -64,51 +64,90 @@ class FullBuildPipeline:
             return BuildResult(ok=False, diagnostics=loaded.diagnostics)
 
         system = loaded.value
-        result = self.pipeline.run(request, system)
-        result.diagnostics = loaded.diagnostics + result.diagnostics
 
-        if not result.ok:
-            return result
+        planned_bridges = self.bridge_planner.plan(system)
 
-        ctx = BuildContext(out_dir=Path(request.out_dir))
-        files_ir = (
-            self.files_ir_builder.build(result.design, result.rtl_ir)
-            if result.design is not None and result.rtl_ir is not None
-            else None
-        )
-        manifest = self.emitters.emit_all(
-            ctx,
-            board_ir=result.board_ir,
-            timing_ir=result.timing_ir,
-            rtl_ir=result.rtl_ir,
-            files_ir=files_ir,
-            software_ir=result.software_ir,
-            docs_ir=result.docs_ir,
-            register_block_irs=result.register_block_irs,
-            peripheral_shell_irs=result.peripheral_shell_irs,
-        )
-        result.manifest = manifest
+        if request.legacy_backend:
+            from socfw.utils.deprecation import print_legacy_warning
+            print_legacy_warning()
 
-        fw_res = self.firmware_builder.build(system, request.out_dir)
-        result.diagnostics.extend(fw_res.diagnostics)
-        if fw_res.ok and fw_res.value is not None and system.ram is not None:
-            fw_boot = BootImage(
-                input_file=fw_res.value.bin,
-                output_file=fw_res.value.hex,
-                input_format="bin",
-                output_format="hex",
-                size_bytes=system.ram.size,
-                endian="little",
+            result = self.pipeline.run(request, system)
+            result.diagnostics = loaded.diagnostics + result.diagnostics
+
+            if not result.ok:
+                return result
+
+            ctx = BuildContext(out_dir=Path(request.out_dir))
+            files_ir = (
+                self.files_ir_builder.build(result.design, result.rtl_ir)
+                if result.design is not None and result.rtl_ir is not None
+                else None
             )
-            conv = self.bin2hex.run(fw_boot)
-            result.diagnostics.extend(conv.diagnostics)
-            if conv.ok and conv.value is not None:
-                system.ram = replace(system.ram, init_file=conv.value, image_format="hex")
+            manifest = self.emitters.emit_all(
+                ctx,
+                board_ir=result.board_ir,
+                timing_ir=result.timing_ir,
+                rtl_ir=result.rtl_ir,
+                files_ir=files_ir,
+                software_ir=result.software_ir,
+                docs_ir=result.docs_ir,
+                register_block_irs=result.register_block_irs,
+                peripheral_shell_irs=result.peripheral_shell_irs,
+            )
+            result.manifest = manifest
 
-        image = self.image_builder.build(system, request.out_dir)
-        if image is not None and image.input_format == "bin" and image.output_format == "hex":
-            conv = self.bin2hex.run(image)
-            result.diagnostics.extend(conv.diagnostics)
+            fw_res = self.firmware_builder.build(system, request.out_dir)
+            result.diagnostics.extend(fw_res.diagnostics)
+            if fw_res.ok and fw_res.value is not None and system.ram is not None:
+                fw_boot = BootImage(
+                    input_file=fw_res.value.bin,
+                    output_file=fw_res.value.hex,
+                    input_format="bin",
+                    output_format="hex",
+                    size_bytes=system.ram.size,
+                    endian="little",
+                )
+                conv = self.bin2hex.run(fw_boot)
+                result.diagnostics.extend(conv.diagnostics)
+                if conv.ok and conv.value is not None:
+                    system.ram = replace(system.ram, init_file=conv.value, image_format="hex")
+
+            image = self.image_builder.build(system, request.out_dir)
+            if image is not None and image.input_format == "bin" and image.output_format == "hex":
+                conv = self.bin2hex.run(image)
+                result.diagnostics.extend(conv.diagnostics)
+        else:
+            from socfw.core.diagnostics import Severity
+            val_diags = self.pipeline._validate(system)
+            all_diags = list(loaded.diagnostics) + val_diags
+            if any(d.severity == Severity.ERROR for d in val_diags):
+                return BuildResult(ok=False, diagnostics=all_diags)
+            result = BuildResult(ok=True, diagnostics=all_diags)
+
+            bridge_files = _copy_bridge_artifacts(request.out_dir, planned_bridges)
+            for bf in bridge_files:
+                result.manifest.add("rtl", bf, "BridgePlanner")
+
+            rtl_top = self.rtl_ir_builder.build(
+                system=system,
+                planned_bridges=planned_bridges,
+                design=None,
+            )
+            native_top_file = self.rtl_native_emitter.emit_top(request.out_dir, rtl_top)
+            result.manifest.add("rtl", native_top_file, "RtlNativeEmitter")
+
+            files_tcl = self.files_tcl_emitter.emit(
+                out_dir=request.out_dir,
+                system=system,
+                planned_bridges=planned_bridges,
+            )
+            result.manifest.add("hal", files_tcl, "FilesTclEmitter")
+
+            sdc_file = self.sdc_emitter.emit(out_dir=request.out_dir, system=system)
+            result.manifest.add("timing", sdc_file, "SdcEmitter")
+
+            board_tcl = self.board_tcl_emitter.emit(out_dir=request.out_dir, system=system)
+            result.manifest.add("hal", board_tcl, "BoardTclEmitter")
 
         report_paths = self.reports.emit_all(
             system=system,
@@ -123,37 +162,57 @@ class FullBuildPipeline:
         if bridge_summary is not None:
             result.manifest.add("report", bridge_summary, "BridgeSummary")
 
-        planned_bridges = self.bridge_planner.plan(system)
-        bridge_files = _copy_bridge_artifacts(request.out_dir, planned_bridges)
-        for bf in bridge_files:
-            result.manifest.add("rtl", bf, "BridgePlanner")
+        if request.legacy_backend:
+            legacy_bridge_files = _copy_bridge_artifacts(request.out_dir, planned_bridges)
+            for bf in legacy_bridge_files:
+                result.manifest.add("rtl", bf, "BridgePlanner")
 
-        rtl_top = self.rtl_ir_builder.build(
-            system=system,
-            planned_bridges=planned_bridges,
-            design=result.design,
-        )
-        native_top_file = self.rtl_native_emitter.emit_top(request.out_dir, rtl_top)
-        result.manifest.add("rtl", native_top_file, "RtlNativeEmitter")
+            rtl_top = self.rtl_ir_builder.build(
+                system=system,
+                planned_bridges=planned_bridges,
+                design=result.design,
+            )
+            native_top_file = self.rtl_native_emitter.emit_top(request.out_dir, rtl_top)
+            result.manifest.add("rtl", native_top_file, "RtlNativeEmitter")
 
-        files_tcl = self.files_tcl_emitter.emit(
-            out_dir=request.out_dir,
-            system=system,
-            planned_bridges=planned_bridges,
-        )
-        result.manifest.add("hal", files_tcl, "FilesTclEmitter")
+            files_tcl = self.files_tcl_emitter.emit(
+                out_dir=request.out_dir,
+                system=system,
+                planned_bridges=planned_bridges,
+            )
+            result.manifest.add("hal", files_tcl, "FilesTclEmitter")
 
-        sdc_file = self.sdc_emitter.emit(out_dir=request.out_dir, system=system)
-        result.manifest.add("timing", sdc_file, "SdcEmitter")
+            sdc_file = self.sdc_emitter.emit(out_dir=request.out_dir, system=system)
+            result.manifest.add("timing", sdc_file, "SdcEmitter")
 
-        board_tcl = self.board_tcl_emitter.emit(out_dir=request.out_dir, system=system)
-        result.manifest.add("hal", board_tcl, "BoardTclEmitter")
+            board_tcl = self.board_tcl_emitter.emit(out_dir=request.out_dir, system=system)
+            result.manifest.add("hal", board_tcl, "BoardTclEmitter")
 
         soc_provenance = _build_soc_provenance(system, result, request.out_dir, planned_bridges)
         summary_path = self.build_summary.write(request.out_dir, soc_provenance)
         result.manifest.add("report", summary_path, "BuildSummary")
 
         return result
+
+
+def _collect_vendor_from_system(system) -> "VendorArtifactBundle":
+    from socfw.model.vendor_artifacts import VendorArtifactBundle
+    bundle = VendorArtifactBundle()
+    seen: set[str] = set()
+    used_types = {m.type_name for m in system.project.modules}
+    if system.cpu is not None:
+        used_types.add(system.cpu.type_name)
+    for t in sorted(used_types):
+        ip = system.ip_catalog.get(t)
+        if ip is not None and ip.vendor_info is not None:
+            if ip.vendor_info.qip and ip.vendor_info.qip not in seen:
+                bundle.qip_files.append(ip.vendor_info.qip)
+                seen.add(ip.vendor_info.qip)
+            for sdc in ip.vendor_info.sdc:
+                if sdc not in seen:
+                    bundle.sdc_files.append(sdc)
+                    seen.add(sdc)
+    return bundle
 
 
 def _copy_bridge_artifacts(out_dir: str, planned_bridges) -> list[str]:
@@ -191,7 +250,10 @@ def _collect_bridge_pairs(system) -> list[tuple[str, str, str]]:
 
 def _build_soc_provenance(system, result: BuildResult, out_dir: str, planned_bridges=None) -> SocBuildProvenance:
     cpu_desc = system.cpu_desc()
-    vendor_bundle = VendorArtifactCollector().collect(result.design) if result.design is not None else None
+    if result.design is not None:
+        vendor_bundle = VendorArtifactCollector().collect(result.design)
+    else:
+        vendor_bundle = _collect_vendor_from_system(system)
 
     if planned_bridges:
         bridge_pairs = sorted(

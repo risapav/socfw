@@ -32,7 +32,7 @@ def test_blink02_sdc_has_generated_clock(tmp_path):
 def test_blink02_dot_graph(tmp_path):
     out_dir = tmp_path / "out"
     result = FullBuildPipeline(templates_dir="socfw/templates").run(
-        BuildRequest(project_file=str(FIXTURE), out_dir=str(out_dir))
+        BuildRequest(project_file=str(FIXTURE), out_dir=str(out_dir), legacy_backend=True)
     )
     assert result.ok, [str(d) for d in result.diagnostics]
 

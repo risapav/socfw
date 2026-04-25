@@ -1,0 +1,68 @@
+# =============================================================================
+# SoC Framework v3 - Makefile.common (Opravená verzia s argumentmi)
+# =============================================================================
+
+# --- Nastavenia ciest ---
+ROOT        := $(shell cd ../../ && pwd)
+CFG         := project.yaml
+BUILD_DIR   := build
+GEN_DIR     := $(BUILD_DIR)/gen
+
+# Výber príkazu a sledovaného súboru podľa režimu HAS_SW
+ifeq ($(HAS_SW),1)
+SOCFW_CMD := build-fw
+SENTINEL  := $(GEN_DIR)/sections.lds
+else
+SOCFW_CMD := build
+SENTINEL  := $(GEN_DIR)/files.tcl
+endif
+
+# Pridané 'build' do PHONY, aby sa nebiu s adresárom build/
+.PHONY: all gen sw validate clean help build
+
+# --- Predvolený cieľ ---
+all: gen
+
+# --- Validácia projektu ---
+# Opravené: pridaný argument $(CFG)
+validate:
+	@echo "[CHECK] Validujem konfiguráciu: $(CFG)..."
+	socfw validate $(CFG)
+
+# --- Generovanie (Build) ---
+# Opravené: pridaný argument $(CFG) k príkazu socfw
+$(SENTINEL): $(CFG)
+	@echo "[SOCFW] Spúšťam $(SOCFW_CMD) pre: $(DEMO_NAME)..."
+	@mkdir -p $(BUILD_DIR)
+	socfw $(SOCFW_CMD) $(CFG)
+	@echo "[OK] Artefakty úspešne vygenerované v $(GEN_DIR)."
+
+gen: $(SENTINEL)
+
+# Pomocný cieľ pre manuálne spustenie buildu
+build: gen
+
+# --- Firmware ---
+sw:
+	@echo "[SOCFW] Spúšťam build-fw pre firmware..."
+	socfw build-fw $(CFG)
+
+# --- Vyčistenie ---
+clean:
+	@echo "[CLEAN] Odstraňujem artefakty v $(DEMO_NAME)..."
+	rm -rf $(BUILD_DIR)
+	rm -rf db incremental_db output_files
+	rm -f *.rpt *.summary *.smsg *.pin *.done *.flow.rpt *.jdi *.sld
+	rm -f *.asm.rpt *.fit.rpt *.map.rpt *.sta.rpt *.eda.rpt
+	rm -f *.qpf.bak *.qsf.bak *.txt
+	@echo "[OK] Projekt je čistý."
+
+# --- Pomocník ---
+help:
+	@echo "SoC Framework v3 - Makefile (socfw CLI)"
+	@echo "---------------------------------------"
+	@echo "make validate - Skontroluje project.yaml"
+	@echo "make gen      - Vygeneruje kompletný build (RTL + HAL)"
+	@echo "make sw       - Spustí build-fw (vhodné pre SoC režim)"
+	@echo "make clean    - Vymaže všetky vygenerované súbory"
+    

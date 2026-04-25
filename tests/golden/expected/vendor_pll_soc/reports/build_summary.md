@@ -38,15 +38,7 @@
 
 ## Generated Files
 
-- `files.tcl`
-- `hal/board.tcl`
 - `hal/board.tcl`
 - `hal/files.tcl`
-- `reports/build_report.json`
-- `reports/build_report.md`
-- `reports/soc_graph.dot`
 - `rtl/soc_top.sv`
-- `rtl/soc_top.sv`
-- `sim`
-- `timing/soc_top.sdc`
 - `timing/soc_top.sdc`

@@ -28,7 +28,11 @@ def cmd_build(args) -> int:
     from socfw.build.full_pipeline import FullBuildPipeline
 
     pipeline = FullBuildPipeline(templates_dir=args.templates)
-    result = pipeline.run(BuildRequest(project_file=args.project, out_dir=args.out))
+    result = pipeline.run(BuildRequest(
+        project_file=args.project,
+        out_dir=args.out,
+        legacy_backend=getattr(args, "legacy_backend", False),
+    ))
 
     _print_diags(result.diagnostics)
 
@@ -353,6 +357,11 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("project")
     b.add_argument("--out", default="build/gen")
     b.add_argument("--templates", default=_default_templates_dir())
+    b.add_argument(
+        "--legacy-backend",
+        action="store_true",
+        help="Use deprecated legacy backend instead of native emitters",
+    )
     b.set_defaults(func=cmd_build)
 
     p_fmt = sub.add_parser("fmt", help="Format YAML config into canonical shape")

@@ -31,6 +31,6 @@ def test_vendor_pll_soc_golden(tmp_path):
 
     _assert_same(out_dir / "rtl" / "soc_top.sv", EXPECTED / "rtl" / "soc_top.sv")
     _assert_same(out_dir / "hal" / "board.tcl", EXPECTED / "hal" / "board.tcl")
-    _assert_same(out_dir / "files.tcl", EXPECTED / "files.tcl")
+    _assert_same(out_dir / "hal" / "files.tcl", EXPECTED / "hal" / "files.tcl")
     _assert_same(out_dir / "timing" / "soc_top.sdc", EXPECTED / "timing" / "soc_top.sdc")
     _assert_same(out_dir / "reports" / "build_summary.md", EXPECTED / "reports" / "build_summary.md")

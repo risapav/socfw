@@ -434,20 +434,43 @@ class RtlIrBuilder:
                         )
                         seen.add(ext.top_name)
         else:
+            from socfw.model.board import BoardResource, BoardVectorSignal, BoardScalarSignal
             for mod in system.project.modules:
                 for pb in mod.port_bindings:
                     if not pb.target.startswith("board:"):
                         continue
-                    board_path = pb.target[len("board:"):]
-                    resource = system.board.resolve_resource_path(board_path)
-                    if not isinstance(resource, dict):
+                    try:
+                        ref_obj = system.board.resolve_ref(pb.target)
+                    except (KeyError, Exception):
                         continue
-                    name = resource.get("top_name")
-                    if not name or name in seen:
+
+                    if isinstance(ref_obj, BoardResource):
+                        sig = ref_obj.default_signal()
+                        if sig is None:
+                            continue
+                    elif isinstance(ref_obj, dict):
+                        top_name = ref_obj.get("top_name")
+                        if not top_name:
+                            continue
+                        if top_name in seen:
+                            continue
+                        width = int(ref_obj.get("width", 1))
+                        direction = "output"
+                        top.ports.append(RtlPort(name=top_name, direction=direction, width=width))
+                        seen.add(top_name)
                         continue
-                    kind = resource.get("kind", "scalar")
-                    width = int(resource.get("width", 1))
-                    direction = "inout" if kind == "inout" else "output"
+                    else:
+                        sig = ref_obj
+
+                    name = sig.top_name
+                    if name in seen:
+                        continue
+                    if isinstance(sig, BoardVectorSignal):
+                        width = sig.width
+                        direction = "output"
+                    else:
+                        width = 1
+                        direction = "output"
                     top.ports.append(RtlPort(name=name, direction=direction, width=width))
                     seen.add(name)
 
@@ -480,10 +503,21 @@ class RtlIrBuilder:
                         ext = resolved.resolved[0]
                         conns.append(RtlConnection(pb.port_name, ext.top_name))
                 elif pb.target.startswith("board:"):
-                    board_path = pb.target[len("board:"):]
-                    resource = system.board.resolve_resource_path(board_path)
-                    if isinstance(resource, dict) and resource.get("top_name"):
-                        conns.append(RtlConnection(pb.port_name, resource["top_name"]))
+                    from socfw.model.board import BoardResource
+                    try:
+                        ref_obj = system.board.resolve_ref(pb.target)
+                    except (KeyError, Exception):
+                        ref_obj = None
+                    if ref_obj is not None:
+                        if isinstance(ref_obj, BoardResource):
+                            sig = ref_obj.default_signal()
+                            top_name = sig.top_name if sig is not None else None
+                        elif isinstance(ref_obj, dict):
+                            top_name = ref_obj.get("top_name")
+                        else:
+                            top_name = ref_obj.top_name
+                        if top_name:
+                            conns.append(RtlConnection(pb.port_name, top_name))
 
             top.instances.append(
                 RtlInstance(

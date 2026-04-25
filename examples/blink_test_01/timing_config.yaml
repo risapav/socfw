@@ -1,0 +1,25 @@
+version: 2
+kind: timing
+
+timing:
+  derive_uncertainty: true
+
+  clocks:
+  - name: SYS_CLK
+    source: SYS_CLK
+    period_ns: 20.0
+
+    reset:
+      source: RESET_N
+      active_low: true
+      sync_stages: 2
+
+  false_paths:
+  - from_port: RESET_N
+    comment: Async reset
+    
+  io_delays:
+    auto: true
+    clock: SYS_CLK
+    default_input_max_ns: 3.0
+    default_output_max_ns: 3.0

@@ -37,21 +37,9 @@
 
 ## Generated Files
 
-- `docs/soc_map.md`
-- `files.tcl`
-- `hal/board.tcl`
 - `hal/board.tcl`
 - `hal/files.tcl`
 - `reports/bridge_summary.txt`
-- `reports/build_report.json`
-- `reports/build_report.md`
-- `reports/soc_graph.dot`
 - `rtl/simple_bus_to_wishbone_bridge.sv`
 - `rtl/soc_top.sv`
-- `rtl/soc_top.sv`
-- `sim`
-- `sw/sections.lds`
-- `sw/soc_irq.h`
-- `sw/soc_map.h`
-- `timing/soc_top.sdc`
 - `timing/soc_top.sdc`

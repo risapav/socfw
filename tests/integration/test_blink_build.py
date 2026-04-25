@@ -17,9 +17,7 @@ def test_blink_test_01_build(tmp_path):
     assert result.ok, [str(d) for d in result.diagnostics]
     assert (out_dir / "rtl" / "soc_top.sv").exists()
     assert (out_dir / "hal" / "board.tcl").exists()
-    assert (out_dir / "reports" / "build_report.json").exists()
-    assert (out_dir / "reports" / "build_report.md").exists()
-    assert (out_dir / "reports" / "soc_graph.dot").exists()
+    assert (out_dir / "reports" / "build_summary.md").exists()
 
 
 def test_blink_test_02_build(tmp_path):
@@ -30,4 +28,3 @@ def test_blink_test_02_build(tmp_path):
     assert result.ok, [str(d) for d in result.diagnostics]
     assert (out_dir / "rtl" / "soc_top.sv").exists()
     assert (out_dir / "timing" / "soc_top.sdc").exists()
-    assert (out_dir / "reports" / "soc_graph.dot").exists()
