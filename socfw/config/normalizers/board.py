@@ -107,8 +107,10 @@ def _walk_resources(resources: dict, *, file: str, path: str = "resources") -> t
 
 def normalize_board_document(data: dict, *, file: str) -> NormalizedDocument:
     from socfw.config.normalizers.board_kind import normalize_board_resource_kinds
+    from socfw.board.derived_resources import derive_resources
 
     d = deepcopy(data)
+    d = derive_resources(d)
     diags: list[Diagnostic] = []
     aliases: list[str] = []
 

@@ -119,14 +119,19 @@ def _validate_resources_shape(resources: dict, *, file: str) -> list[Diagnostic]
 
 class BoardLoader:
     def load(self, path: str) -> Result[BoardModel]:
+        from socfw.config.normalizers.board import normalize_board_document
+
         raw = load_yaml_file(path)
         if not raw.ok:
             return Result(diagnostics=raw.diagnostics)
 
+        norm = normalize_board_document(raw.value or {}, file=path)
+        data = norm.data
+
         try:
-            doc = BoardConfigSchema.model_validate(raw.value)
+            doc = BoardConfigSchema.model_validate(data)
         except ValidationError as exc:
-            return Result(diagnostics=[board_schema_error(exc, file=path)])
+            return Result(diagnostics=norm.diagnostics + [board_schema_error(exc, file=path)])
 
         onboard: dict[str, BoardResource] = {}
         for key, res in doc.resources.onboard.items():
@@ -242,7 +247,7 @@ class BoardLoader:
         )
 
         errs = model.validate()
-        all_diags = resource_diags + [
+        all_diags = norm.diagnostics + resource_diags + [
             Diagnostic(
                 code="BRD101",
                 severity=Severity.ERROR,
@@ -252,7 +257,7 @@ class BoardLoader:
             )
             for msg in errs
         ]
-        if all_diags:
+        if any(d.severity == Severity.ERROR for d in all_diags):
             return Result(diagnostics=all_diags)
 
-        return Result(value=model)
+        return Result(value=model, diagnostics=norm.diagnostics)

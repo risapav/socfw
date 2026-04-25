@@ -37,52 +37,28 @@ resources:
       direction: output
       width: 6
       io_standard: "3.3-V LVTTL"
-      pins:
-        5: A6
-        4: B7
-        3: A7
-        2: B8
-        1: A8
-        0: E4
+      pins: [E4, A8, B8, A7, B7, A6]
 
     seg:
       top_name: ONB_SEG
       direction: output
       width: 8
       io_standard: "3.3-V LVTTL"
-      pins:
-        7: A4
-        6: B1
-        5: B4
-        4: A5
-        3: C3
-        2: A3
-        1: B2
-        0: C4
+      pins: [C4, B2, A3, C3, A5, B4, B1, A4]
 
     dig:
       top_name: ONB_DIG
       direction: output
       width: 6
       io_standard: "3.3-V LVTTL"
-      pins:
-        5: A9
-        4: B9
-        3: C7
-        2: C8
-        1: C9
-        0: C10
+      pins: [C10, C9, C8, C7, B9, A9]
 
     buttons:
       top_name: ONB_BTN
       direction: input
       width: 4
       io_standard: "3.3-V LVTTL"
-      pins:
-        3: V14
-        2: U14
-        1: V13
-        0: U13
+      pins: [U13, V13, U14, V14]
 
     uart:
       io_standard: "3.3-V LVTTL"
@@ -105,55 +81,22 @@ resources:
           top_name: SDRAM_ADDR
           direction: output
           width: 13
-          pins:
-            12: P8
-            11: P7
-            10: N8
-            9: N6
-            8: U6
-            7: U7
-            6: V6
-            5: V7
-            4: P6
-            3: P5
-            2: R5
-            1: R6
-            0: T6
+          pins: [T6, R6, R5, P5, P6, V7, V6, U7, U6, N6, N8, P7, P8]
         dq:
           top_name: SDRAM_DQ
           direction: inout
           width: 16
-          pins:
-            15: T4
-            14: T5
-            13: R3
-            12: R4
-            11: R1
-            10: R2
-            9: P4
-            8: P3
-            7: T7
-            6: T8
-            5: U8
-            4: U9
-            3: V9
-            2: V10
-            1: T9
-            0: T10
+          pins: [T10, T9, V10, V9, U9, U8, T8, T7, P3, P4, R2, R1, R4, R3, T5, T4]
         ba:
           top_name: SDRAM_BA
           direction: output
           width: 2
-          pins:
-            1: P9
-            0: N9
+          pins: [N9, P9]
         dqm:
           top_name: SDRAM_DQM
           direction: output
           width: 2
-          pins:
-            1: R0
-            0: V11
+          pins: [V11, R0]
       signals:
         cas_n:
           top_name: SDRAM_CAS_N
