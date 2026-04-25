@@ -349,6 +349,26 @@ def _detect_kind(data: dict, path: Path) -> str:
     return "project"
 
 
+def cmd_board_info(args) -> int:
+    from pathlib import Path as _Path
+    from socfw.config.board_loader import BoardLoader
+    from socfw.diagnostics.board_info import BoardInfoReport
+
+    if args.board_file:
+        board_path = args.board_file
+    else:
+        _builtin = str(_Path(__file__).resolve().parents[2] / "packs" / "builtin")
+        board_path = str(_Path(_builtin) / "boards" / args.board_id / "board.yaml")
+
+    result = BoardLoader().load(board_path)
+    _print_diags(result.diagnostics)
+    if not result.ok:
+        return 1
+
+    print(BoardInfoReport().build(result.value), end="")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="socfw", description="SoC Framework — config-driven FPGA generator")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -440,6 +460,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     lb = sub.add_parser("list-boards", help="List known boards in the catalog")
     lb.set_defaults(func=cmd_list_boards)
+
+    bi = sub.add_parser("board-info", help="Show board resource summary")
+    bi.add_argument("board_id", nargs="?", default=None, help="Board ID (e.g. ac608_ep4ce15)")
+    bi.add_argument("--board-file", default=None, help="Path to board YAML file")
+    bi.set_defaults(func=cmd_board_info)
 
     return ap
 
