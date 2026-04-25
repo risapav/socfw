@@ -65,6 +65,29 @@ class BoardBindingRule(ValidationRule):
                 if not b.target.startswith("board:"):
                     continue
 
+                path_after_board = b.target[len("board:"):]
+                if path_after_board.startswith("connectors."):
+                    derived = _suggest_derived(path_after_board, system.board)
+                    hints = [
+                        "Connector paths describe physical pins, not bindable resources.",
+                        "Define a derived resource in the board YAML:",
+                        "  derived_resources:",
+                        f"    - name: external.pmod.{path_after_board.split('.')[-1].lower()}_gpio8",
+                        f"      from: {path_after_board}",
+                        "      role: gpio8",
+                        "      top_name: PMOD_D",
+                    ]
+                    if derived:
+                        hints = [f"Use derived resource: board:{derived}"] + hints
+                    diags.append(Diagnostic(
+                        code="BRD003",
+                        severity=Severity.ERROR,
+                        message=f"'{b.target}' is a connector path, not a bindable resource",
+                        subject="project.bind",
+                        hints=tuple(hints),
+                    ))
+                    continue
+
                 try:
                     target = system.board.resolve_ref(b.target)
                 except (KeyError, Exception):
@@ -119,6 +142,23 @@ class BoardBindingRule(ValidationRule):
                     ))
 
         return diags
+
+
+def _suggest_derived(connector_path: str, board) -> str | None:
+    """Suggest a derived resource path for a connector path."""
+    external = board.resources.get("external") or {}
+    parts = connector_path.split(".")
+    if len(parts) >= 3:
+        conn_section = parts[1]
+        conn_key = parts[2].lower()
+        section = external.get(conn_section, {})
+        if isinstance(section, dict) and conn_key in section:
+            sub = section[conn_key]
+            if isinstance(sub, dict):
+                first = next(iter(sub), None)
+                if first:
+                    return f"external.{conn_section}.{conn_key}.{first}"
+    return None
 
 
 def _resource_width(target) -> int | None:
