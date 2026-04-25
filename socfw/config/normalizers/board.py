@@ -39,9 +39,30 @@ def _normalize_pins(pins, *, file: str, path: str) -> tuple[list | None, list[Di
     return pins, []
 
 
+def _normalize_legacy_fields(node: dict, *, file: str, path: str) -> list[Diagnostic]:
+    """Rename legacy field aliases in-place. Returns any warning diagnostics."""
+    diags: list[Diagnostic] = []
+
+    if "soc_top_name" in node and "top_name" not in node:
+        node["top_name"] = node.pop("soc_top_name")
+        diags.append(_warn("BRD_ALIAS002", file, f"soc_top_name at `{path}`; prefer `top_name`", "Replace `soc_top_name` with `top_name`."))
+
+    if "dir" in node and "direction" not in node:
+        node["direction"] = node.pop("dir")
+        diags.append(_warn("BRD_ALIAS003", file, f"dir at `{path}`; prefer `direction`", "Replace `dir` with `direction`."))
+
+    if "standard" in node and "io_standard" not in node:
+        node["io_standard"] = node.pop("standard")
+        diags.append(_warn("BRD_ALIAS004", file, f"standard at `{path}`; prefer `io_standard`", "Replace `standard` with `io_standard`."))
+
+    return diags
+
+
 def _normalize_resource(node: dict, *, file: str, path: str) -> tuple[dict, list[Diagnostic]]:
     d = deepcopy(node)
     diags: list[Diagnostic] = []
+
+    diags.extend(_normalize_legacy_fields(d, file=file, path=path))
 
     if "pins" in d:
         normalized, pin_diags = _normalize_pins(d["pins"], file=file, path=path)
@@ -68,7 +89,9 @@ def _walk_resources(resources: dict, *, file: str, path: str = "resources") -> t
 
     for key, val in resources.items():
         cur_path = f"{path}.{key}"
-        if isinstance(val, dict) and "kind" in val and "top_name" in val:
+        if isinstance(val, dict) and "kind" in val and (
+            "top_name" in val or "soc_top_name" in val
+        ):
             normed, node_diags = _normalize_resource(val, file=file, path=cur_path)
             result[key] = normed
             diags.extend(node_diags)

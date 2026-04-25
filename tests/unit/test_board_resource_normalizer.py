@@ -75,6 +75,32 @@ def test_bundle_signals_pins_normalized():
     assert len(norm.diagnostics) == 1
 
 
+def test_legacy_soc_top_name_renamed():
+    data = {
+        "resources": {
+            "onboard": {
+                "leds": {
+                    "kind": "vector",
+                    "soc_top_name": "ONB_LEDS",
+                    "dir": "output",
+                    "standard": "3.3-V LVTTL",
+                    "width": 2,
+                    "pins": ["A1", "A2"],
+                }
+            }
+        }
+    }
+    norm = normalize_board_document(data, file="board.yaml")
+    leds = norm.data["resources"]["onboard"]["leds"]
+    assert leds["top_name"] == "ONB_LEDS"
+    assert leds["direction"] == "output"
+    assert leds["io_standard"] == "3.3-V LVTTL"
+    codes = {d.code for d in norm.diagnostics}
+    assert "BRD_ALIAS002" in codes
+    assert "BRD_ALIAS003" in codes
+    assert "BRD_ALIAS004" in codes
+
+
 def test_string_indexed_dict_pins():
     data = {
         "resources": {
