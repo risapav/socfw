@@ -35,6 +35,12 @@
 
 - none
 
+## Artifact Inventory
+
+- rtl: `2`
+- tcl: `2`
+- timing: `1`
+
 ## Generated Files
 
 - `hal/board.tcl`

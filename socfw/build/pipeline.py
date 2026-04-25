@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from socfw.build.artifacts import BuildArtifactInventory
 from socfw.build.context import BuildContext, BuildRequest
 from socfw.build.manifest import BuildManifest
 from socfw.build.provenance_model import BuildProvenance
@@ -23,6 +24,7 @@ class BuildResult:
     ok: bool
     diagnostics: list[Diagnostic] = field(default_factory=list)
     manifest: BuildManifest = field(default_factory=BuildManifest)
+    artifacts: BuildArtifactInventory = field(default_factory=BuildArtifactInventory)
     board_ir: object | None = None
     timing_ir: object | None = None
     rtl_ir: object | None = None
@@ -32,6 +34,13 @@ class BuildResult:
     peripheral_shell_irs: list[object] = field(default_factory=list)
     design: object | None = None
     provenance: BuildProvenance | None = None
+
+    def add_file(self, path: str, *, kind: str, producer: str) -> None:
+        self.manifest.add(kind, path, producer)
+        self.artifacts.add(path, kind=kind, producer=producer)
+
+    def normalize_files(self) -> None:
+        pass
 
 
 class BuildPipeline:

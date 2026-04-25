@@ -83,6 +83,15 @@ class BuildSummaryReport:
             lines.append("- none")
         lines.append("")
 
+        lines.append("## Artifact Inventory")
+        lines.append("")
+        if getattr(provenance, "artifact_kinds", None):
+            for kind in sorted(provenance.artifact_kinds):
+                lines.append(f"- {kind}: `{provenance.artifact_kinds[kind]}`")
+        else:
+            lines.append("- none")
+        lines.append("")
+
         lines.append("## Generated Files")
         lines.append("")
         if provenance.generated_files:

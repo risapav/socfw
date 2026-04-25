@@ -25,3 +25,4 @@ class SocBuildProvenance:
 
     generated_files: list[str] = field(default_factory=list)
     aliases_used: list[str] = field(default_factory=list)
+    artifact_kinds: dict[str, int] = field(default_factory=dict)

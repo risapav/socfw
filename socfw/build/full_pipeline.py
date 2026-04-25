@@ -126,7 +126,7 @@ class FullBuildPipeline:
 
             bridge_files = _copy_bridge_artifacts(request.out_dir, planned_bridges)
             for bf in bridge_files:
-                result.manifest.add("rtl", bf, "BridgePlanner")
+                result.add_file(bf, kind="rtl", producer="BridgePlanner")
 
             rtl_top = self.rtl_ir_builder.build(
                 system=system,
@@ -134,20 +134,21 @@ class FullBuildPipeline:
                 design=None,
             )
             native_top_file = self.rtl_native_emitter.emit_top(request.out_dir, rtl_top)
-            result.manifest.add("rtl", native_top_file, "RtlNativeEmitter")
+            result.add_file(native_top_file, kind="rtl", producer="RtlNativeEmitter")
 
             files_tcl = self.files_tcl_emitter.emit(
                 out_dir=request.out_dir,
                 system=system,
                 planned_bridges=planned_bridges,
             )
-            result.manifest.add("hal", files_tcl, "FilesTclEmitter")
+            result.add_file(files_tcl, kind="tcl", producer="FilesTclEmitter")
 
             sdc_file = self.sdc_emitter.emit(out_dir=request.out_dir, system=system)
-            result.manifest.add("timing", sdc_file, "SdcEmitter")
+            result.add_file(sdc_file, kind="timing", producer="SdcEmitter")
 
             board_tcl = self.board_tcl_emitter.emit(out_dir=request.out_dir, system=system)
-            result.manifest.add("hal", board_tcl, "BoardTclEmitter")
+            result.add_file(board_tcl, kind="tcl", producer="BoardTclEmitter")
+            result.normalize_files()
 
         report_paths = self.reports.emit_all(
             system=system,
@@ -281,6 +282,10 @@ def _build_soc_provenance(system, result: BuildResult, out_dir: str, planned_bri
     vendor_qip = sorted(Path(p).name for p in (vendor_bundle.qip_files if vendor_bundle else []))
     vendor_sdc = sorted(Path(p).name for p in (vendor_bundle.sdc_files if vendor_bundle else []))
 
+    artifact_kinds: dict[str, int] = {}
+    for a in result.artifacts.normalized():
+        artifact_kinds[a.kind] = artifact_kinds.get(a.kind, 0) + 1
+
     return SocBuildProvenance(
         project_name=system.project.name,
         project_mode=system.project.mode,
@@ -296,6 +301,7 @@ def _build_soc_provenance(system, result: BuildResult, out_dir: str, planned_bri
         bridge_pairs=bridge_pairs,
         generated_files=generated,
         aliases_used=list(system.sources.aliases_used),
+        artifact_kinds=artifact_kinds,
     )
 
 
