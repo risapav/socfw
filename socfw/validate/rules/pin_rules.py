@@ -10,19 +10,33 @@ def _extract_pins(resource) -> set[str]:
     return collect_pins(resource)
 
 
+def _collect_bind_targets(system: SystemModel) -> list[str]:
+    """Collect all board: targets referenced in port bindings."""
+    targets = []
+    for mod in system.project.modules:
+        for pb in mod.port_bindings:
+            if pb.target.startswith("board:"):
+                targets.append(pb.target)
+    return targets
+
+
 class BoardPinConflictRule(ValidationRule):
     def validate(self, system: SystemModel) -> list[Diagnostic]:
         diags: list[Diagnostic] = []
 
-        if not system.project.feature_refs:
+        feature_refs = system.project.feature_refs or []
+        bind_targets = _collect_bind_targets(system)
+
+        # Combine active refs: features.use + bind targets
+        active_refs = list(dict.fromkeys(feature_refs + bind_targets))
+        if not active_refs:
             return diags
 
         # build map: pin -> list of refs that use it
         pin_to_refs: dict[str, list[str]] = {}
 
-        for ref in system.project.feature_refs:
+        for ref in active_refs:
             path = ref[len("board:"):] if ref.startswith("board:") else ref
-            # Try to expand into leaf resources; falls back to single resolve
             leaves = list(iter_resource_leaves(system.board, path))
             if leaves:
                 for leaf_path, leaf_res in leaves:
@@ -37,20 +51,20 @@ class BoardPinConflictRule(ValidationRule):
                     pin_to_refs.setdefault(pin, []).append(ref)
 
         for pin, refs in sorted(pin_to_refs.items()):
-            if len(refs) > 1:
+            unique_refs = list(dict.fromkeys(refs))
+            if len(unique_refs) > 1:
                 diags.append(
                     Diagnostic(
                         code="PIN001",
                         severity=Severity.ERROR,
                         message=(
-                            f"Pin {pin} is used by multiple board features: "
-                            + " and ".join(refs)
+                            f"Pin {pin} is used by multiple board resources: "
+                            + " and ".join(unique_refs)
                         ),
                         subject="project.features.use",
                         hints=(
-                            f"Physical pin `{pin}` is claimed by both {refs[0]} and {refs[1]}.",
-                            "Remove one of the conflicting features from `features.use`.",
-                            "Note: J11 PMOD pins R1/R2 conflict with SDRAM DQ — do not use both.",
+                            f"Physical pin `{pin}` is claimed by both {unique_refs[0]} and {unique_refs[1]}.",
+                            "Remove one of the conflicting features from `features.use`, or remove the conflicting port binding.",
                         ),
                     )
                 )
