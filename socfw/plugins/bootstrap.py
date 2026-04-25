@@ -22,6 +22,7 @@ from socfw.validate.rules.board_rules import (
     UnknownBoardBindingTargetRule,
     UnknownBoardFeatureRule,
 )
+from socfw.validate.rules.pin_rules import BoardPinConflictRule
 from socfw.validate.rules.bridge_rules import MissingBridgeRule
 from socfw.validate.rules.bus_rules import (
     DuplicateAddressRegionRule,
@@ -67,6 +68,7 @@ def create_builtin_registry(templates_dir: str) -> PluginRegistry:
     reg.register_validator(UnknownGeneratedClockSourceRule())
     reg.register_validator(UnknownBoardFeatureRule())
     reg.register_validator(UnknownBoardBindingTargetRule())
+    reg.register_validator(BoardPinConflictRule())
     reg.register_validator(VendorIpArtifactExistsRule())
     reg.register_validator(BindingWidthCompatibilityRule())
     reg.register_validator(BoardBindingRule())
