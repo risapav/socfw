@@ -1,0 +1,25 @@
+version: 2
+kind: cpu
+
+cpu:
+  name: dummy_cpu
+  module: dummy_cpu
+  family: riscv32
+
+clock_port: SYS_CLK
+reset_port: RESET_N
+irq_port: irq_i
+
+bus_master:
+  port_name: bus
+  protocol: simple_bus
+  addr_width: 32
+  data_width: 32
+
+default_params: {}
+
+artifacts:
+  - ../rtl/dummy_cpu.sv
+
+notes:
+  - Minimal demo CPU descriptor

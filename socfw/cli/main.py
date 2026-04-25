@@ -246,11 +246,12 @@ def cmd_init(args) -> int:
 
     board = args.board or "qmtech_ep4ce55"
 
-    if args.template == "blink":
+    if args.template in ("blink", "pll", "sdram"):
         from socfw.scaffold.init_project import ProjectInitializer
         out_dir = os.path.join(args.out, args.name)
         try:
-            created = ProjectInitializer().init_blink(
+            created = ProjectInitializer().init(
+                template=args.template,
                 target_dir=out_dir,
                 name=args.name,
                 board=board,
@@ -415,10 +416,9 @@ def build_parser() -> argparse.ArgumentParser:
     docs_export.add_argument("--out", default="build/docs")
     docs_export.set_defaults(func=cmd_docs_export)
 
-    from socfw.scaffold.template_registry import TemplateRegistry as _TR
     i = sub.add_parser("init", help="Initialize a new project from a scaffold template")
     i.add_argument("name")
-    i.add_argument("--template", required=True, choices=[t.key for t in _TR().all()])
+    i.add_argument("--template", default="blink", choices=["blink", "pll", "sdram"])
     i.add_argument("--board", default=None)
     i.add_argument("--cpu", default=None)
     i.add_argument("--out", default=".")

@@ -1,0 +1,69 @@
+version: 2
+kind: project
+
+project:
+  name: {{ name }}
+  mode: soc
+  board: {{ board }}
+  debug: true
+
+timing:
+  file: timing_config.yaml
+
+registries:
+  packs:
+    - packs/builtin
+  ip:
+    - ip
+  cpu: []
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:SYS_CLK
+    frequency_hz: 50000000
+  generated: []
+
+buses:
+  - name: main
+    protocol: simple_bus
+    addr_width: 32
+    data_width: 32
+
+cpu:
+  instance: cpu0
+  type: dummy_cpu
+  fabric: main
+  reset_vector: 0
+
+modules:
+  - instance: sdram0
+    type: sdram_ctrl
+    bus:
+      fabric: main
+      base: 2147483648
+      size: 16777216
+    clocks:
+      clk: sys_clk
+    bind:
+      ports:
+        zs_addr:
+          target: board:external.sdram.addr
+        zs_ba:
+          target: board:external.sdram.ba
+        zs_dq:
+          target: board:external.sdram.dq
+        zs_dqm:
+          target: board:external.sdram.dqm
+        zs_cs_n:
+          target: board:external.sdram.cs_n
+        zs_we_n:
+          target: board:external.sdram.we_n
+        zs_ras_n:
+          target: board:external.sdram.ras_n
+        zs_cas_n:
+          target: board:external.sdram.cas_n
+        zs_cke:
+          target: board:external.sdram.cke
+        zs_clk:
+          target: board:external.sdram.clk

@@ -1,0 +1,22 @@
+version: 2
+kind: timing
+
+timing:
+  clocks:
+    - name: SYS_CLK
+      source: board:SYS_CLK
+      period_ns: 20.0
+      reset:
+        source: board:RESET_N
+        active_low: true
+        sync_stages: 2
+
+  io_delays:
+    auto: true
+    default_clock: SYS_CLK
+    default_input_max_ns: 3.0
+    default_output_max_ns: 3.0
+
+  false_paths:
+    - from_port: RESET_N
+      comment: Async reset

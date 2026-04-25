@@ -67,12 +67,26 @@ modules:
 ## Create a new project
 
 ```bash
-socfw init my_blink --template blink --name my_blink --board qmtech_ep4ce55
+socfw init my_blink --template blink --board qmtech_ep4ce55
 socfw validate my_blink/project.yaml
 socfw build my_blink/project.yaml --out my_blink/build/gen
 ```
 
 The generated project uses the new pack-aware `project.yaml` format.
+
+## Templates
+
+```bash
+socfw init my_blink --template blink
+socfw init my_pll --template pll
+socfw init my_sdram --template sdram
+```
+
+| Template | Mode       | Description                              |
+|----------|------------|------------------------------------------|
+| `blink`  | standalone | LED blink demo, single clock domain      |
+| `pll`    | standalone | Blink with explicit timing config        |
+| `sdram`  | soc        | SDRAM controller SoC with dummy CPU      |
 
 ## Additional CLI commands
 
