@@ -183,3 +183,35 @@ derived_resources:
     from: connectors.headers.P6
     role: gpio2
     top_name: HDR_P6_D
+
+aliases:
+  leds: onboard.leds
+  buttons: onboard.buttons
+  hdmi: onboard.hdmi
+  sdram: external.sdram
+  p8: external.headers.P8.gpio
+  p5: external.headers.P5.gpio
+  p6: external.headers.P6.gpio
+
+profiles:
+  minimal:
+    use:
+      - onboard.leds
+  hdmi:
+    use:
+      - onboard.hdmi
+  sdram:
+    use:
+      - external.sdram
+  headers:
+    use:
+      - external.headers.P8.gpio
+      - external.headers.P5.gpio
+      - external.headers.P6.gpio
+
+mux_groups:
+  sdram_vs_headers:
+    resources:
+      - external.sdram
+      - external.headers.P8.gpio
+    policy: mutually_exclusive

@@ -20,6 +20,12 @@ class BoardCatalog:
                 board_file="boards/qmtech_ep4ce55/board.yaml",
                 family="cyclone_iv_e",
             ),
+            BoardCatalogEntry(
+                key="ac608_ep4ce15",
+                title="AC608 Cyclone IV E EP4CE15E22C8",
+                board_file="boards/ac608_ep4ce15/board.yaml",
+                family="cyclone_iv_e",
+            ),
         ]
 
     def get(self, key: str) -> BoardCatalogEntry | None:

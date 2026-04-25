@@ -107,6 +107,16 @@ class BoardSystemSchema(BaseModel):
     reset: BoardResetSchema
 
 
+class BoardProfileSchema(BaseModel):
+    use: list[str] = Field(default_factory=list)
+    model_config = {"extra": "allow"}
+
+
+class BoardMuxGroupSchema(BaseModel):
+    resources: list[str] = Field(default_factory=list)
+    policy: str = "mutually_exclusive"
+
+
 class BoardConfigSchema(BaseModel):
     version: Literal[2]
     kind: Literal["board"]
@@ -115,3 +125,7 @@ class BoardConfigSchema(BaseModel):
     system: BoardSystemSchema
     resources: BoardResourcesSchema = Field(default_factory=BoardResourcesSchema)
     toolchains: dict[str, Any] = Field(default_factory=dict)
+    aliases: dict[str, str] = Field(default_factory=dict)
+    profiles: dict[str, BoardProfileSchema] = Field(default_factory=dict)
+    mux_groups: dict[str, BoardMuxGroupSchema] = Field(default_factory=dict)
+    derived_resources: list[dict[str, Any]] = Field(default_factory=list)
