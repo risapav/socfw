@@ -48,7 +48,7 @@ def test_vendor_pll_soc_golden(tmp_path):
 
     assert result.ok, [str(d) for d in result.diagnostics]
 
-    for rel in ["rtl/soc_top.sv", "hal/board.tcl", "files.tcl"]:
+    for rel in ["rtl/soc_top.sv", "hal/board.tcl", "hal/files.tcl", "files.tcl"]:
         expected_file = EXPECTED_VENDOR_PLL / rel
         if expected_file.exists():
             assert _read(out_dir / rel) == _read(expected_file), f"Golden mismatch: {rel}"
@@ -64,7 +64,7 @@ def test_vendor_sdram_soc_golden(tmp_path):
 
     assert result.ok, [str(d) for d in result.diagnostics]
 
-    for rel in ["rtl/soc_top.sv", "hal/board.tcl", "files.tcl"]:
+    for rel in ["rtl/soc_top.sv", "hal/board.tcl", "hal/files.tcl", "files.tcl"]:
         expected_file = EXPECTED_VENDOR_SDRAM / rel
         if expected_file.exists():
             assert _read(out_dir / rel) == _read(expected_file), f"Golden mismatch: {rel}"

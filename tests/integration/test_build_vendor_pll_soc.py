@@ -18,7 +18,7 @@ def test_build_vendor_pll_soc(tmp_path):
 
     rtl = out_dir / "rtl" / "soc_top.sv"
     board_tcl = out_dir / "hal" / "board.tcl"
-    files_tcl = out_dir / "files.tcl"
+    files_tcl = out_dir / "hal" / "files.tcl"
 
     assert rtl.exists()
     assert board_tcl.exists()

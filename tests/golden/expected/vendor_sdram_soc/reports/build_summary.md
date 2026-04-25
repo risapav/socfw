@@ -40,6 +40,7 @@
 - `docs/soc_map.md`
 - `files.tcl`
 - `hal/board.tcl`
+- `hal/files.tcl`
 - `reports/bridge_summary.txt`
 - `reports/build_report.json`
 - `reports/build_report.md`

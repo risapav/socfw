@@ -15,7 +15,7 @@ def test_build_vendor_sdram_soc(tmp_path):
     assert result.ok, [f"{d.code}: {d.message}" for d in result.diagnostics]
 
     rtl = out_dir / "rtl" / "soc_top.sv"
-    files_tcl = out_dir / "files.tcl"
+    files_tcl = out_dir / "hal" / "files.tcl"
     bridge_summary = out_dir / "reports" / "bridge_summary.txt"
 
     assert rtl.exists()
@@ -43,5 +43,6 @@ def test_build_vendor_sdram_soc(tmp_path):
     assert "sdram_ctrl.qip" in files_tcl_text
     assert "SDC_FILE" in files_tcl_text
     assert "sdram_ctrl.sdc" in files_tcl_text
+    assert "simple_bus_to_wishbone_bridge.sv" in files_tcl_text
 
     assert "sdram0: simple_bus -> wishbone" in bridge_summary_text
