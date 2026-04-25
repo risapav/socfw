@@ -40,6 +40,27 @@ def cmd_build(args) -> int:
     return 0 if result.ok else 1
 
 
+def cmd_explain_schema(args) -> int:
+    from socfw.schema_docs import available_schemas, get_schema_doc
+
+    if args.schema == "list":
+        print("Available schemas:")
+        for name in available_schemas():
+            print(f"  {name}")
+        return 0
+
+    doc = get_schema_doc(args.schema)
+    if doc is None:
+        print(f"Unknown schema: {args.schema}")
+        print("Available schemas:")
+        for name in available_schemas():
+            print(f"  {name}")
+        return 1
+
+    print(doc)
+    return 0
+
+
 def cmd_doctor(args) -> int:
     from socfw.build.full_pipeline import FullBuildPipeline
     from socfw.diagnostics.doctor import DoctorReport
@@ -315,6 +336,10 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--out", default="build/gen")
     b.add_argument("--templates", default=_default_templates_dir())
     b.set_defaults(func=cmd_build)
+
+    p_es = sub.add_parser("explain-schema", help="Show canonical YAML schema examples")
+    p_es.add_argument("schema", help="Schema name: project, timing, ip, board, or list")
+    p_es.set_defaults(func=cmd_explain_schema)
 
     p_doc = sub.add_parser("doctor", help="Inspect resolved project configuration")
     p_doc.add_argument("project")
