@@ -87,4 +87,67 @@ class DoctorReport:
             lines.append("- none")
         lines.append("")
 
+        lines.append("## Selected board features")
+        if system.project.feature_refs:
+            for ref in system.project.feature_refs:
+                lines.append(f"- {ref}")
+        else:
+            lines.append("- none")
+        lines.append("")
+
+        lines.append("## Board resources used")
+        self._add_board_resources_used(system, lines)
+        lines.append("")
+
         return "\n".join(lines).rstrip() + "\n"
+
+    def _add_board_resources_used(self, system, lines: list[str]) -> None:
+        from socfw.model.board_resources import collect_pins, iter_resource_leaves
+
+        seen: set[str] = set()
+
+        for mod in system.project.modules:
+            for pb in mod.port_bindings:
+                if not pb.target.startswith("board:"):
+                    continue
+                path = pb.target[len("board:"):]
+                if path in seen:
+                    continue
+                seen.add(path)
+
+                leaves = list(iter_resource_leaves(system.board, path))
+                if leaves:
+                    for leaf_path, res in leaves:
+                        pins = sorted(collect_pins(res))
+                        pin_str = ",".join(pins) if pins else "—"
+                        top = res.get("top_name", "") if isinstance(res, dict) else getattr(res, "top_name", "")
+                        width = res.get("width", "") if isinstance(res, dict) else getattr(res, "width", "")
+                        w_str = f"[{width-1}:0]" if isinstance(width, int) and width > 1 else ""
+                        lines.append(f"- {leaf_path}: {top}{w_str}, pins {pin_str}")
+                else:
+                    try:
+                        res = system.board.resolve_ref(pb.target)
+                        pins = sorted(collect_pins(res))
+                        pin_str = ",".join(pins) if pins else "—"
+                        top = res.get("top_name", "") if isinstance(res, dict) else getattr(res, "top_name", "")
+                        lines.append(f"- {path}: {top}, pins {pin_str}")
+                    except (KeyError, Exception):
+                        lines.append(f"- {path}: (unresolved)")
+
+        for ref in system.project.feature_refs:
+            path = ref[len("board:"):] if ref.startswith("board:") else ref
+            if path in seen:
+                continue
+            seen.add(path)
+
+            leaves = list(iter_resource_leaves(system.board, path))
+            for leaf_path, res in leaves:
+                pins = sorted(collect_pins(res))
+                pin_str = ",".join(pins) if pins else "—"
+                top = res.get("top_name", "") if isinstance(res, dict) else getattr(res, "top_name", "")
+                width = res.get("width", "") if isinstance(res, dict) else getattr(res, "width", "")
+                w_str = f"[{width-1}:0]" if isinstance(width, int) and width > 1 else ""
+                lines.append(f"- {leaf_path}: {top}{w_str}, pins {pin_str}")
+
+        if not seen:
+            lines.append("- none")
