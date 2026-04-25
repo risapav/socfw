@@ -276,6 +276,68 @@ resources:
         io_standard: "3.3-V LVTTL"
         connector: connectors.pmod.J11
         pins: [R1, P1, N1, M1, R2, P2, N2, M2]
+      j10_hdmi_out:
+        kind: bundle
+        connector: connectors.pmod.J10
+        io_standard: "3.3-V LVTTL"
+        signals:
+          clk:
+            kind: scalar
+            top_name: HDMI_CLK
+            direction: output
+            pin: H1
+          de:
+            kind: scalar
+            top_name: HDMI_DE
+            direction: output
+            pin: F1
+          hsync:
+            kind: scalar
+            top_name: HDMI_HSYNC
+            direction: output
+            pin: E1
+          vsync:
+            kind: scalar
+            top_name: HDMI_VSYNC
+            direction: output
+            pin: C1
+          d:
+            kind: vector
+            top_name: HDMI_D
+            direction: output
+            width: 4
+            pins: [H2, F2, D2, C2]
+      j11_hdmi_in:
+        kind: bundle
+        connector: connectors.pmod.J11
+        io_standard: "3.3-V LVTTL"
+        signals:
+          clk:
+            kind: scalar
+            top_name: HDMI_IN_CLK
+            direction: input
+            pin: R1
+          de:
+            kind: scalar
+            top_name: HDMI_IN_DE
+            direction: input
+            pin: P1
+          hsync:
+            kind: scalar
+            top_name: HDMI_IN_HSYNC
+            direction: input
+            pin: N1
+          vsync:
+            kind: scalar
+            top_name: HDMI_IN_VSYNC
+            direction: input
+            pin: M1
+          d:
+            kind: vector
+            top_name: HDMI_IN_D
+            direction: input
+            width: 4
+            pins: [R2, P2, N2, M2]
 
   connectors:
     pmod:

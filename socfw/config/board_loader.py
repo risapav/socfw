@@ -33,9 +33,9 @@ def _validate_resources_shape(resources: dict, *, file: str) -> list[Diagnostic]
         if not isinstance(node, dict):
             return
 
-        if "kind" in node and "top_name" in node:
+        if "kind" in node:
             kind = node.get("kind")
-            if kind not in {"scalar", "vector", "inout"}:
+            if kind not in {"scalar", "vector", "inout", "bundle"}:
                 diags.append(
                     Diagnostic(
                         code="BRD201",
@@ -45,6 +45,13 @@ def _validate_resources_shape(resources: dict, *, file: str) -> list[Diagnostic]
                         spans=(SourceLocation(file=file),),
                     )
                 )
+                return
+
+            if kind == "bundle":
+                # recurse into bundle signals
+                for sig_name, sig_val in (node.get("signals") or {}).items():
+                    if isinstance(sig_val, dict):
+                        walk(sig_val, f"{path}.signals.{sig_name}")
                 return
 
             if kind == "scalar" and "pin" not in node:
