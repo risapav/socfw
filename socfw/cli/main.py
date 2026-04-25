@@ -40,6 +40,23 @@ def cmd_build(args) -> int:
     return 0 if result.ok else 1
 
 
+def cmd_fmt(args) -> int:
+    from socfw.config.formatter import ConfigFormatter
+
+    res = ConfigFormatter().format_file(args.file, write=args.write)
+    _print_diags(res.diagnostics)
+
+    if not res.ok or res.value is None:
+        return 1
+
+    if args.write:
+        print(f"OK: formatted {args.file}")
+    else:
+        print(res.value, end="")
+
+    return 0
+
+
 def cmd_explain_schema(args) -> int:
     from socfw.schema_docs import available_schemas, get_schema_doc
 
@@ -336,6 +353,11 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--out", default="build/gen")
     b.add_argument("--templates", default=_default_templates_dir())
     b.set_defaults(func=cmd_build)
+
+    p_fmt = sub.add_parser("fmt", help="Format YAML config into canonical shape")
+    p_fmt.add_argument("file")
+    p_fmt.add_argument("--write", action="store_true", help="Rewrite file in place")
+    p_fmt.set_defaults(func=cmd_fmt)
 
     p_es = sub.add_parser("explain-schema", help="Show canonical YAML schema examples")
     p_es.add_argument("schema", help="Schema name: project, timing, ip, board, or list")

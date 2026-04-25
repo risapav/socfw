@@ -22,7 +22,7 @@ def normalize_project_aliases(data: dict, *, file: str) -> tuple[dict, list[Diag
     # timing.config -> timing.file
     timing = d.get("timing")
     if isinstance(timing, dict) and "config" in timing and "file" not in timing:
-        timing["file"] = timing["config"]
+        timing["file"] = timing.pop("config")
         diags.append(alias_warning("PRJ_ALIAS001", file, "timing.config", "timing.file"))
 
     # legacy paths.ip_plugins -> registries.ip
@@ -86,7 +86,7 @@ def normalize_timing_aliases(data: dict, *, file: str) -> tuple[dict, list[Diagn
 
         for key in ("clocks", "generated_clocks", "io_delays", "false_paths"):
             if key in d:
-                timing[key] = d[key]
+                timing[key] = d.pop(key)
                 moved = True
 
         if moved:
