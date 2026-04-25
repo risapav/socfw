@@ -62,6 +62,12 @@ class RtlEmitter:
         if signals:
             lines.append("")
 
+        adapt_assigns = getattr(top, "adapt_assigns", [])
+        for aa in adapt_assigns:
+            lines.append(f"  assign {aa.lhs} = {aa.rhs};")
+        if adapt_assigns:
+            lines.append("")
+
         for inst in sorted(top.instances, key=lambda i: i.instance):
             lines.append(f"  {inst.module} {inst.instance} (")
             conns = list(inst.connections)

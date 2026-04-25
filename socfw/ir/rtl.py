@@ -159,11 +159,19 @@ class RtlIrqCombiner:
 
 
 @dataclass
+class RtlAdaptAssign:
+    """Represents a width-adapt assign between a port wire and an instance signal."""
+    lhs: str
+    rhs: str
+
+
+@dataclass
 class RtlTop:
     module_name: str = "soc_top"
     ports: list[RtlPort] = field(default_factory=list)
     signals: list[RtlSignal] = field(default_factory=list)
     instances: list[RtlInstance] = field(default_factory=list)
+    adapt_assigns: list[RtlAdaptAssign] = field(default_factory=list)
 
 
 # Backward-compatible aliases

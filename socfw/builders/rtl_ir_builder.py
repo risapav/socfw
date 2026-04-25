@@ -475,7 +475,7 @@ class RtlIrBuilder:
                     seen.add(name)
 
     def _add_project_module_instances(self, system, top, design) -> None:
-        from socfw.ir.rtl import RtlConnection, RtlInstance
+        from socfw.ir.rtl import RtlAdaptAssign, RtlConnection, RtlInstance, RtlSignal
 
         for mod in system.project.modules:
             ip = system.ip_catalog.get(mod.type_name)
@@ -483,6 +483,8 @@ class RtlIrBuilder:
                 continue
 
             explicit: dict[str, str] = {}
+            port_widths: dict[str, int] = {p.name: p.width for p in (ip.ports or [])}
+            port_dirs: dict[str, str] = {p.name: p.direction for p in (ip.ports or [])}
 
             for cb in mod.clocks:
                 explicit[cb.port_name] = self._clock_expr(system, cb.domain)
@@ -512,12 +514,38 @@ class RtlIrBuilder:
                         if isinstance(ref_obj, BoardResource):
                             sig = ref_obj.default_signal()
                             top_name = sig.top_name if sig is not None else None
+                            board_width = sig.width if sig is not None and hasattr(sig, "width") else 1
                         elif isinstance(ref_obj, dict):
                             top_name = ref_obj.get("top_name")
+                            board_width = int(ref_obj.get("width", 1))
                         else:
                             top_name = ref_obj.top_name
+                            board_width = getattr(ref_obj, "width", 1)
+
                         if top_name:
-                            explicit[pb.port_name] = top_name
+                            ip_width = port_widths.get(pb.port_name)
+                            adapt_mode = pb.adapt
+                            if adapt_mode and ip_width is not None and ip_width != board_width:
+                                wire_name = f"w_{mod.instance}_{pb.port_name}"
+                                port_dir = port_dirs.get(pb.port_name, "output")
+                                top.signals.append(RtlSignal(name=wire_name, kind="wire", width=ip_width))
+                                explicit[pb.port_name] = wire_name
+                                if port_dir == "input":
+                                    # Input: board signal → wire (truncate or zero_extend)
+                                    if board_width > ip_width:
+                                        rhs = f"{top_name}[{ip_width - 1}:0]"
+                                    else:
+                                        pad = ip_width - board_width
+                                        rhs = f"{{ {pad}'b0, {top_name} }}"
+                                    top.adapt_assigns.append(RtlAdaptAssign(lhs=wire_name, rhs=rhs))
+                                else:
+                                    # Output: wire → board port (zero_extend, truncate, replicate)
+                                    rhs = self._adapt_rhs(
+                                        wire=wire_name, src_w=ip_width, dst_w=board_width, mode=adapt_mode
+                                    )
+                                    top.adapt_assigns.append(RtlAdaptAssign(lhs=top_name, rhs=rhs))
+                            else:
+                                explicit[pb.port_name] = top_name
 
             top.instances.append(
                 RtlInstance(
@@ -526,6 +554,14 @@ class RtlIrBuilder:
                     connections=self._connections_from_declared_ports(ip, explicit),
                 )
             )
+
+    def _adapt_rhs(self, *, wire: str, src_w: int, dst_w: int, mode: str) -> str:
+        if dst_w > src_w:
+            pad = dst_w - src_w
+            if mode == "replicate":
+                return f"{{ {{{pad}{{ {wire}[{src_w - 1}] }} }}, {wire} }}"
+            return f"{{ {pad}'b0, {wire} }}"
+        return f"{wire}[{dst_w - 1}:0]"
 
     def _default_expr_for_port(self, port) -> str:
         if port.direction != "input":
