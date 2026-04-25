@@ -227,6 +227,56 @@ resources:
         top_name: ZS_CLK
         pin: V4
 
+    pmod:
+      j10_led6:
+        kind: vector
+        top_name: PMOD_J10_LED
+        direction: output
+        width: 6
+        io_standard: "3.3-V LVTTL"
+        connector: connectors.pmod.J10
+        pins: [H1, F1, E1, C1, H2, F2]
+      j10_led8:
+        kind: vector
+        top_name: PMOD_J10_LED8
+        direction: output
+        width: 8
+        io_standard: "3.3-V LVTTL"
+        connector: connectors.pmod.J10
+        pins: [H1, F1, E1, C1, H2, F2, D2, C2]
+      j11_led6:
+        kind: vector
+        top_name: PMOD_J11_LED
+        direction: output
+        width: 6
+        io_standard: "3.3-V LVTTL"
+        connector: connectors.pmod.J11
+        pins: [R1, P1, N1, M1, R2, P2]
+      j11_led8:
+        kind: vector
+        top_name: PMOD_J11_LED8
+        direction: output
+        width: 8
+        io_standard: "3.3-V LVTTL"
+        connector: connectors.pmod.J11
+        pins: [R1, P1, N1, M1, R2, P2, N2, M2]
+      j10_buttons8:
+        kind: vector
+        top_name: PMOD_J10_BTN
+        direction: input
+        width: 8
+        io_standard: "3.3-V LVTTL"
+        connector: connectors.pmod.J10
+        pins: [H1, F1, E1, C1, H2, F2, D2, C2]
+      j11_buttons8:
+        kind: vector
+        top_name: PMOD_J11_BTN
+        direction: input
+        width: 8
+        io_standard: "3.3-V LVTTL"
+        connector: connectors.pmod.J11
+        pins: [R1, P1, N1, M1, R2, P2, N2, M2]
+
   connectors:
     pmod:
       J10:
