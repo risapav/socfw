@@ -1,0 +1,60 @@
+version: 2
+kind: project
+
+project:
+  name: ac608_sdram
+  mode: soc
+  board: ac608_ep4ce15
+  output_dir: build/gen
+
+registries:
+  packs:
+    - ../../packs/builtin
+  ip:
+    - ip
+  cpu: []
+
+features:
+  use:
+    - board:external.sdram
+
+timing:
+  file: timing_config.yaml
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+    frequency_hz: 50000000
+  generated: []
+
+modules:
+  - instance: sdram0
+    type: sdram_ctrl
+    clocks:
+      clk: sys_clk
+    bind:
+      ports:
+        zs_addr:
+          target: board:external.sdram.addr
+        zs_ba:
+          target: board:external.sdram.ba
+        zs_dq:
+          target: board:external.sdram.dq
+        zs_dqm:
+          target: board:external.sdram.dqm
+        zs_cs_n:
+          target: board:external.sdram.cs_n
+        zs_we_n:
+          target: board:external.sdram.we_n
+        zs_ras_n:
+          target: board:external.sdram.ras_n
+        zs_cas_n:
+          target: board:external.sdram.cas_n
+        zs_cke:
+          target: board:external.sdram.cke
+        zs_clk:
+          target: board:external.sdram.clk
+
+artifacts:
+  emit: [rtl, board, timing]
