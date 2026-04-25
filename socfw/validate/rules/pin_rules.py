@@ -20,6 +20,22 @@ def _collect_bind_targets(system: SystemModel) -> list[str]:
     return targets
 
 
+def _prune_subpaths(refs: list[str]) -> list[str]:
+    """Remove refs that are sub-paths of another ref in the list."""
+    paths = [r[len("board:"):] if r.startswith("board:") else r for r in refs]
+    pruned = []
+    for i, ref in enumerate(refs):
+        path = paths[i]
+        dominated = False
+        for j, other_path in enumerate(paths):
+            if i != j and path != other_path and path.startswith(other_path + "."):
+                dominated = True
+                break
+        if not dominated:
+            pruned.append(ref)
+    return pruned
+
+
 class BoardPinConflictRule(ValidationRule):
     def validate(self, system: SystemModel) -> list[Diagnostic]:
         diags: list[Diagnostic] = []
@@ -27,8 +43,9 @@ class BoardPinConflictRule(ValidationRule):
         feature_refs = system.project.feature_refs or []
         bind_targets = _collect_bind_targets(system)
 
-        # Combine active refs: features.use + bind targets
-        active_refs = list(dict.fromkeys(feature_refs + bind_targets))
+        # Combine active refs: features.use + bind targets, removing sub-paths
+        raw_refs = list(dict.fromkeys(feature_refs + bind_targets))
+        active_refs = _prune_subpaths(raw_refs)
         if not active_refs:
             return diags
 
