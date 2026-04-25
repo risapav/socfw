@@ -17,6 +17,7 @@ class BoardTclEmitter:
         self._emit_device(lines, system.board)
         self._emit_system_pins(lines, system.board)
         self._emit_resources(lines, system.board)
+        self._emit_external_resources(lines, system)
 
         out.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
         return str(out)
@@ -57,4 +58,54 @@ class BoardTclEmitter:
                         f"set_location_assignment {vec.pins[idx]} -to {vec.top_name}[{idx}]"
                     )
 
+        lines.append("")
+
+    def _emit_external_resources(self, lines: list[str], system) -> None:
+        from socfw.board.resource_tree import iter_resource_leaves, resource_width, resource_direction
+
+        board = system.board
+        feature_refs = getattr(system.project, "feature_refs", [])
+        bind_targets = []
+        for mod in system.project.modules:
+            for pb in mod.port_bindings:
+                if pb.target.startswith("board:"):
+                    bind_targets.append(pb.target)
+
+        active_external_paths: set[str] = set()
+        for ref in feature_refs + bind_targets:
+            path = ref[len("board:"):] if ref.startswith("board:") else ref
+            if path.startswith("external."):
+                active_external_paths.add(path)
+
+        if not active_external_paths:
+            return
+
+        lines.append("# External resources")
+        emitted: set[str] = set()
+        for path in sorted(active_external_paths):
+            for leaf_path, node in iter_resource_leaves(board, path):
+                if not isinstance(node, dict):
+                    continue
+                top_name = node.get("top_name")
+                if not top_name or top_name in emitted:
+                    continue
+                emitted.add(top_name)
+                kind = node.get("kind", "scalar")
+                io_std = node.get("io_standard")
+                if kind == "scalar":
+                    pin = node.get("pin")
+                    if pin:
+                        lines.append(f"set_location_assignment {pin} -to {top_name}")
+                        if io_std:
+                            lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}")
+                elif kind in ("vector", "inout"):
+                    pins = node.get("pins") or []
+                    if isinstance(pins, dict):
+                        sorted_pins = [(k, pins[k]) for k in sorted(pins)]
+                    else:
+                        sorted_pins = list(enumerate(pins))
+                    for idx, pin in sorted_pins:
+                        lines.append(f"set_location_assignment {pin} -to {top_name}[{idx}]")
+                    if io_std and sorted_pins:
+                        lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}")
         lines.append("")
