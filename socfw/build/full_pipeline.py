@@ -21,6 +21,7 @@ from socfw.core.result import Result
 from socfw.emit.orchestrator import EmitOrchestrator
 from socfw.model.image import BootImage
 from socfw.plugins.bootstrap import create_builtin_registry
+from socfw.reports.build_provenance_json import BuildProvenanceJsonReport
 from socfw.reports.build_summary import BuildSummaryReport
 from socfw.reports.orchestrator import ReportOrchestrator
 from socfw.tools.bin2hex_runner import Bin2HexRunner
@@ -42,6 +43,7 @@ class FullBuildPipeline:
         self.files_ir_builder = FilesIRBuilder()
         self.vendor_collector = VendorArtifactCollector()
         self.build_summary = BuildSummaryReport()
+        self.provenance_json = BuildProvenanceJsonReport()
         self.bridge_planner = BridgePlanner()
         self.rtl_ir_builder = RtlIrBuilder()
         self.rtl_native_emitter = RtlEmitter()
@@ -192,6 +194,9 @@ class FullBuildPipeline:
         soc_provenance = _build_soc_provenance(system, result, request.out_dir, planned_bridges)
         summary_path = self.build_summary.write(request.out_dir, soc_provenance)
         result.manifest.add("report", summary_path, "BuildSummary")
+
+        json_path = self.provenance_json.write(request.out_dir, soc_provenance)
+        result.manifest.add("report", json_path, "BuildProvenanceJson")
 
         return result
 

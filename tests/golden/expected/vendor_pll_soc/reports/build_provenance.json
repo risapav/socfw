@@ -1,0 +1,36 @@
+{
+  "aliases_used": [],
+  "artifact_kinds": {
+    "rtl": 1,
+    "tcl": 2,
+    "timing": 1
+  },
+  "board_id": "qmtech_ep4ce55",
+  "bridge_pairs": [],
+  "cpu_module": null,
+  "cpu_type": null,
+  "generated_files": [
+    "hal/board.tcl",
+    "hal/files.tcl",
+    "rtl/soc_top.sv",
+    "timing/soc_top.sdc"
+  ],
+  "ip_types": [
+    "blink_test",
+    "sys_pll"
+  ],
+  "module_instances": [
+    "blink_test",
+    "pll0"
+  ],
+  "project_mode": "standalone",
+  "project_name": "vendor_pll_soc",
+  "timing_false_paths": 0,
+  "timing_generated_clocks": 0,
+  "vendor_qip_files": [
+    "sys_pll.qip"
+  ],
+  "vendor_sdc_files": [
+    "sys_pll.sdc"
+  ]
+}

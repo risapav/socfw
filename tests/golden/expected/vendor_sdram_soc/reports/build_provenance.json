@@ -1,0 +1,38 @@
+{
+  "aliases_used": [],
+  "artifact_kinds": {
+    "rtl": 2,
+    "tcl": 2,
+    "timing": 1
+  },
+  "board_id": "qmtech_ep4ce55",
+  "bridge_pairs": [
+    "sdram0: simple_bus -> wishbone"
+  ],
+  "cpu_module": "dummy_cpu",
+  "cpu_type": "dummy_cpu",
+  "generated_files": [
+    "hal/board.tcl",
+    "hal/files.tcl",
+    "reports/bridge_summary.txt",
+    "rtl/simple_bus_to_wishbone_bridge.sv",
+    "rtl/soc_top.sv",
+    "timing/soc_top.sdc"
+  ],
+  "ip_types": [
+    "sdram_ctrl"
+  ],
+  "module_instances": [
+    "sdram0"
+  ],
+  "project_mode": "soc",
+  "project_name": "vendor_sdram_soc",
+  "timing_false_paths": 0,
+  "timing_generated_clocks": 0,
+  "vendor_qip_files": [
+    "sdram_ctrl.qip"
+  ],
+  "vendor_sdc_files": [
+    "sdram_ctrl.sdc"
+  ]
+}

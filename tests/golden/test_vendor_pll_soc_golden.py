@@ -34,3 +34,4 @@ def test_vendor_pll_soc_golden(tmp_path):
     _assert_same(out_dir / "hal" / "files.tcl", EXPECTED / "hal" / "files.tcl")
     _assert_same(out_dir / "timing" / "soc_top.sdc", EXPECTED / "timing" / "soc_top.sdc")
     _assert_same(out_dir / "reports" / "build_summary.md", EXPECTED / "reports" / "build_summary.md")
+    _assert_same(out_dir / "reports" / "build_provenance.json", EXPECTED / "reports" / "build_provenance.json")
