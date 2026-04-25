@@ -12,13 +12,18 @@ class UnknownBoardFeatureRule(ValidationRule):
         for ref in system.project.feature_refs:
             try:
                 system.board.resolve_ref(ref)
-            except KeyError as e:
+            except KeyError:
                 diags.append(
                     Diagnostic(
                         code="BRD001",
                         severity=Severity.ERROR,
-                        message=str(e),
+                        message=f"Unknown board feature reference '{ref}'",
                         subject="project.features.use",
+                        hints=(
+                            f"Reference `{ref}` was not found in board resources.",
+                            "Check `resources` section in your board.yaml.",
+                            "Ensure the resource key path matches the reference.",
+                        ),
                     )
                 )
 
@@ -34,13 +39,19 @@ class UnknownBoardBindingTargetRule(ValidationRule):
                 if binding.target.startswith("board:"):
                     try:
                         system.board.resolve_ref(binding.target)
-                    except KeyError as e:
+                    except KeyError:
                         diags.append(
                             Diagnostic(
                                 code="BRD002",
                                 severity=Severity.ERROR,
-                                message=f"Instance '{mod.instance}' port '{binding.port_name}': {e}",
+                                message=f"Instance '{mod.instance}' port '{binding.port_name}': unknown board target '{binding.target}'",
                                 subject="project.modules.bind.ports",
+                                hints=(
+                                    f"Target `{binding.target}` was not found in board resources.",
+                                    "Check `resources` section in your board.yaml.",
+                                    "Use `board:<section>.<key>` format.",
+                                    "Run `socfw doctor project.yaml` to inspect available resources.",
+                                ),
                             )
                         )
 
