@@ -214,6 +214,7 @@ class BoardLoader:
             connectors[conn_key] = BoardConnector(key=conn_key, roles=roles)
 
         external_raw = dict(doc.resources.external)
+        connectors_raw = dict(doc.resources.connectors)
         resource_diags = _validate_resources_shape(
             {"external": external_raw}, file=path
         )
@@ -243,7 +244,7 @@ class BoardLoader:
             onboard=onboard,
             connectors=connectors,
             metadata={"toolchains": doc.toolchains},
-            resources={"external": external_raw},
+            resources={"external": external_raw, "connectors": connectors_raw},
             aliases=dict(doc.aliases),
             profiles={
                 name: list(prof.use)
