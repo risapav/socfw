@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from socfw.board.feature_expansion import expand_features
+from socfw.board.pin_ownership import PinUse, collect_pin_ownership
 from socfw.core.diagnostics import Diagnostic, Severity
-from socfw.model.board_resources import collect_pins, iter_resource_leaves
+from socfw.model.board_resources import collect_pins
 from socfw.model.system import SystemModel
 from .base import ValidationRule
 
@@ -36,51 +38,64 @@ def _prune_subpaths(refs: list[str]) -> list[str]:
     return pruned
 
 
+def _pin_use_label(use: PinUse) -> str:
+    if use.bit is not None:
+        return f"{use.resource_path}[{use.bit}]"
+    return use.resource_path
+
+
 class BoardPinConflictRule(ValidationRule):
     def validate(self, system: SystemModel) -> list[Diagnostic]:
         diags: list[Diagnostic] = []
 
-        feature_refs = system.project.feature_refs or []
-        bind_targets = _collect_bind_targets(system)
+        project = system.project
+        board = system.board
 
-        # Combine active refs: features.use + bind targets, removing sub-paths
-        raw_refs = list(dict.fromkeys(feature_refs + bind_targets))
-        active_refs = _prune_subpaths(raw_refs)
-        if not active_refs:
+        # Build selected resources from features + bind targets
+        profile = getattr(project, "feature_profile", None)
+        use_refs = list(project.feature_refs or [])
+        selected = expand_features(board, profile, use_refs)
+
+        # Also include direct bind targets that reference external paths
+        bind_targets = _collect_bind_targets(system)
+        for ref in bind_targets:
+            if not ref.startswith("board:"):
+                continue
+            path = ref[len("board:"):]
+            # Add bind targets as explicit use refs so they appear in ownership
+            if path not in selected.paths:
+                selected.paths.append(path)
+
+        if not selected.paths:
             return diags
 
-        # build map: pin -> list of refs that use it
-        pin_to_refs: dict[str, list[str]] = {}
+        pin_uses = collect_pin_ownership(board, selected)
 
-        for ref in active_refs:
-            path = ref[len("board:"):] if ref.startswith("board:") else ref
-            leaves = list(iter_resource_leaves(system.board, path))
-            if leaves:
-                for leaf_path, leaf_res in leaves:
-                    for pin in collect_pins(leaf_res):
-                        pin_to_refs.setdefault(pin, []).append(ref)
-            else:
-                try:
-                    target = system.board.resolve_ref(ref)
-                except (KeyError, Exception):
-                    continue
-                for pin in _extract_pins(target):
-                    pin_to_refs.setdefault(pin, []).append(ref)
+        # Build map: pin -> list of PinUse that claim it
+        pin_to_uses: dict[str, list[PinUse]] = {}
+        for use in pin_uses:
+            pin_to_uses.setdefault(use.pin, []).append(use)
 
-        for pin, refs in sorted(pin_to_refs.items()):
-            unique_refs = list(dict.fromkeys(refs))
-            if len(unique_refs) > 1:
+        for pin, uses in sorted(pin_to_uses.items()):
+            # Deduplicate by resource_path+bit
+            seen: set[tuple] = set()
+            unique: list[PinUse] = []
+            for u in uses:
+                key = (u.resource_path, u.bit)
+                if key not in seen:
+                    seen.add(key)
+                    unique.append(u)
+
+            if len(unique) > 1:
+                labels = " and ".join(_pin_use_label(u) for u in unique)
                 diags.append(
                     Diagnostic(
                         code="PIN001",
                         severity=Severity.ERROR,
-                        message=(
-                            f"Pin {pin} is used by multiple board resources: "
-                            + " and ".join(unique_refs)
-                        ),
+                        message=f"pin {pin} selected by both {labels}",
                         subject="project.features.use",
                         hints=(
-                            f"Physical pin `{pin}` is claimed by both {unique_refs[0]} and {unique_refs[1]}.",
+                            f"Physical pin `{pin}` is claimed by {_pin_use_label(unique[0])} and {_pin_use_label(unique[1])}.",
                             "Remove one of the conflicting features from `features.use`, or remove the conflicting port binding.",
                         ),
                     )
