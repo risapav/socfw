@@ -6,6 +6,7 @@ from pydantic import ValidationError
 
 from socfw.config.common import load_yaml_file
 from socfw.config.ip_schema import IpConfigSchema
+from socfw.config.normalizers.ip import normalize_ip_document
 from socfw.config.schema_errors import ip_schema_error
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
 from socfw.core.result import Result
@@ -28,10 +29,14 @@ class IpLoader:
         if not raw.ok:
             return Result(diagnostics=raw.diagnostics)
 
+        data = raw.value or {}
+        norm = normalize_ip_document(data, file=path)
+        data = norm.data
+
         try:
-            doc = IpConfigSchema.model_validate(raw.value)
+            doc = IpConfigSchema.model_validate(data)
         except ValidationError as exc:
-            return Result(diagnostics=[ip_schema_error(exc, file=path)])
+            return Result(diagnostics=norm.diagnostics + [ip_schema_error(exc, file=path)])
 
         base_dir = Path(path).parent
 
@@ -171,7 +176,7 @@ class IpLoader:
                 ]
             )
 
-        return Result(value=ip)
+        return Result(value=ip, diagnostics=norm.diagnostics)
 
     def load_catalog(self, search_dirs: list[str]) -> Result[dict[str, IpDescriptor]]:
         catalog: dict[str, IpDescriptor] = {}

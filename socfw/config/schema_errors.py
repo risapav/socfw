@@ -74,8 +74,14 @@ def ip_schema_error(exc: Exception, *, file: str) -> Diagnostic:
         subject="ip",
         spans=(SourceLocation(file=file),),
         hints=(
-            "Expected shape: version: 2, kind: ip, ip: { name, module, category }.",
-            "Artifacts should be under `artifacts.synthesis`, `artifacts.simulation`, `artifacts.metadata`.",
+            "Use canonical IP schema v2.",
+            "Expected: version: 2, kind: ip, ip: { name, module, category }.",
+            "Use `integration.needs_bus`, not `config.needs_bus`.",
+            "Use `reset.port` and `reset.active_high`, not `port_bindings.reset` or `config.active_high_reset`.",
+            "Use `clocking.primary_input_port` and `clocking.outputs` for clock-capable IP.",
+            "Use `ports:` to declare RTL port names, directions and widths.",
+            "Use `artifacts.synthesis:` for RTL/QIP files.",
+            "Run `socfw explain-schema ip` for a canonical example.",
             f"Raw schema detail: {detail}",
         ),
     )

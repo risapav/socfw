@@ -75,6 +75,15 @@ class UnknownGeneratedClockSourceRule(ValidationRule):
                             f"'{req.source_output}' on IP '{inst.type_name}'"
                         ),
                         subject="project.clocks.generated",
+                        hints=(
+                            f"Module instance `{req.source_instance}` has type `{inst.type_name}`.",
+                            f"IP descriptor `{inst.type_name}` must declare this clock output:",
+                            "clocking:",
+                            "  outputs:",
+                            f"    - name: {req.source_output}",
+                            "      frequency_hz: <Hz>",
+                            "If your descriptor uses `interfaces: type: clock_output`, convert it to `clocking.outputs` or enable IP alias normalization.",
+                        ),
                     )
                 )
                 continue

@@ -19,9 +19,12 @@ class UnknownIpTypeRule(ValidationRule):
                         file=system.sources.project_file,
                         path=f"modules[{idx}].type",
                         hints=[
-                            "Add a matching *.ip.yaml descriptor to a registered IP catalog path.",
-                            "Or change the module type to an existing IP descriptor.",
+                            f"Project module `{mod.instance}` uses `type: {mod.type_name}`.",
+                            "That value must match `ip.name` in one loaded *.ip.yaml descriptor.",
+                            "Check `registries.ip` paths in project.yaml.",
+                            "Check `registries.packs` if the IP should come from a pack.",
                             f"Known IP descriptors: {known}",
+                            "Run `socfw doctor project.yaml` to inspect loaded IP catalog.",
                         ],
                     )
                 )

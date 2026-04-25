@@ -75,25 +75,46 @@ version: 2
 kind: ip
 
 ip:
-  name: blink_test
-  module: blink_test
-  category: standalone
+  name: clkpll
+  module: clkpll
+  category: clocking
 
 origin:
-  kind: source
-  packaging: plain_rtl
+  kind: generated
+  packaging: quartus_ip
 
 integration:
   needs_bus: false
+  generate_registers: false
   instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: areset
+  active_high: true
 
 clocking:
-  primary_input_port: SYS_CLK
-  outputs: []
+  primary_input_port: inclk0
+  additional_input_ports: []
+  outputs:
+    - name: c0
+      domain_hint: clk_100mhz
+      frequency_hz: 100000000
+
+ports:
+  - name: inclk0
+    direction: input
+    width: 1
+  - name: areset
+    direction: input
+    width: 1
+  - name: c0
+    direction: output
+    width: 1
 
 artifacts:
   synthesis:
-    - ../rtl/blink_test.sv
+    - clkpll.qip
   simulation: []
   metadata: []
 """,
