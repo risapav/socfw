@@ -105,6 +105,7 @@ class ProjectLoader:
             registries_packs=doc.registries.packs,
             registries_cpu=doc.registries.cpu,
             feature_refs=doc.features.use,
+            feature_profile=doc.features.profile,
             modules=modules,
             primary_clock_domain=doc.clocks.primary.domain,
             generated_clocks=gen_clocks,

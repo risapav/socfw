@@ -105,6 +105,9 @@ class BoardModel:
     connectors: dict[str, BoardConnector] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
     resources: dict[str, Any] = field(default_factory=dict)
+    aliases: dict[str, str] = field(default_factory=dict)
+    profiles: dict[str, list[str]] = field(default_factory=dict)
+    mux_groups: dict[str, Any] = field(default_factory=dict)
 
     def resolve_ref(
         self, ref: str

@@ -107,6 +107,14 @@ class SystemLoader:
             return Result(diagnostics=diags)
         board = board_res.value
 
+        # Resolve feature profile into feature_refs
+        if project.feature_profile:
+            from socfw.board.profile_resolver import ProfileResolver
+            resolver = ProfileResolver(board.profiles)
+            project.feature_refs = resolver.expand_features(
+                project.feature_profile, project.feature_refs
+            )
+
         checked_ip_dirs = []
         for p in project.registries_ip:
             resolved, p_diags = check_existing_dir(

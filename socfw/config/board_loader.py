@@ -244,6 +244,15 @@ class BoardLoader:
             connectors=connectors,
             metadata={"toolchains": doc.toolchains},
             resources={"external": external_raw},
+            aliases=dict(doc.aliases),
+            profiles={
+                name: list(prof.use)
+                for name, prof in doc.profiles.items()
+            },
+            mux_groups={
+                name: {"resources": list(grp.resources), "policy": grp.policy}
+                for name, grp in doc.mux_groups.items()
+            },
         )
 
         errs = model.validate()

@@ -22,6 +22,7 @@ class RegistriesSchema(BaseModel):
 
 class FeaturesSchema(BaseModel):
     use: list[str] = Field(default_factory=list)
+    profile: str | None = None
 
 
 class PrimaryClockSchema(BaseModel):
