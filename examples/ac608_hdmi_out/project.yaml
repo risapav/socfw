@@ -1,0 +1,45 @@
+version: 2
+kind: project
+
+project:
+  name: ac608_hdmi_out
+  mode: standalone
+  board: ac608_ep4ce15
+  board_file: boards/ac608_ep4ce15.yaml
+  output_dir: build/gen
+
+registries:
+  packs:
+    - ../../packs/builtin
+  ip:
+    - ip
+
+features:
+  use:
+    - board:onboard.hdmi.tmds_p
+    - board:onboard.hdmi.tmds_n
+
+timing:
+  file: timing.yaml
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:SYS_CLK
+    frequency_hz: 50000000
+  generated: []
+
+modules:
+  - instance: hdmi0
+    type: hdmi_out
+    clocks:
+      PIXEL_CLK: sys_clk
+    bind:
+      ports:
+        TMDS_P:
+          target: board:onboard.hdmi.tmds_p
+        TMDS_N:
+          target: board:onboard.hdmi.tmds_n
+
+artifacts:
+  emit: [rtl, board, timing]
