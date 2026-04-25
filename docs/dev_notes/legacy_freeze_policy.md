@@ -23,3 +23,18 @@ The legacy flow is now frozen.
 - New project skeletons
 - New vendor-specific hacks
 - New implicit config conventions
+
+## Isolation
+
+Legacy code must not:
+- patch native outputs
+- generate native reports
+- mutate native build artifacts
+- own vendor QIP/SDC export
+
+Native emitters are the source of truth for:
+- rtl/soc_top.sv
+- hal/files.tcl
+- hal/board.tcl
+- timing/soc_top.sdc
+- reports/build_summary.md
