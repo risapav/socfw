@@ -70,3 +70,13 @@ def test_extract_pins_from_bundle_dict():
         },
     }
     assert _extract_pins(resource) == {"H1", "H2", "F2"}
+
+
+def test_top_level_sdram_ref_expands_to_detect_j11_conflict():
+    system = _make_system([
+        "board:external.sdram",
+        "board:external.pmod.j11_led8",
+    ])
+    diags = BoardPinConflictRule().validate(system)
+    pin001 = [d for d in diags if d.code == "PIN001"]
+    assert pin001, "Expected PIN001 for SDRAM vs J11 conflict via expansion"

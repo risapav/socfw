@@ -1,52 +1,13 @@
 from __future__ import annotations
 
 from socfw.core.diagnostics import Diagnostic, Severity
+from socfw.model.board_resources import collect_pins, iter_resource_leaves
 from socfw.model.system import SystemModel
 from .base import ValidationRule
 
 
 def _extract_pins(resource) -> set[str]:
-    """Extract all physical pin identifiers from a raw board resource dict or model object."""
-    pins: set[str] = set()
-
-    if isinstance(resource, dict):
-        kind = resource.get("kind")
-        if kind == "scalar":
-            pin = resource.get("pin")
-            if pin:
-                pins.add(str(pin))
-        elif kind in ("vector", "inout"):
-            for p in (resource.get("pins") or []):
-                if p:
-                    pins.add(str(p))
-        elif kind == "bundle":
-            for sig in (resource.get("signals") or {}).values():
-                if isinstance(sig, dict):
-                    pins.update(_extract_pins(sig))
-        else:
-            # unknown kind — try pins/pin anyway
-            pin = resource.get("pin")
-            if pin:
-                pins.add(str(pin))
-            for p in (resource.get("pins") or []):
-                if p:
-                    pins.add(str(p))
-    else:
-        from socfw.model.board import BoardScalarSignal, BoardVectorSignal, BoardResource, BoardConnectorRole
-        if isinstance(resource, BoardScalarSignal):
-            if resource.pin:
-                pins.add(resource.pin)
-        elif isinstance(resource, BoardVectorSignal):
-            pins.update(resource.pins.values() if isinstance(resource.pins, dict) else resource.pins)
-        elif isinstance(resource, BoardResource):
-            for sig in resource.scalars.values():
-                pins.update(_extract_pins(sig))
-            for vec in resource.vectors.values():
-                pins.update(_extract_pins(vec))
-        elif isinstance(resource, BoardConnectorRole):
-            pins.update(resource.pins.values() if isinstance(resource.pins, dict) else resource.pins)
-
-    return pins
+    return collect_pins(resource)
 
 
 class BoardPinConflictRule(ValidationRule):
@@ -60,13 +21,20 @@ class BoardPinConflictRule(ValidationRule):
         pin_to_refs: dict[str, list[str]] = {}
 
         for ref in system.project.feature_refs:
-            try:
-                target = system.board.resolve_ref(ref)
-            except (KeyError, Exception):
-                continue
-
-            for pin in _extract_pins(target):
-                pin_to_refs.setdefault(pin, []).append(ref)
+            path = ref[len("board:"):] if ref.startswith("board:") else ref
+            # Try to expand into leaf resources; falls back to single resolve
+            leaves = list(iter_resource_leaves(system.board, path))
+            if leaves:
+                for leaf_path, leaf_res in leaves:
+                    for pin in collect_pins(leaf_res):
+                        pin_to_refs.setdefault(pin, []).append(ref)
+            else:
+                try:
+                    target = system.board.resolve_ref(ref)
+                except (KeyError, Exception):
+                    continue
+                for pin in _extract_pins(target):
+                    pin_to_refs.setdefault(pin, []).append(ref)
 
         for pin, refs in sorted(pin_to_refs.items()):
             if len(refs) > 1:
