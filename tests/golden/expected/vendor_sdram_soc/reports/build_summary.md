@@ -24,8 +24,8 @@
 
 ## Vendor Artifacts
 
-- QIP: `sdram_ctrl.qip`
-- SDC: `sdram_ctrl.sdc`
+- QIP: `$REPO/packs/vendor-intel/ip/sdram_ctrl/files/sdram_ctrl.qip`
+- SDC: `$REPO/packs/vendor-intel/ip/sdram_ctrl/files/sdram_ctrl.sdc`
 
 ## Bridges
 
@@ -43,9 +43,9 @@
 
 ## Generated Files
 
-- `hal/board.tcl`
-- `hal/files.tcl`
-- `reports/bridge_summary.txt`
-- `rtl/simple_bus_to_wishbone_bridge.sv`
-- `rtl/soc_top.sv`
-- `timing/soc_top.sdc`
+- `$OUT/hal/board.tcl`
+- `$OUT/hal/files.tcl`
+- `$OUT/reports/bridge_summary.txt`
+- `$OUT/rtl/simple_bus_to_wishbone_bridge.sv`
+- `$OUT/rtl/soc_top.sv`
+- `$OUT/timing/soc_top.sdc`

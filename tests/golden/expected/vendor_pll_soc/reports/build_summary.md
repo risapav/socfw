@@ -25,8 +25,8 @@
 
 ## Vendor Artifacts
 
-- QIP: `sys_pll.qip`
-- SDC: `sys_pll.sdc`
+- QIP: `$REPO/packs/vendor-intel/ip/sys_pll/files/sys_pll.qip`
+- SDC: `$REPO/packs/vendor-intel/ip/sys_pll/files/sys_pll.sdc`
 
 ## Bridges
 
@@ -44,7 +44,7 @@
 
 ## Generated Files
 
-- `hal/board.tcl`
-- `hal/files.tcl`
-- `rtl/soc_top.sv`
-- `timing/soc_top.sdc`
+- `$OUT/hal/board.tcl`
+- `$OUT/hal/files.tcl`
+- `$OUT/rtl/soc_top.sv`
+- `$OUT/timing/soc_top.sdc`

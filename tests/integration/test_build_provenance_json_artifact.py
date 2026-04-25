@@ -24,3 +24,5 @@ def test_build_writes_json_provenance_artifact(tmp_path):
     assert data["board_id"] == "qmtech_ep4ce55"
     assert "sdram_ctrl" in data["ip_types"]
     assert "sdram0: simple_bus -> wishbone" in data["bridge_pairs"]
+    assert any(p.startswith("$OUT/") for p in data["generated_files"])
+    assert any(p.startswith("$REPO/") for p in data["vendor_qip_files"])

@@ -272,20 +272,15 @@ def _build_soc_provenance(system, result: BuildResult, out_dir: str, planned_bri
             for src, dst, inst in _collect_bridge_pairs(system)
         ]
 
-    out_root = Path(out_dir).resolve()
+    from socfw.reports.path_normalizer import ReportPathNormalizer
+    normalizer = ReportPathNormalizer(out_dir=out_dir)
 
-    def _rel(abs_path: str) -> str:
-        try:
-            return str(Path(abs_path).resolve().relative_to(out_root))
-        except ValueError:
-            return Path(abs_path).name
-
-    generated = sorted(
-        _rel(a.path) for a in result.manifest.artifacts
+    generated = normalizer.normalize_list(
+        [a.path for a in result.manifest.artifacts]
     ) if result.manifest is not None else []
 
-    vendor_qip = sorted(Path(p).name for p in (vendor_bundle.qip_files if vendor_bundle else []))
-    vendor_sdc = sorted(Path(p).name for p in (vendor_bundle.sdc_files if vendor_bundle else []))
+    vendor_qip = normalizer.normalize_list(vendor_bundle.qip_files if vendor_bundle else [])
+    vendor_sdc = normalizer.normalize_list(vendor_bundle.sdc_files if vendor_bundle else [])
 
     artifact_kinds: dict[str, int] = {}
     for a in result.artifacts.normalized():

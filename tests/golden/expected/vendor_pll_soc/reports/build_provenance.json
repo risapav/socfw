@@ -10,10 +10,10 @@
   "cpu_module": null,
   "cpu_type": null,
   "generated_files": [
-    "hal/board.tcl",
-    "hal/files.tcl",
-    "rtl/soc_top.sv",
-    "timing/soc_top.sdc"
+    "$OUT/hal/board.tcl",
+    "$OUT/hal/files.tcl",
+    "$OUT/rtl/soc_top.sv",
+    "$OUT/timing/soc_top.sdc"
   ],
   "ip_types": [
     "blink_test",
@@ -28,9 +28,9 @@
   "timing_false_paths": 0,
   "timing_generated_clocks": 0,
   "vendor_qip_files": [
-    "sys_pll.qip"
+    "$REPO/packs/vendor-intel/ip/sys_pll/files/sys_pll.qip"
   ],
   "vendor_sdc_files": [
-    "sys_pll.sdc"
+    "$REPO/packs/vendor-intel/ip/sys_pll/files/sys_pll.sdc"
   ]
 }

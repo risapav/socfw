@@ -12,12 +12,12 @@
   "cpu_module": "dummy_cpu",
   "cpu_type": "dummy_cpu",
   "generated_files": [
-    "hal/board.tcl",
-    "hal/files.tcl",
-    "reports/bridge_summary.txt",
-    "rtl/simple_bus_to_wishbone_bridge.sv",
-    "rtl/soc_top.sv",
-    "timing/soc_top.sdc"
+    "$OUT/hal/board.tcl",
+    "$OUT/hal/files.tcl",
+    "$OUT/reports/bridge_summary.txt",
+    "$OUT/rtl/simple_bus_to_wishbone_bridge.sv",
+    "$OUT/rtl/soc_top.sv",
+    "$OUT/timing/soc_top.sdc"
   ],
   "ip_types": [
     "sdram_ctrl"
@@ -30,9 +30,9 @@
   "timing_false_paths": 0,
   "timing_generated_clocks": 0,
   "vendor_qip_files": [
-    "sdram_ctrl.qip"
+    "$REPO/packs/vendor-intel/ip/sdram_ctrl/files/sdram_ctrl.qip"
   ],
   "vendor_sdc_files": [
-    "sdram_ctrl.sdc"
+    "$REPO/packs/vendor-intel/ip/sdram_ctrl/files/sdram_ctrl.sdc"
   ]
 }
