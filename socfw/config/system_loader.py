@@ -115,6 +115,26 @@ class SystemLoader:
                 project.feature_profile, project.feature_refs
             )
 
+        # Resolve @alias refs in feature_refs and port bindings
+        if board.aliases:
+            import dataclasses
+            from socfw.board.alias_resolver import AliasResolver
+            alias_res = AliasResolver(board.aliases, file=project_file)
+            project.feature_refs, alias_diags = alias_res.resolve_refs(project.feature_refs)
+            diags.extend(alias_diags)
+            for mod in project.modules:
+                new_bindings = []
+                changed = False
+                for pb in mod.port_bindings:
+                    resolved_target, pb_alias_diags = alias_res.resolve_ref(pb.target)
+                    diags.extend(pb_alias_diags)
+                    if resolved_target != pb.target:
+                        pb = dataclasses.replace(pb, target=resolved_target)
+                        changed = True
+                    new_bindings.append(pb)
+                if changed:
+                    mod.port_bindings = new_bindings
+
         checked_ip_dirs = []
         for p in project.registries_ip:
             resolved, p_diags = check_existing_dir(
