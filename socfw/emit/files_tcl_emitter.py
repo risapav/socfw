@@ -14,6 +14,13 @@ class QuartusFilesEmitter:
     def emit(self, ctx: BuildContext, ir: RtlModuleIR | FilesIR) -> list[GeneratedArtifact]:
         out = Path(ctx.out_dir) / "files.tcl"
         out.parent.mkdir(parents=True, exist_ok=True)
+        cwd = Path.cwd().resolve()
+
+        def _norm(p: str) -> str:
+            try:
+                return str(Path(p).resolve().relative_to(cwd))
+            except ValueError:
+                return p
 
         lines: list[str] = []
         lines.append("# AUTO-GENERATED - DO NOT EDIT")
@@ -21,14 +28,14 @@ class QuartusFilesEmitter:
 
         if isinstance(ir, FilesIR):
             for q in ir.qip_files:
-                lines.append(f"set_global_assignment -name QIP_FILE {q}")
+                lines.append(f"set_global_assignment -name QIP_FILE {_norm(q)}")
             for fp in ir.rtl_files:
-                lines.append(self._file_assignment(fp))
+                lines.append(self._file_assignment(_norm(fp)))
             for s in ir.sdc_files:
-                lines.append(f"set_global_assignment -name SDC_FILE {s}")
+                lines.append(f"set_global_assignment -name SDC_FILE {_norm(s)}")
         else:
             for fp in sorted(ir.extra_sources):
-                lines.append(self._file_assignment(fp))
+                lines.append(self._file_assignment(_norm(fp)))
 
         out.write_text("\n".join(lines) + "\n", encoding="ascii")
 
