@@ -10,8 +10,8 @@ module soc_top (
   wire reset_n;
 
   blink_test blink_test (
-    .SYS_CLK(SYS_CLK),
-    .ONB_LEDS(ONB_LEDS)
+    .ONB_LEDS(ONB_LEDS),
+    .SYS_CLK(SYS_CLK)
   );
 
 endmodule

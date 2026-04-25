@@ -23,14 +23,14 @@ module soc_top (
     .reset_n(reset_n),
     .zs_addr(ZS_ADDR),
     .zs_ba(ZS_BA),
-    .zs_dq(ZS_DQ),
-    .zs_dqm(ZS_DQM),
-    .zs_cs_n(ZS_CS_N),
-    .zs_we_n(ZS_WE_N),
-    .zs_ras_n(ZS_RAS_N),
     .zs_cas_n(ZS_CAS_N),
     .zs_cke(ZS_CKE),
-    .zs_clk(ZS_CLK)
+    .zs_clk(ZS_CLK),
+    .zs_cs_n(ZS_CS_N),
+    .zs_dq(ZS_DQ),
+    .zs_dqm(ZS_DQM),
+    .zs_ras_n(ZS_RAS_N),
+    .zs_we_n(ZS_WE_N)
   );
 
   simple_bus_to_wishbone_bridge u_bridge_sdram0 (

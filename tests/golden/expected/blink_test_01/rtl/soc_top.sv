@@ -10,8 +10,6 @@ module soc_top (
   wire reset_n;
 
   blink_test blink_test (
-    .clk(SYS_CLK),
-    .rst_n(reset_n),
     .gpio_o(ONB_LEDS)
   );
 

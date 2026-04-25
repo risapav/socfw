@@ -10,14 +10,12 @@ module soc_top (
   wire reset_n;
 
   blink_test blink_test (
-    .clk(clk_100mhz),
-    .rst_n(reset_n),
     .gpio_o(ONB_LEDS)
   );
 
   clkpll clkpll (
-    .clk(SYS_CLK),
-    .areset(reset_n)
+    .areset(reset_n),
+    .clk(SYS_CLK)
   );
 
 endmodule

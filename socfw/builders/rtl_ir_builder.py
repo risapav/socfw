@@ -482,13 +482,13 @@ class RtlIrBuilder:
             if ip is None:
                 continue
 
-            conns: list[RtlConnection] = []
+            explicit: dict[str, str] = {}
 
             for cb in mod.clocks:
-                conns.append(RtlConnection(cb.port_name, self._clock_expr(system, cb.domain)))
+                explicit[cb.port_name] = self._clock_expr(system, cb.domain)
 
             if ip.reset.port:
-                conns.append(RtlConnection(ip.reset.port, "reset_n"))
+                explicit[ip.reset.port] = "reset_n"
 
             for pb in mod.port_bindings:
                 if design is not None:
@@ -501,7 +501,7 @@ class RtlIrBuilder:
                     )
                     if resolved and resolved.resolved:
                         ext = resolved.resolved[0]
-                        conns.append(RtlConnection(pb.port_name, ext.top_name))
+                        explicit[pb.port_name] = ext.top_name
                 elif pb.target.startswith("board:"):
                     from socfw.model.board import BoardResource
                     try:
@@ -517,15 +517,34 @@ class RtlIrBuilder:
                         else:
                             top_name = ref_obj.top_name
                         if top_name:
-                            conns.append(RtlConnection(pb.port_name, top_name))
+                            explicit[pb.port_name] = top_name
 
             top.instances.append(
                 RtlInstance(
                     module=ip.module,
                     instance=mod.instance,
-                    connections=tuple(conns),
+                    connections=self._connections_from_declared_ports(ip, explicit),
                 )
             )
+
+    def _default_expr_for_port(self, port) -> str:
+        if port.direction != "input":
+            return ""
+        if port.width == 1:
+            return "1'b0"
+        return f"{port.width}'h0"
+
+    def _connections_from_declared_ports(self, ip, explicit: dict[str, str]):
+        from socfw.ir.rtl import RtlConnection
+        if getattr(ip, "ports", None):
+            conns = []
+            for p in sorted(ip.ports, key=lambda x: x.name):
+                expr = explicit.get(p.name)
+                if expr is None:
+                    expr = self._default_expr_for_port(p)
+                conns.append(RtlConnection(p.name, expr))
+            return tuple(conns)
+        return tuple(RtlConnection(name, expr) for name, expr in sorted(explicit.items()))
 
     def _clock_expr(self, system, domain: str) -> str:
         if domain in {"sys_clk", "ref_clk"}:
