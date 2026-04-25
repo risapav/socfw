@@ -62,6 +62,19 @@ def _validate_resources_shape(resources: dict, *, file: str) -> list[Diagnostic]
                         walk(sig_val, f"{path}.signals.{sig_name}")
                 return
 
+            direction = node.get("direction")
+            if direction is not None and direction not in {"input", "output", "inout"}:
+                diags.append(
+                    Diagnostic(
+                        code="BRD205",
+                        severity=Severity.ERROR,
+                        message=f"Invalid board resource direction '{direction}'",
+                        subject="board.resources",
+                        spans=(SourceLocation(file=file),),
+                        hints=("Supported directions: input, output, inout.",),
+                    )
+                )
+
             if kind == "scalar" and "pin" not in node:
                 diags.append(
                     Diagnostic(
