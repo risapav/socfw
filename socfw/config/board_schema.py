@@ -17,12 +17,14 @@ class BoardVectorSignalSchema(BaseModel):
     top_name: str
     direction: Literal["input", "output", "inout"]
     width: int
-    pins: dict[int, str]
+    pins: dict[int, str] | list[str]
     io_standard: str | None = None
     weak_pull_up: bool = False
 
     @model_validator(mode="after")
     def _validate_shape(self) -> "BoardVectorSignalSchema":
+        if isinstance(self.pins, list):
+            self.pins = {i: p for i, p in enumerate(self.pins)}
         if self.width <= 0:
             raise ValueError("width must be > 0")
         if len(self.pins) != self.width:
@@ -38,7 +40,7 @@ class BoardResourceSchema(BaseModel):
     top_name: str | None = None
     direction: Literal["input", "output", "inout"] | None = None
     width: int | None = None
-    pins: dict[int, str] | None = None
+    pins: dict[int, str] | list[str] | None = None
     pin: str | None = None
     io_standard: str | None = None
     weak_pull_up: bool = False
@@ -53,7 +55,7 @@ class BoardConnectorRoleSchema(BaseModel):
     top_name: str
     direction: Literal["input", "output", "inout"]
     width: int
-    pins: dict[int, str]
+    pins: dict[int, str] | list[str]
     io_standard: str | None = None
 
 

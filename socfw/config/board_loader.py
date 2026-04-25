@@ -26,6 +26,14 @@ from socfw.model.board import (
 )
 
 
+def _normalize_pins(pins) -> dict[int, str] | None:
+    if pins is None:
+        return None
+    if isinstance(pins, list):
+        return {i: p for i, p in enumerate(pins)}
+    return pins
+
+
 def _validate_resources_shape(resources: dict, *, file: str) -> list[Diagnostic]:
     diags: list[Diagnostic] = []
 
@@ -127,7 +135,7 @@ class BoardLoader:
                         top_name=grp.top_name,
                         direction=PortDir(grp.direction),
                         width=grp.width,
-                        pins=grp.pins,
+                        pins=_normalize_pins(grp.pins),
                         io_standard=grp.io_standard,
                         weak_pull_up=grp.weak_pull_up,
                     )
@@ -151,7 +159,7 @@ class BoardLoader:
                         top_name=res.top_name or key.upper(),
                         direction=PortDir(res.direction or "output"),
                         width=res.width,
-                        pins=res.pins,
+                        pins=_normalize_pins(res.pins),
                         io_standard=res.io_standard,
                         weak_pull_up=res.weak_pull_up,
                     )

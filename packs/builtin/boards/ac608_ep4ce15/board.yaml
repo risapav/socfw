@@ -1,0 +1,183 @@
+version: 2
+kind: board
+
+board:
+  id: ac608_ep4ce15
+  vendor: AC608
+  title: AC608 Cyclone IV E EP4CE15E22C8
+
+fpga:
+  family: "Cyclone IV E"
+  part: EP4CE15E22C8
+  package: TQFP
+  pins: 144
+  speed: 8
+  hdl_default: SystemVerilog_2005
+
+system:
+  clock:
+    id: sys_clk
+    top_name: clk
+    pin: E15
+    io_standard: "3.3-V LVTTL"
+    frequency_hz: 50000000
+    period_ns: 20.0
+
+  reset:
+    id: sys_reset_n
+    top_name: RESET_N
+    pin: E1
+    io_standard: "3.3-V LVTTL"
+    active_low: true
+
+resources:
+  onboard:
+    leds:
+      kind: vector
+      top_name: ONB_LEDS
+      direction: output
+      width: 5
+      io_standard: "3.3-V LVTTL"
+      pins: [L3, J13, G16, B16, F8]
+
+    buttons:
+      kind: vector
+      top_name: ONB_BUTTON
+      direction: input
+      width: 3
+      io_standard: "3.3-V LVTTL"
+      pins: [E1, B8, A8]
+
+    uart:
+      signals:
+        rx:
+          top_name: UART_RX
+          direction: input
+          io_standard: "3.3-V LVTTL"
+          pin: T13
+        tx:
+          top_name: UART_TX
+          direction: output
+          io_standard: "3.3-V LVTTL"
+          pin: R14
+
+    i2c:
+      signals:
+        sda:
+          top_name: I2C_SDA
+          direction: inout
+          io_standard: "3.3-V LVTTL"
+          pin: C9
+        scl:
+          top_name: I2C_SCL
+          direction: output
+          io_standard: "3.3-V LVTTL"
+          pin: D9
+
+    hdmi:
+      groups:
+        tmds_p:
+          top_name: TMDS_P
+          direction: output
+          width: 4
+          io_standard: "LVDS_E_3R"
+          pins: [L2, N2, P2, K2]
+        tmds_n:
+          top_name: TMDS_N
+          direction: output
+          width: 4
+          io_standard: "LVDS_E_3R"
+          pins: [L1, N1, P1, K1]
+
+  external:
+    sdram:
+      clk:
+        kind: scalar
+        top_name: SDRAM_CLK
+        direction: output
+        io_standard: "3.3-V LVTTL"
+        pin: A7
+      cke:
+        kind: scalar
+        top_name: SDRAM_CKE
+        direction: output
+        io_standard: "3.3-V LVTTL"
+        pin: B7
+      cs_n:
+        kind: scalar
+        top_name: SDRAM_CS_N
+        direction: output
+        io_standard: "3.3-V LVTTL"
+        pin: E7
+      ras_n:
+        kind: scalar
+        top_name: SDRAM_RAS_N
+        direction: output
+        io_standard: "3.3-V LVTTL"
+        pin: C8
+      cas_n:
+        kind: scalar
+        top_name: SDRAM_CAS_N
+        direction: output
+        io_standard: "3.3-V LVTTL"
+        pin: D8
+      we_n:
+        kind: scalar
+        top_name: SDRAM_WE_N
+        direction: output
+        io_standard: "3.3-V LVTTL"
+        pin: E8
+      dq:
+        kind: inout
+        top_name: SDRAM_DQ
+        direction: inout
+        width: 16
+        io_standard: "3.3-V LVTTL"
+        pins: [D14, C14, D12, B13, E10, B12, D11, C11, B10, A11, B11, A12, A13, A14, B14, A15]
+      addr:
+        kind: vector
+        top_name: SDRAM_ADDR
+        direction: output
+        width: 12
+        io_standard: "3.3-V LVTTL"
+        pins: [D5, C3, D3, A2, B3, A3, B4, A4, B5, A5, E6, B6]
+      ba:
+        kind: vector
+        top_name: SDRAM_BA
+        direction: output
+        width: 2
+        io_standard: "3.3-V LVTTL"
+        pins: [C6, D6]
+      dqm:
+        kind: vector
+        top_name: SDRAM_DQM
+        direction: output
+        width: 2
+        io_standard: "3.3-V LVTTL"
+        pins: [E9, A10]
+
+    headers:
+      P8:
+        gpio:
+          kind: inout
+          top_name: HDR_P8_D
+          direction: inout
+          width: 14
+          io_standard: "3.3-V LVTTL"
+          pins: [R1, T2, R3, T3, T9, R4, T4, R5, T5, R6, T6, R7, T7, R10]
+      P5:
+        gpio:
+          kind: inout
+          top_name: HDR_P5_D
+          direction: inout
+          width: 2
+          io_standard: "3.3-V LVTTL"
+          pins: [A9, B9]
+      P6:
+        gpio:
+          kind: inout
+          top_name: HDR_P6_D
+          direction: inout
+          width: 2
+          io_standard: "3.3-V LVTTL"
+          pins: [M16, M15]
