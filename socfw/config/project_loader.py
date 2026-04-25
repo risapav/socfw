@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pydantic import ValidationError
 
-from socfw.config.aliases import normalize_project_aliases
 from socfw.config.common import load_yaml_file
+from socfw.config.normalizers.project import normalize_project_document
 from socfw.config.project_schema import ModuleClockPortSchema, ProjectConfigSchema
 from socfw.config.schema_errors import project_schema_error
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
@@ -29,7 +29,9 @@ class ProjectLoader:
             return Result(diagnostics=raw.diagnostics)
 
         data = raw.value or {}
-        data, alias_diags = normalize_project_aliases(data, file=path)
+        norm = normalize_project_document(data, file=path)
+        data = norm.data
+        alias_diags = norm.diagnostics
 
         try:
             doc = ProjectConfigSchema.model_validate(data)

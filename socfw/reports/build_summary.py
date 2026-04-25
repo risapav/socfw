@@ -74,6 +74,15 @@ class BuildSummaryReport:
             lines.append("- none")
         lines.append("")
 
+        lines.append("## Compatibility Aliases")
+        lines.append("")
+        if provenance.aliases_used:
+            for alias in sorted(provenance.aliases_used):
+                lines.append(f"- {alias}")
+        else:
+            lines.append("- none")
+        lines.append("")
+
         lines.append("## Generated Files")
         lines.append("")
         if provenance.generated_files:

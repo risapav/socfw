@@ -48,6 +48,14 @@ class DoctorReport:
             lines.append(f"  - {p}")
         lines.append("")
 
+        lines.append("## Compatibility aliases")
+        if system.sources.aliases_used:
+            for a in sorted(system.sources.aliases_used):
+                lines.append(f"- {a}")
+        else:
+            lines.append("- none")
+        lines.append("")
+
         lines.append("## IP catalog")
         if system.ip_catalog:
             for name in sorted(system.ip_catalog):

@@ -12,3 +12,4 @@ class SourceContext:
     pack_roots: list[str] = field(default_factory=list)
     ip_search_dirs: list[str] = field(default_factory=list)
     cpu_search_dirs: list[str] = field(default_factory=list)
+    aliases_used: list[str] = field(default_factory=list)

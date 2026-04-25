@@ -24,3 +24,4 @@ class SocBuildProvenance:
     bridge_pairs: list[str] = field(default_factory=list)
 
     generated_files: list[str] = field(default_factory=list)
+    aliases_used: list[str] = field(default_factory=list)

@@ -214,6 +214,7 @@ def _build_soc_provenance(system, result: BuildResult, out_dir: str, planned_bri
         vendor_sdc_files=vendor_sdc,
         bridge_pairs=bridge_pairs,
         generated_files=generated,
+        aliases_used=list(system.sources.aliases_used),
     )
 
 

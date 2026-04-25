@@ -131,6 +131,10 @@ class SystemLoader:
                 pack_roots=resolved_pack_roots,
                 ip_search_dirs=ip_search_dirs,
                 cpu_search_dirs=cpu_search_dirs,
+                aliases_used=[
+                    d.message for d in diags
+                    if "ALIAS" in str(getattr(d, "code", ""))
+                ],
             ),
         )
 

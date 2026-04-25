@@ -31,6 +31,10 @@
 
 - `sdram0: simple_bus -> wishbone`
 
+## Compatibility Aliases
+
+- none
+
 ## Generated Files
 
 - `docs/soc_map.md`

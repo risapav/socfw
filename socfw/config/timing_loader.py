@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pydantic import ValidationError
 
-from socfw.config.aliases import normalize_timing_aliases
 from socfw.config.common import load_yaml_file
+from socfw.config.normalizers.timing import normalize_timing_document
 from socfw.config.schema_errors import timing_schema_error
 from socfw.config.timing_schema import TimingDocumentSchema
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
@@ -25,7 +25,9 @@ class TimingLoader:
             return Result(diagnostics=raw.diagnostics)
 
         data = raw.value or {}
-        data, alias_diags = normalize_timing_aliases(data, file=path)
+        norm = normalize_timing_document(data, file=path)
+        data = norm.data
+        alias_diags = norm.diagnostics
 
         try:
             doc = TimingDocumentSchema.model_validate(data)
