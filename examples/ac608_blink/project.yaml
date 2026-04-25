@@ -5,7 +5,6 @@ project:
   name: ac608_blink
   mode: standalone
   board: ac608_ep4ce15
-  board_file: boards/ac608_ep4ce15.yaml
   output_dir: build/gen
 
 registries:
@@ -19,7 +18,7 @@ features:
     - board:onboard.leds
 
 timing:
-  file: timing.yaml
+  file: timing_config.yaml
 
 clocks:
   primary:
