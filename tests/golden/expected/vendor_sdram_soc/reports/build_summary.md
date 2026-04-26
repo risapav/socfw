@@ -37,6 +37,7 @@
 
 ## Artifact Inventory
 
+- report: `1`
 - rtl: `2`
 - tcl: `2`
 - timing: `1`
@@ -45,6 +46,7 @@
 
 - `$OUT/hal/board.tcl`
 - `$OUT/hal/files.tcl`
+- `$OUT/reports/board_selectors.json`
 - `$OUT/reports/bridge_summary.txt`
 - `$OUT/rtl/simple_bus_to_wishbone_bridge.sv`
 - `$OUT/rtl/soc_top.sv`

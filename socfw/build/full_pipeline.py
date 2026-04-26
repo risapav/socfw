@@ -150,6 +150,11 @@ class FullBuildPipeline:
 
             board_tcl = self.board_tcl_emitter.emit(out_dir=request.out_dir, system=system)
             result.add_file(board_tcl, kind="tcl", producer="BoardTclEmitter")
+
+            from socfw.board.selector_index import emit_selector_index
+            selector_json = emit_selector_index(system.board, request.out_dir)
+            result.add_file(selector_json, kind="report", producer="BoardSelectorIndex")
+
             result.normalize_files()
 
         report_paths = self.reports.emit_all(

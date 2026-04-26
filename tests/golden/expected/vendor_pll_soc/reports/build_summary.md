@@ -38,6 +38,7 @@
 
 ## Artifact Inventory
 
+- report: `1`
 - rtl: `1`
 - tcl: `2`
 - timing: `1`
@@ -46,5 +47,6 @@
 
 - `$OUT/hal/board.tcl`
 - `$OUT/hal/files.tcl`
+- `$OUT/reports/board_selectors.json`
 - `$OUT/rtl/soc_top.sv`
 - `$OUT/timing/soc_top.sdc`

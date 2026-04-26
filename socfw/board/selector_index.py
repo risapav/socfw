@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from socfw.board.resource_tree import iter_resource_leaves
 from socfw.model.board import BoardModel
@@ -71,3 +73,19 @@ def _collect_connector_paths(node: dict, prefix: str, out: list[str]) -> None:
 def _is_connector_leaf(node: dict) -> bool:
     """Return True if node is a physical connector definition (has pins)."""
     return "pins" in node or "pin" in node
+
+
+def emit_selector_index(board: BoardModel, out_dir: str) -> str:
+    """Write board selector index JSON and return the output path."""
+    index = build_selector_index(board)
+    out = Path(out_dir) / "reports" / "board_selectors.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "board": index.board_id,
+        "resources": index.resources,
+        "aliases": index.aliases,
+        "profiles": index.profiles,
+        "connectors": index.connectors,
+    }
+    out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return str(out)
