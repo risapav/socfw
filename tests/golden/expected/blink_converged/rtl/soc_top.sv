@@ -2,15 +2,8 @@
 
 module soc_top (
   output wire [5:0] ONB_LEDS,
-  input wire RESET_N,
   input wire SYS_CLK
 );
-
-  wire reset_active;
-  wire reset_n;
-
-  assign reset_n = RESET_N;
-  assign reset_active = ~RESET_N;
 
   blink_test blink_test (
     .ONB_LEDS(ONB_LEDS),

@@ -385,7 +385,8 @@ class RtlIrBuilder:
         top = RtlTop(module_name="soc_top")
 
         if system is not None:
-            self._add_basic_clock_reset_nets(system, top)
+            needs_reset = self._any_ip_needs_reset(system, planned_bridges)
+            self._add_basic_clock_reset_nets(system, top, needs_reset)
             self._add_board_bound_ports(system, top, design)
             self._add_project_module_instances(system, top, design)
         self._add_bridge_instances(planned_bridges, top, system)
@@ -401,11 +402,23 @@ class RtlIrBuilder:
             by_name[s.name] = s
         return sorted(by_name.values(), key=lambda s: s.name)
 
-    def _add_basic_clock_reset_nets(self, system, top) -> None:
+    def _any_ip_needs_reset(self, system, planned_bridges) -> bool:
+        for mod in system.project.modules:
+            ip = system.ip_catalog.get(mod.type_name)
+            if ip is not None and ip.reset.port:
+                return True
+        if planned_bridges:
+            return True
+        return False
+
+    def _add_basic_clock_reset_nets(self, system, top, needs_reset: bool = True) -> None:
         from socfw.ir.rtl import RtlAdaptAssign, RtlPort, RtlSignal
 
         clk_name = system.board.sys_clock.top_name
         top.ports.append(RtlPort(name=clk_name, direction="input", width=1))
+
+        if not needs_reset:
+            return
 
         if system.board.sys_reset is not None:
             rst_name = system.board.sys_reset.top_name
