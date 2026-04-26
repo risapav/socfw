@@ -16,6 +16,7 @@ class SdcEmitter:
 
         self._emit_primary_clock(lines, system)
         self._emit_generated_clocks(lines, system)
+        self._emit_derive_uncertainty(lines, system)
         self._emit_io_delays(lines, system)
         self._emit_false_paths(lines, system)
 
@@ -55,6 +56,14 @@ class SdcEmitter:
             )
         lines.append("")
 
+    def _emit_derive_uncertainty(self, lines: list[str], system) -> None:
+        timing = system.timing
+        if timing is None or not timing.derive_uncertainty:
+            return
+        lines.append("# Derived uncertainty")
+        lines.append("derive_clock_uncertainty")
+        lines.append("")
+
     def _emit_io_delays(self, lines: list[str], system) -> None:
         timing = system.timing
         if timing is None or not timing.io_auto:
@@ -67,18 +76,31 @@ class SdcEmitter:
         if input_max is None and output_max is None:
             return
 
+        clk_name = system.board.sys_clock.top_name
+        rst_name = system.board.sys_reset.top_name if system.board.sys_reset else None
+        exclude = f"{{{clk_name}}}" if rst_name is None else f"{{{clk_name} {rst_name}}}"
+        data_inputs = f"[remove_from_collection [all_inputs] [get_ports {exclude}]]"
+
         lines.append("# Default IO delays")
 
         if input_max is not None:
             lines.append(
                 f"set_input_delay -clock {clock} "
-                f"-max {float(input_max):.3f} [all_inputs]"
+                f"-max {float(input_max):.3f} {data_inputs}"
+            )
+            lines.append(
+                f"set_input_delay -clock {clock} "
+                f"-min {float(input_max):.3f} {data_inputs}"
             )
 
         if output_max is not None:
             lines.append(
                 f"set_output_delay -clock {clock} "
                 f"-max {float(output_max):.3f} [all_outputs]"
+            )
+            lines.append(
+                f"set_output_delay -clock {clock} "
+                f"-min {float(output_max):.3f} [all_outputs]"
             )
 
         lines.append("")

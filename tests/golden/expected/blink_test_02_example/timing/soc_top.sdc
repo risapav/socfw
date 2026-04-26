@@ -6,9 +6,14 @@ create_clock -name SYS_CLK -period 20.000 [get_ports {SYS_CLK}]
 # Generated clocks
 create_generated_clock -name clk_100mhz -multiply_by 2 -source [get_pins {clkpll|c0}] [get_pins {clkpll|c0}]
 
+# Derived uncertainty
+derive_clock_uncertainty
+
 # Default IO delays
-set_input_delay -clock sys_clk -max 3.000 [all_inputs]
+set_input_delay -clock sys_clk -max 3.000 [remove_from_collection [all_inputs] [get_ports {SYS_CLK RESET_N}]]
+set_input_delay -clock sys_clk -min 3.000 [remove_from_collection [all_inputs] [get_ports {SYS_CLK RESET_N}]]
 set_output_delay -clock sys_clk -max 3.000 [all_outputs]
+set_output_delay -clock sys_clk -min 3.000 [all_outputs]
 
 # False paths
 set_false_path -from [get_ports {RESET_N}]
