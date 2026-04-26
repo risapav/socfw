@@ -131,3 +131,38 @@ class TimingResetUnusedRule(ValidationRule):
                 ),
             )
         ]
+
+
+class TimingIoDelayMinMissingRule(ValidationRule):
+    """Warn when IO max delay is set but min delay is not specified."""
+
+    def validate(self, system: SystemModel) -> list[Diagnostic]:
+        timing = system.timing
+        if timing is None or not timing.io_auto:
+            return []
+
+        diags: list[Diagnostic] = []
+
+        if timing.io_default_input_max_ns is not None and timing.io_default_input_min_ns is None:
+            diags.append(
+                Diagnostic(
+                    code="TIM201",
+                    severity=Severity.WARNING,
+                    message="Input max IO delay is set but input min IO delay is missing",
+                    subject="timing.io_delays",
+                    hints=("Add 'default_input_min_ns' to the io_delays section.",),
+                )
+            )
+
+        if timing.io_default_output_max_ns is not None and timing.io_default_output_min_ns is None:
+            diags.append(
+                Diagnostic(
+                    code="TIM201",
+                    severity=Severity.WARNING,
+                    message="Output max IO delay is set but output min IO delay is missing",
+                    subject="timing.io_delays",
+                    hints=("Add 'default_output_min_ns' to the io_delays section.",),
+                )
+            )
+
+        return diags
