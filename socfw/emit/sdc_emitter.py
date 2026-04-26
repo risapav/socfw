@@ -71,7 +71,9 @@ class SdcEmitter:
 
         clock = timing.io_default_clock or system.board.sys_clock.top_name
         input_max = timing.io_default_input_max_ns
+        input_min = timing.io_default_input_min_ns if timing.io_default_input_min_ns is not None else input_max
         output_max = timing.io_default_output_max_ns
+        output_min = timing.io_default_output_min_ns if timing.io_default_output_min_ns is not None else output_max
 
         if input_max is None and output_max is None:
             return
@@ -90,7 +92,7 @@ class SdcEmitter:
             )
             lines.append(
                 f"set_input_delay -clock {clock} "
-                f"-min {float(input_max):.3f} {data_inputs}"
+                f"-min {float(input_min):.3f} {data_inputs}"
             )
 
         if output_max is not None:
@@ -100,7 +102,7 @@ class SdcEmitter:
             )
             lines.append(
                 f"set_output_delay -clock {clock} "
-                f"-min {float(output_max):.3f} [all_outputs]"
+                f"-min {float(output_min):.3f} [all_outputs]"
             )
 
         lines.append("")

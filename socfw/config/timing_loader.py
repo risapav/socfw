@@ -68,7 +68,9 @@ class TimingLoader:
             io_auto=doc.timing.io_delays.auto,
             io_default_clock=doc.timing.io_delays.default_clock,
             io_default_input_max_ns=doc.timing.io_delays.default_input_max_ns,
+            io_default_input_min_ns=doc.timing.io_delays.default_input_min_ns,
             io_default_output_max_ns=doc.timing.io_delays.default_output_max_ns,
+            io_default_output_min_ns=doc.timing.io_delays.default_output_min_ns,
             io_overrides=[
                 IoDelayOverride(
                     port=o.port,

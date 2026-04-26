@@ -54,7 +54,9 @@ class IoDelaysSchema(BaseModel):
     auto: bool = True
     default_clock: str | None = None
     default_input_max_ns: float | None = None
+    default_input_min_ns: float | None = None
     default_output_max_ns: float | None = None
+    default_output_min_ns: float | None = None
     overrides: list[IoDelayOverrideSchema] = Field(default_factory=list)
 
 

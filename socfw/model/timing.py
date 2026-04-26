@@ -60,7 +60,9 @@ class TimingModel:
     io_auto: bool = True
     io_default_clock: str | None = None
     io_default_input_max_ns: float | None = None
+    io_default_input_min_ns: float | None = None
     io_default_output_max_ns: float | None = None
+    io_default_output_min_ns: float | None = None
     io_overrides: list[IoDelayOverride] = field(default_factory=list)
     false_paths: list[FalsePathConstraint] = field(default_factory=list)
     derive_uncertainty: bool = True
