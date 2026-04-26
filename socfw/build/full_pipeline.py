@@ -21,6 +21,7 @@ from socfw.core.result import Result
 from socfw.emit.orchestrator import EmitOrchestrator
 from socfw.model.image import BootImage
 from socfw.plugins.bootstrap import create_builtin_registry
+from socfw.reports.board_pinout import BoardPinoutReport
 from socfw.reports.build_provenance_json import BuildProvenanceJsonReport
 from socfw.reports.build_summary import BuildSummaryReport
 from socfw.reports.orchestrator import ReportOrchestrator
@@ -44,6 +45,7 @@ class FullBuildPipeline:
         self.vendor_collector = VendorArtifactCollector()
         self.build_summary = BuildSummaryReport()
         self.provenance_json = BuildProvenanceJsonReport()
+        self.board_pinout = BoardPinoutReport()
         self.bridge_planner = BridgePlanner()
         self.rtl_ir_builder = RtlIrBuilder()
         self.rtl_native_emitter = RtlEmitter()
@@ -154,6 +156,9 @@ class FullBuildPipeline:
             from socfw.board.selector_index import emit_selector_index
             selector_json = emit_selector_index(system.board, request.out_dir)
             result.add_file(selector_json, kind="report", producer="BoardSelectorIndex")
+
+            pinout_path = self.board_pinout.write(request.out_dir, system.board, system.project)
+            result.add_file(pinout_path, kind="report", producer="BoardPinoutReport")
 
             result.normalize_files()
 

@@ -38,7 +38,7 @@
 
 ## Artifact Inventory
 
-- report: `1`
+- report: `2`
 - rtl: `1`
 - tcl: `2`
 - timing: `1`
@@ -47,12 +47,14 @@
 
 - `$OUT/hal/board.tcl`
 - `$OUT/hal/files.tcl`
+- `$OUT/reports/board_pinout.md`
 - `$OUT/reports/board_selectors.json`
 - `$OUT/rtl/soc_top.sv`
 - `$OUT/timing/soc_top.sdc`
 
 ## Artifacts
 
+- report: `$OUT/reports/board_pinout.md` (BoardPinoutReport)
 - report: `$OUT/reports/board_selectors.json` (BoardSelectorIndex)
 - rtl: `$OUT/rtl/soc_top.sv` (RtlNativeEmitter)
 - tcl: `$OUT/hal/board.tcl` (BoardTclEmitter)

@@ -1,12 +1,17 @@
 {
   "aliases_used": [],
   "artifact_kinds": {
-    "report": 1,
+    "report": 2,
     "rtl": 1,
     "tcl": 2,
     "timing": 1
   },
   "artifacts": [
+    {
+      "kind": "report",
+      "path": "$OUT/reports/board_pinout.md",
+      "producer": "BoardPinoutReport"
+    },
     {
       "kind": "report",
       "path": "$OUT/reports/board_selectors.json",
@@ -40,6 +45,7 @@
   "generated_files": [
     "$OUT/hal/board.tcl",
     "$OUT/hal/files.tcl",
+    "$OUT/reports/board_pinout.md",
     "$OUT/reports/board_selectors.json",
     "$OUT/rtl/soc_top.sv",
     "$OUT/timing/soc_top.sdc"
