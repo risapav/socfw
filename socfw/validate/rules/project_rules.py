@@ -102,3 +102,32 @@ class UnknownGeneratedClockSourceRule(ValidationRule):
                 )
 
         return diags
+
+
+class TimingResetUnusedRule(ValidationRule):
+    """Warn when a board reset is declared but no instantiated IP consumes it."""
+
+    def validate(self, system: SystemModel) -> list[Diagnostic]:
+        if system.board.sys_reset is None:
+            return []
+
+        for mod in system.project.modules:
+            ip = system.ip_catalog.get(mod.type_name)
+            if ip is not None and ip.reset.port:
+                return []
+
+        return [
+            Diagnostic(
+                code="RST001",
+                severity=Severity.WARNING,
+                message=(
+                    f"Board reset '{system.board.sys_reset.top_name}' is declared "
+                    "but no instantiated IP consumes reset"
+                ),
+                subject="project.modules",
+                hints=(
+                    "Add 'reset: {port: rst_ni, active_high: false}' to the IP descriptor,",
+                    "or remove the reset pin from the timing config.",
+                ),
+            )
+        ]
