@@ -11,4 +11,5 @@ set_output_delay -clock SYS_CLK -max 3.000 [all_outputs]
 set_output_delay -clock SYS_CLK -min 0.000 [all_outputs]
 
 # False paths
+# Async reset
 set_false_path -from [get_ports {RESET_N}]

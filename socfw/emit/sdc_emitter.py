@@ -114,6 +114,8 @@ class SdcEmitter:
 
         lines.append("# False paths")
         for fp in timing.false_paths:
+            if fp.comment:
+                lines.append(f"# {fp.comment}")
             if fp.from_clock and fp.to_clock:
                 lines.append(
                     f"set_false_path -from [get_clocks {{{fp.from_clock}}}] "
