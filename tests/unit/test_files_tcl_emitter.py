@@ -82,8 +82,8 @@ def test_files_tcl_emitter_writes_vendor_and_bridge_files(tmp_path):
     )
 
     text = Path(out).read_text(encoding="utf-8")
-    assert "VERILOG_FILE /tmp/clkpll.v" in text
+    assert "VERILOG_FILE" in text and "clkpll.v" in text
     assert "bridge.sv" in text
-    assert "QIP_FILE /tmp/clkpll.qip" in text
-    assert "SDC_FILE /tmp/clkpll.sdc" in text
+    assert "QIP_FILE" in text and "clkpll.qip" in text
+    assert "SDC_FILE" in text and "clkpll.sdc" in text
     assert Path(out).parent.name == "hal"

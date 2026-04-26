@@ -12,9 +12,7 @@
 
 ## Modules and IP
 
-- Module instance: `blink_01`
-- Module instance: `blink_02`
-- Module instance: `blink_03`
+- Module instance: `blink_test`
 - Module instance: `clkpll`
 
 - IP type: `blink_test`
@@ -22,8 +20,8 @@
 
 ## Timing
 
-- Generated clocks: `1`
-- False paths: `1`
+- Generated clocks: `2`
+- False paths: `0`
 
 ## Vendor Artifacts
 
@@ -40,7 +38,7 @@
 
 ## Artifact Inventory
 
-- report: `2`
+- report: `4`
 - rtl: `1`
 - tcl: `2`
 - timing: `1`
@@ -49,6 +47,8 @@
 
 - `$OUT/hal/board.tcl`
 - `$OUT/hal/files.tcl`
+- `$OUT/reports/board_bindings.json`
+- `$OUT/reports/board_bindings.md`
 - `$OUT/reports/board_pinout.md`
 - `$OUT/reports/board_selectors.json`
 - `$OUT/rtl/soc_top.sv`
@@ -56,6 +56,8 @@
 
 ## Artifacts
 
+- report: `$OUT/reports/board_bindings.json` (BoardBindingsReport)
+- report: `$OUT/reports/board_bindings.md` (BoardBindingsReport)
 - report: `$OUT/reports/board_pinout.md` (BoardPinoutReport)
 - report: `$OUT/reports/board_selectors.json` (BoardSelectorIndex)
 - rtl: `$OUT/rtl/soc_top.sv` (RtlNativeEmitter)

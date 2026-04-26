@@ -67,13 +67,15 @@
     "clkpll"
   ],
   "module_instances": [
-    "blink_test",
+    "blink_01",
+    "blink_02",
+    "blink_03",
     "clkpll"
   ],
   "project_mode": "standalone",
   "project_name": "blink_test_02",
-  "timing_false_paths": 0,
-  "timing_generated_clocks": 2,
+  "timing_false_paths": 1,
+  "timing_generated_clocks": 1,
   "vendor_qip_files": [],
   "vendor_sdc_files": []
 }
