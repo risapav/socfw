@@ -1,12 +1,22 @@
 {
   "aliases_used": [],
   "artifact_kinds": {
-    "report": 2,
+    "report": 4,
     "rtl": 1,
     "tcl": 2,
     "timing": 1
   },
   "artifacts": [
+    {
+      "kind": "report",
+      "path": "$OUT/reports/board_bindings.json",
+      "producer": "BoardBindingsReport"
+    },
+    {
+      "kind": "report",
+      "path": "$OUT/reports/board_bindings.md",
+      "producer": "BoardBindingsReport"
+    },
     {
       "kind": "report",
       "path": "$OUT/reports/board_pinout.md",
@@ -45,6 +55,8 @@
   "generated_files": [
     "$OUT/hal/board.tcl",
     "$OUT/hal/files.tcl",
+    "$OUT/reports/board_bindings.json",
+    "$OUT/reports/board_bindings.md",
     "$OUT/reports/board_pinout.md",
     "$OUT/reports/board_selectors.json",
     "$OUT/rtl/soc_top.sv",
