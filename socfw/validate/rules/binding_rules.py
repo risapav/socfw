@@ -53,6 +53,45 @@ class BindingWidthCompatibilityRule(ValidationRule):
         return diags
 
 
+class BindConflictRule(ValidationRule):
+    """Detect multiple output drivers targeting the same board resource."""
+
+    def validate(self, system: SystemModel) -> list[Diagnostic]:
+        diags: list[Diagnostic] = []
+        output_targets: dict[str, list[str]] = {}
+
+        for mod in system.project.modules:
+            ip = system.ip_catalog.get(mod.type_name)
+            if ip is None:
+                continue
+            for b in mod.port_bindings:
+                if not b.target.startswith("board:"):
+                    continue
+                ip_port = ip.port_by_name(b.port_name)
+                if ip_port is None or ip_port.direction != "output":
+                    continue
+                key = b.target
+                output_targets.setdefault(key, []).append(f"{mod.instance}.{b.port_name}")
+
+        for target, drivers in output_targets.items():
+            if len(drivers) > 1:
+                diags.append(Diagnostic(
+                    code="BIND020",
+                    severity=Severity.ERROR,
+                    message=(
+                        f"Multiple output drivers for {target}: "
+                        + ", ".join(drivers)
+                    ),
+                    subject="project.bind",
+                    hints=(
+                        "Only one output port may drive a board resource.",
+                        "Use different targets for each instance.",
+                    ),
+                ))
+
+        return diags
+
+
 class BoardBindingRule(ValidationRule):
     def validate(self, system: SystemModel) -> list[Diagnostic]:
         diags: list[Diagnostic] = []
