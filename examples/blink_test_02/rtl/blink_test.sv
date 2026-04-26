@@ -8,17 +8,17 @@
 module blink_test #(
     parameter int CLK_FREQ = 50_000_000
 ) (
-    input  wire       clk,
-    input  wire       rstn,
-    output wire [5:0] leds
+    input  wire       clk_i,
+    input  wire       rst_ni,
+    output wire [5:0] leds_o
 );
     // blink ~1.5 Hz
     localparam int CNT_MAX = CLK_FREQ / 3;
     reg [$clog2(CNT_MAX)-1:0] cnt;
     reg blink;
 
-    always_ff @(posedge clk or negedge rstn) begin
-        if (!rstn) begin
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (!rst_ni) begin
             cnt   <= '0;
             blink <= 1'b0;
         end else if (cnt == CNT_MAX - 1) begin
@@ -29,7 +29,7 @@ module blink_test #(
         end
     end
 
-    assign leds = {6{blink}};
+    assign leds_o = {6{blink}};
 
 endmodule : blink_test
 

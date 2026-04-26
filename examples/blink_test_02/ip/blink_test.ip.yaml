@@ -17,22 +17,22 @@ integration:
   dependency_only: false
 
 reset:
-  port: rstn
+  port: rst_ni
   active_high: false
 
 clocking:
-  primary_input_port: clk
+  primary_input_port: clk_i
   additional_input_ports: []
   outputs: []
 
 ports:
-  - name: clk
+  - name: clk_i
     direction: input
     width: 1
-  - name: rstn
+  - name: rst_ni
     direction: input
     width: 1
-  - name: leds
+  - name: leds_o
     direction: output
     width: 6
 
