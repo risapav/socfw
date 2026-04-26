@@ -291,6 +291,11 @@ def _build_soc_provenance(system, result: BuildResult, out_dir: str, planned_bri
     for a in result.artifacts.normalized():
         artifact_kinds[a.kind] = artifact_kinds.get(a.kind, 0) + 1
 
+    artifact_list = [
+        {"path": normalizer.normalize(a.path), "kind": a.kind, "producer": a.producer}
+        for a in result.artifacts.normalized()
+    ]
+
     return SocBuildProvenance(
         project_name=system.project.name,
         project_mode=system.project.mode,
@@ -307,6 +312,7 @@ def _build_soc_provenance(system, result: BuildResult, out_dir: str, planned_bri
         generated_files=generated,
         aliases_used=list(system.sources.aliases_used),
         artifact_kinds=artifact_kinds,
+        artifacts=artifact_list,
     )
 
 

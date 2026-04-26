@@ -50,3 +50,11 @@
 - `$OUT/reports/board_selectors.json`
 - `$OUT/rtl/soc_top.sv`
 - `$OUT/timing/soc_top.sdc`
+
+## Artifacts
+
+- report: `$OUT/reports/board_selectors.json` (BoardSelectorIndex)
+- rtl: `$OUT/rtl/soc_top.sv` (RtlNativeEmitter)
+- tcl: `$OUT/hal/board.tcl` (BoardTclEmitter)
+- tcl: `$OUT/hal/files.tcl` (FilesTclEmitter)
+- timing: `$OUT/timing/soc_top.sdc` (SdcEmitter)

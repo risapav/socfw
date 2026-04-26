@@ -51,3 +51,12 @@
 - `$OUT/rtl/simple_bus_to_wishbone_bridge.sv`
 - `$OUT/rtl/soc_top.sv`
 - `$OUT/timing/soc_top.sdc`
+
+## Artifacts
+
+- report: `$OUT/reports/board_selectors.json` (BoardSelectorIndex)
+- rtl: `$OUT/rtl/simple_bus_to_wishbone_bridge.sv` (BridgePlanner)
+- rtl: `$OUT/rtl/soc_top.sv` (RtlNativeEmitter)
+- tcl: `$OUT/hal/board.tcl` (BoardTclEmitter)
+- tcl: `$OUT/hal/files.tcl` (FilesTclEmitter)
+- timing: `$OUT/timing/soc_top.sdc` (SdcEmitter)

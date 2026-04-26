@@ -6,6 +6,38 @@
     "tcl": 2,
     "timing": 1
   },
+  "artifacts": [
+    {
+      "kind": "report",
+      "path": "$OUT/reports/board_selectors.json",
+      "producer": "BoardSelectorIndex"
+    },
+    {
+      "kind": "rtl",
+      "path": "$OUT/rtl/simple_bus_to_wishbone_bridge.sv",
+      "producer": "BridgePlanner"
+    },
+    {
+      "kind": "rtl",
+      "path": "$OUT/rtl/soc_top.sv",
+      "producer": "RtlNativeEmitter"
+    },
+    {
+      "kind": "tcl",
+      "path": "$OUT/hal/board.tcl",
+      "producer": "BoardTclEmitter"
+    },
+    {
+      "kind": "tcl",
+      "path": "$OUT/hal/files.tcl",
+      "producer": "FilesTclEmitter"
+    },
+    {
+      "kind": "timing",
+      "path": "$OUT/timing/soc_top.sdc",
+      "producer": "SdcEmitter"
+    }
+  ],
   "board_id": "qmtech_ep4ce55",
   "bridge_pairs": [
     "sdram0: simple_bus -> wishbone"

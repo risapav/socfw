@@ -101,6 +101,13 @@ class BuildSummaryReport:
             lines.append("- none")
         lines.append("")
 
+        if getattr(provenance, "artifacts", None):
+            lines.append("## Artifacts")
+            lines.append("")
+            for art in sorted(provenance.artifacts, key=lambda a: (a["kind"], a["path"])):
+                lines.append(f"- {art['kind']}: `{art['path']}` ({art['producer']})")
+            lines.append("")
+
         return "\n".join(lines).rstrip() + "\n"
 
     def write(self, out_dir: str, provenance: SocBuildProvenance) -> str:
