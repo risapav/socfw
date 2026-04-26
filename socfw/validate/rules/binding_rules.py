@@ -118,6 +118,8 @@ class BoardBindingRule(ValidationRule):
 
                 res_width = _resource_width(target)
 
+                eff_width = b.width if b.width is not None else res_width
+
                 if b.adapt is not None:
                     if b.adapt not in _VALID_ADAPT_MODES:
                         diags.append(Diagnostic(
@@ -131,7 +133,7 @@ class BoardBindingRule(ValidationRule):
                         ))
                     elif ip_port.direction not in ("input", "output"):
                         diags.append(Diagnostic(
-                            code="BIND007",
+                            code="BIND008",
                             severity=Severity.ERROR,
                             message=(
                                 f"Adapt mode '{b.adapt}' not allowed for inout port "
@@ -139,19 +141,45 @@ class BoardBindingRule(ValidationRule):
                             ),
                             subject="project.bind",
                         ))
-                elif res_width is not None and ip_port.width != res_width:
+                    elif eff_width is not None and eff_width != ip_port.width:
+                        bad = _validate_adapt_widths(b.adapt, ip_port.width, eff_width)
+                        if bad:
+                            diags.append(Diagnostic(
+                                code="BIND007",
+                                severity=Severity.ERROR,
+                                message=(
+                                    f"Adapt '{b.adapt}' is not valid for bind {mod.instance}.{b.port_name}: "
+                                    f"{bad} (IP width={ip_port.width}, target width={eff_width})"
+                                ),
+                                subject="project.bind",
+                            ))
+                elif eff_width is not None and ip_port.width != eff_width:
                     diags.append(Diagnostic(
                         code="BIND003",
                         severity=Severity.ERROR,
                         message=(
                             f"Width mismatch for bind {mod.instance}.{b.port_name}: "
-                            f"IP port width {ip_port.width}, board resource width {res_width}; "
+                            f"IP port width {ip_port.width}, target width {eff_width}; "
                             f"use `adapt: zero_extend`, `adapt: truncate`, or `adapt: replicate`"
                         ),
                         subject="project.bind",
                     ))
 
         return diags
+
+
+def _validate_adapt_widths(adapt: str, ip_w: int, target_w: int) -> str | None:
+    """Return error reason string if this adapt/width combo is invalid, else None."""
+    if adapt == "zero_extend":
+        if ip_w >= target_w:
+            return f"zero_extend requires IP width < target width ({ip_w} >= {target_w})"
+    elif adapt == "truncate":
+        if ip_w <= target_w:
+            return f"truncate requires IP width > target width ({ip_w} <= {target_w})"
+    elif adapt == "replicate":
+        if ip_w != 1 and (target_w % ip_w != 0):
+            return f"replicate requires target width divisible by IP width ({target_w} % {ip_w} != 0)"
+    return None
 
 
 def _suggest_for_connector(connector_path: str, index) -> list[str]:

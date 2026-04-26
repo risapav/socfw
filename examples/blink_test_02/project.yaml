@@ -26,7 +26,7 @@ registries:
 features:
   use:
     - "board:onboard.leds"
-    - "board:external.pmod.j10_led6"
+    - "board:external.pmod.j10_led8"
     - "board:external.pmod.j11_led6"
 
 clocks:
@@ -35,6 +35,7 @@ clocks:
     source: board:sys_clk
   generated:
     - domain: clk_100mhz
+      comment: "Generated 100 MHz clock from PLL"
       source:
         instance: clkpll
         output: c0
@@ -52,41 +53,37 @@ modules:
   - instance: blink_01
     type: blink_test
     clocks:
-      clk: clk_100mhz
+      clk_i: clk_100mhz
     params:
       CLK_FREQ: 100000000
     bind:
       ports:
-        leds:
+        leds_o:
           target: "board:onboard.leds"
 
   - instance: blink_02
     type: blink_test
     clocks:
-      clk: clk_100mhz
+      clk_i: clk_100mhz
     params:
       CLK_FREQ: 100000000
     bind:
       ports:
-        leds:
-          target:   "board:external.pmod.j10_led6"
-          top_name: "PMOD_J10"
+        leds_o:
+          target:   "board:external.pmod.j10_led8"
           width:    8
-          adapt:    replicate
+          adapt:    zero_extend
 
   - instance: blink_03
     type: blink_test
     clocks:
-      clk: sys_clk
+      clk_i: sys_clk
     params:
       CLK_FREQ: 50000000
     bind:
       ports:
-        leds:
+        leds_o:
           target:   "board:external.pmod.j11_led6"
-          top_name: "PMOD_J11"
-          width:    8
-          adapt:    zero_extend
 
 artifacts:
   emit: [rtl, board, timing]          

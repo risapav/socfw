@@ -150,11 +150,11 @@ def test_valid_adapt_modes_accepted():
         assert not any(d.code == "BIND006" for d in diags), f"mode {mode} incorrectly rejected"
 
 
-def test_adapt_on_inout_reports_bind007():
+def test_adapt_on_inout_reports_bind008():
     diags = BoardBindingRule().validate(
         _system_adapt(PortDescriptor(name="ONB_LEDS", direction="inout", width=4), adapt="zero_extend")
     )
-    assert any(d.code == "BIND007" for d in diags)
+    assert any(d.code == "BIND008" for d in diags)
 
 
 def test_bind003_hint_mentions_adapt():

@@ -16,7 +16,7 @@ module soc_top (
 
   assign reset_n = RESET_N;
   assign reset_active = ~RESET_N;
-  assign PMOD_J10_LED8 = { {2{ w_blink_02_leds_o[5] } }, w_blink_02_leds_o };
+  assign PMOD_J10_LED8 = { 2'b0, w_blink_02_leds_o };
 
   blink_test blink_01 (
     .clk_i(clkpll_c0),
