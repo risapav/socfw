@@ -74,6 +74,7 @@ class ProjectModel:
     registries_cpu: list[str] = field(default_factory=list)
     feature_refs: list[str] = field(default_factory=list)
     feature_profile: str | None = None
+    inferred_feature_refs: list[str] = field(default_factory=list)
     modules: list[ModuleInstance] = field(default_factory=list)
     primary_clock_domain: str = "sys_clk"
     generated_clocks: list[GeneratedClockRequest] = field(default_factory=list)

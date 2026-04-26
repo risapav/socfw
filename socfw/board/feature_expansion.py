@@ -23,6 +23,28 @@ class SelectedResources:
         return len(self.paths)
 
 
+def expand_features_for_project(board: BoardModel, project) -> SelectedResources:
+    """
+    Expand features for a project, falling back to inferred bind targets
+    when no explicit features are declared.
+    """
+    profile = getattr(project, "feature_profile", None)
+    use = list(getattr(project, "feature_refs", []) or [])
+    inferred = list(getattr(project, "inferred_feature_refs", []) or [])
+
+    if not profile and not use and inferred:
+        # No explicit features — infer from bind targets
+        result = SelectedResources()
+        seen: set[str] = set()
+        for ref in inferred:
+            if ref.startswith("board:"):
+                path = ref[len("board:"):]
+                _add(path, result.paths, seen)
+        return result
+
+    return expand_features(board, profile, use)
+
+
 def expand_features(
     board: BoardModel,
     profile: str | None,

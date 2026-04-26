@@ -193,6 +193,15 @@ class SystemLoader:
                 return Result(diagnostics=diags)
             timing = tim_res.value
 
+        # Infer feature refs from bind targets when none are declared
+        if not project.feature_refs and not project.feature_profile:
+            inferred = []
+            for mod in project.modules:
+                for pb in mod.port_bindings:
+                    if pb.target.startswith("board:") and pb.target not in inferred:
+                        inferred.append(pb.target)
+            project.inferred_feature_refs = inferred
+
         system = SystemModel(
             board=board,
             project=project,

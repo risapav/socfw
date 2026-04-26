@@ -43,15 +43,12 @@ class BoardTclEmitter:
         lines.append("")
 
     def _emit_selected_resources(self, lines: list[str], system) -> None:
-        from socfw.board.feature_expansion import expand_features
+        from socfw.board.feature_expansion import expand_features_for_project
         from socfw.board.pin_ownership import collect_pin_ownership
 
         board = system.board
         project = system.project
-
-        profile = getattr(project, "feature_profile", None)
-        use_refs = list(project.feature_refs or [])
-        selected = expand_features(board, profile, use_refs)
+        selected = expand_features_for_project(board, project)
 
         # Add bind targets not already covered
         for mod in project.modules:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from socfw.board.feature_expansion import expand_features
+from socfw.board.feature_expansion import expand_features, expand_features_for_project
 from socfw.board.pin_ownership import PinUse, collect_pin_ownership
 from socfw.core.diagnostics import Diagnostic, Severity
 from socfw.model.board_resources import collect_pins
@@ -51,10 +51,8 @@ class BoardPinConflictRule(ValidationRule):
         project = system.project
         board = system.board
 
-        # Build selected resources from features + bind targets
-        profile = getattr(project, "feature_profile", None)
-        use_refs = list(project.feature_refs or [])
-        selected = expand_features(board, profile, use_refs)
+        # Build selected resources from features + bind targets (with inference fallback)
+        selected = expand_features_for_project(board, project)
 
         # Also include direct bind targets that reference external paths
         bind_targets = _collect_bind_targets(system)
