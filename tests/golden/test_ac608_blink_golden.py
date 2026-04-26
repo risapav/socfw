@@ -23,7 +23,7 @@ def test_ac608_blink_golden(tmp_path):
 
     assert result.ok, [f"{d.code}: {d.message}" for d in result.diagnostics]
 
-    for rel in ["rtl/soc_top.sv", "hal/board.tcl"]:
+    for rel in ["rtl/soc_top.sv", "hal/board.tcl", "reports/board_pinout.md"]:
         expected_file = EXPECTED / rel
         if expected_file.exists():
             assert _read(out_dir / rel) == _read(expected_file), f"Golden mismatch: {rel}"
