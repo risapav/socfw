@@ -43,6 +43,13 @@ def test_blink_test_01_golden(tmp_path):
     assert 'IO_STANDARD "3.3-V LVTTL" -to RESET_N' in board_tcl
     assert 'IO_STANDARD "3.3-V LVTTL" -to ONB_LEDS' in board_tcl
 
+    sdc = _read(out_dir / "timing" / "soc_top.sdc")
+    assert "derive_clock_uncertainty" in sdc, "SDC must include derive_clock_uncertainty"
+    assert "set_false_path -from [get_ports {RESET_N}]" in sdc, "SDC must false-path async reset"
+    assert "set_output_delay -clock SYS_CLK -max" in sdc, "SDC must include output max delay"
+    assert "set_output_delay -clock SYS_CLK -min" in sdc, "SDC must include output min delay"
+    assert "IO_STANDARD" in board_tcl, "board.tcl must have IO_STANDARD assignments"
+
     files_tcl = _read(out_dir / "hal" / "files.tcl")
     sdc_count = files_tcl.count("soc_top.sdc")
     assert sdc_count <= 1, f"soc_top.sdc appears {sdc_count} times in files.tcl (must not duplicate)"

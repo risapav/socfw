@@ -2,3 +2,13 @@
 
 # Primary clocks
 create_clock -name SYS_CLK -period 20.000 [get_ports {SYS_CLK}]
+
+# Derived uncertainty
+derive_clock_uncertainty
+
+# Default IO delays
+set_output_delay -clock SYS_CLK -max 3.000 [all_outputs]
+set_output_delay -clock SYS_CLK -min 0.000 [all_outputs]
+
+# False paths
+set_false_path -from [get_ports {RESET_N}]

@@ -30,5 +30,8 @@ modules:
         gpio_o:
           target: board:onboard.leds
 
+timing:
+  file: timing.yaml
+
 artifacts:
-  emit: [rtl, board]
+  emit: [rtl, board, timing]
