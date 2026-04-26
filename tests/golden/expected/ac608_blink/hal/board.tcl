@@ -3,17 +3,16 @@
 # FPGA device
 set_global_assignment -name DEVICE EP4CE15E22C8
 
-# FPGA family
-# family: Cyclone IV E
+set_global_assignment -name FAMILY "Cyclone IV E"
 
 # System pins
-set_location_assignment E15 -to clk
-set_location_assignment E1 -to RESET_N
+set_location_assignment PIN_E15 -to clk
+set_location_assignment PIN_E1 -to RESET_N
 
 # Board resources
-set_location_assignment L3 -to ONB_LEDS[0]
-set_location_assignment J13 -to ONB_LEDS[1]
-set_location_assignment G16 -to ONB_LEDS[2]
-set_location_assignment B16 -to ONB_LEDS[3]
-set_location_assignment F8 -to ONB_LEDS[4]
+set_location_assignment PIN_L3 -to ONB_LEDS[0]
+set_location_assignment PIN_J13 -to ONB_LEDS[1]
+set_location_assignment PIN_G16 -to ONB_LEDS[2]
+set_location_assignment PIN_B16 -to ONB_LEDS[3]
+set_location_assignment PIN_F8 -to ONB_LEDS[4]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ONB_LEDS

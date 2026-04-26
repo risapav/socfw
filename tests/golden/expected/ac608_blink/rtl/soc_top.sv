@@ -9,6 +9,9 @@ module soc_top (
   wire reset_active;
   wire reset_n;
 
+  assign reset_n = RESET_N;
+  assign reset_active = ~RESET_N;
+
   blink_ac608 blink0 (
     .clk(clk),
     .leds_o(ONB_LEDS)

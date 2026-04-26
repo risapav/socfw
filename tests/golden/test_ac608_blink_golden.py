@@ -70,5 +70,5 @@ def test_ac608_blink_led_pins(tmp_path):
     )
     assert result.ok
     tcl = (out_dir / "hal" / "board.tcl").read_text()
-    assert "set_location_assignment L3 -to ONB_LEDS[0]" in tcl
-    assert "set_location_assignment F8 -to ONB_LEDS[4]" in tcl
+    assert "set_location_assignment PIN_L3 -to ONB_LEDS[0]" in tcl
+    assert "set_location_assignment PIN_F8 -to ONB_LEDS[4]" in tcl

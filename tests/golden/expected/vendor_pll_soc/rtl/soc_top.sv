@@ -6,8 +6,12 @@ module soc_top (
   input wire SYS_CLK
 );
 
+  wire pll0_c0;
   wire reset_active;
   wire reset_n;
+
+  assign reset_n = RESET_N;
+  assign reset_active = ~RESET_N;
 
   blink_test blink_test (
     .clk(SYS_CLK),
@@ -16,7 +20,7 @@ module soc_top (
   );
 
   sys_pll pll0 (
-    .areset(reset_n),
+    .areset(~reset_n),
     .inclk0(SYS_CLK)
   );
 

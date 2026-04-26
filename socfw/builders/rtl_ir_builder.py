@@ -402,7 +402,7 @@ class RtlIrBuilder:
         return sorted(by_name.values(), key=lambda s: s.name)
 
     def _add_basic_clock_reset_nets(self, system, top) -> None:
-        from socfw.ir.rtl import RtlPort, RtlSignal
+        from socfw.ir.rtl import RtlAdaptAssign, RtlPort, RtlSignal
 
         clk_name = system.board.sys_clock.top_name
         top.ports.append(RtlPort(name=clk_name, direction="input", width=1))
@@ -413,6 +413,10 @@ class RtlIrBuilder:
             top.signals.append(RtlSignal(name="reset_n", width=1))
             if system.board.sys_reset.active_low:
                 top.signals.append(RtlSignal(name="reset_active", width=1))
+                top.adapt_assigns.append(RtlAdaptAssign(lhs="reset_n", rhs=rst_name))
+                top.adapt_assigns.append(RtlAdaptAssign(lhs="reset_active", rhs=f"~{rst_name}"))
+            else:
+                top.adapt_assigns.append(RtlAdaptAssign(lhs="reset_n", rhs=f"~{rst_name}"))
         else:
             top.signals.append(RtlSignal(name="reset_n", width=1))
 
@@ -475,7 +479,10 @@ class RtlIrBuilder:
                     seen.add(name)
 
     def _add_project_module_instances(self, system, top, design) -> None:
+        from socfw.clock.domain_resolver import build_resolver
         from socfw.ir.rtl import RtlAdaptAssign, RtlConnection, RtlInstance, RtlSignal
+
+        resolver = build_resolver(system.board, system.project)
 
         for mod in system.project.modules:
             ip = system.ip_catalog.get(mod.type_name)
@@ -487,10 +494,19 @@ class RtlIrBuilder:
             port_dirs: dict[str, str] = {p.name: p.direction for p in (ip.ports or [])}
 
             for cb in mod.clocks:
-                explicit[cb.port_name] = self._clock_expr(system, cb.domain)
+                explicit[cb.port_name] = resolver.net_for_domain(cb.domain)
 
             if ip.reset.port:
-                explicit[ip.reset.port] = "reset_n"
+                rst = "~reset_n" if ip.reset.active_high else "reset_n"
+                explicit[ip.reset.port] = rst
+
+            # Wire clocking IP outputs to <instance>_<output> nets
+            if ip.clocking and ip.clocking.outputs:
+                for out in ip.clocking.outputs:
+                    net = f"{mod.instance}_{out.port}"
+                    explicit[out.port] = net
+                    if not any(s.name == net for s in top.signals):
+                        top.signals.append(RtlSignal(name=net, width=1))
 
             for pb in mod.port_bindings:
                 if design is not None:
@@ -581,14 +597,6 @@ class RtlIrBuilder:
                 conns.append(RtlConnection(p.name, expr))
             return tuple(conns)
         return tuple(RtlConnection(name, expr) for name, expr in sorted(explicit.items()))
-
-    def _clock_expr(self, system, domain: str) -> str:
-        if domain in {"sys_clk", "ref_clk"}:
-            return system.board.sys_clock.top_name
-        if ":" in domain:
-            inst, output = domain.split(":", 1)
-            return f"{inst}_{output}"
-        return domain
 
     def _add_bridge_instances(self, planned_bridges, top, system=None) -> None:
         from socfw.ir.rtl import RtlConnection, RtlInstance
