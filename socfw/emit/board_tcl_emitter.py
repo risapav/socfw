@@ -40,9 +40,13 @@ class BoardTclEmitter:
         lines.append("# System pins")
         clk = board.sys_clock
         lines.append(f"set_location_assignment {_pin(clk.pin)} -to {clk.top_name}")
+        if clk.io_standard:
+            lines.append(f"set_instance_assignment -name IO_STANDARD \"{clk.io_standard}\" -to {clk.top_name}")
 
         rst = board.sys_reset
         lines.append(f"set_location_assignment {_pin(rst.pin)} -to {rst.top_name}")
+        if rst.io_standard:
+            lines.append(f"set_instance_assignment -name IO_STANDARD \"{rst.io_standard}\" -to {rst.top_name}")
 
         lines.append("")
 
