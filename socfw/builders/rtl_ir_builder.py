@@ -452,29 +452,24 @@ class RtlIrBuilder:
                         sig = ref_obj.default_signal()
                         if sig is None:
                             continue
-                    elif isinstance(ref_obj, dict):
-                        top_name = ref_obj.get("top_name")
-                        if not top_name:
-                            continue
-                        if top_name in seen:
-                            continue
-                        width = int(ref_obj.get("width", 1))
+                        res_name = sig.top_name
+                        res_width = sig.width if isinstance(sig, BoardVectorSignal) else 1
                         direction = "output"
-                        top.ports.append(RtlPort(name=top_name, direction=direction, width=width))
-                        seen.add(top_name)
-                        continue
+                    elif isinstance(ref_obj, dict):
+                        res_name = ref_obj.get("top_name") or ""
+                        if not res_name:
+                            continue
+                        res_width = int(ref_obj.get("width", 1))
+                        direction = "output"
                     else:
-                        sig = ref_obj
+                        res_name = ref_obj.top_name
+                        res_width = getattr(ref_obj, "width", 1)
+                        direction = "output"
 
-                    name = sig.top_name
+                    name = pb.top_name or res_name
+                    width = pb.width if pb.width is not None else res_width
                     if name in seen:
                         continue
-                    if isinstance(sig, BoardVectorSignal):
-                        width = sig.width
-                        direction = "output"
-                    else:
-                        width = 1
-                        direction = "output"
                     top.ports.append(RtlPort(name=name, direction=direction, width=width))
                     seen.add(name)
 
@@ -538,30 +533,30 @@ class RtlIrBuilder:
                             top_name = ref_obj.top_name
                             board_width = getattr(ref_obj, "width", 1)
 
-                        if top_name:
+                        eff_name = pb.top_name or top_name
+                        eff_width = pb.width if pb.width is not None else board_width
+                        if eff_name:
                             ip_width = port_widths.get(pb.port_name)
                             adapt_mode = pb.adapt
-                            if adapt_mode and ip_width is not None and ip_width != board_width:
+                            if adapt_mode and ip_width is not None and ip_width != eff_width:
                                 wire_name = f"w_{mod.instance}_{pb.port_name}"
                                 port_dir = port_dirs.get(pb.port_name, "output")
                                 top.signals.append(RtlSignal(name=wire_name, kind="wire", width=ip_width))
                                 explicit[pb.port_name] = wire_name
                                 if port_dir == "input":
-                                    # Input: board signal → wire (truncate or zero_extend)
-                                    if board_width > ip_width:
-                                        rhs = f"{top_name}[{ip_width - 1}:0]"
+                                    if eff_width > ip_width:
+                                        rhs = f"{eff_name}[{ip_width - 1}:0]"
                                     else:
-                                        pad = ip_width - board_width
-                                        rhs = f"{{ {pad}'b0, {top_name} }}"
+                                        pad = ip_width - eff_width
+                                        rhs = f"{{ {pad}'b0, {eff_name} }}"
                                     top.adapt_assigns.append(RtlAdaptAssign(lhs=wire_name, rhs=rhs))
                                 else:
-                                    # Output: wire → board port (zero_extend, truncate, replicate)
                                     rhs = self._adapt_rhs(
-                                        wire=wire_name, src_w=ip_width, dst_w=board_width, mode=adapt_mode
+                                        wire=wire_name, src_w=ip_width, dst_w=eff_width, mode=adapt_mode
                                     )
-                                    top.adapt_assigns.append(RtlAdaptAssign(lhs=top_name, rhs=rhs))
+                                    top.adapt_assigns.append(RtlAdaptAssign(lhs=eff_name, rhs=rhs))
                             else:
-                                explicit[pb.port_name] = top_name
+                                explicit[pb.port_name] = eff_name
 
             top.instances.append(
                 RtlInstance(
