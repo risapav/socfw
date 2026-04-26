@@ -17,13 +17,24 @@ integration:
   dependency_only: false
 
 reset:
-  port: null
+  port: rst_ni
   active_high: false
 
 clocking:
-  primary_input_port: SYS_CLK
+  primary_input_port: clk_i
   additional_input_ports: []
   outputs: []
+
+ports:
+  - name: clk_i
+    direction: input
+    width: 1
+  - name: rst_ni
+    direction: input
+    width: 1
+  - name: leds_o
+    direction: output
+    width: 6
 
 artifacts:
   synthesis:

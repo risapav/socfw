@@ -32,11 +32,11 @@ modules:
     params:
       CLK_FREQ: 50000000
     clocks:
-      SYS_CLK: sys_clk
+      clk_i: sys_clk
     bind:
       ports:
-        ONB_LEDS:
+        leds_o:
           target: board:onboard.leds
 
 artifacts:
-  emit: [rtl, board]
+  emit: [rtl, board, timing]
