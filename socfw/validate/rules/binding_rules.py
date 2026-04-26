@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from socfw.board.selector_index import build_selector_index
 from socfw.core.diagnostics import Diagnostic, Severity
 from socfw.model.board import BoardResource, BoardConnectorRole, BoardScalarSignal, BoardVectorSignal
 from socfw.model.system import SystemModel
@@ -67,18 +68,16 @@ class BoardBindingRule(ValidationRule):
 
                 path_after_board = b.target[len("board:"):]
                 if path_after_board.startswith("connectors."):
-                    derived = _suggest_derived(path_after_board, system.board)
-                    hints = [
-                        "Connector paths describe physical pins, not bindable resources.",
-                        "Define a derived resource in the board YAML:",
-                        "  derived_resources:",
-                        f"    - name: external.pmod.{path_after_board.split('.')[-1].lower()}_gpio8",
-                        f"      from: {path_after_board}",
-                        "      role: gpio8",
-                        "      top_name: PMOD_D",
+                    index = build_selector_index(system.board)
+                    suggestions = _suggest_for_connector(path_after_board, index)
+                    hints: list[str] = [
+                        f"'{b.target}' is a physical connector path, not a bindable resource.",
                     ]
-                    if derived:
-                        hints = [f"Use derived resource: board:{derived}"] + hints
+                    if suggestions:
+                        hints.append("Did you mean:")
+                        hints.extend(f"  {s}" for s in suggestions)
+                    else:
+                        hints.append("Use a derived resource from the board YAML external section.")
                     diags.append(Diagnostic(
                         code="BRD003",
                         severity=Severity.ERROR,
@@ -94,11 +93,22 @@ class BoardBindingRule(ValidationRule):
                     target = None
 
                 if target is None:
+                    index = build_selector_index(system.board)
+                    suggestions = _suggest_closest(b.target, index)
+                    hints = [f"Unknown board target '{b.target}'."]
+                    if suggestions:
+                        hints.append("Did you mean:")
+                        hints.extend(f"  {s}" for s in suggestions)
+                    else:
+                        hints.append(
+                            "Check available targets with: socfw board-info --selectors"
+                        )
                     diags.append(Diagnostic(
                         code="BIND001",
                         severity=Severity.ERROR,
                         message=f"Unknown board binding target '{b.target}'",
                         subject="project.bind",
+                        hints=tuple(hints),
                     ))
                     continue
 
@@ -144,21 +154,30 @@ class BoardBindingRule(ValidationRule):
         return diags
 
 
-def _suggest_derived(connector_path: str, board) -> str | None:
-    """Suggest a derived resource path for a connector path."""
-    external = board.resources.get("external") or {}
+def _suggest_for_connector(connector_path: str, index) -> list[str]:
+    """Suggest bindable resources that correspond to a connector path."""
     parts = connector_path.split(".")
-    if len(parts) >= 3:
-        conn_section = parts[1]
-        conn_key = parts[2].lower()
-        section = external.get(conn_section, {})
-        if isinstance(section, dict) and conn_key in section:
-            sub = section[conn_key]
-            if isinstance(sub, dict):
-                first = next(iter(sub), None)
-                if first:
-                    return f"external.{conn_section}.{conn_key}.{first}"
-    return None
+    if len(parts) < 3:
+        return []
+    conn_key = parts[2].lower()
+    return [
+        r for r in index.resources
+        if conn_key in r.lower() and r.startswith("board:external.")
+    ][:3]
+
+
+def _suggest_closest(target: str, index) -> list[str]:
+    """Suggest closest board resources/aliases to a typo'd target."""
+    needle = target.replace("board:", "").lower()
+    all_valid = index.resources + index.aliases
+    scored = []
+    for ref in all_valid:
+        ref_path = ref.replace("board:", "").lower()
+        common = sum(a == b for a, b in zip(needle, ref_path))
+        if common >= min(3, len(needle) - 1):
+            scored.append((common, ref))
+    scored.sort(key=lambda x: -x[0])
+    return [ref for _, ref in scored[:3]]
 
 
 def _resource_width(target) -> int | None:
