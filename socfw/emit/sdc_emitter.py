@@ -47,7 +47,7 @@ class SdcEmitter:
                 args.append(f"-multiply_by {g.multiply_by}")
 
             arg_text = (" " + " ".join(args)) if args else ""
-            src_pin = f"u_{g.source_instance}|{g.source_clock}"
+            src_pin = f"{g.source_instance}|{g.source_clock}"
             lines.append(
                 f"create_generated_clock -name {g.name}{arg_text} "
                 f"-source [get_pins {{{src_pin}}}] "

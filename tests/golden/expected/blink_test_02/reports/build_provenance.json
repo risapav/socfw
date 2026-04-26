@@ -1,0 +1,69 @@
+{
+  "aliases_used": [],
+  "artifact_kinds": {
+    "report": 2,
+    "rtl": 1,
+    "tcl": 2,
+    "timing": 1
+  },
+  "artifacts": [
+    {
+      "kind": "report",
+      "path": "$OUT/reports/board_pinout.md",
+      "producer": "BoardPinoutReport"
+    },
+    {
+      "kind": "report",
+      "path": "$OUT/reports/board_selectors.json",
+      "producer": "BoardSelectorIndex"
+    },
+    {
+      "kind": "rtl",
+      "path": "$OUT/rtl/soc_top.sv",
+      "producer": "RtlNativeEmitter"
+    },
+    {
+      "kind": "tcl",
+      "path": "$OUT/hal/board.tcl",
+      "producer": "BoardTclEmitter"
+    },
+    {
+      "kind": "tcl",
+      "path": "$OUT/hal/files.tcl",
+      "producer": "FilesTclEmitter"
+    },
+    {
+      "kind": "timing",
+      "path": "$OUT/timing/soc_top.sdc",
+      "producer": "SdcEmitter"
+    }
+  ],
+  "board_id": "qmtech_ep4ce55",
+  "bridge_pairs": [],
+  "cpu_module": null,
+  "cpu_type": null,
+  "generated_files": [
+    "$OUT/hal/board.tcl",
+    "$OUT/hal/files.tcl",
+    "$OUT/reports/board_pinout.md",
+    "$OUT/reports/board_selectors.json",
+    "$OUT/rtl/soc_top.sv",
+    "$OUT/timing/soc_top.sdc"
+  ],
+  "ip_types": [
+    "blink_test",
+    "clkpll"
+  ],
+  "module_instances": [
+    "blink_01",
+    "blink_02",
+    "blink_03",
+    "clkpll"
+  ],
+  "project_mode": "standalone",
+  "project_name": "blink_test_02",
+  "timing_false_paths": 1,
+  "timing_generated_clocks": 1,
+  "vendor_qip_files": [],
+  "vendor_sdc_files": []
+}

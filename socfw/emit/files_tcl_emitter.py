@@ -10,17 +10,23 @@ from socfw.ir.rtl import RtlModuleIR
 
 
 class FilesTclEmitter:
-    def emit(self, *, out_dir: str, system, planned_bridges: list) -> str:
+    def emit(self, *, out_dir: str, system, planned_bridges: list, project_dir: str | None = None) -> str:
         hal_dir = Path(out_dir) / "hal"
         hal_dir.mkdir(parents=True, exist_ok=True)
 
+        base = Path(project_dir).resolve() if project_dir else Path.cwd().resolve()
         cwd = Path.cwd().resolve()
 
         def _norm(p: str) -> str:
+            abs_p = Path(p).resolve()
             try:
-                return str(Path(p).resolve().relative_to(cwd))
+                return str(abs_p.relative_to(base))
             except ValueError:
-                return p
+                pass
+            try:
+                return str(abs_p.relative_to(cwd))
+            except ValueError:
+                return str(abs_p)
 
         out = hal_dir / "files.tcl"
         lines: list[str] = []

@@ -144,6 +144,7 @@ class FullBuildPipeline:
                 out_dir=request.out_dir,
                 system=system,
                 planned_bridges=planned_bridges,
+                project_dir=str(Path(request.project_file).parent),
             )
             result.add_file(files_tcl, kind="tcl", producer="FilesTclEmitter")
 
@@ -192,6 +193,7 @@ class FullBuildPipeline:
                 out_dir=request.out_dir,
                 system=system,
                 planned_bridges=planned_bridges,
+                project_dir=str(Path(request.project_file).parent),
             )
             result.manifest.add("hal", files_tcl, "FilesTclEmitter")
 

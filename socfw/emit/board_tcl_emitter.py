@@ -3,6 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 
+def _pin(pin: str) -> str:
+    """Return Quartus PIN_<x> location specifier, adding prefix if missing."""
+    return pin if pin.startswith("PIN_") else f"PIN_{pin}"
+
+
 class BoardTclEmitter:
     def emit(self, *, out_dir: str, system) -> str:
         hal_dir = Path(out_dir) / "hal"
@@ -28,17 +33,16 @@ class BoardTclEmitter:
             lines.append("")
 
         if board.fpga_family:
-            lines.append("# FPGA family")
-            lines.append(f"# family: {board.fpga_family}")
+            lines.append(f"set_global_assignment -name FAMILY \"{board.fpga_family}\"")
             lines.append("")
 
     def _emit_system_pins(self, lines: list[str], board) -> None:
         lines.append("# System pins")
         clk = board.sys_clock
-        lines.append(f"set_location_assignment {clk.pin} -to {clk.top_name}")
+        lines.append(f"set_location_assignment {_pin(clk.pin)} -to {clk.top_name}")
 
         rst = board.sys_reset
-        lines.append(f"set_location_assignment {rst.pin} -to {rst.top_name}")
+        lines.append(f"set_location_assignment {_pin(rst.pin)} -to {rst.top_name}")
 
         lines.append("")
 
@@ -105,14 +109,14 @@ class BoardTclEmitter:
 
         if scalar_uses:
             u = scalar_uses[0]
-            lines.append(f"set_location_assignment {u.pin} -to {top_name}")
+            lines.append(f"set_location_assignment {_pin(u.pin)} -to {top_name}")
             io_std = self._get_io_standard(u, board)
             if io_std:
                 lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}")
 
         if vector_uses:
             for u in sorted(vector_uses, key=lambda x: x.bit):
-                lines.append(f"set_location_assignment {u.pin} -to {top_name}[{u.bit}]")
+                lines.append(f"set_location_assignment {_pin(u.pin)} -to {top_name}[{u.bit}]")
             io_std = self._get_io_standard(vector_uses[0], board)
             if io_std:
                 lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}")
