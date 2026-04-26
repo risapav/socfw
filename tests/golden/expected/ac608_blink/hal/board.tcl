@@ -8,8 +8,6 @@ set_global_assignment -name FAMILY "Cyclone IV E"
 # System pins
 set_location_assignment PIN_E15 -to clk
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to clk
-set_location_assignment PIN_E1 -to RESET_N
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to RESET_N
 
 # Board resources
 set_location_assignment PIN_L3 -to ONB_LEDS[0]

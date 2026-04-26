@@ -20,7 +20,7 @@ class BoardTclEmitter:
         lines.append("")
 
         self._emit_device(lines, system.board)
-        self._emit_system_pins(lines, system.board)
+        self._emit_system_pins(lines, system.board, system)
         self._emit_selected_resources(lines, system)
 
         out.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
@@ -36,7 +36,7 @@ class BoardTclEmitter:
             lines.append(f"set_global_assignment -name FAMILY \"{board.fpga_family}\"")
             lines.append("")
 
-    def _emit_system_pins(self, lines: list[str], board) -> None:
+    def _emit_system_pins(self, lines: list[str], board, system=None) -> None:
         lines.append("# System pins")
         clk = board.sys_clock
         lines.append(f"set_location_assignment {_pin(clk.pin)} -to {clk.top_name}")
@@ -44,11 +44,21 @@ class BoardTclEmitter:
             lines.append(f"set_instance_assignment -name IO_STANDARD \"{clk.io_standard}\" -to {clk.top_name}")
 
         rst = board.sys_reset
-        lines.append(f"set_location_assignment {_pin(rst.pin)} -to {rst.top_name}")
-        if rst.io_standard:
-            lines.append(f"set_instance_assignment -name IO_STANDARD \"{rst.io_standard}\" -to {rst.top_name}")
+        if rst is not None and self._reset_is_used(system):
+            lines.append(f"set_location_assignment {_pin(rst.pin)} -to {rst.top_name}")
+            if rst.io_standard:
+                lines.append(f"set_instance_assignment -name IO_STANDARD \"{rst.io_standard}\" -to {rst.top_name}")
 
         lines.append("")
+
+    def _reset_is_used(self, system) -> bool:
+        if system is None:
+            return True
+        for mod in system.project.modules:
+            ip = system.ip_catalog.get(mod.type_name)
+            if ip is not None and ip.reset.port:
+                return True
+        return False
 
     def _emit_selected_resources(self, lines: list[str], system) -> None:
         from socfw.board.feature_expansion import expand_features_for_project
