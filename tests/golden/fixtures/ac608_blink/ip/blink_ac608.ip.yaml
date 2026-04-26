@@ -1,0 +1,40 @@
+version: 2
+kind: ip
+
+ip:
+  name: blink_ac608
+  module: blink_ac608
+  category: standalone
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: null
+  active_high: false
+
+clocking:
+  primary_input_port: clk
+  additional_input_ports: []
+  outputs: []
+
+artifacts:
+  synthesis:
+    - ../rtl/blink_ac608.sv
+  simulation: []
+  metadata: []
+
+ports:
+  - name: clk
+    direction: input
+    width: 1
+  - name: leds_o
+    direction: output
+    width: 5

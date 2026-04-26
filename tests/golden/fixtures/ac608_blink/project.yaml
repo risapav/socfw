@@ -1,0 +1,36 @@
+version: 2
+kind: project
+
+project:
+  name: ac608_blink
+  mode: standalone
+  board: ac608_ep4ce15
+  output_dir: build/gen
+
+registries:
+  ip:
+    - ip
+
+features:
+  use:
+    - board:onboard.leds
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+
+modules:
+  - instance: blink0
+    type: blink_ac608
+    params:
+      CLK_FREQ: 50000000
+    clocks:
+      clk: sys_clk
+    bind:
+      ports:
+        leds_o:
+          target: board:onboard.leds
+
+artifacts:
+  emit: [rtl, board]
