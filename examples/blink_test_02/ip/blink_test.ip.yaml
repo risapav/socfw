@@ -1,0 +1,43 @@
+version: 2
+kind: ip
+
+ip:
+  name: blink_test
+  module: blink_test
+  category: standalone
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rstn
+  active_high: false
+
+clocking:
+  primary_input_port: clk
+  additional_input_ports: []
+  outputs: []
+
+ports:
+  - name: clk
+    direction: input
+    width: 1
+  - name: rstn
+    direction: input
+    width: 1
+  - name: leds
+    direction: output
+    width: 6
+
+artifacts:
+  synthesis:
+    - ../rtl/blink_test.sv
+  simulation: []
+  metadata: []

@@ -1,0 +1,92 @@
+# =============================================================================
+# SoC Framework v3 - project.yaml (Canonical v2)
+# =============================================================================
+version: 2
+kind: project
+
+project:
+  name: blink_test_02
+  mode: standalone
+  board: qmtech_ep4ce55
+  output_dir: build/gen
+  debug: true
+
+timing:
+  file: timing_config.yaml
+
+registries:
+  ip:
+    # Cesta k IP jadrám (clkpll, blink_test), upravená na 2 úrovne hore
+    - ip
+    - cores
+  packs:
+    - ../../packs/builtin
+ 
+
+features:
+  use:
+    - "board:onboard.leds"
+    - "board:external.pmod.j10_led6"
+    - "board:external.pmod.j11_led6"
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+  generated:
+    - domain: clk_100mhz
+      source:
+        instance: clkpll
+        output: c0
+      frequency_hz: 100000000
+      reset:
+        sync_from: sys_clk
+        sync_stages: 2
+
+modules:
+  - instance: clkpll
+    type: clkpll        # Vyžaduje clkpll.ip.yaml v registries.ip 
+    clocks:
+      inclk0: sys_clk
+
+  - instance: blink_01
+    type: blink_test
+    clocks:
+      clk: clk_100mhz
+    params:
+      CLK_FREQ: 100000000
+    bind:
+      ports:
+        leds:
+          target: "board:onboard.leds"
+
+  - instance: blink_02
+    type: blink_test
+    clocks:
+      clk: clk_100mhz
+    params:
+      CLK_FREQ: 100000000
+    bind:
+      ports:
+        leds:
+          target:   "board:external.pmod.j10_led6"
+          top_name: "PMOD_J10"
+          width:    8
+          adapt:    replicate
+
+  - instance: blink_03
+    type: blink_test
+    clocks:
+      clk: sys_clk
+    params:
+      CLK_FREQ: 50000000
+    bind:
+      ports:
+        leds:
+          target:   "board:external.pmod.j11_led6"
+          top_name: "PMOD_J11"
+          width:    8
+          adapt:    zero_extend
+
+artifacts:
+  emit: [rtl, board, timing]          

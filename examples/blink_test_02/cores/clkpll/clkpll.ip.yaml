@@ -1,0 +1,56 @@
+# =============================================================================
+# SoC Framework v3 - clkpll.ip.yaml (Canonical v2)
+# =============================================================================
+version: 2
+kind: ip
+
+# Framework vyžaduje kľúč 'ip' s týmito poliami
+ip:
+  name: clkpll
+  module: clkpll
+  category: clocking
+
+origin:
+  kind: generated
+  packaging: quartus_ip
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: areset
+  active_high: true
+
+clocking:
+  primary_input_port: inclk0
+  additional_input_ports: []
+  outputs:
+    - port: c0
+      kind: generated_clock
+      domain: clk_100mhz
+    - port: locked
+      kind: status
+
+ports:
+  - name: inclk0
+    direction: input
+    width: 1
+  - name: areset
+    direction: input
+    width: 1
+  - name: c0
+    direction: output
+    width: 1
+  - name: locked
+    direction: output
+    width: 1
+
+artifacts:
+  synthesis:
+    - clkpll.qip
+  simulation: []
+  metadata: []          
+

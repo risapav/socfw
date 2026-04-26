@@ -1,0 +1,40 @@
+version: 2
+kind: timing
+
+timing:
+  clocks:
+    - name:      sys_clk
+      source:    SYS_CLK
+      period_ns: 20.0
+      reset:
+        source:      RESET_N
+        active_low:  true
+        sync_stages: 2
+
+  generated_clocks:
+    - name:        clk_100mhz
+      source:
+        instance: clkpll
+        output:   c0
+      multiply_by: 2
+      divide_by:   1
+      reset_sync_from:   sys_clk
+      reset_sync_stages: 2
+
+  clock_groups:
+    - type: asynchronous
+      groups:
+        - [sys_clk]
+        - [clk_100mhz]
+
+  io_delays:
+    auto:                  true
+    default_clock:         sys_clk
+    default_input_max_ns:  3.0
+    default_output_max_ns: 3.0
+
+  false_paths:
+    - from_port: RESET_N
+      comment:   "Async reset path"
+
+  derive_uncertainty: true

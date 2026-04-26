@@ -1,0 +1,47 @@
+# =============================================================================
+# SoC Framework v3 - Štandardizovaný QSF Script (Stable Version)
+# Target: Cyclone IV E (QMTech EP4CE55F23C8)
+# @file: soc_top.qsf
+# @brief: Quartus Project Settings for soc_top
+# =============================================================================
+
+# --- 1. Statické nastavenia projektu ---
+set_global_assignment -name TOP_LEVEL_ENTITY soc_top
+set_global_assignment -name ORIGINAL_QUARTUS_VERSION 25.1
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
+set_global_assignment -name NUM_PARALLEL_PROCESSORS 4
+
+# --- 2. Definícia zdrojových súborov ---
+# Pridávame hlavnú entitu priamo, ak nie je korektne v files.tcl
+source build/gen/hal/files.tcl
+set_global_assignment -name SYSTEMVERILOG_FILE build/gen/rtl/soc_top.sv
+
+# Načítanie automaticky generovaných zoznamov súborov a pinov
+
+set_global_assignment -name FAMILY "Cyclone IV E"
+source build/gen/hal/board.tcl
+
+# --- 3. Nastavenia pre SystemVerilog ---
+set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
+set_global_assignment -name VERILOG_SHOW_LMF_MAPPING_MESSAGES OFF
+
+# --- 4. Časové obmedzenia (SDC) ---
+set_global_assignment -name SDC_FILE build/gen/timing/soc_top.sdc
+
+# --- 5. Globálne nastavenia Partície ---
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+
+# --- 6. Power & Thermal ---
+set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
+set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
+set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
+set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+
+# --- 7. Verzia a ukončenie ---
+set_global_assignment -name LAST_QUARTUS_VERSION "25.1std.0 Lite Edition"
+
+# Súbor končí prázdnym riadkom.
+
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
