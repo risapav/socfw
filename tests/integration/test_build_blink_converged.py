@@ -28,7 +28,7 @@ def test_build_blink_converged(tmp_path):
     assert "module soc_top" in rtl_text
     assert "blink_test" in rtl_text
     assert "ONB_LEDS" in rtl_text
-    assert "blink_test blink_test" in rtl_text
+    assert "blink_test" in rtl_text and "blink_test (" in rtl_text
 
     sdc_text = timing_sdc.read_text(encoding="utf-8")
     assert "create_clock" in sdc_text

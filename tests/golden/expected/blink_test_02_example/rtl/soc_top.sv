@@ -18,19 +18,25 @@ module soc_top (
   assign reset_active = ~RESET_N;
   assign PMOD_J10_LED8 = { 2'b0, w_blink_02_leds_o };
 
-  blink_test blink_01 (
+  blink_test #(
+    .CLK_FREQ(100000000)
+  ) blink_01 (
     .clk_i(clkpll_c0),
     .leds_o(ONB_LEDS),
     .rst_ni(reset_n)
   );
 
-  blink_test blink_02 (
+  blink_test #(
+    .CLK_FREQ(100000000)
+  ) blink_02 (
     .clk_i(clkpll_c0),
     .leds_o(w_blink_02_leds_o),
     .rst_ni(reset_n)
   );
 
-  blink_test blink_03 (
+  blink_test #(
+    .CLK_FREQ(50000000)
+  ) blink_03 (
     .clk_i(SYS_CLK),
     .leds_o(PMOD_J11_LED),
     .rst_ni(reset_n)

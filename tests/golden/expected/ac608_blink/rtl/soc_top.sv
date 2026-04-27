@@ -5,7 +5,9 @@ module soc_top (
   input wire clk
 );
 
-  blink_ac608 blink0 (
+  blink_ac608 #(
+    .CLK_FREQ(50000000)
+  ) blink0 (
     .clk(clk),
     .leds_o(ONB_LEDS)
   );

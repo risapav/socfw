@@ -33,6 +33,21 @@ class RtlEmitter:
             )
         ]
 
+    def _format_param_value(self, value) -> str:
+        if isinstance(value, bool):
+            return "1" if value else "0"
+        if isinstance(value, int):
+            return str(value)
+        if isinstance(value, float):
+            return str(value)
+        if isinstance(value, str):
+            if value.startswith(("'", '"')):
+                return value
+            if value.isidentifier():
+                return value
+            return f'"{value}"'
+        return str(value)
+
     def emit_top(self, out_dir: str, top) -> str:
         rtl_dir = Path(out_dir) / "rtl"
         rtl_dir.mkdir(parents=True, exist_ok=True)
@@ -69,7 +84,15 @@ class RtlEmitter:
             lines.append("")
 
         for inst in sorted(top.instances, key=lambda i: i.instance):
-            lines.append(f"  {inst.module} {inst.instance} (")
+            if inst.parameters:
+                lines.append(f"  {inst.module} #(")
+                params = list(inst.parameters)
+                for idx, p in enumerate(params):
+                    comma = "," if idx < len(params) - 1 else ""
+                    lines.append(f"    .{p.name}({self._format_param_value(p.value)}){comma}")
+                lines.append(f"  ) {inst.instance} (")
+            else:
+                lines.append(f"  {inst.module} {inst.instance} (")
             conns = list(inst.connections)
             for idx, c in enumerate(conns):
                 comma = "," if idx < len(conns) - 1 else ""

@@ -13,7 +13,9 @@ module soc_top (
   assign reset_n = RESET_N;
   assign reset_active = ~RESET_N;
 
-  blink_test blink_test (
+  blink_test #(
+    .CLK_FREQ(100000000)
+  ) blink_test (
     .clk(SYS_CLK),
     .gpio_o(ONB_LEDS),
     .rst_n(reset_n)

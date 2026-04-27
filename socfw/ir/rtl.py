@@ -75,9 +75,16 @@ class RtlConnection:
 
 
 @dataclass(frozen=True)
+class RtlParameter:
+    name: str
+    value: object
+
+
+@dataclass(frozen=True)
 class RtlInstance:
     module: str
     instance: str
+    parameters: tuple[RtlParameter, ...] = ()
     connections: tuple[RtlConnection, ...] = ()
 
 

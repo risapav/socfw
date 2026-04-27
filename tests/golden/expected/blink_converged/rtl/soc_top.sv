@@ -5,7 +5,9 @@ module soc_top (
   input wire SYS_CLK
 );
 
-  blink_test blink_test (
+  blink_test #(
+    .CLK_FREQ(50000000)
+  ) blink_test (
     .ONB_LEDS(ONB_LEDS),
     .SYS_CLK(SYS_CLK)
   );

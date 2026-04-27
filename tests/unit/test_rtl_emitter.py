@@ -1,5 +1,5 @@
 from socfw.emit.rtl_emitter import RtlEmitter
-from socfw.ir.rtl import RtlConnection, RtlInstance, RtlPort, RtlSignal, RtlTop
+from socfw.ir.rtl import RtlConnection, RtlInstance, RtlParameter, RtlPort, RtlSignal, RtlTop
 
 
 def test_rtl_emitter_writes_top(tmp_path):
@@ -64,3 +64,24 @@ def test_rtl_emitter_writes_top_with_ports_and_signals(tmp_path):
     assert "output wire [5:0] ONB_LEDS" in text
     assert "wire reset_n;" in text
     assert "demo_mod u0" in text
+
+
+def test_rtl_emitter_writes_parameter_overrides(tmp_path):
+    top = RtlTop(
+        module_name="soc_top",
+        instances=[
+            RtlInstance(
+                module="blink_test",
+                instance="blink0",
+                parameters=(RtlParameter("CLK_FREQ", 50000000),),
+                connections=(RtlConnection("clk_i", "SYS_CLK"),),
+            )
+        ],
+    )
+
+    RtlEmitter().emit_top(str(tmp_path), top)
+    text = (tmp_path / "rtl" / "soc_top.sv").read_text()
+
+    assert "blink_test #(" in text
+    assert ".CLK_FREQ(50000000)" in text
+    assert ") blink0 (" in text

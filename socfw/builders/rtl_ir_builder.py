@@ -488,7 +488,7 @@ class RtlIrBuilder:
 
     def _add_project_module_instances(self, system, top, design) -> None:
         from socfw.clock.domain_resolver import build_resolver
-        from socfw.ir.rtl import RtlAdaptAssign, RtlConnection, RtlInstance, RtlSignal
+        from socfw.ir.rtl import RtlAdaptAssign, RtlConnection, RtlInstance, RtlParameter, RtlSignal
 
         resolver = build_resolver(system.board, system.project)
 
@@ -575,6 +575,10 @@ class RtlIrBuilder:
                 RtlInstance(
                     module=ip.module,
                     instance=mod.instance,
+                    parameters=tuple(
+                        RtlParameter(name=k, value=v)
+                        for k, v in sorted((mod.params or {}).items())
+                    ),
                     connections=self._connections_from_declared_ports(ip, explicit),
                 )
             )
