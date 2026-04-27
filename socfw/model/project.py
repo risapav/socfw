@@ -63,6 +63,14 @@ class BusFabricRequest:
     slaves: list[str] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class ConnectionSpec:
+    from_instance: str
+    from_port: str
+    to_instance: str
+    to_port: str
+
+
 @dataclass
 class ProjectModel:
     name: str
@@ -76,6 +84,7 @@ class ProjectModel:
     feature_profile: str | None = None
     inferred_feature_refs: list[str] = field(default_factory=list)
     modules: list[ModuleInstance] = field(default_factory=list)
+    connections: list[ConnectionSpec] = field(default_factory=list)
     primary_clock_domain: str = "sys_clk"
     generated_clocks: list[GeneratedClockRequest] = field(default_factory=list)
     timing_file: str | None = None

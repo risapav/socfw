@@ -492,11 +492,37 @@ class RtlIrBuilder:
                     top.ports.append(RtlPort(name=name, direction=direction, width=width))
                     seen.add(name)
 
+    def _build_connection_wires(self, system, top) -> dict[tuple[str, str], str]:
+        """Create wires for module-to-module connections; return (instance, port) -> wire_name."""
+        from socfw.ir.rtl import RtlSignal
+
+        conn_map: dict[tuple[str, str], str] = {}
+        for conn in system.project.connections:
+            wire_name = f"w_{conn.from_instance}_{conn.from_port}"
+            conn_map[(conn.from_instance, conn.from_port)] = wire_name
+            conn_map[(conn.to_instance, conn.to_port)] = wire_name
+
+            if not any(s.name == wire_name for s in top.signals):
+                src_ip = None
+                for mod in system.project.modules:
+                    if mod.instance == conn.from_instance:
+                        src_ip = system.ip_catalog.get(mod.type_name)
+                        break
+                width = 1
+                if src_ip:
+                    for p in (src_ip.ports or []):
+                        if p.name == conn.from_port:
+                            width = p.width
+                            break
+                top.signals.append(RtlSignal(name=wire_name, width=width))
+        return conn_map
+
     def _add_project_module_instances(self, system, top, design) -> None:
         from socfw.clock.domain_resolver import build_resolver
         from socfw.ir.rtl import RtlAdaptAssign, RtlConnection, RtlInstance, RtlParameter, RtlSignal
 
         resolver = build_resolver(system.board, system.project)
+        conn_map = self._build_connection_wires(system, top)
 
         for mod in system.project.modules:
             ip = system.ip_catalog.get(mod.type_name)
@@ -509,6 +535,10 @@ class RtlIrBuilder:
 
             for cb in mod.clocks:
                 explicit[cb.port_name] = resolver.net_for_domain(cb.domain)
+
+            for (inst, port), wire in conn_map.items():
+                if inst == mod.instance:
+                    explicit[port] = wire
 
             if ip.reset.port:
                 rst = "~reset_n" if ip.reset.active_high else "reset_n"

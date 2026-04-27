@@ -32,6 +32,45 @@ ports:
   - name: tx_o
     direction: output
     width: 1
+  - name: tx_data_i
+    direction: input
+    width: 8
+  - name: tx_valid_i
+    direction: input
+    width: 1
+  - name: tx_ready_o
+    direction: output
+    width: 1
+  - name: tx_done_o
+    direction: output
+    width: 1
+  - name: rx_data_o
+    direction: output
+    width: 8
+  - name: rx_valid_o
+    direction: output
+    width: 1
+  - name: rx_ready_i
+    direction: input
+    width: 1
+  - name: err_clear_i
+    direction: input
+    width: 1
+  - name: tx_busy_o
+    direction: output
+    width: 1
+  - name: rx_busy_o
+    direction: output
+    width: 1
+  - name: overrun_err_o
+    direction: output
+    width: 1
+  - name: frame_err_o
+    direction: output
+    width: 1
+  - name: parity_err_o
+    direction: output
+    width: 1
 
 artifacts:
   synthesis:

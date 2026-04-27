@@ -18,7 +18,9 @@ registries:
 
 features:
   use:
-    - board:onboard.uart
+    - board:onboard.uart.rx
+    - board:onboard.uart.tx
+    - board:onboard.leds
 
 clocks:
   primary:
@@ -46,6 +48,40 @@ modules:
         tx_o:
           target: board:onboard.uart.tx
 
+  - instance: uart_loopback0
+    type: uart_stream_loopback_status
+    clocks:
+      clk: sys_clk
+    bind:
+      ports:
+        leds_o:
+          target: board:onboard.leds
+
+connections:
+  - from: uart0.rx_data_o
+    to: uart_loopback0.rx_data_i
+  - from: uart0.rx_valid_o
+    to: uart_loopback0.rx_valid_i
+  - from: uart_loopback0.rx_ready_o
+    to: uart0.rx_ready_i
+
+  - from: uart_loopback0.tx_data_o
+    to: uart0.tx_data_i
+  - from: uart_loopback0.tx_valid_o
+    to: uart0.tx_valid_i
+  - from: uart0.tx_ready_o
+    to: uart_loopback0.tx_ready_i
+
+  - from: uart0.tx_busy_o
+    to: uart_loopback0.tx_busy_i
+  - from: uart0.rx_busy_o
+    to: uart_loopback0.rx_busy_i
+  - from: uart0.overrun_err_o
+    to: uart_loopback0.overrun_err_i
+  - from: uart0.frame_err_o
+    to: uart_loopback0.frame_err_i
+  - from: uart0.parity_err_o
+    to: uart_loopback0.parity_err_i
+
 artifacts:
   emit: [rtl, board, timing]
-  

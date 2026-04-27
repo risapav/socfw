@@ -1,0 +1,73 @@
+version: 2
+kind: ip
+
+ip:
+  name: uart_stream_loopback_status
+  module: uart_stream_loopback_status
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rstn
+  active_high: false
+
+clocking:
+  primary_input_port: clk
+  additional_input_ports: []
+  outputs: []
+
+ports:
+  - name: rx_data_i
+    direction: input
+    width: 8
+  - name: rx_valid_i
+    direction: input
+    width: 1
+  - name: rx_ready_o
+    direction: output
+    width: 1
+  - name: tx_data_o
+    direction: output
+    width: 8
+  - name: tx_valid_o
+    direction: output
+    width: 1
+  - name: tx_ready_i
+    direction: input
+    width: 1
+  - name: rx_busy_i
+    direction: input
+    width: 1
+  - name: tx_busy_i
+    direction: input
+    width: 1
+  - name: overrun_err_i
+    direction: input
+    width: 1
+  - name: frame_err_i
+    direction: input
+    width: 1
+  - name: parity_err_i
+    direction: input
+    width: 1
+  - name: err_clear_o
+    direction: output
+    width: 1
+  - name: leds_o
+    direction: output
+    width: 6
+
+artifacts:
+  synthesis:
+    - ../rtl/uart_stream_loopback_status.sv
+  simulation: []
+  metadata: []

@@ -15,6 +15,7 @@ from socfw.model.project import (
     BusAttach,
     BusFabricRequest,
     ClockBinding,
+    ConnectionSpec,
     GeneratedClockRequest,
     ModuleInstance,
     PortBinding,
@@ -96,6 +97,18 @@ class ProjectLoader:
             for g in doc.clocks.generated
         ]
 
+        connections: list[ConnectionSpec] = []
+        for c in doc.connections:
+            from_parts = c.from_.split(".", 1)
+            to_parts = c.to.split(".", 1)
+            if len(from_parts) == 2 and len(to_parts) == 2:
+                connections.append(ConnectionSpec(
+                    from_instance=from_parts[0],
+                    from_port=from_parts[1],
+                    to_instance=to_parts[0],
+                    to_port=to_parts[1],
+                ))
+
         model = ProjectModel(
             name=doc.project.name,
             mode=doc.project.mode,
@@ -107,6 +120,7 @@ class ProjectLoader:
             feature_refs=doc.features.use,
             feature_profile=doc.features.profile,
             modules=modules,
+            connections=connections,
             primary_clock_domain=doc.clocks.primary.domain,
             generated_clocks=gen_clocks,
             timing_file=(doc.timing.file if doc.timing else None),

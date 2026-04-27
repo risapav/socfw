@@ -136,6 +136,14 @@ class BootSchema(BaseModel):
     stack_percent: int = 25
 
 
+class ConnectionEntrySchema(BaseModel):
+    # "instance.port" format
+    from_: str = Field(alias="from")
+    to: str
+
+    model_config = {"populate_by_name": True}
+
+
 class ProjectConfigSchema(BaseModel):
     version: Literal[2]
     kind: Literal["project"]
@@ -148,6 +156,7 @@ class ProjectConfigSchema(BaseModel):
     boot: BootSchema = Field(default_factory=BootSchema)
     buses: list[BusFabricSchema] = Field(default_factory=list)
     modules: list[ModuleSchema] = Field(default_factory=list)
+    connections: list[ConnectionEntrySchema] = Field(default_factory=list)
     timing: TimingRefSchema | None = None
     firmware: FirmwareSchema | None = None
     artifacts: ArtifactsSchema = Field(default_factory=ArtifactsSchema)
