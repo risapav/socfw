@@ -10,12 +10,10 @@ module soc_top (
 
   wire clkpll_c0;
   wire clkpll_locked;
-  wire reset_active;
   wire reset_n;
   wire [5:0] w_blink_02_leds_o;
 
   assign reset_n = RESET_N;
-  assign reset_active = ~RESET_N;
   assign PMOD_J10_LED8 = { 2'b0, w_blink_02_leds_o };
 
   blink_test #(

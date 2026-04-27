@@ -15,11 +15,9 @@ module soc_top (
   output wire ZS_WE_N
 );
 
-  wire reset_active;
   wire reset_n;
 
   assign reset_n = RESET_N;
-  assign reset_active = ~RESET_N;
 
   sdram_ctrl sdram0 (
     .clk(SYS_CLK),

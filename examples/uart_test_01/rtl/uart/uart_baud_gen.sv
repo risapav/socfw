@@ -48,7 +48,7 @@ module uart_baud_gen #(
     // Half tick offset – stred bitu
     // --------------------------------------------------------------------------
     always_comb begin
-        half_offset = (prescale_i - 1) >> 1;
+        half_offset = (prescale_i - COUNT_WIDTH'(1)) >> 1;
     end
 
     // --------------------------------------------------------------------------
@@ -56,13 +56,13 @@ module uart_baud_gen #(
     // --------------------------------------------------------------------------
     always_ff @(posedge clk or negedge rstn) begin
         if (!rstn) begin
-            count_q      <= prescale_i - 1; // prvý tick hneď
+            count_q      <= prescale_i - COUNT_WIDTH'(1); // prvý tick hneď
             start_tick_o <= 1'b1;
             half_tick_o  <= 1'b0;
             end_tick_o   <= 1'b0;
         end else begin
             if (start_i) begin
-                count_q      <= prescale_i - 1;
+                count_q      <= prescale_i - COUNT_WIDTH'(1);
                 start_tick_o <= 1'b1;
                 half_tick_o  <= 1'b0;
                 end_tick_o   <= 1'b0;
@@ -72,9 +72,9 @@ module uart_baud_gen #(
                 end_tick_o   <= (count_q == 1);
 
                 if (count_q == 0)
-                    count_q <= prescale_i - 1;
+                    count_q <= prescale_i - COUNT_WIDTH'(1);
                 else
-                    count_q <= count_q - 1;
+                    count_q <= count_q - COUNT_WIDTH'(1);
             end else begin
                 // idle
                 start_tick_o <= 1'b0;

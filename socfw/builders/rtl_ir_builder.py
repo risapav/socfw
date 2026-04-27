@@ -431,9 +431,7 @@ class RtlIrBuilder:
             top.ports.append(RtlPort(name=rst_name, direction="input", width=1))
             top.signals.append(RtlSignal(name="reset_n", width=1))
             if system.board.sys_reset.active_low:
-                top.signals.append(RtlSignal(name="reset_active", width=1))
                 top.adapt_assigns.append(RtlAdaptAssign(lhs="reset_n", rhs=rst_name))
-                top.adapt_assigns.append(RtlAdaptAssign(lhs="reset_active", rhs=f"~{rst_name}"))
             else:
                 top.adapt_assigns.append(RtlAdaptAssign(lhs="reset_n", rhs=f"~{rst_name}"))
         else:

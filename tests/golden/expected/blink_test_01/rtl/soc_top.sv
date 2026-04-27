@@ -6,11 +6,9 @@ module soc_top (
   input wire SYS_CLK
 );
 
-  wire reset_active;
   wire reset_n;
 
   assign reset_n = RESET_N;
-  assign reset_active = ~RESET_N;
 
   blink_test blink_test (
     .clk(SYS_CLK),
