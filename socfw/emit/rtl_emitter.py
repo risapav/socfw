@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
+
+_SV_LITERAL_RE = re.compile(r"^\d+\'[bBoOdDhH][0-9a-fA-FxXzZ_?]+$")
 
 from socfw.build.context import BuildContext
 from socfw.build.manifest import GeneratedArtifact
@@ -42,6 +45,8 @@ class RtlEmitter:
             return str(value)
         if isinstance(value, str):
             if value.startswith(("'", '"')):
+                return value
+            if _SV_LITERAL_RE.match(value):
                 return value
             if value.isidentifier():
                 return value

@@ -29,14 +29,19 @@ def collect_pin_ownership(
             sub = path[len("onboard."):]
             parts = sub.split(".", 1)
             res_key = parts[0]
+            signal_filter = parts[1] if len(parts) > 1 else None
             res = board.onboard.get(res_key)
             if res is None:
                 continue
 
-            for sig in res.scalars.values():
+            for sig_key, sig in res.scalars.items():
+                if signal_filter is not None and sig_key != signal_filter:
+                    continue
                 result.append(PinUse(pin=sig.pin, resource_path=path, bit=None, top_name=sig.top_name))
 
-            for vec in res.vectors.values():
+            for vec_key, vec in res.vectors.items():
+                if signal_filter is not None and vec_key != signal_filter:
+                    continue
                 for idx, pin in sorted(vec.pins.items()):
                     result.append(PinUse(
                         pin=pin,

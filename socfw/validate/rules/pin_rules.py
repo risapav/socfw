@@ -64,6 +64,11 @@ class BoardPinConflictRule(ValidationRule):
             if path not in selected.paths:
                 selected.paths.append(path)
 
+        selected.paths = _prune_subpaths(
+            [f"board:{p}" for p in selected.paths]
+        )
+        selected.paths = [p[len("board:"):] if p.startswith("board:") else p for p in selected.paths]
+
         if not selected.paths:
             return diags
 

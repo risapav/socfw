@@ -18,6 +18,7 @@ class SdcEmitter:
         self._emit_generated_clocks(lines, system)
         self._emit_derive_uncertainty(lines, system)
         self._emit_io_delays(lines, system)
+        self._emit_io_overrides(lines, system)
         self._emit_false_paths(lines, system)
 
         out.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
@@ -127,6 +128,26 @@ class SdcEmitter:
                 f"-min {float(output_min):.3f} [all_outputs]"
             )
 
+        lines.append("")
+
+    def _emit_io_overrides(self, lines: list[str], system) -> None:
+        timing = system.timing
+        if timing is None or not timing.io_overrides:
+            return
+
+        lines.append("# IO delay overrides")
+        for ov in timing.io_overrides:
+            clock = self._resolve_sdc_clock(ov.clock, system)
+            if ov.comment:
+                lines.append(f"# {ov.comment}")
+            port_expr = f"[get_ports {{{ov.port}}}]"
+            min_ns = ov.min_ns if ov.min_ns is not None else ov.max_ns
+            if ov.direction == "input":
+                lines.append(f"set_input_delay -clock {clock} -max {float(ov.max_ns):.3f} {port_expr}")
+                lines.append(f"set_input_delay -clock {clock} -min {float(min_ns):.3f} {port_expr}")
+            else:
+                lines.append(f"set_output_delay -clock {clock} -max {float(ov.max_ns):.3f} {port_expr}")
+                lines.append(f"set_output_delay -clock {clock} -min {float(min_ns):.3f} {port_expr}")
         lines.append("")
 
     def _emit_false_paths(self, lines: list[str], system) -> None:

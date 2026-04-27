@@ -18,6 +18,12 @@ from socfw.ir.rtl import (
 )
 
 
+def _port_dir_str(direction) -> str:
+    """Convert PortDir enum or string to 'input'/'output' string."""
+    v = getattr(direction, "value", direction)
+    return str(v) if v in ("input", "output") else "output"
+
+
 class RtlIRBuilder:
     def __init__(self) -> None:
         self.bus_builder = RtlBusBuilder()
@@ -467,17 +473,17 @@ class RtlIrBuilder:
                             continue
                         res_name = sig.top_name
                         res_width = sig.width if isinstance(sig, BoardVectorSignal) else 1
-                        direction = "output"
+                        direction = _port_dir_str(getattr(sig, "direction", "output"))
                     elif isinstance(ref_obj, dict):
                         res_name = ref_obj.get("top_name") or ""
                         if not res_name:
                             continue
                         res_width = int(ref_obj.get("width", 1))
-                        direction = "output"
+                        direction = _port_dir_str(ref_obj.get("direction", "output"))
                     else:
                         res_name = ref_obj.top_name
                         res_width = getattr(ref_obj, "width", 1)
-                        direction = "output"
+                        direction = _port_dir_str(getattr(ref_obj, "direction", "output"))
 
                     name = pb.top_name or res_name
                     width = pb.width if pb.width is not None else res_width

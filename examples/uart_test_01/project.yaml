@@ -1,0 +1,51 @@
+version: 2
+kind: project
+
+project:
+  name: uart_test_01
+  mode: standalone
+  board: qmtech_ep4ce55
+  output_dir: build/gen
+  debug: true
+
+timing:
+  file: timing_config.yaml
+
+registries:
+  ip:
+    - ip
+  cpu: []
+
+features:
+  use:
+    - board:onboard.uart
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+    frequency_hz: 50000000
+  generated: []
+
+modules:
+  - instance: uart0
+    type: uart
+    params:
+      CLK_FREQ_HZ: 50000000
+      BAUD_RATE: 115200
+      DATA_WIDTH: 8
+      STOP2: false
+      PARITY: "2'b00"
+      DBITS: "2'b00"
+    clocks:
+      clk: sys_clk
+    bind:
+      ports:
+        rx_i:
+          target: board:onboard.uart.rx
+        tx_o:
+          target: board:onboard.uart.tx
+
+artifacts:
+  emit: [rtl, board, timing]
+  

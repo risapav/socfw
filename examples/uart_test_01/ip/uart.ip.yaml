@@ -1,0 +1,52 @@
+version: 2
+kind: ip
+
+ip:
+  name: uart
+  module: uart
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rstn
+  active_high: false
+
+clocking:
+  primary_input_port: clk
+  additional_input_ports: []
+  outputs: []
+
+ports:
+  - name: rx_i
+    direction: input
+    width: 1
+  - name: tx_o
+    direction: output
+    width: 1
+
+artifacts:
+  synthesis:
+    - ../rtl/uart/uart_pkg.sv
+    - ../rtl/uart/uart_baud_gen.sv
+    - ../rtl/uart/uart_core_rx.sv
+    - ../rtl/uart/uart_core_tx.sv
+    - ../rtl/uart/uart.sv
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - uart_baud_gen
+    - uart_core_rx
+    - uart_core_tx
+    - uart
+  package: uart_pkg

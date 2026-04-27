@@ -1,0 +1,41 @@
+version: 2
+kind: timing
+
+timing:
+  derive_uncertainty: true
+
+  clocks:
+    - name: SYS_CLK
+      source: SYS_CLK
+      period_ns: 20.0
+      reset:
+        source: RESET_N
+        active_low: true
+        sync_stages: 2
+
+  false_paths:
+    - from_port: RESET_N
+      comment: "Async reset path"
+
+  io_delays:
+    auto: true
+    default_clock: SYS_CLK
+    default_input_max_ns: 3.0
+    default_input_min_ns: 0.0
+    default_output_max_ns: 3.0
+    default_output_min_ns: 0.0
+    overrides:
+      - port: UART_RX
+        direction: input
+        clock: SYS_CLK
+        max_ns: 3.0
+        min_ns: 0.0
+        comment: "UART RX input delay"
+
+      - port: UART_TX
+        direction: output
+        clock: SYS_CLK
+        max_ns: 3.0
+        min_ns: 0.0
+        comment: "UART TX output delay"
+        
