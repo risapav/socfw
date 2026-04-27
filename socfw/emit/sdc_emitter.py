@@ -48,13 +48,23 @@ class SdcEmitter:
                 args.append(f"-multiply_by {g.multiply_by}")
 
             arg_text = (" " + " ".join(args)) if args else ""
-            src_pin = f"{g.source_instance}|{g.source_clock}"
+            src_pin = self._pll_input_pin(g.source_instance)
+            tgt_pin = self._pll_output_pin(g.source_instance, g.source_clock)
             lines.append(
                 f"create_generated_clock -name {g.name}{arg_text} "
                 f"-source [get_pins {{{src_pin}}}] "
-                f"[get_pins {{{src_pin}}}]"
+                f"[get_pins {{{tgt_pin}}}]"
             )
         lines.append("")
+
+    def _pll_input_pin(self, instance: str) -> str:
+        return f"{instance}|inclk[0]"
+
+    def _pll_output_pin(self, instance: str, output: str) -> str:
+        if len(output) >= 2 and output[0] == "c" and output[1:].isdigit():
+            idx = int(output[1:])
+            return f"{instance}|altpll_component|auto_generated|pll1|clk[{idx}]"
+        return f"{instance}|{output}"
 
     def _emit_derive_uncertainty(self, lines: list[str], system) -> None:
         timing = system.timing
@@ -64,12 +74,24 @@ class SdcEmitter:
         lines.append("derive_clock_uncertainty")
         lines.append("")
 
+    def _resolve_sdc_clock(self, name: str, system) -> str:
+        """Resolve a timing domain name to its SDC clock name (board port name)."""
+        timing = system.timing
+        if timing:
+            for pc in timing.primary_clocks:
+                if pc.name == name:
+                    return pc.source_port
+        return name
+
     def _emit_io_delays(self, lines: list[str], system) -> None:
         timing = system.timing
         if timing is None or not timing.io_auto:
             return
 
-        clock = timing.io_default_clock or system.board.sys_clock.top_name
+        clock = self._resolve_sdc_clock(
+            timing.io_default_clock or system.board.sys_clock.top_name,
+            system,
+        )
         input_max = timing.io_default_input_max_ns
         input_min = timing.io_default_input_min_ns if timing.io_default_input_min_ns is not None else input_max
         output_max = timing.io_default_output_max_ns

@@ -1,5 +1,5 @@
 Fitter report for soc_top
-Sun Apr 26 21:28:46 2026
+Mon Apr 27 04:56:40 2026
 Quartus Prime Version 25.1std.0 Build 1129 10/21/2025 SC Lite Edition
 
 
@@ -68,7 +68,7 @@ on the Quartus Prime software download page.
 +--------------------------------------------------------------------------------------+
 ; Fitter Summary                                                                       ;
 +------------------------------------+-------------------------------------------------+
-; Fitter Status                      ; Successful - Sun Apr 26 21:28:46 2026           ;
+; Fitter Status                      ; Successful - Mon Apr 27 04:56:40 2026           ;
 ; Quartus Prime Version              ; 25.1std.0 Build 1129 10/21/2025 SC Lite Edition ;
 ; Revision Name                      ; soc_top                                         ;
 ; Top-level Entity Name              ; soc_top                                         ;
@@ -1471,9 +1471,9 @@ Warning (169177): 2 pins must meet Intel FPGA requirements for 3.3-, 3.0-, and 2
     Info (169178): Pin SYS_CLK uses I/O standard 3.3-V LVTTL at T2 File: /home/palo/Projekty/socfw/examples/blink_test_02/build/gen/rtl/soc_top.sv Line: 9
 Info (144001): Generated suppressed messages file /home/palo/Projekty/socfw/examples/blink_test_02/output_files/soc_top.fit.smsg
 Info: Quartus Prime Fitter was successful. 0 errors, 15 warnings
-    Info: Peak virtual memory: 1271 megabytes
-    Info: Processing ended: Sun Apr 26 21:28:47 2026
-    Info: Elapsed time: 00:00:08
+    Info: Peak virtual memory: 1275 megabytes
+    Info: Processing ended: Mon Apr 27 04:56:41 2026
+    Info: Elapsed time: 00:00:07
     Info: Total CPU time (on all processors): 00:00:10
 
 
