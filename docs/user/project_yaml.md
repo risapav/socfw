@@ -109,8 +109,23 @@ List of bus fabrics with protocol, addr_width, data_width.
 
 ### `modules`
 List of peripheral instances:
-- `type`: IP type name from catalog
+- `type`: IP type name from catalog (must match `ip.name` in a loaded descriptor)
+- `params`: override IP module parameters — emitted as `#(.NAME(VALUE))` in RTL;
+  supports `int`, `bool` (→ `0`/`1`), SystemVerilog literals (e.g. `"4'b1010"`), and identifiers
 - `bus.fabric` + `bus.base` + `bus.size`: bus attachment
 - `clocks`: clock port → domain name mapping
 - `bind.ports`: port → board resource binding
-- `params`: override IP default parameters
+
+### `connections`
+Direct module-to-module wiring without going through the bus fabric:
+
+```yaml
+connections:
+  - from: uart0.tx_data_o
+    to: loopback0.rx_data_i
+  - from: loopback0.tx_data_o
+    to: uart0.tx_data_i
+```
+
+Each entry creates an intermediate wire named `w_{source_instance}_{source_port}` in `soc_top.sv`.
+The wire width is taken from the source port declaration in its IP descriptor.

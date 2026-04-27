@@ -43,6 +43,9 @@ SystemModel
     → AddressMapBuilder     → peripheral_blocks
     → IrqPlanBuilder        → irq_plan
   → RtlIRBuilder.build()    → RtlModuleIR
+      module instances with #(.PARAM(value)) overrides
+      connection wires (w_{inst}_{port}) for connections: entries
+      reset nets only when consumed by instantiated IP
   → RtlEmitter.emit()       → soc_top.sv
 ```
 

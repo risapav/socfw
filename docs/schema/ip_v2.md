@@ -123,12 +123,16 @@ integration:
   dependency_only: false
 ```
 
-| Field | Meaning |
-|---|---|
-| `needs_bus` | IP expects a bus interface |
-| `generate_registers` | framework should generate register block |
-| `instantiate_directly` | IP appears as instance in top |
-| `dependency_only` | files are exported but module is not instantiated |
+| Field | Default | Meaning |
+|---|---|---|
+| `needs_bus` | `false` | IP expects a bus interface |
+| `generate_registers` | `false` | framework should generate a register block for the IP |
+| `instantiate_directly` | `true` | IP module appears as an instance in `soc_top.sv` |
+| `dependency_only` | `false` | RTL files are exported to `files.tcl` but the module is not instantiated |
+
+`instantiate_directly: true` and `dependency_only: false` is the standard combination for leaf peripherals.
+Set `dependency_only: true` for helper packages (e.g. a `_pkg.sv`) that are compiled as dependencies
+but never instantiated directly.
 
 ## `reset` section
 
@@ -239,6 +243,26 @@ vendor:
 ```
 
 Vendor artifacts are exported into `hal/files.tcl`.
+
+## `provides` section
+
+Optional. Declares sub-modules and packages compiled from this descriptor's artifacts.
+
+```yaml
+provides:
+  modules:
+    - uart_baud_gen
+    - uart_core_rx
+    - uart_core_tx
+    - uart
+  package: uart_pkg
+```
+
+`modules` lists additional RTL modules (other than the top-level `ip.module`) that are compiled
+as part of this IP's artifacts. Used for documentation and future dependency checks.
+
+`package` names a SystemVerilog package compiled from the artifacts. This ensures the package
+is included in the synthesis filelist before the modules that depend on it.
 
 ## `artifacts` section
 

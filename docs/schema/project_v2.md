@@ -35,9 +35,10 @@ clocks:
         none: <bool>
 
 modules:
-  - instance: <string>    # instance name
-    type: <string>        # IP type
-    params: {}            # parameter overrides
+  - instance: <string>    # instance name (must be unique)
+    type: <string>        # IP type (must match ip.name in a loaded descriptor)
+    params:               # parameter overrides — emitted as #(.NAME(VALUE)) in RTL
+      <PARAM>: <value>    # int, bool (→ 0/1), SV literal string (e.g. "4'b1010"), identifier
     clocks:
       <port>: <domain>    # or {domain: ..., no_reset: true}
     bind:
@@ -57,6 +58,10 @@ buses:
     protocol: <string>
     addr_width: <int>
     data_width: <int>
+
+connections:
+  - from: <instance>.<port>   # source module instance and port name
+    to: <instance>.<port>     # destination module instance and port name
 
 timing:
   file: <path>            # path to timing YAML
