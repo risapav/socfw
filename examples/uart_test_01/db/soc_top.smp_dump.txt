@@ -1,0 +1,16 @@
+
+State Machine - |soc_top|uart:uart0|uart_core_rx:u_rx|state_q
+Name state_q.UART_PARITY state_q.UART_DATA state_q.UART_START state_q.UART_IDLE state_q.UART_STOP 
+state_q.UART_IDLE 0 0 0 0 0 
+state_q.UART_START 0 0 1 1 0 
+state_q.UART_DATA 0 1 0 1 0 
+state_q.UART_PARITY 1 0 0 1 0 
+state_q.UART_STOP 0 0 0 1 1 
+
+State Machine - |soc_top|uart:uart0|uart_core_tx:u_tx|state_q
+Name state_q.UART_PARITY state_q.UART_DATA state_q.UART_START state_q.UART_IDLE state_q.UART_STOP 
+state_q.UART_IDLE 0 0 0 0 0 
+state_q.UART_START 0 0 1 1 0 
+state_q.UART_DATA 0 1 0 1 0 
+state_q.UART_PARITY 1 0 0 1 0 
+state_q.UART_STOP 0 0 0 1 1 
