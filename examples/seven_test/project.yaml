@@ -49,7 +49,7 @@ modules:
       CLOCK_FREQ_HZ: 50000000
       NUM_DIGITS: 3
       DIGIT_REFRESH_HZ: 500
-      COMMON_ANODE: 0
+      COMMON_ANODE: 1
     bind:
       ports:
         digit_sel_o:

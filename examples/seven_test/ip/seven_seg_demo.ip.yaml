@@ -36,7 +36,6 @@ parameters:
     type: int
     default: 4
 
-# Port widths for NUM_DIGITS=3 (fixed)
 ports:
   - name: clk_i
     direction: input
@@ -48,11 +47,11 @@ ports:
 
   - name: digits_o
     direction: output
-    width: 12    # NUM_DIGITS * 4 = 3 * 4
+    width_expr: "NUM_DIGITS*4"
 
   - name: dots_o
     direction: output
-    width: 3     # NUM_DIGITS
+    width_expr: "NUM_DIGITS"
 
 artifacts:
   synthesis:

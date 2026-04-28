@@ -9,6 +9,7 @@ from socfw.config.ip_schema import IpConfigSchema
 from socfw.config.normalizers.ip import normalize_ip_document
 from socfw.config.schema_errors import ip_schema_error
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
+from socfw.core.expr_eval import eval_width_expr
 from socfw.core.result import Result
 from socfw.model.ip import (
     IpArtifactBundle,
@@ -22,6 +23,18 @@ from socfw.model.ip import (
     IpVendorInfo,
 )
 from socfw.model.ports import PortDescriptor
+
+
+def _make_port(p, default_params: dict[str, int], file: str) -> PortDescriptor:
+    """Resolve port width: evaluate width_expr with defaults, or use literal width."""
+    if p.width_expr:
+        try:
+            width = eval_width_expr(p.width_expr, default_params)
+        except ValueError:
+            width = p.width  # keep schema default (1) if expr can't be evaluated yet
+        return PortDescriptor(name=p.name, direction=p.direction,
+                              width=width, width_expr=p.width_expr)
+    return PortDescriptor(name=p.name, direction=p.direction, width=p.width)
 
 
 class IpLoader:
@@ -40,6 +53,12 @@ class IpLoader:
             return Result(diagnostics=norm.diagnostics + [ip_schema_error(exc, file=path)])
 
         base_dir = Path(path).parent
+
+        # Build default-param map for width_expr evaluation
+        default_params: dict[str, int] = {}
+        for p in doc.parameters:
+            if isinstance(p.default, (int, bool)):
+                default_params[p.name] = int(p.default)
 
         ip = IpDescriptor(
             name=doc.ip.name,
@@ -106,11 +125,7 @@ class IpLoader:
                 else ()
             ),
             ports=tuple(
-                PortDescriptor(
-                    name=p.name,
-                    direction=p.direction,
-                    width=p.width,
-                )
+                _make_port(p, default_params, path)
                 for p in doc.ports
             ),
             declared_params=tuple(

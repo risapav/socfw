@@ -39,7 +39,6 @@ parameters:
     type: bit
     default: true
 
-# Port widths for NUM_DIGITS=6 (fixed — width_expr not yet supported)
 ports:
   - name: clk_i
     direction: input
@@ -51,15 +50,15 @@ ports:
 
   - name: digits_i
     direction: input
-    width: 12    # NUM_DIGITS * 4 = 3 * 4
+    width_expr: "NUM_DIGITS*4"
 
   - name: dots_i
     direction: input
-    width: 3     # NUM_DIGITS
+    width_expr: "NUM_DIGITS"
 
   - name: digit_sel_o
     direction: output
-    width: 3     # NUM_DIGITS
+    width_expr: "NUM_DIGITS"
 
   - name: segment_sel_o
     direction: output
@@ -67,7 +66,7 @@ ports:
 
   - name: current_digit_o
     direction: output
-    width: 2     # $clog2(NUM_DIGITS) = $clog2(3) = 2
+    width_expr: "$clog2(NUM_DIGITS)"
 
 artifacts:
   synthesis:

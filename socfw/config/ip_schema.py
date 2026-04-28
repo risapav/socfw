@@ -103,6 +103,7 @@ class IpPortSchema(BaseModel):
     name: str
     direction: str
     width: int = 1
+    width_expr: str | None = None
 
 
 class IpParameterSchema(BaseModel):
