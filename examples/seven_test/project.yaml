@@ -1,0 +1,172 @@
+version: 2
+kind: project
+
+project:
+  name: vga_test_01
+  mode: standalone
+  board: qmtech_ep4ce55
+
+registries:
+  packs:
+    - ../../packs/builtin
+  ip:
+    - ip
+    - cores/clkpll
+
+timing:
+  file: timing_config.yaml
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+  generated:
+    - domain: clk_pixel
+      source:
+        instance: clkpll
+        output: c0
+      frequency_hz: 25175000
+      reset:
+        sync_from: sys_clk
+        sync_stages: 2
+
+features:
+  use:
+    - board:onboard.buttons
+    - board:onboard.seg
+    - board:onboard.dig
+    # HDMI PMOD J10 — jednotlivé signály (bundle vyžaduje .signals.<name>)
+    # HDMI_CLK: ručne napoj v soc_top.sv (assign HDMI_CLK = clkpll_c0)
+    # HDMI_HSYNC/VSYNC: ručne napoj (assign HDMI_HSYNC = vga_ctrl0.syn_o[1]; ...)
+    - board:external.pmod.j10_hdmi_out.signals.clk
+    - board:external.pmod.j10_hdmi_out.signals.de
+    - board:external.pmod.j10_hdmi_out.signals.hsync
+    - board:external.pmod.j10_hdmi_out.signals.vsync
+    - board:external.pmod.j10_hdmi_out.signals.d
+
+modules:
+  - instance: clkpll
+    type: clkpll
+    clocks:
+      inclk0:
+        domain: sys_clk
+        no_reset: true
+
+  - instance: vga_ctrl0
+    type: vga_ctrl
+    clocks:
+      clk_i: clk_pixel
+    params:
+      BLANKING_COLOR: "16'h0000"
+      UNDERRUN_COLOR: "16'hF81F"
+      MAX_COUNTER_H: 800
+      MAX_COUNTER_V: 525
+    bind:
+      ports:
+        # dat_o (16-bit RGB565) → HDMI_D (4-bit): framework vezme dat_o[3:0]
+        # Pre lepší obraz zmeň ručne na: assign HDMI_D = {dat_o[15],dat_o[10],dat_o[4],dat_o[0]};
+        dat_o:
+          target: board:external.pmod.j10_hdmi_out.signals.d
+          adapt: truncate
+
+  - instance: vga_pixel_xy0
+    type: vga_pixel_xy
+    clocks:
+      clk_i: clk_pixel
+    params:
+      MAX_COUNTER_H: 800
+      MAX_COUNTER_V: 525
+
+  - instance: picture_gen0
+    type: picture_gen
+    clocks:
+      clk_i: clk_pixel
+    params:
+      H_RES: 640
+      V_RES: 480
+    bind:
+      ports:
+        # ONB_BTN je 4-bitový, mode_i je 3-bitový → adapt vezme spodné 3 bity
+        mode_i:
+          target: board:onboard.buttons
+          width: 3
+          adapt: truncate
+
+  - instance: seven_seg_mux0
+    type: seven_seg_mux
+    clocks:
+      clk_i: sys_clk
+    params:
+      CLOCK_FREQ_HZ: 50000000
+      NUM_DIGITS: 6
+      DIGIT_REFRESH_HZ: 250
+      COMMON_ANODE: 0
+    bind:
+      ports:
+        digit_sel_o:
+          target: board:onboard.dig
+        segment_sel_o:
+          target: board:onboard.seg
+
+# Prepojenia medzi modulmi
+# enable_i všetkých VGA modulov je riadené PLL locked signálom —
+# VGA štartuje až po ustálení PLL (eliminuje glitche pri spúšťaní)
+connections:
+  - from: clkpll.locked
+    to: vga_ctrl0.enable_i
+  - from: clkpll.locked
+    to: vga_pixel_xy0.enable_i
+  - from: clkpll.locked
+    to: picture_gen0.enable_i
+
+  # Koniec riadku / snímky: vga_ctrl → pixel XY počítadlo
+  - from: vga_ctrl0.eol_o
+    to: vga_pixel_xy0.eol_i
+  - from: vga_ctrl0.eof_o
+    to: vga_pixel_xy0.eof_i
+
+  # Súradnice pixelu: pixel XY → generátor obrazcov
+  - from: vga_pixel_xy0.x_o
+    to: picture_gen0.x_i
+  - from: vga_pixel_xy0.y_o
+    to: picture_gen0.y_i
+
+  # Data enable: vga_ctrl → generátor obrazcov (HDE = aktívny riadok)
+  - from: vga_ctrl0.hde_o
+    to: picture_gen0.de_i
+
+  # Dátový tok pixelov: generátor → VGA radič (bez FIFO, priamo)
+  - from: picture_gen0.data_o
+    to: vga_ctrl0.fifo_data_i
+
+# =============================================================================
+# RUČNÉ ÚPRAVY POTREBNÉ V build/gen/rtl/soc_top.sv PO VYGENEROVANÍ:
+# =============================================================================
+#
+# 1. Na začiatok modulu (za deklarácie portov) pridaj:
+#
+#   import vga_pkg::*;
+#   localparam vga_params_t VGA_P = get_vga_params(VGA_640x480_60);
+#
+# 2. V inštancii vga_ctrl0 zmeň:
+#   .h_line_i(45'h0) → .h_line_i(VGA_P.h_line)
+#   .v_line_i(45'h0) → .v_line_i(VGA_P.v_line)
+#   .fifo_empty_i(1'b0) ponechaj (pipeline bez FIFO, dáta sú vždy dostupné)
+#
+# 3. V inštancii vga_pixel_xy0:
+#   .h_line_i a .v_line_i (ak sú ako porty) → VGA_P.h_line / VGA_P.v_line
+#
+# 4. V inštancii picture_gen0:
+#   .h_line_i(45'h0) → .h_line_i(VGA_P.h_line)
+#   .v_line_i(45'h0) → .v_line_i(VGA_P.v_line)
+#
+# 5. V inštancii seven_seg_mux0 pridaj:
+#   .digits_i('{ 4'h0, 4'h0, 4'h0, 4'h0, 4'h0, 4'h0 }),
+#   .dots_i('{ 0, 0, 0, 0, 0, 0 })
+#
+# 6. Na koniec assign blokov (za framework-generované) pridaj:
+#   assign HDMI_HSYNC = w_vga_ctrl0_syn_o[1];  // syn_o[1] = HSYNC
+#   assign HDMI_VSYNC = w_vga_ctrl0_syn_o[0];  // syn_o[0] = VSYNC
+#   assign HDMI_CLK   = clkpll_c0;
+#   assign HDMI_DE    = w_vga_ctrl0_hde_o;     // hde_o je framework wire
+# =============================================================================
