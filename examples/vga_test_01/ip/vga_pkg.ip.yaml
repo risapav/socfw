@@ -1,0 +1,37 @@
+version: 2
+kind: ip
+
+ip:
+  name: vga_pkg
+  module: vga_pkg
+  category: standalone
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: false
+  dependency_only: true
+
+reset:
+  port: null
+  active_high: false
+
+clocking:
+  primary_input_port: null
+  additional_input_ports: []
+  outputs: []
+
+ports: []
+
+artifacts:
+  synthesis:
+    - ../rtl/vga/vga_pkg.sv
+  simulation: []
+  metadata: []
+
+provides:
+  package: vga_pkg

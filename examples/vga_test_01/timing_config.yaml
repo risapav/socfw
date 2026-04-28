@@ -1,0 +1,68 @@
+version: 2
+kind: timing
+
+timing:
+  derive_uncertainty: true
+
+  clocks:
+    - name: SYS_CLK
+      source: SYS_CLK
+      period_ns: 20.0
+      reset:
+        source: RESET_N
+        active_low: true
+        sync_stages: 2
+
+  generated_clocks:
+    - name: clk_pixel
+      source:
+        instance: clkpll
+        output: c0
+      # 25.175 MHz ≈ 50 MHz / 2 pre SDC analýzu (aproximácia)
+      # Quartus odvodí presnú frekvenciu z konfigurácie PLL v clkpll.qip
+      multiply_by: 1
+      divide_by: 2
+
+  clock_groups:
+    - type: asynchronous
+      groups:
+        - [SYS_CLK]
+        - [clk_pixel]
+
+  io_delays:
+    auto: true
+    default_clock: SYS_CLK
+    default_input_max_ns: 2.0
+    default_input_min_ns: 0.5
+    default_output_max_ns: 3.0
+    default_output_min_ns: 0.5
+    overrides:
+      # VGA výstupné signály sú taktované pixelovým hodinami
+      - port: HDMI_D[*]
+        direction: output
+        clock: clk_pixel
+        max_ns: 3.0
+        min_ns: 0.5
+        comment: VGA RGB data (pixel clock domain)
+      - port: HDMI_HSYNC
+        direction: output
+        clock: clk_pixel
+        max_ns: 3.0
+        min_ns: 0.5
+        comment: VGA HSYNC
+      - port: HDMI_VSYNC
+        direction: output
+        clock: clk_pixel
+        max_ns: 3.0
+        min_ns: 0.5
+        comment: VGA VSYNC
+      - port: HDMI_DE
+        direction: output
+        clock: clk_pixel
+        max_ns: 3.0
+        min_ns: 0.5
+        comment: VGA data enable
+
+  false_paths:
+    - comment: Async reset na všetky registre
+      from_port: RESET_N

@@ -1,0 +1,74 @@
+version: 2
+kind: ip
+
+ip:
+  name: picture_gen
+  module: picture_gen
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: []
+  outputs: []
+
+# h_line_i / v_line_i: 45-bitové packed structs (line_t).
+# Framework napojí na 45'h0. Ručne doplni správne hodnoty do soc_top.sv.
+# x_i / y_i: 11 bitov pre default MaxPosCounterX/Y = 1920/1080.
+# mode_i: 3 bity pre MaxModes=8 → ModeWidth=$clog2(8)=3.
+
+ports:
+  - name: clk_i
+    direction: input
+    width: 1
+  - name: rst_ni
+    direction: input
+    width: 1
+  - name: enable_i
+    direction: input
+    width: 1
+  - name: h_line_i
+    direction: input
+    width: 45
+  - name: v_line_i
+    direction: input
+    width: 45
+  - name: x_i
+    direction: input
+    width: 11
+  - name: y_i
+    direction: input
+    width: 11
+  - name: de_i
+    direction: input
+    width: 1
+  - name: mode_i
+    direction: input
+    width: 3
+  - name: data_o
+    direction: output
+    width: 16
+
+artifacts:
+  synthesis:
+    - ../rtl/vga/vga_pkg.sv
+    - ../rtl/picture/picture_gen.sv
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - picture_gen

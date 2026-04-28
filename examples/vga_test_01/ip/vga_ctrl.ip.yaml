@@ -1,0 +1,93 @@
+version: 2
+kind: ip
+
+ip:
+  name: vga_ctrl
+  module: vga_ctrl
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: []
+  outputs: []
+
+# Pozn.: h_line_i a v_line_i sú 45-bitové packed structs (line_t = 4×11 + 1 bit).
+# Framework ich pripojí k 45'h0 (nulovým konštantám). Pred kompiláciou treba
+# ručne doplniť do soc_top.sv:
+#   import vga_pkg::*;
+#   localparam vga_params_t VGA_P = get_vga_params(VGA_640x480_60);
+# a zmeniť .h_line_i(45'h0) → .h_line_i(VGA_P.h_line), .v_line_i → .v_line_i(VGA_P.v_line)
+#
+# syn_o je 2-bit struct {hs, vs}. Nie je napojený frameworkom.
+# Ručne pridaj: assign HDMI_HSYNC = syn_o[1]; assign HDMI_VSYNC = syn_o[0];
+
+ports:
+  - name: clk_i
+    direction: input
+    width: 1
+  - name: rst_ni
+    direction: input
+    width: 1
+  - name: enable_i
+    direction: input
+    width: 1
+  - name: h_line_i
+    direction: input
+    width: 45
+  - name: v_line_i
+    direction: input
+    width: 45
+  - name: fifo_data_i
+    direction: input
+    width: 16
+  - name: fifo_empty_i
+    direction: input
+    width: 1
+  - name: hde_o
+    direction: output
+    width: 1
+  - name: vde_o
+    direction: output
+    width: 1
+  - name: dat_o
+    direction: output
+    width: 16
+  - name: syn_o
+    direction: output
+    width: 2
+  - name: eol_o
+    direction: output
+    width: 1
+  - name: eof_o
+    direction: output
+    width: 1
+
+artifacts:
+  synthesis:
+    - ../rtl/vga/vga_pkg.sv
+    - ../rtl/vga/vga_line.sv
+    - ../rtl/vga/vga_timing.sv
+    - ../rtl/vga/vga_ctrl.sv
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - vga_line
+    - vga_timing
+    - vga_ctrl
+  package: vga_pkg

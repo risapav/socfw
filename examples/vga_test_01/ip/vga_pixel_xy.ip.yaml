@@ -1,0 +1,64 @@
+version: 2
+kind: ip
+
+ip:
+  name: vga_pixel_xy
+  module: vga_pixel_xy
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: []
+  outputs: []
+
+# x_o a y_o: šírka závisí od parametra MAX_COUNTER_H/V.
+# Pre default MaxPosCounterX=1920 → CounterWidthX = $clog2(1920) = 11 bitov.
+# Ak overriduješ MAX_COUNTER_H v project.yaml, uprav aj width tu.
+
+ports:
+  - name: clk_i
+    direction: input
+    width: 1
+  - name: rst_ni
+    direction: input
+    width: 1
+  - name: enable_i
+    direction: input
+    width: 1
+  - name: eol_i
+    direction: input
+    width: 1
+  - name: eof_i
+    direction: input
+    width: 1
+  - name: x_o
+    direction: output
+    width: 11
+  - name: y_o
+    direction: output
+    width: 11
+
+artifacts:
+  synthesis:
+    - ../rtl/vga/vga_pkg.sv
+    - ../rtl/vga/vga_pixel_xy.sv
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - vga_pixel_xy
