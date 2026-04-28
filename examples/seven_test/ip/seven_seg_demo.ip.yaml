@@ -2,8 +2,8 @@ version: 2
 kind: ip
 
 ip:
-  name: seven_seg_mux
-  module: seven_seg_mux_packed
+  name: seven_seg_demo
+  module: seven_seg_demo
   category: display
 
 origin:
@@ -32,14 +32,11 @@ parameters:
   - name: NUM_DIGITS
     type: int
     default: 6
-  - name: DIGIT_REFRESH_HZ
+  - name: TICK_HZ
     type: int
-    default: 250
-  - name: COMMON_ANODE
-    type: bit
-    default: true
+    default: 4
 
-# Port widths for NUM_DIGITS=6 (fixed — width_expr not yet supported)
+# Port widths for NUM_DIGITS=6 (fixed)
 ports:
   - name: clk_i
     direction: input
@@ -49,34 +46,20 @@ ports:
     direction: input
     width: 1
 
-  - name: digits_i
-    direction: input
+  - name: digits_o
+    direction: output
     width: 24    # NUM_DIGITS * 4 = 6 * 4
 
-  - name: dots_i
-    direction: input
-    width: 6     # NUM_DIGITS
-
-  - name: digit_sel_o
+  - name: dots_o
     direction: output
     width: 6     # NUM_DIGITS
-
-  - name: segment_sel_o
-    direction: output
-    width: 8
-
-  - name: current_digit_o
-    direction: output
-    width: 3     # $clog2(NUM_DIGITS) = $clog2(6) = 3
 
 artifacts:
   synthesis:
-    - ../rtl/segment/seven_seg_mux.sv
-    - ../rtl/segment/seven_seg_mux_packed.sv
+    - ../rtl/seven_seg_demo.sv
   simulation: []
   metadata: []
 
 provides:
   modules:
-    - seven_seg_mux
-    - seven_seg_mux_packed
+    - seven_seg_demo
