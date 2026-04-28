@@ -1,8 +1,15 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 from socfw.model.ports import PortDescriptor
+
+
+@dataclass(frozen=True)
+class IpParameterDecl:
+    name: str
+    type: Literal["int", "bit", "string"] = "int"
+    default: Any = None
 
 
 @dataclass(frozen=True)
@@ -87,6 +94,7 @@ class IpDescriptor:
     artifacts: IpArtifactBundle
     bus_interfaces: tuple[IpBusInterface, ...] = ()
     ports: tuple[PortDescriptor, ...] = ()
+    declared_params: tuple[IpParameterDecl, ...] = ()
     vendor_info: IpVendorInfo | None = None
     meta: dict[str, Any] = field(default_factory=dict)
     source_file: str | None = None

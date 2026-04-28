@@ -31,7 +31,7 @@ parameters:
     default: 50000000
   - name: NUM_DIGITS
     type: int
-    default: 6
+    default: 3
   - name: DIGIT_REFRESH_HZ
     type: int
     default: 250
@@ -51,15 +51,15 @@ ports:
 
   - name: digits_i
     direction: input
-    width: 24    # NUM_DIGITS * 4 = 6 * 4
+    width: 12    # NUM_DIGITS * 4 = 3 * 4
 
   - name: dots_i
     direction: input
-    width: 6     # NUM_DIGITS
+    width: 3     # NUM_DIGITS
 
   - name: digit_sel_o
     direction: output
-    width: 6     # NUM_DIGITS
+    width: 3     # NUM_DIGITS
 
   - name: segment_sel_o
     direction: output
@@ -67,7 +67,7 @@ ports:
 
   - name: current_digit_o
     direction: output
-    width: 3     # $clog2(NUM_DIGITS) = $clog2(6) = 3
+    width: 2     # $clog2(NUM_DIGITS) = $clog2(3) = 2
 
 artifacts:
   synthesis:

@@ -105,6 +105,12 @@ class IpPortSchema(BaseModel):
     width: int = 1
 
 
+class IpParameterSchema(BaseModel):
+    name: str
+    type: str = "int"
+    default: Any = None
+
+
 class IpVendorSchema(BaseModel):
     vendor: str
     tool: str
@@ -127,6 +133,7 @@ class IpConfigSchema(BaseModel):
     artifacts: IpArtifactsSchema = Field(default_factory=IpArtifactsSchema)
     bus_interfaces: list[IpBusInterfaceSchema] = Field(default_factory=list)
     ports: list[IpPortSchema] = Field(default_factory=list)
+    parameters: list[IpParameterSchema] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
     registers: list[IpRegisterSchema] = Field(default_factory=list)
     irqs: list[IpIrqSchema] = Field(default_factory=list)

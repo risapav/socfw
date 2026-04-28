@@ -44,14 +44,15 @@ resources:
       direction: output
       width: 8
       io_standard: "3.3-V LVTTL"
-      pins: [C4, B2, A3, C3, A5, B4, B1, A4]
+      pins: [C4, B2, A3, C3, A5, B4, B1, A4]  # Original pin order (a,b,c,d,e,f,g,dp)  [7:0] = [A4, B1, B4, A5, C3, A3, B2, C4]
+#      pins: [A4, B1, B4, A5, C3, A3, B2, C4] # Reordered to match segment order (a,b,c,d,e,f,g,dp)  [0:7] = [C4, B2, A3, C3, A5, B4, B1, A4]
 
     dig:
       top_name: ONB_DIG
       direction: output
-      width: 6
+      width: 3
       io_standard: "3.3-V LVTTL"
-      pins: [C10, C9, C8, C7, B9, A9]
+      pins: [B5, B3, B6]
 
     buttons:
       top_name: ONB_BTN

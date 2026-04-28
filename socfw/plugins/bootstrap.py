@@ -17,6 +17,7 @@ from socfw.reports.graphviz_emitter import GraphvizEmitter
 from socfw.reports.json_emitter import JsonReportEmitter
 from socfw.reports.markdown_emitter import MarkdownReportEmitter
 from socfw.validate.rules.asset_rules import VendorIpArtifactExistsRule, IpArtifactExistsRule
+from socfw.validate.rules.ip_rules import UnknownIpParamRule
 from socfw.validate.rules.binding_rules import BindingWidthCompatibilityRule, BoardBindingRule, BindConflictRule
 from socfw.validate.rules.board_rules import (
     UnknownBoardBindingTargetRule,
@@ -68,6 +69,7 @@ def create_builtin_registry(templates_dir: str) -> PluginRegistry:
 
     reg.register_validator(DuplicateModuleInstanceRule())
     reg.register_validator(UnknownIpTypeRule())
+    reg.register_validator(UnknownIpParamRule())
     reg.register_validator(UnknownGeneratedClockSourceRule())
     reg.register_validator(TimingResetUnusedRule())
     reg.register_validator(TimingIoDelayMinMissingRule())

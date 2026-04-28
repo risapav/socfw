@@ -17,6 +17,7 @@ from socfw.model.ip import (
     IpClocking,
     IpDescriptor,
     IpOrigin,
+    IpParameterDecl,
     IpResetSemantics,
     IpVendorInfo,
 )
@@ -111,6 +112,14 @@ class IpLoader:
                     width=p.width,
                 )
                 for p in doc.ports
+            ),
+            declared_params=tuple(
+                IpParameterDecl(
+                    name=p.name,
+                    type=p.type,
+                    default=p.default,
+                )
+                for p in doc.parameters
             ),
             meta={
                 "notes": doc.notes,

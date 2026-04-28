@@ -31,12 +31,12 @@ parameters:
     default: 50000000
   - name: NUM_DIGITS
     type: int
-    default: 6
+    default: 3
   - name: TICK_HZ
     type: int
     default: 4
 
-# Port widths for NUM_DIGITS=6 (fixed)
+# Port widths for NUM_DIGITS=3 (fixed)
 ports:
   - name: clk_i
     direction: input
@@ -48,11 +48,11 @@ ports:
 
   - name: digits_o
     direction: output
-    width: 24    # NUM_DIGITS * 4 = 6 * 4
+    width: 12    # NUM_DIGITS * 4 = 3 * 4
 
   - name: dots_o
     direction: output
-    width: 6     # NUM_DIGITS
+    width: 3     # NUM_DIGITS
 
 artifacts:
   synthesis:
