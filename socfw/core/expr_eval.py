@@ -12,6 +12,24 @@ def _clog2(n: int) -> int:
     return (n - 1).bit_length()
 
 
+def resolve_port_width(port, instance_params: dict) -> int:
+    """Return concrete width for a PortDescriptor given instance params.
+
+    If the port has a width_expr, re-evaluate it with instance_params.
+    Falls back to port.width (which was evaluated at load time with defaults).
+    """
+    if not getattr(port, 'width_expr', None):
+        return port.width
+    int_params: dict[str, int] = {}
+    for k, v in instance_params.items():
+        if isinstance(v, (int, bool)):
+            int_params[k] = int(v)
+    try:
+        return eval_width_expr(port.width_expr, int_params)
+    except ValueError:
+        return port.width
+
+
 def eval_width_expr(expr: str, params: dict[str, int]) -> int:
     """Evaluate a parameterized width expression.
 

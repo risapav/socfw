@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from socfw.core.expr_eval import resolve_port_width
 from socfw.builders.rtl_bus_builder import RtlBusBuilder
 from socfw.builders.rtl_bus_connections import RtlBusConnectionResolver
 from socfw.builders.rtl_irq_builder import RtlIrqBuilder
@@ -528,7 +529,10 @@ class RtlIrBuilder:
                 continue
 
             explicit: dict[str, str] = {}
-            port_widths: dict[str, int] = {p.name: p.width for p in (ip.ports or [])}
+            port_widths: dict[str, int] = {
+                p.name: resolve_port_width(p, mod.params or {})
+                for p in (ip.ports or [])
+            }
             port_dirs: dict[str, str] = {p.name: p.direction for p in (ip.ports or [])}
 
             for cb in mod.clocks:
@@ -613,7 +617,7 @@ class RtlIrBuilder:
                         RtlParameter(name=k, value=v)
                         for k, v in sorted((mod.params or {}).items())
                     ),
-                    connections=self._connections_from_declared_ports(ip, explicit),
+                    connections=self._connections_from_declared_ports(ip, explicit, mod.params or {}),
                 )
             )
 
@@ -625,21 +629,23 @@ class RtlIrBuilder:
             return f"{{ {pad}'b0, {wire} }}"
         return f"{wire}[{dst_w - 1}:0]"
 
-    def _default_expr_for_port(self, port) -> str:
+    def _default_expr_for_port(self, port, instance_params: dict | None = None) -> str:
         if port.direction != "input":
             return ""
-        if port.width == 1:
+        w = resolve_port_width(port, instance_params or {})
+        if w <= 1:
             return "1'b0"
-        return f"{port.width}'h0"
+        return f"{w}'h0"
 
-    def _connections_from_declared_ports(self, ip, explicit: dict[str, str]):
+    def _connections_from_declared_ports(self, ip, explicit: dict[str, str],
+                                          instance_params: dict | None = None):
         from socfw.ir.rtl import RtlConnection
         if getattr(ip, "ports", None):
             conns = []
             for p in sorted(ip.ports, key=lambda x: x.name):
                 expr = explicit.get(p.name)
                 if expr is None:
-                    expr = self._default_expr_for_port(p)
+                    expr = self._default_expr_for_port(p, instance_params)
                 conns.append(RtlConnection(p.name, expr))
             return tuple(conns)
         return tuple(RtlConnection(name, expr) for name, expr in sorted(explicit.items()))

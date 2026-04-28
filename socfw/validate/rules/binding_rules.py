@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from socfw.board.selector_index import build_selector_index
 from socfw.core.diagnostics import Diagnostic, Severity
+from socfw.core.expr_eval import resolve_port_width
 from socfw.model.board import BoardResource, BoardConnectorRole, BoardScalarSignal, BoardVectorSignal
 from socfw.model.system import SystemModel
 from .base import ValidationRule
@@ -155,6 +156,7 @@ class BoardBindingRule(ValidationRule):
                 if ip_port is None:
                     continue
 
+                ip_width = resolve_port_width(ip_port, mod.params or {})
                 res_width = _resource_width(target)
 
                 eff_width = b.width if b.width is not None else res_width
@@ -180,25 +182,25 @@ class BoardBindingRule(ValidationRule):
                             ),
                             subject="project.bind",
                         ))
-                    elif eff_width is not None and eff_width != ip_port.width:
-                        bad = _validate_adapt_widths(b.adapt, ip_port.width, eff_width)
+                    elif eff_width is not None and eff_width != ip_width:
+                        bad = _validate_adapt_widths(b.adapt, ip_width, eff_width)
                         if bad:
                             diags.append(Diagnostic(
                                 code="BIND007",
                                 severity=Severity.ERROR,
                                 message=(
                                     f"Adapt '{b.adapt}' is not valid for bind {mod.instance}.{b.port_name}: "
-                                    f"{bad} (IP width={ip_port.width}, target width={eff_width})"
+                                    f"{bad} (IP width={ip_width}, target width={eff_width})"
                                 ),
                                 subject="project.bind",
                             ))
-                elif eff_width is not None and ip_port.width != eff_width:
+                elif eff_width is not None and ip_width != eff_width:
                     diags.append(Diagnostic(
                         code="BIND003",
                         severity=Severity.ERROR,
                         message=(
                             f"Width mismatch for bind {mod.instance}.{b.port_name}: "
-                            f"IP port width {ip_port.width}, target width {eff_width}; "
+                            f"IP port width {ip_width}, target width {eff_width}; "
                             f"use `adapt: zero_extend`, `adapt: truncate`, or `adapt: replicate`"
                         ),
                         subject="project.bind",
