@@ -63,6 +63,11 @@ modules:
     params:
       DEPTH: 2048
 
+  - instance: vsync0
+    type: video_stream_frame_sync
+    clocks:
+      clk_i: clk_pixel
+
   - instance: vga0
     type: vga_rgb565_stream
     clocks:
@@ -95,18 +100,18 @@ modules:
   - instance: mode_gen0
     type: mode_gen
     clocks:
-      clk_i: sys_clk
+      clk_i: clk_pixel
     params:
-      CLOCK_FREQ_HZ: 50000000
+      CLOCK_FREQ_HZ: 65000000
       NUM_DIGITS: 3
       CHANGE_PERIOD_MS: 2000
 
   - instance: seven_seg_mux0
     type: seven_seg_mux
     clocks:
-      clk_i: sys_clk
+      clk_i: clk_pixel
     params:
-      CLOCK_FREQ_HZ: 50000000
+      CLOCK_FREQ_HZ: 65000000
       NUM_DIGITS: 3
       DIGIT_REFRESH_HZ: 250
       COMMON_ANODE: 1
@@ -138,18 +143,38 @@ connections:
   - from: pgen0.m_axis_eof_o
     to: vfifo0.s_axis_eof_i
 
-  # AXI-Stream: video_stream_fifo → vga_rgb565_stream
+  # AXI-Stream: video_stream_fifo → video_stream_frame_sync
   - from: vfifo0.m_axis_data_o
-    to: vga0.s_axis_data_i
+    to: vsync0.s_axis_data_i
   - from: vfifo0.m_axis_valid_o
-    to: vga0.s_axis_valid_i
-  - from: vga0.s_axis_ready_o
+    to: vsync0.s_axis_valid_i
+  - from: vsync0.s_axis_ready_o
     to: vfifo0.m_axis_ready_i
   - from: vfifo0.m_axis_sof_o
-    to: vga0.s_axis_sof_i
+    to: vsync0.s_axis_sof_i
   - from: vfifo0.m_axis_eol_o
-    to: vga0.s_axis_eol_i
+    to: vsync0.s_axis_eol_i
   - from: vfifo0.m_axis_eof_o
+    to: vsync0.s_axis_eof_i
+
+  # Spätné signály z VGA do frame_sync (video_active, frame_start)
+  - from: vga0.active_video_o
+    to: vsync0.video_active_i
+  - from: vga0.frame_start_o
+    to: vsync0.video_frame_start_i
+
+  # AXI-Stream: video_stream_frame_sync → vga_rgb565_stream
+  - from: vsync0.m_axis_data_o
+    to: vga0.s_axis_data_i
+  - from: vsync0.m_axis_valid_o
+    to: vga0.s_axis_valid_i
+  - from: vga0.s_axis_ready_o
+    to: vsync0.m_axis_ready_i
+  - from: vsync0.m_axis_sof_o
+    to: vga0.s_axis_sof_i
+  - from: vsync0.m_axis_eol_o
+    to: vga0.s_axis_eol_i
+  - from: vsync0.m_axis_eof_o
     to: vga0.s_axis_eof_i
 
   # Výber módu: mode_gen → picture_gen_stream
