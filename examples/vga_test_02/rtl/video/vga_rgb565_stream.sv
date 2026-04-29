@@ -45,6 +45,9 @@ module vga_rgb565_stream #(
     output logic       frame_start_o,
     output logic       line_start_o,
 
+    output logic       stream_active_o,
+    output logic       stream_frame_start_o,
+
     output logic [X_WIDTH-1:0] pixel_x_o,
     output logic [Y_WIDTH-1:0] pixel_y_o,
 
@@ -87,7 +90,9 @@ module vga_rgb565_stream #(
         ((v_cnt_q >= V_ACTIVE + V_FP) &&
          (v_cnt_q <  V_ACTIVE + V_FP + V_SYNC)) ? VSYNC_POL : ~VSYNC_POL;
 
-    assign s_axis_ready_o = active_video;
+    assign s_axis_ready_o        = active_video;
+    assign stream_active_o       = active_video;
+    assign stream_frame_start_o  = first_active_pixel;
 
     assign selected_pixel =
         (active_video && s_axis_valid_i) ? s_axis_data_i : DEFAULT_COLOR;

@@ -1,7 +1,7 @@
 // megafunction wizard: %ALTPLL%VBB%
 // GENERATION: STANDARD
 // VERSION: WM1.0
-// MODULE: altpll
+// MODULE: altpll 
 
 // ============================================================
 // File Name: clkpll.v
@@ -18,18 +18,18 @@
 // ************************************************************
 
 //Copyright (C) 2025  Altera Corporation. All rights reserved.
-//Your use of Altera Corporation's design tools, logic functions
-//and other software and tools, and any partner logic
-//functions, and any output files from any of the foregoing
-//(including device programming or simulation files), and any
-//associated documentation or information are expressly subject
-//to the terms and conditions of the Altera Program License
+//Your use of Altera Corporation's design tools, logic functions 
+//and other software and tools, and any partner logic 
+//functions, and any output files from any of the foregoing 
+//(including device programming or simulation files), and any 
+//associated documentation or information are expressly subject 
+//to the terms and conditions of the Altera Program License 
 //Subscription Agreement, the Altera Quartus Prime License Agreement,
 //the Altera IP License Agreement, or other applicable license
 //agreement, including, without limitation, that your use is for
 //the sole purpose of programming logic devices manufactured by
 //Altera and sold by Altera or its authorized distributors.  Please
-//refer to the Altera Software License Subscription Agreements
+//refer to the Altera Software License Subscription Agreements 
 //on the Quartus Prime software download page.
 
 module clkpll (
@@ -59,7 +59,7 @@ endmodule
 // Retrieval info: PRIVATE: BANDWIDTH STRING "1.000"
 // Retrieval info: PRIVATE: BANDWIDTH_FEATURE_ENABLED STRING "1"
 // Retrieval info: PRIVATE: BANDWIDTH_FREQ_UNIT STRING "MHz"
-// Retrieval info: PRIVATE: BANDWIDTH_PRESET STRING "Medium"
+// Retrieval info: PRIVATE: BANDWIDTH_PRESET STRING "Low"
 // Retrieval info: PRIVATE: BANDWIDTH_USE_AUTO STRING "1"
 // Retrieval info: PRIVATE: BANDWIDTH_USE_PRESET STRING "0"
 // Retrieval info: PRIVATE: CLKBAD_SWITCHOVER_CHECK STRING "0"
@@ -71,16 +71,16 @@ endmodule
 // Retrieval info: PRIVATE: CUR_DEDICATED_CLK STRING "c0"
 // Retrieval info: PRIVATE: CUR_FBIN_CLK STRING "c0"
 // Retrieval info: PRIVATE: DEVICE_SPEED_GRADE STRING "8"
-// Retrieval info: PRIVATE: DIV_FACTOR0 NUMERIC "1"
+// Retrieval info: PRIVATE: DIV_FACTOR0 NUMERIC "10"
 // Retrieval info: PRIVATE: DUTY_CYCLE0 STRING "50.00000000"
-// Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE0 STRING "100.000000"
+// Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE0 STRING "65.000000"
 // Retrieval info: PRIVATE: EXPLICIT_SWITCHOVER_COUNTER STRING "0"
 // Retrieval info: PRIVATE: EXT_FEEDBACK_RADIO STRING "0"
 // Retrieval info: PRIVATE: GLOCKED_COUNTER_EDIT_CHANGED STRING "1"
 // Retrieval info: PRIVATE: GLOCKED_FEATURE_ENABLED STRING "0"
 // Retrieval info: PRIVATE: GLOCKED_MODE_CHECK STRING "0"
 // Retrieval info: PRIVATE: GLOCK_COUNTER_EDIT NUMERIC "1048575"
-// Retrieval info: PRIVATE: HAS_MANUAL_SWITCHOVER STRING "0"
+// Retrieval info: PRIVATE: HAS_MANUAL_SWITCHOVER STRING "1"
 // Retrieval info: PRIVATE: INCLK0_FREQ_EDIT STRING "50.000"
 // Retrieval info: PRIVATE: INCLK0_FREQ_UNIT_COMBO STRING "MHz"
 // Retrieval info: PRIVATE: INCLK1_FREQ_EDIT STRING "100.000"
@@ -96,10 +96,10 @@ endmodule
 // Retrieval info: PRIVATE: LVDS_PHASE_SHIFT_UNIT0 STRING "deg"
 // Retrieval info: PRIVATE: MIG_DEVICE_SPEED_GRADE STRING "Any"
 // Retrieval info: PRIVATE: MIRROR_CLK0 STRING "0"
-// Retrieval info: PRIVATE: MULT_FACTOR0 NUMERIC "1"
+// Retrieval info: PRIVATE: MULT_FACTOR0 NUMERIC "13"
 // Retrieval info: PRIVATE: NORMAL_MODE_RADIO STRING "1"
 // Retrieval info: PRIVATE: OUTPUT_FREQ0 STRING "100.00000000"
-// Retrieval info: PRIVATE: OUTPUT_FREQ_MODE0 STRING "1"
+// Retrieval info: PRIVATE: OUTPUT_FREQ_MODE0 STRING "0"
 // Retrieval info: PRIVATE: OUTPUT_FREQ_UNIT0 STRING "MHz"
 // Retrieval info: PRIVATE: PHASE_RECONFIG_FEATURE_ENABLED STRING "1"
 // Retrieval info: PRIVATE: PHASE_RECONFIG_INPUTS_CHECK STRING "0"
@@ -116,7 +116,7 @@ endmodule
 // Retrieval info: PRIVATE: PLL_PFDENA_CHECK STRING "0"
 // Retrieval info: PRIVATE: PLL_TARGET_HARCOPY_CHECK NUMERIC "0"
 // Retrieval info: PRIVATE: PRIMARY_CLK_COMBO STRING "inclk0"
-// Retrieval info: PRIVATE: RECONFIG_FILE STRING "ClkPll.mif"
+// Retrieval info: PRIVATE: RECONFIG_FILE STRING "clkpll.mif"
 // Retrieval info: PRIVATE: SACN_INPUTS_CHECK STRING "0"
 // Retrieval info: PRIVATE: SCAN_FEATURE_ENABLED STRING "1"
 // Retrieval info: PRIVATE: SELF_RESET_LOCK_LOSS STRING "0"
@@ -200,12 +200,12 @@ endmodule
 // Retrieval info: CONNECT: @inclk 0 0 1 0 inclk0 0 0 0 0
 // Retrieval info: CONNECT: c0 0 0 0 0 @clk 0 0 1 0
 // Retrieval info: CONNECT: locked 0 0 0 0 @locked 0 0 0 0
-// Retrieval info: GEN_FILE: TYPE_NORMAL ClkPll.v TRUE
-// Retrieval info: GEN_FILE: TYPE_NORMAL ClkPll.ppf TRUE
-// Retrieval info: GEN_FILE: TYPE_NORMAL ClkPll.inc FALSE
-// Retrieval info: GEN_FILE: TYPE_NORMAL ClkPll.cmp FALSE
-// Retrieval info: GEN_FILE: TYPE_NORMAL ClkPll.bsf FALSE
-// Retrieval info: GEN_FILE: TYPE_NORMAL ClkPll_inst.v FALSE
-// Retrieval info: GEN_FILE: TYPE_NORMAL ClkPll_bb.v TRUE
+// Retrieval info: GEN_FILE: TYPE_NORMAL clkpll.v TRUE
+// Retrieval info: GEN_FILE: TYPE_NORMAL clkpll.ppf TRUE
+// Retrieval info: GEN_FILE: TYPE_NORMAL clkpll.inc FALSE
+// Retrieval info: GEN_FILE: TYPE_NORMAL clkpll.cmp FALSE
+// Retrieval info: GEN_FILE: TYPE_NORMAL clkpll.bsf FALSE
+// Retrieval info: GEN_FILE: TYPE_NORMAL clkpll_inst.v FALSE
+// Retrieval info: GEN_FILE: TYPE_NORMAL clkpll_bb.v TRUE
 // Retrieval info: LIB_FILE: altera_mf
 // Retrieval info: CBX_MODULE_PREFIX: ON

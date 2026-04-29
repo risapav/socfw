@@ -29,9 +29,9 @@ module picture_gen_stream #(
     output logic    m_axis_valid_o,
     input  wire logic m_axis_ready_i,
 
-    output logic    m_axis_sof_o,
-    output logic    m_axis_eol_o,
-    output logic    m_axis_eof_o,
+    output logic m_axis_sof_o,
+    output logic m_axis_eol_o,
+    output logic m_axis_eof_o,
 
     output logic    busy_o,
 
@@ -123,19 +123,10 @@ module picture_gen_stream #(
         end
     end
 
-    always_ff @(posedge clk_i) begin
-        if (!rst_ni) begin
-            m_axis_data_o <= BLACK;
-            m_axis_sof_o  <= 1'b0;
-            m_axis_eol_o  <= 1'b0;
-            m_axis_eof_o  <= 1'b0;
-        end else if (!m_axis_valid_o || m_axis_ready_i) begin
-            m_axis_data_o <= data_next;
-            m_axis_sof_o  <= m_axis_valid_o && (x_q == '0) && (y_q == '0);
-            m_axis_eol_o  <= m_axis_valid_o && last_x;
-            m_axis_eof_o  <= m_axis_valid_o && last_pixel;
-        end
-    end
+    assign m_axis_data_o = data_next;
+    assign m_axis_sof_o  = m_axis_valid_o && (x_q == '0) && (y_q == '0);
+    assign m_axis_eol_o  = m_axis_valid_o && last_x;
+    assign m_axis_eof_o  = m_axis_valid_o && last_pixel;
 
     always_comb begin
         data_next = BLACK;

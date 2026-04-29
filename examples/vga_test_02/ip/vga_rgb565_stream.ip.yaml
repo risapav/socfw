@@ -106,6 +106,12 @@ ports:
   - name: line_start_o
     direction: output
     width: 1
+  - name: stream_active_o
+    direction: output
+    width: 1
+  - name: stream_frame_start_o
+    direction: output
+    width: 1
   - name: pixel_x_o
     direction: output
     width_expr: "$clog2(H_ACTIVE)"

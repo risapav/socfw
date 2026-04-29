@@ -123,7 +123,7 @@ modules:
           target: board:onboard.seg
 
 connections:
-  # PLL lock spustí generátor obrazcov (start_i=locked → auto-restart po každom frame)
+  # PLL lock povolí generátor; continuous_i=1'b1 → beží nepretržite (nastavené v module params)
   - from: clkpll.locked
     to: pgen0.enable_i
   - from: clkpll.locked
@@ -157,10 +157,10 @@ connections:
   - from: vfifo0.m_axis_eof_o
     to: vsync0.s_axis_eof_i
 
-  # Spätné signály z VGA do frame_sync (video_active, frame_start)
-  - from: vga0.active_video_o
+  # Spätné kombinačné signály z VGA do frame_sync (bez registrového oneskorenia)
+  - from: vga0.stream_active_o
     to: vsync0.video_active_i
-  - from: vga0.frame_start_o
+  - from: vga0.stream_frame_start_o
     to: vsync0.video_frame_start_i
 
   # AXI-Stream: video_stream_frame_sync → vga_rgb565_stream
