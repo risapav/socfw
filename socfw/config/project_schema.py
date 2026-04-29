@@ -89,7 +89,17 @@ class ModuleSchema(BaseModel):
     clocks: dict[str, str | ModuleClockPortSchema] = Field(default_factory=dict)
     bind: ModuleBindSchema = Field(default_factory=ModuleBindSchema)
     bus: BusAttachSchema | None = None
-    reset: str | None = "auto"
+    reset: str | None = Field(
+        default="auto",
+        description=(
+            "Per-instance reset port override. "
+            "'auto' (default) connects the IP reset port to the global reset_n signal. "
+            "null disables the reset connection entirely (port left unconnected). "
+            "Any other string is used as a literal SystemVerilog expression "
+            "(e.g. '~RESET_N' to bypass the synchronised reset and drive the port directly "
+            "from the board pin — required for PLLs whose areset must not depend on locked)."
+        ),
+    )
 
 
 class TimingRefSchema(BaseModel):
@@ -160,7 +170,19 @@ class ProjectConfigSchema(BaseModel):
     connections: list[ConnectionEntrySchema] = Field(default_factory=list)
     timing: TimingRefSchema | None = None
     firmware: FirmwareSchema | None = None
-    reset_driver: str | None = None
+    reset_driver: str | None = Field(
+        default=None,
+        description=(
+            "Designates a module output port that drives the system reset_n signal "
+            "instead of the default direct board-pin assign. "
+            "Format: 'instance.port' (e.g. 'rst_sync0.rst_no'). "
+            "Typical use: insert a cdc_reset_synchronizer driven by a PLL locked signal "
+            "so that reset_n deasserts only after the PLL is stable. "
+            "The named instance must declare the port as an output of width 1 in its IP descriptor. "
+            "Note: the PLL itself must use reset: '~RESET_N' to avoid a combinational loop "
+            "through its own locked output."
+        ),
+    )
     artifacts: ArtifactsSchema = Field(default_factory=ArtifactsSchema)
 
     @model_validator(mode="after")

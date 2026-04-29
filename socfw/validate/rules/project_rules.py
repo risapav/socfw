@@ -104,6 +104,120 @@ class UnknownGeneratedClockSourceRule(ValidationRule):
         return diags
 
 
+class ResetDriverRule(ValidationRule):
+    """Validate the reset_driver field: instance exists, port is a 1-bit output."""
+
+    def validate(self, system: SystemModel) -> list[Diagnostic]:
+        reset_driver = getattr(system.project, "reset_driver", None)
+        if not reset_driver:
+            return []
+
+        parts = reset_driver.split(".", 1)
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            return [
+                Diagnostic(
+                    code="RST010",
+                    severity=Severity.ERROR,
+                    message=f"reset_driver '{reset_driver}' must be in 'instance.port' format",
+                    subject="project.reset_driver",
+                )
+            ]
+
+        inst_name, port_name = parts
+        mod = system.project.module_by_name(inst_name)
+        if mod is None:
+            return [
+                Diagnostic(
+                    code="RST011",
+                    severity=Severity.ERROR,
+                    message=f"reset_driver references unknown instance '{inst_name}'",
+                    subject="project.reset_driver",
+                    hints=(f"Add an instance named '{inst_name}' to modules:",),
+                )
+            ]
+
+        ip = system.ip_catalog.get(mod.type_name)
+        if ip is None:
+            return []
+
+        port = next((p for p in (ip.ports or []) if p.name == port_name), None)
+        if port is None:
+            return [
+                Diagnostic(
+                    code="RST012",
+                    severity=Severity.ERROR,
+                    message=(
+                        f"reset_driver references unknown port '{port_name}' "
+                        f"on instance '{inst_name}' (type '{mod.type_name}')"
+                    ),
+                    subject="project.reset_driver",
+                )
+            ]
+
+        diags: list[Diagnostic] = []
+        if port.direction != "output":
+            diags.append(
+                Diagnostic(
+                    code="RST013",
+                    severity=Severity.ERROR,
+                    message=(
+                        f"reset_driver port '{inst_name}.{port_name}' "
+                        f"is '{port.direction}', must be 'output'"
+                    ),
+                    subject="project.reset_driver",
+                )
+            )
+        if getattr(port, "width", 1) != 1:
+            diags.append(
+                Diagnostic(
+                    code="RST014",
+                    severity=Severity.ERROR,
+                    message=(
+                        f"reset_driver port '{inst_name}.{port_name}' "
+                        f"has width {port.width}, must be 1"
+                    ),
+                    subject="project.reset_driver",
+                )
+            )
+        return diags
+
+
+class ModuleResetOverrideRule(ValidationRule):
+    """Warn when a module reset expression will be silently ignored."""
+
+    def validate(self, system: SystemModel) -> list[Diagnostic]:
+        diags: list[Diagnostic] = []
+
+        for mod in system.project.modules:
+            reset_override = getattr(mod, "reset_override", "auto")
+            if reset_override == "auto" or reset_override is None:
+                continue
+
+            ip = system.ip_catalog.get(mod.type_name)
+            if ip is None:
+                continue
+
+            if not ip.reset.port:
+                diags.append(
+                    Diagnostic(
+                        code="RST020",
+                        severity=Severity.WARNING,
+                        message=(
+                            f"Module '{mod.instance}' has reset: '{reset_override}' "
+                            f"but IP '{mod.type_name}' declares no reset port — "
+                            "the expression will be ignored"
+                        ),
+                        subject=f"project.modules.{mod.instance}",
+                        hints=(
+                            f"Add 'reset: {{port: <port_name>}}' to {mod.type_name}.ip.yaml,",
+                            "or remove the reset: override from project.yaml.",
+                        ),
+                    )
+                )
+
+        return diags
+
+
 class TimingResetUnusedRule(ValidationRule):
     """Warn when a board reset is declared but no instantiated IP consumes it."""
 
