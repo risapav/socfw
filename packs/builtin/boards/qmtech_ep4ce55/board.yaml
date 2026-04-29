@@ -32,6 +32,41 @@ system:
 
 resources:
   onboard:
+
+    vga:
+      top_name: VGA
+      direction: output
+      groups:
+        vga_r:
+          top_name: VGA_R
+          direction: output
+          io_standard: "3.3-V LVTTL"
+          width: 5
+          pins: [N20, B21, M20, N19, M19]
+        vga_g:
+          top_name: VGA_G
+          direction: output
+          io_standard: "3.3-V LVTTL"
+          width: 6
+          pins: [D22, E21, C22, D21, C21, B22]
+        vga_b:
+          top_name: VGA_B
+          direction: output
+          io_standard: "3.3-V LVTTL"
+          width: 5
+          pins: [H21, H22, F21, F22, E22]
+      signals:
+        vga_hsync:
+          direction: output
+          top_name: VGA_HS
+          pin: J21
+          io_standard: "3.3-V LVTTL"
+        vga_vsync:
+          direction: output
+          top_name: VGA_VS
+          pin: J22
+          io_standard: "3.3-V LVTTL"
+
     leds:
       top_name: ONB_LEDS
       direction: output
@@ -45,7 +80,6 @@ resources:
       width: 8
       io_standard: "3.3-V LVTTL"
       pins: [C4, B2, A3, C3, A5, B4, B1, A4]  # Original pin order (a,b,c,d,e,f,g,dp)  [7:0] = [A4, B1, B4, A5, C3, A3, B2, C4]
-#      pins: [A4, B1, B4, A5, C3, A3, B2, C4] # Reordered to match segment order (a,b,c,d,e,f,g,dp)  [0:7] = [C4, B2, A3, C3, A5, B4, B1, A4]
 
     dig:
       top_name: ONB_DIG

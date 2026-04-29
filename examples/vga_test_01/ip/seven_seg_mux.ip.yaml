@@ -25,13 +25,24 @@ clocking:
   additional_input_ports: []
   outputs: []
 
+parameters:
+  - name: CLOCK_FREQ_HZ
+    type: int
+    default: 50000000
+  - name: NUM_DIGITS
+    type: int
+    default: 3
+  - name: DIGIT_REFRESH_HZ
+    type: int
+    default: 250
+  - name: COMMON_ANODE
+    type: bit
+    default: false
+
 # POZOR: digits_i [NUM_DIGITS] a dots_i [NUM_DIGITS] sú UNPACKED ARRAYS.
-# Framework ich nevie automaticky napojiť. Nie sú uvedené v ports:.
-# Po generovaní ručne doplni do soc_top.sv napríklad:
-#   .digits_i('{ 4'h0, 4'h0, 4'h0, 4'h0, 4'h0, 4'h0 }),
-#   .dots_i('{ 0, 0, 0, 0, 0, 0 })
-#
-# current_digit_o: $clog2(NUM_DIGITS) = $clog2(6) = 3 bity, nepripojené.
+# Framework ich nevie automaticky napojiť — po generovaní ručne doplni do soc_top.sv:
+#   .digits_i('{ 4'h0, 4'h0, 4'h0 }),
+#   .dots_i('{ 0, 0, 0 })
 
 ports:
   - name: clk_i
@@ -42,7 +53,7 @@ ports:
     width: 1
   - name: digit_sel_o
     direction: output
-    width: 6
+    width_expr: "NUM_DIGITS"
   - name: segment_sel_o
     direction: output
     width: 8

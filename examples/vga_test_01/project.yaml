@@ -25,24 +25,20 @@ clocks:
       source:
         instance: clkpll
         output: c0
-      frequency_hz: 25175000
+      frequency_hz: 75000000
       reset:
         sync_from: sys_clk
         sync_stages: 2
 
 features:
   use:
-    - board:onboard.buttons
     - board:onboard.seg
     - board:onboard.dig
-    # HDMI PMOD J10 — jednotlivé signály (bundle vyžaduje .signals.<name>)
-    # HDMI_CLK: ručne napoj v soc_top.sv (assign HDMI_CLK = clkpll_c0)
-    # HDMI_HSYNC/VSYNC: ručne napoj (assign HDMI_HSYNC = vga_ctrl0.syn_o[1]; ...)
-    - board:external.pmod.j10_hdmi_out.signals.clk
-    - board:external.pmod.j10_hdmi_out.signals.de
-    - board:external.pmod.j10_hdmi_out.signals.hsync
-    - board:external.pmod.j10_hdmi_out.signals.vsync
-    - board:external.pmod.j10_hdmi_out.signals.d
+    - board:onboard.vga.vga_r
+    - board:onboard.vga.vga_g
+    - board:onboard.vga.vga_b
+    - board:onboard.vga.vga_hsync
+    - board:onboard.vga.vga_vsync
 
 modules:
   - instance: clkpll
@@ -59,31 +55,36 @@ modules:
     params:
       BLANKING_COLOR: "16'h0000"
       UNDERRUN_COLOR: "16'hF81F"
-      MAX_COUNTER_H: 800
-      MAX_COUNTER_V: 525
+      MAX_COUNTER_H: 1024
+      MAX_COUNTER_V: 768
     bind:
       ports:
-        # dat_o (16-bit RGB565) → HDMI_D (4-bit): framework vezme dat_o[3:0]
-        # Pre lepší obraz zmeň ručne na: assign HDMI_D = {dat_o[15],dat_o[10],dat_o[4],dat_o[0]};
-        dat_o:
-          target: board:external.pmod.j10_hdmi_out.signals.d
-          adapt: truncate
+        vga_r_o:
+          target: board:onboard.vga.vga_r
+        vga_g_o:
+          target: board:onboard.vga.vga_g
+        vga_b_o:
+          target: board:onboard.vga.vga_b
+        vga_hs_o:
+          target: board:onboard.vga.vga_hsync
+        vga_vs_o:
+          target: board:onboard.vga.vga_vsync
 
   - instance: vga_pixel_xy0
     type: vga_pixel_xy
     clocks:
       clk_i: clk_pixel
     params:
-      MAX_COUNTER_H: 800
-      MAX_COUNTER_V: 525
+      MAX_COUNTER_H: 1024
+      MAX_COUNTER_V: 768
 
   - instance: picture_gen0
     type: picture_gen
     clocks:
       clk_i: clk_pixel
     params:
-      H_RES: 640
-      V_RES: 480
+      H_RES: 1024
+      V_RES: 768
     bind:
       ports:
         # ONB_BTN je 4-bitový, mode_i je 3-bitový → adapt vezme spodné 3 bity
@@ -98,7 +99,7 @@ modules:
       clk_i: sys_clk
     params:
       CLOCK_FREQ_HZ: 50000000
-      NUM_DIGITS: 6
+      NUM_DIGITS: 3
       DIGIT_REFRESH_HZ: 250
       COMMON_ANODE: 0
     bind:
@@ -139,34 +140,3 @@ connections:
   - from: picture_gen0.data_o
     to: vga_ctrl0.fifo_data_i
 
-# =============================================================================
-# RUČNÉ ÚPRAVY POTREBNÉ V build/gen/rtl/soc_top.sv PO VYGENEROVANÍ:
-# =============================================================================
-#
-# 1. Na začiatok modulu (za deklarácie portov) pridaj:
-#
-#   import vga_pkg::*;
-#   localparam vga_params_t VGA_P = get_vga_params(VGA_640x480_60);
-#
-# 2. V inštancii vga_ctrl0 zmeň:
-#   .h_line_i(45'h0) → .h_line_i(VGA_P.h_line)
-#   .v_line_i(45'h0) → .v_line_i(VGA_P.v_line)
-#   .fifo_empty_i(1'b0) ponechaj (pipeline bez FIFO, dáta sú vždy dostupné)
-#
-# 3. V inštancii vga_pixel_xy0:
-#   .h_line_i a .v_line_i (ak sú ako porty) → VGA_P.h_line / VGA_P.v_line
-#
-# 4. V inštancii picture_gen0:
-#   .h_line_i(45'h0) → .h_line_i(VGA_P.h_line)
-#   .v_line_i(45'h0) → .v_line_i(VGA_P.v_line)
-#
-# 5. V inštancii seven_seg_mux0 pridaj:
-#   .digits_i('{ 4'h0, 4'h0, 4'h0, 4'h0, 4'h0, 4'h0 }),
-#   .dots_i('{ 0, 0, 0, 0, 0, 0 })
-#
-# 6. Na koniec assign blokov (za framework-generované) pridaj:
-#   assign HDMI_HSYNC = w_vga_ctrl0_syn_o[1];  // syn_o[1] = HSYNC
-#   assign HDMI_VSYNC = w_vga_ctrl0_syn_o[0];  // syn_o[0] = VSYNC
-#   assign HDMI_CLK   = clkpll_c0;
-#   assign HDMI_DE    = w_vga_ctrl0_hde_o;     // hde_o je framework wire
-# =============================================================================

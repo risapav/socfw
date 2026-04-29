@@ -115,7 +115,14 @@ module vga_ctrl #(
     output rgb565_t   dat_o,      ///< @brief Registrované výstupné RGB dáta pre VGA DAC.
     output vga_sync_t syn_o,      ///< @brief Registrované synchronizačné signály (h_sync a v_sync).
     output logic      eol_o,      ///< @brief Registrovaný pulz na konci každého riadku.
-    output logic      eof_o       ///< @brief Registrovaný pulz na konci každej snímky.
+    output logic      eof_o,      ///< @brief Registrovaný pulz na konci každej snímky.
+
+    // --- Priame VGA výstupy pre fyzické piny (bez potreby ručných assignov) ---
+    output logic [4:0] vga_r_o,   ///< @brief Červená zložka RGB565 [15:11].
+    output logic [5:0] vga_g_o,   ///< @brief Zelená zložka RGB565 [10:5].
+    output logic [4:0] vga_b_o,   ///< @brief Modrá zložka RGB565 [4:0].
+    output logic       vga_hs_o,  ///< @brief Horizontálny sync signál.
+    output logic       vga_vs_o   ///< @brief Vertikálny sync signál.
 );
 
     // =========================================================================
@@ -217,6 +224,13 @@ module vga_ctrl #(
     assign syn_o  = sync_q;
     assign eol_o  = eol_q;
     assign eof_o  = eof_q;
+
+    // Priame VGA výstupy — rozbalenie RGB565 a sync štruktúr na skalárne porty.
+    assign vga_r_o  = data_q.red;
+    assign vga_g_o  = data_q.grn;
+    assign vga_b_o  = data_q.blu;
+    assign vga_hs_o = sync_q.hs;
+    assign vga_vs_o = sync_q.vs;
 
 endmodule
 

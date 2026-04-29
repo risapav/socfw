@@ -75,6 +75,21 @@ ports:
   - name: eof_o
     direction: output
     width: 1
+  - name: vga_r_o
+    direction: output
+    width: 5
+  - name: vga_g_o
+    direction: output
+    width: 6
+  - name: vga_b_o
+    direction: output
+    width: 5
+  - name: vga_hs_o
+    direction: output
+    width: 1
+  - name: vga_vs_o
+    direction: output
+    width: 1
 
 artifacts:
   synthesis:

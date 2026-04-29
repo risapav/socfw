@@ -18,9 +18,8 @@ timing:
       source:
         instance: clkpll
         output: c0
-      # 25.175 MHz ≈ 50 MHz / 2 pre SDC analýzu (aproximácia)
-      # Quartus odvodí presnú frekvenciu z konfigurácie PLL v clkpll.qip
-      multiply_by: 1
+        # 75 Mhz pixel clock for 1024x768 @ 75 Hz (CVT-RB)
+      multiply_by: 3
       divide_by: 2
 
   clock_groups:
