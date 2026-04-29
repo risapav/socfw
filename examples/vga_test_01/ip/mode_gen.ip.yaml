@@ -2,8 +2,8 @@ version: 2
 kind: ip
 
 ip:
-  name: seven_seg_mux
-  module: seven_seg_mux_packed
+  name: mode_gen
+  module: mode_gen
   category: peripheral
 
 origin:
@@ -32,12 +32,9 @@ parameters:
   - name: NUM_DIGITS
     type: int
     default: 3
-  - name: DIGIT_REFRESH_HZ
+  - name: CHANGE_PERIOD_MS
     type: int
-    default: 250
-  - name: COMMON_ANODE
-    type: bit
-    default: false
+    default: 2000
 
 ports:
   - name: clk_i
@@ -46,27 +43,22 @@ ports:
   - name: rst_ni
     direction: input
     width: 1
-  - name: digits_i
-    direction: input
+  - name: mode_o
+    direction: output
+    width: 3
+  - name: digits_o
+    direction: output
     width_expr: "NUM_DIGITS*4"
-  - name: dots_i
-    direction: input
-    width_expr: "NUM_DIGITS"
-  - name: digit_sel_o
+  - name: dots_o
     direction: output
     width_expr: "NUM_DIGITS"
-  - name: segment_sel_o
-    direction: output
-    width: 8
 
 artifacts:
   synthesis:
-    - ../rtl/segment/seven_seg_mux.sv
-    - ../rtl/segment/seven_seg_mux_packed.sv
+    - ../rtl/segment/mode_gen.sv
   simulation: []
   metadata: []
 
 provides:
   modules:
-    - seven_seg_mux
-    - seven_seg_mux_packed
+    - mode_gen

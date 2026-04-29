@@ -85,13 +85,15 @@ modules:
     params:
       H_RES: 1024
       V_RES: 768
-    bind:
-      ports:
-        # ONB_BTN je 4-bitový, mode_i je 3-bitový → adapt vezme spodné 3 bity
-        mode_i:
-          target: board:onboard.buttons
-          width: 3
-          adapt: truncate
+
+  - instance: mode_gen0
+    type: mode_gen
+    clocks:
+      clk_i: sys_clk
+    params:
+      CLOCK_FREQ_HZ: 50000000
+      NUM_DIGITS: 3
+      CHANGE_PERIOD_MS: 2000
 
   - instance: seven_seg_mux0
     type: seven_seg_mux
@@ -139,4 +141,12 @@ connections:
   # Dátový tok pixelov: generátor → VGA radič (bez FIFO, priamo)
   - from: picture_gen0.data_o
     to: vga_ctrl0.fifo_data_i
+
+  # Automatický mód: mode_gen → picture_gen (výber vzoru) + seven_seg_mux (zobrazenie)
+  - from: mode_gen0.mode_o
+    to: picture_gen0.mode_i
+  - from: mode_gen0.digits_o
+    to: seven_seg_mux0.digits_i
+  - from: mode_gen0.dots_o
+    to: seven_seg_mux0.dots_i
 
