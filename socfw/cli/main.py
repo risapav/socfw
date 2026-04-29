@@ -96,10 +96,37 @@ def cmd_doctor(args) -> int:
     return 0 if loaded.ok else 1
 
 
+def _detect_yaml_kind(path: str) -> str | None:
+    """Return the top-level 'kind:' field from a YAML file without full parsing."""
+    import yaml as _yaml
+    try:
+        with open(path, encoding="utf-8") as fh:
+            raw = _yaml.safe_load(fh)
+        return raw.get("kind") if isinstance(raw, dict) else None
+    except Exception:
+        return None
+
+
 def cmd_validate(args) -> int:
+    kind = _detect_yaml_kind(args.project)
+
+    if kind == "project" or kind is None:
+        return _validate_project(args.project)
+    if kind == "ip":
+        return _validate_ip(args.project)
+    if kind == "timing":
+        return _validate_timing(args.project)
+    if kind == "board":
+        return _validate_board(args.project)
+
+    print(f"ERROR: unrecognised YAML kind '{kind}' in {args.project}", file=sys.stderr)
+    return 1
+
+
+def _validate_project(path: str) -> int:
     from socfw.build.full_pipeline import FullBuildPipeline
 
-    loaded = FullBuildPipeline().validate(args.project)
+    loaded = FullBuildPipeline().validate(path)
     _print_diags(loaded.diagnostics)
 
     if loaded.ok and loaded.value is not None:
@@ -127,6 +154,47 @@ def cmd_validate(args) -> int:
             f"{cpu_info} "
             f"{timing_info}"
         )
+        return 0
+    return 1
+
+
+def _validate_ip(path: str) -> int:
+    from socfw.config.ip_loader import IpLoader
+
+    result = IpLoader().load_file(path)
+    _print_diags(result.diagnostics)
+    if result.ok and result.value is not None:
+        ip = result.value
+        port_count = len(ip.ports) if ip.ports else 0
+        print(f"OK: ip={ip.name} module={ip.module} ports={port_count}")
+        return 0
+    return 1
+
+
+def _validate_timing(path: str) -> int:
+    from socfw.config.timing_loader import TimingLoader
+
+    result = TimingLoader().load(path)
+    _print_diags(result.diagnostics)
+    if result.ok and result.value is not None:
+        t = result.value
+        print(
+            f"OK: timing primary_clocks={len(t.primary_clocks)} "
+            f"generated_clocks={len(t.generated_clocks)} "
+            f"false_paths={len(t.false_paths)}"
+        )
+        return 0
+    return 1
+
+
+def _validate_board(path: str) -> int:
+    from socfw.config.board_loader import BoardLoader
+
+    result = BoardLoader().load(path)
+    _print_diags(result.diagnostics)
+    if result.ok and result.value is not None:
+        b = result.value
+        print(f"OK: board={b.board_id}")
         return 0
     return 1
 
@@ -397,8 +465,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_doc.add_argument("project")
     p_doc.set_defaults(func=cmd_doctor)
 
-    v = sub.add_parser("validate", help="Validate project config only")
-    v.add_argument("project")
+    v = sub.add_parser(
+        "validate",
+        help="Validate a YAML config file (project / ip / timing / board)",
+    )
+    v.add_argument(
+        "project",
+        metavar="file.yaml",
+        help="Path to project.yaml, *.ip.yaml, timing_config.yaml, or board.yaml. "
+             "File type is detected automatically from the top-level 'kind:' field.",
+    )
     v.set_defaults(func=cmd_validate)
 
     e = sub.add_parser("explain", help="Explain a design aspect in plain text")
