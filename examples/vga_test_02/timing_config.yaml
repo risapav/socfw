@@ -1,0 +1,73 @@
+version: 2
+kind: timing
+
+timing:
+  derive_uncertainty: true
+
+  clocks:
+    - name: SYS_CLK
+      source: SYS_CLK
+      period_ns: 20.0
+      reset:
+        source: RESET_N
+        active_low: true
+        sync_stages: 2
+
+  generated_clocks:
+    - name: clk_pixel
+      source:
+        instance: clkpll
+        output: c0
+        # 65 MHz pixel clock for 1024x768 @ 60 Hz (VESA)
+      multiply_by: 13
+      divide_by: 10
+
+  clock_groups:
+    - type: asynchronous
+      groups:
+        - [SYS_CLK]
+        - [clk_pixel]
+
+  io_delays:
+    auto: true
+    default_clock: SYS_CLK
+    default_input_max_ns: 2.0
+    default_input_min_ns: 0.5
+    default_output_max_ns: 3.0
+    default_output_min_ns: 0.5
+    overrides:
+      # VGA výstupné signály sú taktované pixelovým hodinami
+      - port: VGA_R[*]
+        direction: output
+        clock: clk_pixel
+        max_ns: 3.0
+        min_ns: 0.5
+        comment: VGA RGB data (pixel clock domain)
+      - port: VGA_G[*]
+        direction: output
+        clock: clk_pixel
+        max_ns: 3.0
+        min_ns: 0.5
+        comment: VGA RGB data (pixel clock domain)
+      - port: VGA_B[*]
+        direction: output
+        clock: clk_pixel
+        max_ns: 3.0
+        min_ns: 0.5
+        comment: VGA RGB data (pixel clock domain)                
+      - port: VGA_HS
+        direction: output
+        clock: clk_pixel
+        max_ns: 3.0
+        min_ns: 0.5
+        comment: VGA HSYNC
+      - port: VGA_VS
+        direction: output
+        clock: clk_pixel
+        max_ns: 3.0
+        min_ns: 0.5
+        comment: VGA VSYNC
+
+  false_paths:
+    - comment: Async reset na všetky registre
+      from_port: RESET_N

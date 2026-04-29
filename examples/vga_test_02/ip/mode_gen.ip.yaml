@@ -1,0 +1,64 @@
+version: 2
+kind: ip
+
+ip:
+  name: mode_gen
+  module: mode_gen
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: []
+  outputs: []
+
+parameters:
+  - name: CLOCK_FREQ_HZ
+    type: int
+    default: 50000000
+  - name: NUM_DIGITS
+    type: int
+    default: 3
+  - name: CHANGE_PERIOD_MS
+    type: int
+    default: 2000
+
+ports:
+  - name: clk_i
+    direction: input
+    width: 1
+  - name: rst_ni
+    direction: input
+    width: 1
+  - name: mode_o
+    direction: output
+    width: 3
+  - name: digits_o
+    direction: output
+    width_expr: "NUM_DIGITS*4"
+  - name: dots_o
+    direction: output
+    width_expr: "NUM_DIGITS"
+
+artifacts:
+  synthesis:
+    - ../rtl/segment/mode_gen.sv
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - mode_gen
