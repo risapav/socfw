@@ -81,6 +81,7 @@ class ProjectLoader:
                         if m.bus
                         else None
                     ),
+                    reset_override=m.reset,
                 )
             )
 

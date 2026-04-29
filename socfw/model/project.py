@@ -34,6 +34,7 @@ class ModuleInstance:
     clocks: list[ClockBinding] = field(default_factory=list)
     port_bindings: list[PortBinding] = field(default_factory=list)
     bus: BusAttach | None = None
+    reset_override: str | None = "auto"
 
     def clock_for_port(self, port_name: str) -> ClockBinding | None:
         for cb in self.clocks:

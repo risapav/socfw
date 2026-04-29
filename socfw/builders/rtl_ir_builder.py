@@ -577,9 +577,14 @@ class RtlIrBuilder:
                 if inst == mod.instance:
                     explicit[port] = wire
 
-            if ip.reset.port:
-                rst = "~reset_n" if ip.reset.active_high else "reset_n"
-                explicit[ip.reset.port] = rst
+            reset_override = getattr(mod, "reset_override", "auto")
+            if reset_override == "auto":
+                if ip.reset.port:
+                    rst = "~reset_n" if ip.reset.active_high else "reset_n"
+                    explicit[ip.reset.port] = rst
+            elif reset_override is not None:
+                if ip.reset.port:
+                    explicit[ip.reset.port] = reset_override
 
             # Wire clocking IP outputs to <instance>_<output> nets
             if ip.clocking and ip.clocking.outputs:

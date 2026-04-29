@@ -49,11 +49,13 @@ modules:
       inclk0:
         domain: sys_clk
         no_reset: true
+    reset: "~RESET_N"
 
   - instance: rst_sync0
     type: cdc_reset_synchronizer
     clocks:
       clk_i: clk_pixel
+    reset: null
     params:
       STAGES: 3
 

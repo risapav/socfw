@@ -89,6 +89,7 @@ class ModuleSchema(BaseModel):
     clocks: dict[str, str | ModuleClockPortSchema] = Field(default_factory=dict)
     bind: ModuleBindSchema = Field(default_factory=ModuleBindSchema)
     bus: BusAttachSchema | None = None
+    reset: str | None = "auto"
 
 
 class TimingRefSchema(BaseModel):
