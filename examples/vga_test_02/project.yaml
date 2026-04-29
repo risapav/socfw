@@ -16,6 +16,8 @@ registries:
 timing:
   file: timing_config.yaml
 
+reset_driver: rst_sync0.rst_no
+
 clocks:
   primary:
     domain: sys_clk
@@ -47,6 +49,13 @@ modules:
       inclk0:
         domain: sys_clk
         no_reset: true
+
+  - instance: rst_sync0
+    type: cdc_reset_synchronizer
+    clocks:
+      clk_i: clk_pixel
+    params:
+      STAGES: 3
 
   - instance: pgen0
     type: picture_gen_stream
@@ -123,7 +132,11 @@ modules:
           target: board:onboard.seg
 
 connections:
-  # PLL lock povolí generátor; continuous_i=1'b1 → beží nepretržite (nastavené v module params)
+  # PLL locked → synchrónny reset cez cdc_reset_synchronizer
+  - from: clkpll.locked
+    to: rst_sync0.rst_ni
+
+  # PLL lock povolí generátor
   - from: clkpll.locked
     to: pgen0.enable_i
   - from: clkpll.locked

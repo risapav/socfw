@@ -396,6 +396,7 @@ class RtlIrBuilder:
             self._add_basic_clock_reset_nets(system, top, needs_reset)
             self._add_board_bound_ports(system, top, design)
             self._add_project_module_instances(system, top, design)
+            self._apply_reset_driver(system, top)
         self._add_bridge_instances(planned_bridges, top, system)
 
         top.ports = sorted(top.ports, key=lambda p: p.name)
@@ -427,16 +428,49 @@ class RtlIrBuilder:
         if not needs_reset:
             return
 
+        has_reset_driver = bool(getattr(system.project, "reset_driver", None))
+
         if system.board.sys_reset is not None:
             rst_name = system.board.sys_reset.top_name
             top.ports.append(RtlPort(name=rst_name, direction="input", width=1))
             top.signals.append(RtlSignal(name="reset_n", width=1))
-            if system.board.sys_reset.active_low:
-                top.adapt_assigns.append(RtlAdaptAssign(lhs="reset_n", rhs=rst_name))
-            else:
-                top.adapt_assigns.append(RtlAdaptAssign(lhs="reset_n", rhs=f"~{rst_name}"))
+            if not has_reset_driver:
+                if system.board.sys_reset.active_low:
+                    top.adapt_assigns.append(RtlAdaptAssign(lhs="reset_n", rhs=rst_name))
+                else:
+                    top.adapt_assigns.append(RtlAdaptAssign(lhs="reset_n", rhs=f"~{rst_name}"))
         else:
             top.signals.append(RtlSignal(name="reset_n", width=1))
+
+    def _inject_reset_driver_wire(self, system, top, conn_map: dict) -> None:
+        """Pre-register the reset_driver output wire so it appears in instance connections."""
+        from socfw.ir.rtl import RtlSignal
+
+        reset_driver = getattr(system.project, "reset_driver", None)
+        if not reset_driver:
+            return
+        parts = reset_driver.split(".", 1)
+        if len(parts) != 2:
+            return
+        inst, port = parts
+        wire_name = f"w_{inst}_{port}"
+        if not any(s.name == wire_name for s in top.signals):
+            top.signals.append(RtlSignal(name=wire_name, width=1))
+        conn_map[(inst, port)] = wire_name
+
+    def _apply_reset_driver(self, system, top) -> None:
+        """Wire the reset_driver output to reset_n after all instances are built."""
+        from socfw.ir.rtl import RtlAdaptAssign
+
+        reset_driver = getattr(system.project, "reset_driver", None)
+        if not reset_driver:
+            return
+        parts = reset_driver.split(".", 1)
+        if len(parts) != 2:
+            return
+        inst, port = parts
+        wire_name = f"w_{inst}_{port}"
+        top.adapt_assigns.append(RtlAdaptAssign(lhs="reset_n", rhs=wire_name))
 
     def _add_board_bound_ports(self, system, top, design) -> None:
         from socfw.ir.rtl import RtlPort
@@ -522,6 +556,7 @@ class RtlIrBuilder:
 
         resolver = build_resolver(system.board, system.project)
         conn_map = self._build_connection_wires(system, top)
+        self._inject_reset_driver_wire(system, top, conn_map)
 
         for mod in system.project.modules:
             ip = system.ip_catalog.get(mod.type_name)

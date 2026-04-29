@@ -159,6 +159,7 @@ class ProjectConfigSchema(BaseModel):
     connections: list[ConnectionEntrySchema] = Field(default_factory=list)
     timing: TimingRefSchema | None = None
     firmware: FirmwareSchema | None = None
+    reset_driver: str | None = None
     artifacts: ArtifactsSchema = Field(default_factory=ArtifactsSchema)
 
     @model_validator(mode="after")

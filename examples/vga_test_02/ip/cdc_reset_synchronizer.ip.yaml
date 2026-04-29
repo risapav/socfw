@@ -1,0 +1,51 @@
+version: 2
+kind: ip
+
+ip:
+  name: cdc_reset_synchronizer
+  module: cdc_reset_synchronizer
+  category: cdc
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: null
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: []
+  outputs: []
+
+parameters:
+  - name: STAGES
+    type: int
+    default: 2
+
+ports:
+  - name: clk_i
+    direction: input
+    width: 1
+  - name: rst_ni
+    direction: input
+    width: 1
+  - name: rst_no
+    direction: output
+    width: 1
+
+artifacts:
+  synthesis:
+    - ../rtl/cdc/cdc_reset_synchronizer.sv
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - cdc_reset_synchronizer

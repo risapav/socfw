@@ -134,6 +134,7 @@ class ProjectLoader:
                 )
                 for b in doc.buses
             ],
+            reset_driver=doc.reset_driver,
         )
 
         errs = model.validate()
