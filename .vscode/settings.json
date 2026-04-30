@@ -1,4 +1,7 @@
 {
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
   "yaml.schemas": {
     "build/schema/project.schema.json": "tests/golden/fixtures/*/project.yaml",
     "build/schema/board.schema.json": "tests/golden/fixtures/*/board.yaml",
