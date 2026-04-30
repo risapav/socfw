@@ -1,7 +1,16 @@
+/**
+ * @file vga_rgb565_stream.sv
+ * @brief VGA kontrolér konvertujúci stream na fyzické signály.
+ * @param H_ACTIVE Počet viditeľných pixelov horizontálne.
+ * @param V_ACTIVE Počet viditeľných riadkov vertikálne.
+ * @details Generuje HSYNC, VSYNC a kontroluje integritu AXI-Streamu.
+ */
+
 `ifndef VGA_RGB565_STREAM_SV
 `define VGA_RGB565_STREAM_SV
 
 `timescale 1ns/1ns
+
 `default_nettype none
 
 import video_pkg::*;
@@ -28,6 +37,7 @@ module vga_rgb565_stream #(
     input  wire logic clk_i,
     input  wire logic rst_ni,
 
+    // Stream vstup
     input  rgb565_t   s_axis_data_i,
     input  wire logic s_axis_valid_i,
     output logic      s_axis_ready_o,
@@ -35,12 +45,14 @@ module vga_rgb565_stream #(
     input  wire logic s_axis_eol_i,
     input  wire logic s_axis_eof_i,
 
+    // VGA Fyzické výstupy
     output logic [4:0] vga_r_o,
     output logic [5:0] vga_g_o,
     output logic [4:0] vga_b_o,
     output logic       vga_hs_o,
     output logic       vga_vs_o,
 
+    // Interný status
     output logic       active_video_o,
     output logic       frame_start_o,
     output logic       line_start_o,
@@ -82,6 +94,7 @@ module vga_rgb565_stream #(
     assign last_active_y      = active_video && (v_cnt_q == V_ACTIVE - 1);
     assign last_active_pixel  = last_active_x && last_active_y;
 
+    // Generovanie synchronizačných impulzov[cite: 3]
     assign hsync =
         ((h_cnt_q >= H_ACTIVE + H_FP) &&
          (h_cnt_q <  H_ACTIVE + H_FP + H_SYNC)) ? HSYNC_POL : ~HSYNC_POL;
@@ -94,9 +107,11 @@ module vga_rgb565_stream #(
     assign stream_active_o       = active_video;
     assign stream_frame_start_o  = first_active_pixel;
 
+    // Výber pixelu: dáta zo streamu alebo pozadie[cite: 3]
     assign selected_pixel =
         (active_video && s_axis_valid_i) ? s_axis_data_i : DEFAULT_COLOR;
 
+    // Časová základňa VGA[cite: 3]
     always_ff @(posedge clk_i) begin
         if (!rst_ni) begin
             h_cnt_q <= '0;
@@ -115,6 +130,7 @@ module vga_rgb565_stream #(
         end
     end
 
+    // Výstupné registre a kontrola chýb[cite: 3]
     always_ff @(posedge clk_i) begin
         if (!rst_ni) begin
             vga_r_o        <= '0;
@@ -151,6 +167,7 @@ module vga_rgb565_stream #(
 
             underflow_o <= active_video && !s_axis_valid_i;
 
+            // Detekcia nesúladu medzi HW časovaním a metadátami streamu[cite: 3]
             sync_error_o <= 1'b0;
 
             if (active_video && s_axis_valid_i) begin

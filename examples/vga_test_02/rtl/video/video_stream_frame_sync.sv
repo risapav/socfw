@@ -1,7 +1,14 @@
+/**
+ * @file video_stream_frame_sync.sv
+ * @brief Synchronizátor video streamu s VGA časovaním.
+ * @details Zabezpečuje, že stream z FIFO začne presne na súradniciach (0,0) VGA rámca.
+ */
+
 `ifndef VIDEO_STREAM_FRAME_SYNC_SV
 `define VIDEO_STREAM_FRAME_SYNC_SV
 
 `timescale 1ns/1ns
+
 `default_nettype none
 
 import video_pkg::*;
@@ -10,9 +17,11 @@ module video_stream_frame_sync (
     input  wire logic clk_i,
     input  wire logic rst_ni,
 
+    // Status signály z VGA kontroléra
     input  wire logic video_active_i,
     input  wire logic video_frame_start_i,
 
+    // Stream vstup
     input  rgb565_t   s_axis_data_i,
     input  wire logic s_axis_valid_i,
     output logic      s_axis_ready_o,
@@ -20,6 +29,7 @@ module video_stream_frame_sync (
     input  wire logic s_axis_eol_i,
     input  wire logic s_axis_eof_i,
 
+    // Stream výstup
     output rgb565_t   m_axis_data_o,
     output logic      m_axis_valid_o,
     input  wire logic m_axis_ready_i,

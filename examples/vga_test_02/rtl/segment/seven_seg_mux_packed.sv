@@ -1,3 +1,13 @@
+/**
+ * @file seven_seg_mux_packed.sv
+ * @brief Wrapper pre seven_seg_mux s podporou zbalených (packed) portov.
+ * @details Tento modul preberá dáta ako jeden široký vektor, čo uľahčuje
+ *          portovanie modulu v prostrediach, ktoré nepodporujú polia v portoch.
+ */
+
+`ifndef SEVEN_SEG_MUX_PACKED_SV
+`define SEVEN_SEG_MUX_PACKED_SV
+
 `default_nettype none
 
 module seven_seg_mux_packed #(
@@ -17,9 +27,11 @@ module seven_seg_mux_packed #(
   output logic [$clog2(NUM_DIGITS)-1:0] current_digit_o
 );
 
+  // Unpacked polia pre interné prepojenie s jadrom
   logic [3:0] digits_unpacked [NUM_DIGITS];
   logic       dots_unpacked   [NUM_DIGITS];
 
+  // Rozbalenie vektora pomocou generate bloku
   genvar i;
   generate
     for (i = 0; i < NUM_DIGITS; i = i + 1) begin : g_unpack
@@ -28,6 +40,7 @@ module seven_seg_mux_packed #(
     end
   endgenerate
 
+  // Inštancia jadra multiplexora
   seven_seg_mux #(
     .CLOCK_FREQ_HZ(CLOCK_FREQ_HZ),
     .NUM_DIGITS(NUM_DIGITS),
@@ -45,4 +58,5 @@ module seven_seg_mux_packed #(
 
 endmodule
 
-`default_nettype wire
+`endif
+

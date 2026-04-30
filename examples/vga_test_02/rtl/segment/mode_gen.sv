@@ -1,3 +1,17 @@
+/**
+ * @file mode_gen.sv
+ * @brief Automatický generátor prevádzkových režimov.
+ * @details Modul v pravidelných intervaloch (CHANGE_PERIOD_MS) mení hodnotu mode_o (0-7).
+ *          Zároveň poskytuje dáta pre 7-segmentový displej na zobrazenie aktuálneho módu.
+ * 
+ * @param CLOCK_FREQ_HZ    Frekvencia systémových hodín v Hz.
+ * @param NUM_DIGITS       Počet číslic 7-seg displeja pripojeného na výstup.
+ * @param CHANGE_PERIOD_MS Interval zmeny módu v milisekundách.
+ */
+
+`ifndef MODE_GEN_SV
+`define MODE_GEN_SV
+
 `default_nettype none
 
 // Automatický generátor VGA módu: každé CHANGE_PERIOD_MS ms inkrementuje
@@ -10,8 +24,13 @@ module mode_gen #(
     input  logic clk_i,
     input  logic rst_ni,
 
+    ///< Aktuálny mód (0-7)
     output logic [2:0]              mode_o,
+
+    ///< Dáta pre číslice displeja (BCD/HEX)
     output logic [NUM_DIGITS*4-1:0] digits_o,
+
+    ///< Ovládanie bodiek na displeji
     output logic [NUM_DIGITS-1:0]   dots_o
 );
 
@@ -21,6 +40,7 @@ module mode_gen #(
     logic [CNT_W-1:0] prescaler;
     logic [2:0]       mode_q;
 
+    // Logika prechodu stavov a časovania
     always_ff @(posedge clk_i) begin
         if (!rst_ni) begin
             prescaler <= '0;
@@ -35,7 +55,10 @@ module mode_gen #(
 
     assign mode_o = mode_q;
 
-    // Rightmost digit zobrazuje aktuálny mód (0-7), ostatné sú 0.
+    /** 
+     * Formátovanie výstupu pre displej:
+     * Najpravšia číslica (digit 0) zobrazuje mód, ostatné sú zhasnuté (nuly).
+     */
     always_comb begin
         digits_o      = '0;
         digits_o[3:0] = 4'(mode_q);
@@ -45,4 +68,4 @@ module mode_gen #(
 
 endmodule
 
-`default_nettype wire
+`endif

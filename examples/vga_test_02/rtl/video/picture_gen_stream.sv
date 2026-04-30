@@ -1,7 +1,16 @@
+/**
+ * @file picture_gen_stream.sv
+ * @brief Testovací generátor obrazových vzorov.
+ * @param H_RES Horizontálne rozlíšenie.
+ * @param V_RES Vertikálne rozlíšenie.
+ * @details Implementuje rôzne módy (gradienty, pruhy, mriežky) s animáciou.
+ */
+
 `ifndef PICTURE_GEN_STREAM_SV
 `define PICTURE_GEN_STREAM_SV
 
 `timescale 1ns/1ns
+
 `default_nettype none
 
 import video_pkg::*;
@@ -75,6 +84,7 @@ module picture_gen_stream #(
     assign x_o = x_q;
     assign y_o = y_q;
 
+    // Sekvenčná logika pre generovanie súradníc a animáciu[cite: 4]
     always_ff @(posedge clk_i) begin
         if (!rst_ni) begin
             x_q             <= '0;
@@ -123,11 +133,13 @@ module picture_gen_stream #(
         end
     end
 
+    // Generovanie metadát rámca[cite: 4]
     assign m_axis_data_o = data_next;
     assign m_axis_sof_o  = m_axis_valid_o && (x_q == '0) && (y_q == '0);
     assign m_axis_eol_o  = m_axis_valid_o && last_x;
     assign m_axis_eof_o  = m_axis_valid_o && last_pixel;
 
+    // Kombinačná logika pre výber farebného vzoru[cite: 4]
     always_comb begin
         data_next = BLACK;
 
@@ -180,7 +192,8 @@ module picture_gen_stream #(
             MODE_COLOR_BARS: begin
                 logic [X_WIDTH+2:0] x_times_8;
                 x_times_8 = x_q << 3;
-
+                
+                // Implementácia farebných pruhov[cite: 4]                
                 if      (x_times_8 < H_RES * 1) data_next = WHITE;
                 else if (x_times_8 < H_RES * 2) data_next = YELLOW;
                 else if (x_times_8 < H_RES * 3) data_next = CYAN;
