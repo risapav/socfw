@@ -18,15 +18,24 @@ timing:
       source:
         instance: clkpll
         output: c0
-        # 65 MHz pixel clock for 1024x768 @ 60 Hz (VESA)
-      multiply_by: 13
-      divide_by: 10
+        # 65 MHz pixel clock for 1024x768 @ 60 Hz (VESA) 13/10 = 65 MHz from 50 MHz input
+        # 40 Mhz pixel clock for 800x600x480 @ 60 Hz (VESA) 4/5 = 40 MHz from 50 MHz input
+      multiply_by: 4
+      divide_by: 5
+    - name: clk_pixel5x
+      source:
+        instance: clkpll
+        output: c1
+        # 200 Mhz pixel clock for 800x600 @ 60 Hz (VESA) 4/1 = 200 MHz from 50 MHz input
+      multiply_by: 4
+      divide_by: 1
 
   clock_groups:
     - type: asynchronous
       groups:
         - [SYS_CLK]
         - [clk_pixel]
+        - [clk_pixel5x]
 
   io_delays:
     auto: true
@@ -54,7 +63,7 @@ timing:
         clock: clk_pixel
         max_ns: 3.0
         min_ns: 0.5
-        comment: VGA RGB data (pixel clock domain)                
+        comment: VGA RGB data (pixel clock domain)
       - port: VGA_HS
         direction: output
         clock: clk_pixel
@@ -71,3 +80,5 @@ timing:
   false_paths:
     - comment: Async reset na všetky registre
       from_port: RESET_N
+    - comment: HDMI TMDS DDR výstup — self-clocked, štandardné IO delay analýza neplatí
+      to_port: PMOD_J11_HDMI_OUT

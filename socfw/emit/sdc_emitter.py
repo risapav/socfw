@@ -170,5 +170,7 @@ class SdcEmitter:
                 lines.append(f"set_false_path -to [get_clocks {{{fp.to_clock}}}]")
             elif fp.from_port:
                 lines.append(f"set_false_path -from [get_ports {{{fp.from_port}}}]")
+            elif fp.to_port:
+                lines.append(f"set_false_path -to [get_ports {{{fp.to_port}}}]")
 
         lines.append("")

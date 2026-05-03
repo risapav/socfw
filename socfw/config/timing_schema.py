@@ -62,6 +62,7 @@ class IoDelaysSchema(BaseModel):
 
 class FalsePathSchema(BaseModel):
     from_port: str | None = None
+    to_port: str | None = None
     from_clock: str | None = None
     to_clock: str | None = None
     from_cell: str | None = None

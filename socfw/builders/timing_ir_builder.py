@@ -70,6 +70,7 @@ class TimingIRBuilder:
             ir.false_paths.append(
                 FalsePathConstraintIR(
                     from_port=fp.from_port,
+                    to_port=fp.to_port,
                     from_clock=fp.from_clock,
                     to_clock=fp.to_clock,
                     from_cell=fp.from_cell,

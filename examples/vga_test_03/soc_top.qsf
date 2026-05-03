@@ -13,11 +13,11 @@ set_global_assignment -name NUM_PARALLEL_PROCESSORS 4
 
 # --- 2. Definícia zdrojových súborov ---
 # Pridávame hlavnú entitu priamo, ak nie je korektne v files.tcl
-source build/gen/hal/files.tcl
+source build/hal/files.tcl
 
 # Načítanie automaticky generovaných zoznamov súborov a pinov
 
-source build/gen/hal/board.tcl
+source build/hal/board.tcl
 
 # --- 3. Nastavenia pre SystemVerilog ---
 set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
@@ -41,6 +41,6 @@ set_global_assignment -name LAST_QUARTUS_VERSION "25.1std.0 Lite Edition"
 
 # Súbor končí prázdnym riadkom.
 
-set_global_assignment -name SYSTEMVERILOG_FILE build/gen/rtl/soc_top.sv
-set_global_assignment -name SDC_FILE build/gen/timing/soc_top.sdc
+set_global_assignment -name SYSTEMVERILOG_FILE build/rtl/soc_top.sv
+set_global_assignment -name SDC_FILE build/timing/soc_top.sdc
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

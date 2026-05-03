@@ -27,6 +27,9 @@ clocking:
     - port: c0
       kind: generated_clock
       domain: clk_pixel
+    - port: c1
+      kind: generated_clock
+      domain: clk_pixel5x
 
 ports:
   - name: inclk0
@@ -36,6 +39,9 @@ ports:
     direction: input
     width: 1
   - name: c0
+    direction: output
+    width: 1
+  - name: c1
     direction: output
     width: 1
   - name: locked

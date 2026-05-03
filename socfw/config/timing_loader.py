@@ -85,6 +85,7 @@ class TimingLoader:
             false_paths=[
                 FalsePathConstraint(
                     from_port=f.from_port,
+                    to_port=f.to_port,
                     from_clock=f.from_clock,
                     to_clock=f.to_clock,
                     from_cell=f.from_cell,
