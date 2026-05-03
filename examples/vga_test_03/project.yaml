@@ -12,6 +12,7 @@ registries:
   ip:
     - ip
     - cores/clkpll
+    - cores/ddio_out
 
 timing:
   file: timing_config.yaml

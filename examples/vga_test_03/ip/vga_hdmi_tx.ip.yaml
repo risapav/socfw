@@ -60,6 +60,7 @@ ports:
 
 artifacts:
   synthesis:
+    - ../cores/ddio_out/ddio_out.qip
     - ../rtl/hdmi/hdmi_pkg.sv
     - ../rtl/hdmi/tmds_encoder_pipelined.sv
     - ../rtl/hdmi/generic_serializer.sv
