@@ -51,6 +51,7 @@ class IpArtifactsSchema(BaseModel):
     synthesis: list[str] = Field(default_factory=list)
     simulation: list[str] = Field(default_factory=list)
     metadata: list[str] = Field(default_factory=list)
+    include_dirs: list[str] = Field(default_factory=list)
 
 
 class IpBusInterfaceSchema(BaseModel):

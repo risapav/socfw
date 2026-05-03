@@ -24,6 +24,7 @@ class IpArtifactBundle:
     synthesis: tuple[str, ...] = ()
     simulation: tuple[str, ...] = ()
     metadata: tuple[str, ...] = ()
+    include_dirs: tuple[str, ...] = ()
 
     def all_files(self) -> tuple[str, ...]:
         return self.synthesis + self.simulation + self.metadata

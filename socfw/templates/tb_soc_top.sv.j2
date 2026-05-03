@@ -1,0 +1,43 @@
+// AUTO-GENERATED - DO NOT EDIT
+`timescale 1ns/1ps
+
+module tb_soc_top;
+
+  localparam real CLK_HALF_NS = {{ "%.4f" | format(clk_period_ns / 2.0) }};
+
+{% for p in module.ports %}
+{% if p.direction == "input" %}
+  logic{% if p.width > 1 %} [{{ p.width - 1 }}:0]{% endif %} {{ p.name }};
+{% else %}
+  wire{% if p.width > 1 %} [{{ p.width - 1 }}:0]{% endif %} {{ p.name }};
+{% endif %}
+{% endfor %}
+
+  soc_top dut (
+{% for p in module.ports %}
+    .{{ p.name }}({{ p.name }}){{ "," if not loop.last else "" }}
+{% endfor %}
+  );
+
+  always #(CLK_HALF_NS) {{ clk_port }} = ~{{ clk_port }};
+
+  initial begin
+    $dumpfile("wave.vcd");
+    $dumpvars(0, dut);
+    {{ clk_port }} = 0;
+{% if rst_port %}
+    {{ rst_port }} = {{ "0" if rst_active_low else "1" }};  // assert reset
+{% endif %}
+{% for p in module.ports if p.direction == "input" and p.name != clk_port and p.name != rst_port %}
+    {{ p.name }} = {{ "'0" if p.width > 1 else "1'b0" }};
+{% endfor %}
+    repeat(10) @(posedge {{ clk_port }});
+{% if rst_port %}
+    {{ rst_port }} = {{ "1" if rst_active_low else "0" }};  // release reset
+{% endif %}
+    repeat({{ sim_cycles }}) @(posedge {{ clk_port }});
+    $display("SIM OK");
+    $finish;
+  end
+
+endmodule : tb_soc_top

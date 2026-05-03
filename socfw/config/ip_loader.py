@@ -97,6 +97,7 @@ class IpLoader:
                 synthesis=tuple(str((base_dir / p).resolve()) for p in doc.artifacts.synthesis),
                 simulation=tuple(str((base_dir / p).resolve()) for p in doc.artifacts.simulation),
                 metadata=tuple(str((base_dir / p).resolve()) for p in doc.artifacts.metadata),
+                include_dirs=tuple(str((base_dir / d).resolve()) for d in doc.artifacts.include_dirs),
             ),
             vendor_info=(
                 IpVendorInfo(
