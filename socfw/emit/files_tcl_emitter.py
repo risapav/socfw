@@ -6,7 +6,7 @@ from socfw.build.context import BuildContext
 from socfw.build.manifest import GeneratedArtifact
 from socfw.build.vendor_artifacts import collect_vendor_artifacts
 from socfw.ir.files import FilesIR
-from socfw.ir.rtl import RtlModuleIR
+from socfw.model.ip_graph import collect_synthesis_files
 
 
 def _assignment_for(path: str) -> str | None:
@@ -57,13 +57,14 @@ class FilesTclEmitter:
 
     def _collect_all_files(self, system, planned_bridges: list) -> list[str]:
         files: list[str] = []
+        catalog = system.ip_catalog
 
         used_types = {m.type_name for m in system.project.modules}
         for type_name in sorted(used_types):
-            ip = system.ip_catalog.get(type_name)
+            ip = catalog.get(type_name)
             if ip is None:
                 continue
-            for fp in getattr(ip.artifacts, "synthesis", ()):
+            for fp in collect_synthesis_files(ip, catalog):
                 files.append(str(fp))
             if ip.vendor_info is not None:
                 for sdc in ip.vendor_info.sdc:
@@ -78,7 +79,7 @@ class FilesTclEmitter:
 class QuartusFilesEmitter:
     family = "files"
 
-    def emit(self, ctx: BuildContext, ir: RtlModuleIR | FilesIR) -> list[GeneratedArtifact]:
+    def emit(self, ctx: BuildContext, ir: FilesIR) -> list[GeneratedArtifact]:
         out = Path(ctx.out_dir) / "files.tcl"
         out.parent.mkdir(parents=True, exist_ok=True)
         cwd = Path.cwd().resolve()

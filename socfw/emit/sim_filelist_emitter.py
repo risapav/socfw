@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from socfw.model.ip_graph import collect_include_dirs, collect_simulation_files, collect_synthesis_files
+
 _HDR_EXTS = {".vh", ".svh"}
 _SRC_EXTS = {".sv", ".v"}
 
@@ -20,24 +22,24 @@ class SimFilelistEmitter:
         # RTL output dir is always an include path (soc_top.sv lives there)
         include_dirs.add(str(out_path / "rtl"))
 
+        catalog = system.ip_catalog
         used_types = {m.type_name for m in system.project.modules}
         for type_name in sorted(used_types):
-            ip = system.ip_catalog.get(type_name)
+            ip = catalog.get(type_name)
             if ip is None:
                 continue
 
-            # Explicit include dirs declared in the IP descriptor
-            for d in ip.artifacts.include_dirs:
+            for d in collect_include_dirs(ip, catalog):
                 include_dirs.add(d)
 
-            for fp in ip.artifacts.synthesis:
+            for fp in collect_synthesis_files(ip, catalog):
                 p = Path(fp)
                 if p.suffix in _SRC_EXTS:
                     src_files.append(fp)
                 elif p.suffix in _HDR_EXTS:
                     include_dirs.add(str(p.parent))
 
-            for fp in ip.artifacts.simulation:
+            for fp in collect_simulation_files(ip, catalog):
                 p = Path(fp)
                 if p.suffix in _SRC_EXTS:
                     src_files.append(fp)

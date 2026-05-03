@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from socfw.core.diag_builders import err
 from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
+from socfw.model.ip_graph import transitive_requires
 from socfw.validate.rules.base import ValidationRule
 
 
@@ -109,6 +110,52 @@ class MissingClockPortBindingRule(ValidationRule):
                                 f"Add '{port}: <domain>' under `clocks:` for instance '{mod.instance}'.",
                                 "Without this binding the port receives 1'b0 (dead clock).",
                                 f"Available clock domains: {domain_hint}",
+                            ),
+                        )
+                    )
+
+        return diags
+
+
+class UnknownIpRequiresRule(ValidationRule):
+    """Error when a used IP's requires: list names an IP absent from the catalog.
+
+    Only checks IPs that are transitively required by project modules — unused
+    IPs in the catalog are ignored.
+    """
+
+    def validate(self, system) -> list[Diagnostic]:
+        diags: list[Diagnostic] = []
+        catalog = system.ip_catalog
+
+        # Collect all IPs reachable from the project modules
+        reachable: set[str] = {m.type_name for m in system.project.modules}
+        for type_name in list(reachable):
+            ip = catalog.get(type_name)
+            if ip is not None:
+                reachable |= transitive_requires(ip, catalog)
+
+        for ip_name in sorted(reachable):
+            ip = catalog.get(ip_name)
+            if ip is None:
+                continue
+            for dep_name in ip.requires:
+                if dep_name not in catalog:
+                    diags.append(
+                        Diagnostic(
+                            code="IP004",
+                            severity=Severity.ERROR,
+                            message=(
+                                f"IP '{ip.name}' requires '{dep_name}' "
+                                f"which is not in the catalog"
+                            ),
+                            subject="ip.requires",
+                            spans=(SourceLocation(file=ip.source_file),) if ip.source_file else (),
+                            hints=(
+                                f"Add an IP registry path containing '{dep_name}.ip.yaml' "
+                                f"to registries.ip in project.yaml.",
+                                f"Or remove the requires entry from '{ip.name}' if the dependency "
+                                f"is already included via artifacts.synthesis.",
                             ),
                         )
                     )

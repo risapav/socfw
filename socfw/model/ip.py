@@ -93,6 +93,7 @@ class IpDescriptor:
     reset: IpResetSemantics
     clocking: IpClocking
     artifacts: IpArtifactBundle
+    requires: tuple[str, ...] = ()
     bus_interfaces: tuple[IpBusInterface, ...] = ()
     ports: tuple[PortDescriptor, ...] = ()
     declared_params: tuple[IpParameterDecl, ...] = ()

@@ -99,6 +99,7 @@ class IpLoader:
                 metadata=tuple(str((base_dir / p).resolve()) for p in doc.artifacts.metadata),
                 include_dirs=tuple(str((base_dir / d).resolve()) for d in doc.artifacts.include_dirs),
             ),
+            requires=tuple(doc.requires),
             vendor_info=(
                 IpVendorInfo(
                     vendor=doc.vendor.vendor,

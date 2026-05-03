@@ -133,6 +133,7 @@ class IpConfigSchema(BaseModel):
     reset: IpResetSchema = Field(default_factory=IpResetSchema)
     clocking: IpClockingSchema = Field(default_factory=IpClockingSchema)
     artifacts: IpArtifactsSchema = Field(default_factory=IpArtifactsSchema)
+    requires: list[str] = Field(default_factory=list)
     bus_interfaces: list[IpBusInterfaceSchema] = Field(default_factory=list)
     ports: list[IpPortSchema] = Field(default_factory=list)
     parameters: list[IpParameterSchema] = Field(default_factory=list)
