@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 
-from socfw.core.diagnostics import Diagnostic, Severity
+from socfw.core.diagnostics import Diagnostic, Severity, SourceLocation
 from socfw.model.system import SystemModel
 from .base import ValidationRule
 
@@ -39,19 +39,36 @@ class IpArtifactExistsRule(ValidationRule):
             ip = system.ip_catalog.get(type_name)
             if ip is None:
                 continue
-            for path in ip.artifacts.synthesis:
-                if not Path(path).exists():
-                    diags.append(
-                        Diagnostic(
-                            code="IP101",
-                            severity=Severity.WARNING,
-                            message=f"Missing IP artifact file: {path}",
-                            subject="ip.artifacts.synthesis",
-                            hints=(
-                                f"Declared in IP descriptor for '{ip.name}'.",
-                                "Generate the IP core or update the artifacts list.",
-                            ),
+
+            base_dir = Path(ip.source_file).parent if ip.source_file else None
+            spans = (SourceLocation(file=ip.source_file),) if ip.source_file else ()
+
+            for abs_path in ip.artifacts.synthesis:
+                if Path(abs_path).exists():
+                    continue
+
+                hints = [f"Declared in IP descriptor for '{ip.name}'."]
+
+                if base_dir is not None:
+                    try:
+                        rel = Path(abs_path).relative_to(base_dir.resolve())
+                        hints.append(
+                            f"Path '{rel}' resolved relative to '{base_dir}' — verify the path is correct."
                         )
+                    except ValueError:
+                        hints.append(f"Resolved absolute path: {abs_path}")
+
+                hints.append("Generate the IP core or fix the path in the IP yaml artifacts list.")
+
+                diags.append(
+                    Diagnostic(
+                        code="IP101",
+                        severity=Severity.WARNING,
+                        message=f"Missing IP artifact file: {abs_path}",
+                        subject="ip.artifacts.synthesis",
+                        hints=tuple(hints),
+                        spans=spans,
                     )
+                )
 
         return diags
