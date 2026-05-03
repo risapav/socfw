@@ -39,7 +39,7 @@ modules:
   - instance: clkpll
     type: clkpll
     clocks:
-      clk: sys_clk
+      inclk0: sys_clk
 
   - instance: blink_test
     type: blink_test

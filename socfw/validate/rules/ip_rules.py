@@ -65,3 +65,52 @@ class UnknownIpParamRule(ValidationRule):
                     )
 
         return diags
+
+
+class MissingClockPortBindingRule(ValidationRule):
+    """Error when IP declares additional_input_ports not covered by module clocks: dict.
+
+    A missing clock binding silently wires the port to 1'b0, which causes the
+    module to receive a dead clock — a silent correctness bug.
+    """
+
+    def validate(self, system) -> list[Diagnostic]:
+        diags: list[Diagnostic] = []
+
+        for mod in system.project.modules:
+            ip = system.ip_catalog.get(mod.type_name)
+            if ip is None or not ip.clocking:
+                continue
+
+            all_clock_ports = list(ip.clocking.additional_input_ports)
+            if ip.clocking.primary_input_port:
+                all_clock_ports = [ip.clocking.primary_input_port] + all_clock_ports
+
+            bound_ports = {cb.port_name for cb in mod.clocks}
+
+            for port in all_clock_ports:
+                if port not in bound_ports:
+                    domains = [system.project.primary_clock_domain]
+                    if system.timing:
+                        domains += [c.name for c in system.timing.generated_clocks]
+                    domain_hint = ", ".join(domains)
+
+                    diags.append(
+                        Diagnostic(
+                            code="IP003",
+                            severity=Severity.ERROR,
+                            message=(
+                                f"Instance '{mod.instance}' (type '{mod.type_name}') "
+                                f"has unbound clock port '{port}'"
+                            ),
+                            subject="project.modules",
+                            spans=(SourceLocation(file=system.sources.project_file),),
+                            hints=(
+                                f"Add '{port}: <domain>' under `clocks:` for instance '{mod.instance}'.",
+                                "Without this binding the port receives 1'b0 (dead clock).",
+                                f"Available clock domains: {domain_hint}",
+                            ),
+                        )
+                    )
+
+        return diags

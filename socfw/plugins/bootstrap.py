@@ -4,7 +4,6 @@ from socfw.emit.board_quartus_emitter import QuartusBoardEmitter
 from socfw.emit.docs_emitter import DocsEmitter
 from socfw.emit.files_tcl_emitter import QuartusFilesEmitter
 from socfw.emit.peripheral_shell_emitter import PeripheralShellEmitter
-from socfw.emit.sim_filelist_emitter import SimFilelistEmitter
 from socfw.emit.register_block_emitter import RegisterBlockEmitter
 from socfw.emit.rtl_emitter import RtlEmitter
 from socfw.emit.software_emitter import SoftwareEmitter
@@ -17,7 +16,7 @@ from socfw.reports.graphviz_emitter import GraphvizEmitter
 from socfw.reports.json_emitter import JsonReportEmitter
 from socfw.reports.markdown_emitter import MarkdownReportEmitter
 from socfw.validate.rules.asset_rules import VendorIpArtifactExistsRule, IpArtifactExistsRule
-from socfw.validate.rules.ip_rules import UnknownIpParamRule
+from socfw.validate.rules.ip_rules import MissingClockPortBindingRule, UnknownIpParamRule
 from socfw.validate.rules.binding_rules import BindingWidthCompatibilityRule, BoardBindingRule, BindConflictRule
 from socfw.validate.rules.board_rules import (
     UnknownBoardBindingTargetRule,
@@ -63,7 +62,7 @@ def create_builtin_registry(templates_dir: str) -> PluginRegistry:
     reg.register_emitter(DocsEmitter(templates_dir))
     reg.register_emitter(RegisterBlockEmitter(templates_dir))
     reg.register_emitter(PeripheralShellEmitter(templates_dir))
-    reg.register_emitter(SimFilelistEmitter())
+
 
     reg.register_report(JsonReportEmitter())
     reg.register_report(MarkdownReportEmitter())
@@ -72,6 +71,7 @@ def create_builtin_registry(templates_dir: str) -> PluginRegistry:
     reg.register_validator(DuplicateModuleInstanceRule())
     reg.register_validator(UnknownIpTypeRule())
     reg.register_validator(UnknownIpParamRule())
+    reg.register_validator(MissingClockPortBindingRule())
     reg.register_validator(UnknownGeneratedClockSourceRule())
     reg.register_validator(ResetDriverRule())
     reg.register_validator(ModuleResetOverrideRule())

@@ -24,7 +24,7 @@ module soc_top (
   );
   clkpll clkpll (
     .areset(~reset_n),
-    .inclk0(1'b0)
+    .inclk0(SYS_CLK)
   );
 
 endmodule : soc_top

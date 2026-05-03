@@ -3,6 +3,7 @@
   "artifact_kinds": {
     "report": 4,
     "rtl": 1,
+    "sim": 2,
     "tcl": 2,
     "timing": 1
   },
@@ -30,7 +31,17 @@
     {
       "kind": "rtl",
       "path": "$OUT/rtl/soc_top.sv",
-      "producer": "RtlNativeEmitter"
+      "producer": "RtlEmitter"
+    },
+    {
+      "kind": "sim",
+      "path": "$OUT/sim/files.f",
+      "producer": "SimFilelistEmitter"
+    },
+    {
+      "kind": "sim",
+      "path": "$OUT/sim/tb_soc_top.sv",
+      "producer": "SimTbEmitter"
     },
     {
       "kind": "tcl",
@@ -60,6 +71,8 @@
     "$OUT/reports/board_pinout.md",
     "$OUT/reports/board_selectors.json",
     "$OUT/rtl/soc_top.sv",
+    "$OUT/sim/files.f",
+    "$OUT/sim/tb_soc_top.sv",
     "$OUT/timing/soc_top.sdc"
   ],
   "ip_types": [
