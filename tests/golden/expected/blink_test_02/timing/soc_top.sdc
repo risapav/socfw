@@ -7,5 +7,12 @@ create_clock -name SYS_CLK -period 20.000 [get_ports {SYS_CLK}]
 create_generated_clock -name clk_100mhz -multiply_by 2 -source [get_pins {clkpll|inclk[0]}] [get_pins {clkpll|altpll_component|auto_generated|pll1|clk[0]}]
 create_generated_clock -name clk_100mhz_sh -multiply_by 2 -source [get_pins {clkpll|inclk[0]}] [get_pins {clkpll|altpll_component|auto_generated|pll1|clk[1]}]
 
+# Clock groups
+set_clock_groups -exclusive -group {sys_clk} -group {clk_100mhz clk_100mhz_sh}
+
 # Derived uncertainty
 derive_clock_uncertainty
+
+# False paths
+# CDC reset sync: sys_clk -> clk_100mhz (2-stage FF)
+set_false_path -from [get_clocks {sys_clk}] -to [get_clocks {clk_100mhz}]

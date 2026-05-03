@@ -37,8 +37,10 @@ from socfw.validate.rules.cpu_rules import (
 )
 from socfw.validate.rules.project_rules import (
     DuplicateModuleInstanceRule,
+    GeneratedClockMissingResetSyncRule,
     ModuleResetOverrideRule,
     ResetDriverRule,
+    SyncFromUnknownDomainRule,
     TimingIoDelayMinMissingRule,
     TimingResetUnusedRule,
     UnknownGeneratedClockSourceRule,
@@ -74,6 +76,8 @@ def create_builtin_registry(templates_dir: str) -> PluginRegistry:
     reg.register_validator(UnknownIpRequiresRule())
     reg.register_validator(MissingClockPortBindingRule())
     reg.register_validator(UnknownGeneratedClockSourceRule())
+    reg.register_validator(SyncFromUnknownDomainRule())
+    reg.register_validator(GeneratedClockMissingResetSyncRule())
     reg.register_validator(ResetDriverRule())
     reg.register_validator(ModuleResetOverrideRule())
     reg.register_validator(TimingResetUnusedRule())

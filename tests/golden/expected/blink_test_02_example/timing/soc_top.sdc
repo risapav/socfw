@@ -6,6 +6,9 @@ create_clock -name SYS_CLK -period 20.000 [get_ports {SYS_CLK}]
 # Generated clocks
 create_generated_clock -name clk_100mhz -multiply_by 2 -source [get_pins {clkpll|inclk[0]}] [get_pins {clkpll|altpll_component|auto_generated|pll1|clk[0]}]
 
+# Clock groups
+set_clock_groups -asynchronous -group {sys_clk} -group {clk_100mhz}
+
 # Derived uncertainty
 derive_clock_uncertainty
 
@@ -16,5 +19,7 @@ set_output_delay -clock SYS_CLK -max 3.000 [all_outputs]
 set_output_delay -clock SYS_CLK -min 3.000 [all_outputs]
 
 # False paths
+# CDC reset sync: sys_clk -> clk_100mhz (2-stage FF)
+set_false_path -from [get_clocks {sys_clk}] -to [get_clocks {clk_100mhz}]
 # Async reset path
 set_false_path -from [get_ports {RESET_N}]

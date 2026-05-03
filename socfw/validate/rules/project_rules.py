@@ -280,3 +280,83 @@ class TimingIoDelayMinMissingRule(ValidationRule):
             )
 
         return diags
+
+
+class SyncFromUnknownDomainRule(ValidationRule):
+    """Error when reset.sync_from references a domain not declared in the project."""
+
+    def validate(self, system: SystemModel) -> list[Diagnostic]:
+        diags: list[Diagnostic] = []
+
+        known = {system.project.primary_clock_domain}
+        known |= {g.domain for g in system.project.generated_clocks}
+
+        for req in system.project.generated_clocks:
+            if req.sync_from and req.sync_from not in known:
+                diags.append(
+                    Diagnostic(
+                        code="CLK010",
+                        severity=Severity.ERROR,
+                        message=(
+                            f"Generated clock '{req.domain}' reset.sync_from "
+                            f"references unknown domain '{req.sync_from}'"
+                        ),
+                        subject="project.clocks.generated",
+                        hints=(
+                            f"Known domains: {', '.join(sorted(known))}",
+                            f"Fix reset.sync_from under the '{req.domain}' clock entry.",
+                        ),
+                    )
+                )
+
+        return diags
+
+
+class GeneratedClockMissingResetSyncRule(ValidationRule):
+    """Warn when a generated clock has CDC to the primary domain but no reset sync declared.
+
+    If at least one module runs on the primary domain AND at least one runs on
+    this generated domain, there is a potential CDC reset path that should be
+    explicitly handled (either sync_from or no_reset: true).
+    """
+
+    def validate(self, system: SystemModel) -> list[Diagnostic]:
+        diags: list[Diagnostic] = []
+
+        # Collect which domains are actually used by instantiated modules
+        used_domains: set[str] = set()
+        for mod in system.project.modules:
+            for cb in mod.clocks:
+                used_domains.add(cb.domain)
+
+        primary = system.project.primary_clock_domain
+        if primary not in used_domains:
+            return []
+
+        for req in system.project.generated_clocks:
+            if req.domain not in used_domains:
+                continue
+            if req.sync_from or req.no_reset:
+                continue
+
+            diags.append(
+                Diagnostic(
+                    code="CLK011",
+                    severity=Severity.WARNING,
+                    message=(
+                        f"Generated clock '{req.domain}' has modules clocked by it "
+                        f"and by the primary domain '{primary}', "
+                        f"but no reset synchronization is declared"
+                    ),
+                    subject="project.clocks.generated",
+                    hints=(
+                        f"Add 'reset: {{sync_from: {primary}, sync_stages: 2}}' "
+                        f"under the '{req.domain}' clock entry to declare CDC reset sync.",
+                        "Or add 'reset: {none: true}' if the domain needs no reset.",
+                        "Without this, the reset crossing is undocumented and may be "
+                        "incorrectly timed.",
+                    ),
+                )
+            )
+
+        return diags

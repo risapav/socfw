@@ -16,6 +16,7 @@ class SdcEmitter:
 
         self._emit_primary_clock(lines, system)
         self._emit_generated_clocks(lines, system)
+        self._emit_clock_groups(lines, system)
         self._emit_derive_uncertainty(lines, system)
         self._emit_io_delays(lines, system)
         self._emit_io_overrides(lines, system)
@@ -66,6 +67,19 @@ class SdcEmitter:
             idx = int(output[1:])
             return f"{instance}|altpll_component|auto_generated|pll1|clk[{idx}]"
         return f"{instance}|{output}"
+
+    def _emit_clock_groups(self, lines: list[str], system) -> None:
+        timing = system.timing
+        if timing is None or not timing.clock_groups:
+            return
+
+        lines.append("# Clock groups")
+        for grp in timing.clock_groups:
+            parts = [f"-{grp.group_type}"]
+            for group in grp.groups:
+                parts.append(f"-group {{{' '.join(group)}}}")
+            lines.append("set_clock_groups " + " ".join(parts))
+        lines.append("")
 
     def _emit_derive_uncertainty(self, lines: list[str], system) -> None:
         timing = system.timing
@@ -152,11 +166,29 @@ class SdcEmitter:
 
     def _emit_false_paths(self, lines: list[str], system) -> None:
         timing = system.timing
-        if timing is None or not timing.false_paths:
+        if timing is None:
+            return
+
+        cdc_fps = [
+            (g.sync_from, g.name, g.sync_stages)
+            for g in timing.generated_clocks
+            if g.sync_from
+        ]
+        explicit_fps = timing.false_paths
+        if not cdc_fps and not explicit_fps:
             return
 
         lines.append("# False paths")
-        for fp in timing.false_paths:
+        for sync_from, gclk_name, stages in cdc_fps:
+            n = stages or 2
+            lines.append(
+                f"# CDC reset sync: {sync_from} -> {gclk_name} ({n}-stage FF)"
+            )
+            lines.append(
+                f"set_false_path -from [get_clocks {{{sync_from}}}] "
+                f"-to [get_clocks {{{gclk_name}}}]"
+            )
+        for fp in explicit_fps:
             if fp.comment:
                 lines.append(f"# {fp.comment}")
             if fp.from_clock and fp.to_clock:

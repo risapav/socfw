@@ -27,13 +27,15 @@ clocks:
       source:
         instance: clkpll
         output: c0
-      sync_stages: 2
-      reset_policy: synced
+      reset:
+        sync_from: sys_clk
+        sync_stages: 2
     - domain: clk_100mhz_sh
       source:
         instance: clkpll
         output: c1
-      reset_policy: free
+      reset:
+        none: true
 
 modules:
   - instance: clkpll
