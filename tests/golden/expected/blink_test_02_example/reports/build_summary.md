@@ -42,6 +42,7 @@
 
 - report: `4`
 - rtl: `1`
+- sim: `2`
 - tcl: `2`
 - timing: `1`
 
@@ -54,6 +55,8 @@
 - `$OUT/reports/board_pinout.md`
 - `$OUT/reports/board_selectors.json`
 - `$OUT/rtl/soc_top.sv`
+- `$OUT/sim/files.f`
+- `$OUT/sim/tb_soc_top.sv`
 - `$OUT/timing/soc_top.sdc`
 
 ## Artifacts
@@ -62,7 +65,9 @@
 - report: `$OUT/reports/board_bindings.md` (BoardBindingsReport)
 - report: `$OUT/reports/board_pinout.md` (BoardPinoutReport)
 - report: `$OUT/reports/board_selectors.json` (BoardSelectorIndex)
-- rtl: `$OUT/rtl/soc_top.sv` (RtlNativeEmitter)
+- rtl: `$OUT/rtl/soc_top.sv` (RtlEmitter)
+- sim: `$OUT/sim/files.f` (SimFilelistEmitter)
+- sim: `$OUT/sim/tb_soc_top.sv` (SimTbEmitter)
 - tcl: `$OUT/hal/board.tcl` (BoardTclEmitter)
 - tcl: `$OUT/hal/files.tcl` (FilesTclEmitter)
 - timing: `$OUT/timing/soc_top.sdc` (SdcEmitter)

@@ -26,23 +26,23 @@ def test_soc_led_soc_top_sv(tmp_path):
     assert "gpio" in sv
 
 
-def test_soc_led_soc_map_h(tmp_path):
+def test_soc_led_board_bindings(tmp_path):
     out_dir = tmp_path / "out"
     result = FullBuildPipeline(templates_dir="socfw/templates").run(
-        BuildRequest(project_file=str(FIXTURE), out_dir=str(out_dir), legacy_backend=True)
+        BuildRequest(project_file=str(FIXTURE), out_dir=str(out_dir))
     )
     assert result.ok, [str(d) for d in result.diagnostics]
 
-    h = (out_dir / "sw" / "soc_map.h").read_text()
-    assert "GPIO0_BASE" in h or "gpio0" in h.lower()
+    md = (out_dir / "reports" / "board_bindings.md").read_text()
+    assert "onboard.leds" in md or "ONB_LEDS" in md
 
 
-def test_soc_led_graph(tmp_path):
+def test_soc_led_build_summary(tmp_path):
     out_dir = tmp_path / "out"
     result = FullBuildPipeline(templates_dir="socfw/templates").run(
-        BuildRequest(project_file=str(FIXTURE), out_dir=str(out_dir), legacy_backend=True)
+        BuildRequest(project_file=str(FIXTURE), out_dir=str(out_dir))
     )
     assert result.ok, [str(d) for d in result.diagnostics]
 
-    dot = (out_dir / "reports" / "soc_graph.dot").read_text()
-    assert "digraph soc" in dot
+    summary = (out_dir / "reports" / "build_summary.md").read_text()
+    assert "soc_led" in summary.lower() or "led" in summary.lower()

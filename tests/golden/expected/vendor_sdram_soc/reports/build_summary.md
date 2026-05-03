@@ -39,6 +39,7 @@
 
 - report: `4`
 - rtl: `2`
+- sim: `2`
 - tcl: `2`
 - timing: `1`
 
@@ -53,6 +54,8 @@
 - `$OUT/reports/bridge_summary.txt`
 - `$OUT/rtl/simple_bus_to_wishbone_bridge.sv`
 - `$OUT/rtl/soc_top.sv`
+- `$OUT/sim/files.f`
+- `$OUT/sim/tb_soc_top.sv`
 - `$OUT/timing/soc_top.sdc`
 
 ## Artifacts
@@ -62,7 +65,9 @@
 - report: `$OUT/reports/board_pinout.md` (BoardPinoutReport)
 - report: `$OUT/reports/board_selectors.json` (BoardSelectorIndex)
 - rtl: `$OUT/rtl/simple_bus_to_wishbone_bridge.sv` (BridgePlanner)
-- rtl: `$OUT/rtl/soc_top.sv` (RtlNativeEmitter)
+- rtl: `$OUT/rtl/soc_top.sv` (RtlEmitter)
+- sim: `$OUT/sim/files.f` (SimFilelistEmitter)
+- sim: `$OUT/sim/tb_soc_top.sv` (SimTbEmitter)
 - tcl: `$OUT/hal/board.tcl` (BoardTclEmitter)
 - tcl: `$OUT/hal/files.tcl` (FilesTclEmitter)
 - timing: `$OUT/timing/soc_top.sdc` (SdcEmitter)

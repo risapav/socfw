@@ -3,6 +3,7 @@
   "artifact_kinds": {
     "report": 4,
     "rtl": 2,
+    "sim": 2,
     "tcl": 2,
     "timing": 1
   },
@@ -35,7 +36,17 @@
     {
       "kind": "rtl",
       "path": "$OUT/rtl/soc_top.sv",
-      "producer": "RtlNativeEmitter"
+      "producer": "RtlEmitter"
+    },
+    {
+      "kind": "sim",
+      "path": "$OUT/sim/files.f",
+      "producer": "SimFilelistEmitter"
+    },
+    {
+      "kind": "sim",
+      "path": "$OUT/sim/tb_soc_top.sv",
+      "producer": "SimTbEmitter"
     },
     {
       "kind": "tcl",
@@ -69,6 +80,8 @@
     "$OUT/reports/bridge_summary.txt",
     "$OUT/rtl/simple_bus_to_wishbone_bridge.sv",
     "$OUT/rtl/soc_top.sv",
+    "$OUT/sim/files.f",
+    "$OUT/sim/tb_soc_top.sv",
     "$OUT/timing/soc_top.sdc"
   ],
   "ip_types": [

@@ -41,7 +41,7 @@ project:
   mode: soc
   board: test_board
   board_file: board.yaml
-  output_dir: build/gen
+  output_dir: build
 registries:
   ip:
     - ip
@@ -112,7 +112,7 @@ project:
   mode: soc
   board: test_board
   board_file: board.yaml
-  output_dir: build/gen
+  output_dir: build
 registries:
   ip: []
 clocks:

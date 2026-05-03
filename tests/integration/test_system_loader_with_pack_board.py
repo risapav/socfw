@@ -12,7 +12,7 @@ project:
   name: demo
   mode: standalone
   board: qmtech_ep4ce55
-  output_dir: build/gen
+  output_dir: build
 
 registries:
   ip: []

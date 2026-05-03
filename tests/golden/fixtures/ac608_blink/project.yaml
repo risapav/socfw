@@ -5,7 +5,7 @@ project:
   name: ac608_blink
   mode: standalone
   board: ac608_ep4ce15
-  output_dir: build/gen
+  output_dir: build
 
 registries:
   ip:

@@ -11,10 +11,10 @@ class BuildContext:
 @dataclass
 class BuildRequest:
     project_file: str
-    out_dir: str = "build/gen"
+    out_dir: str = "build"
     artifact_families: list[str] | None = None
     profile: str = "default"
-    legacy_backend: bool = False
+    trace: bool = False
 
     def __post_init__(self) -> None:
         if self.artifact_families is None:

@@ -6,8 +6,6 @@ from socfw.build.context import BuildContext, BuildRequest
 from socfw.build.pipeline import BuildPipeline, BuildResult
 from dataclasses import replace
 
-from socfw.builders.boot_image_builder import BootImageBuilder
-from socfw.builders.files_ir_builder import FilesIRBuilder
 from socfw.builders.rtl_ir_builder import RtlIrBuilder
 from socfw.builders.vendor_artifact_collector import VendorArtifactCollector
 from socfw.build.provenance import SocBuildProvenance
@@ -17,17 +15,15 @@ from socfw.emit.rtl_emitter import RtlEmitter
 from socfw.emit.files_tcl_emitter import FilesTclEmitter
 from socfw.emit.sdc_emitter import SdcEmitter
 from socfw.emit.board_tcl_emitter import BoardTclEmitter
+from socfw.emit.sim_filelist_emitter import SimFilelistEmitter
+from socfw.emit.sim_tb_emitter import SimTbEmitter
 from socfw.core.result import Result
-from socfw.emit.orchestrator import EmitOrchestrator
-from socfw.model.image import BootImage
 from socfw.plugins.bootstrap import create_builtin_registry
 from socfw.reports.board_bindings import BoardBindingsReport
 from socfw.reports.board_pinout import BoardPinoutReport
 from socfw.reports.build_provenance_json import BuildProvenanceJsonReport
 from socfw.reports.build_summary import BuildSummaryReport
 from socfw.reports.orchestrator import ReportOrchestrator
-from socfw.tools.bin2hex_runner import Bin2HexRunner
-from socfw.tools.firmware_builder import FirmwareBuilder
 
 
 class FullBuildPipeline:
@@ -36,13 +32,7 @@ class FullBuildPipeline:
             templates_dir = str(Path(__file__).resolve().parents[1] / "templates")
         self.registry = create_builtin_registry(templates_dir)
         self.loader = SystemLoader()
-        self.pipeline = BuildPipeline(self.registry)
-        self.emitters = EmitOrchestrator(self.registry)
         self.reports = ReportOrchestrator(self.registry)
-        self.image_builder = BootImageBuilder()
-        self.bin2hex = Bin2HexRunner()
-        self.firmware_builder = FirmwareBuilder()
-        self.files_ir_builder = FilesIRBuilder()
         self.vendor_collector = VendorArtifactCollector()
         self.build_summary = BuildSummaryReport()
         self.provenance_json = BuildProvenanceJsonReport()
@@ -50,7 +40,9 @@ class FullBuildPipeline:
         self.board_bindings = BoardBindingsReport()
         self.bridge_planner = BridgePlanner()
         self.rtl_ir_builder = RtlIrBuilder()
-        self.rtl_native_emitter = RtlEmitter()
+        self.rtl_emitter = RtlEmitter(templates_dir)
+        self.sim_filelist_emitter = SimFilelistEmitter()
+        self.sim_tb_emitter = SimTbEmitter(templates_dir)
         self.files_tcl_emitter = FilesTclEmitter()
         self.sdc_emitter = SdcEmitter()
         self.board_tcl_emitter = BoardTclEmitter()
@@ -70,108 +62,73 @@ class FullBuildPipeline:
             return BuildResult(ok=False, diagnostics=loaded.diagnostics)
 
         system = loaded.value
-
         planned_bridges = self.bridge_planner.plan(system)
 
-        if request.legacy_backend:
-            from socfw.utils.deprecation import print_legacy_warning
-            print_legacy_warning()
+        from socfw.build.pipeline import BuildPipeline
+        from socfw.core.diagnostics import Severity
+        val_diags = BuildPipeline(self.registry)._validate(system)
+        all_diags = list(loaded.diagnostics) + val_diags
+        if any(d.severity == Severity.ERROR for d in val_diags):
+            return BuildResult(ok=False, diagnostics=all_diags)
+        result = BuildResult(ok=True, diagnostics=all_diags)
 
-            result = self.pipeline.run(request, system)
-            result.diagnostics = loaded.diagnostics + result.diagnostics
+        bridge_files = _copy_bridge_artifacts(request.out_dir, planned_bridges)
+        for bf in bridge_files:
+            result.add_file(bf, kind="rtl", producer="BridgePlanner")
 
-            if not result.ok:
-                return result
+        rtl_top = self.rtl_ir_builder.build(
+            system=system,
+            planned_bridges=planned_bridges,
+            design=None,
+        )
+        if request.trace:
+            from socfw.diagnostics.rtl_trace import format_rtl_top
+            import sys
+            print(format_rtl_top(rtl_top), file=sys.stderr)
 
-            ctx = BuildContext(out_dir=Path(request.out_dir))
-            files_ir = (
-                self.files_ir_builder.build(result.design, result.rtl_ir)
-                if result.design is not None and result.rtl_ir is not None
-                else None
-            )
-            manifest = self.emitters.emit_all(
-                ctx,
-                board_ir=result.board_ir,
-                timing_ir=result.timing_ir,
-                rtl_ir=result.rtl_ir,
-                files_ir=files_ir,
-                software_ir=result.software_ir,
-                docs_ir=result.docs_ir,
-                register_block_irs=result.register_block_irs,
-                peripheral_shell_irs=result.peripheral_shell_irs,
-            )
-            result.manifest = manifest
+        rtl_file = self.rtl_emitter.emit(request.out_dir, rtl_top)
+        result.add_file(rtl_file, kind="rtl", producer="RtlEmitter")
 
-            fw_res = self.firmware_builder.build(system, request.out_dir)
-            result.diagnostics.extend(fw_res.diagnostics)
-            if fw_res.ok and fw_res.value is not None and system.ram is not None:
-                fw_boot = BootImage(
-                    input_file=fw_res.value.bin,
-                    output_file=fw_res.value.hex,
-                    input_format="bin",
-                    output_format="hex",
-                    size_bytes=system.ram.size,
-                    endian="little",
-                )
-                conv = self.bin2hex.run(fw_boot)
-                result.diagnostics.extend(conv.diagnostics)
-                if conv.ok and conv.value is not None:
-                    system.ram = replace(system.ram, init_file=conv.value, image_format="hex")
+        sim_tb_file = self.sim_tb_emitter.emit(request.out_dir, rtl_top, system)
+        result.add_file(sim_tb_file, kind="sim", producer="SimTbEmitter")
 
-            image = self.image_builder.build(system, request.out_dir)
-            if image is not None and image.input_format == "bin" and image.output_format == "hex":
-                conv = self.bin2hex.run(image)
-                result.diagnostics.extend(conv.diagnostics)
-        else:
-            from socfw.core.diagnostics import Severity
-            val_diags = self.pipeline._validate(system)
-            all_diags = list(loaded.diagnostics) + val_diags
-            if any(d.severity == Severity.ERROR for d in val_diags):
-                return BuildResult(ok=False, diagnostics=all_diags)
-            result = BuildResult(ok=True, diagnostics=all_diags)
+        sim_f_file = self.sim_filelist_emitter.emit(
+            out_dir=request.out_dir,
+            system=system,
+            planned_bridges=planned_bridges,
+        )
+        result.add_file(sim_f_file, kind="sim", producer="SimFilelistEmitter")
 
-            bridge_files = _copy_bridge_artifacts(request.out_dir, planned_bridges)
-            for bf in bridge_files:
-                result.add_file(bf, kind="rtl", producer="BridgePlanner")
+        files_tcl = self.files_tcl_emitter.emit(
+            out_dir=request.out_dir,
+            system=system,
+            planned_bridges=planned_bridges,
+            project_dir=str(Path(request.project_file).parent),
+        )
+        result.add_file(files_tcl, kind="tcl", producer="FilesTclEmitter")
 
-            rtl_top = self.rtl_ir_builder.build(
-                system=system,
-                planned_bridges=planned_bridges,
-                design=None,
-            )
-            native_top_file = self.rtl_native_emitter.emit_top(request.out_dir, rtl_top)
-            result.add_file(native_top_file, kind="rtl", producer="RtlNativeEmitter")
+        sdc_file = self.sdc_emitter.emit(out_dir=request.out_dir, system=system)
+        result.add_file(sdc_file, kind="timing", producer="SdcEmitter")
 
-            files_tcl = self.files_tcl_emitter.emit(
-                out_dir=request.out_dir,
-                system=system,
-                planned_bridges=planned_bridges,
-                project_dir=str(Path(request.project_file).parent),
-            )
-            result.add_file(files_tcl, kind="tcl", producer="FilesTclEmitter")
+        board_tcl = self.board_tcl_emitter.emit(out_dir=request.out_dir, system=system)
+        result.add_file(board_tcl, kind="tcl", producer="BoardTclEmitter")
 
-            sdc_file = self.sdc_emitter.emit(out_dir=request.out_dir, system=system)
-            result.add_file(sdc_file, kind="timing", producer="SdcEmitter")
+        from socfw.board.selector_index import emit_selector_index
+        selector_json = emit_selector_index(system.board, request.out_dir)
+        result.add_file(selector_json, kind="report", producer="BoardSelectorIndex")
 
-            board_tcl = self.board_tcl_emitter.emit(out_dir=request.out_dir, system=system)
-            result.add_file(board_tcl, kind="tcl", producer="BoardTclEmitter")
+        pinout_path = self.board_pinout.write(request.out_dir, system.board, system.project)
+        result.add_file(pinout_path, kind="report", producer="BoardPinoutReport")
 
-            from socfw.board.selector_index import emit_selector_index
-            selector_json = emit_selector_index(system.board, request.out_dir)
-            result.add_file(selector_json, kind="report", producer="BoardSelectorIndex")
+        bindings_md, bindings_json = self.board_bindings.write(request.out_dir, system)
+        result.add_file(bindings_md, kind="report", producer="BoardBindingsReport")
+        result.add_file(bindings_json, kind="report", producer="BoardBindingsReport")
 
-            pinout_path = self.board_pinout.write(request.out_dir, system.board, system.project)
-            result.add_file(pinout_path, kind="report", producer="BoardPinoutReport")
-
-            bindings_md, bindings_json = self.board_bindings.write(request.out_dir, system)
-            result.add_file(bindings_md, kind="report", producer="BoardBindingsReport")
-            result.add_file(bindings_json, kind="report", producer="BoardBindingsReport")
-
-            result.normalize_files()
+        result.normalize_files()
 
         report_paths = self.reports.emit_all(
             system=system,
-            design=result.design,
+            design=None,
             result=result,
             out_dir=request.out_dir,
         )
@@ -181,33 +138,6 @@ class FullBuildPipeline:
         bridge_summary = _write_bridge_summary(system, request.out_dir)
         if bridge_summary is not None:
             result.manifest.add("report", bridge_summary, "BridgeSummary")
-
-        if request.legacy_backend:
-            legacy_bridge_files = _copy_bridge_artifacts(request.out_dir, planned_bridges)
-            for bf in legacy_bridge_files:
-                result.manifest.add("rtl", bf, "BridgePlanner")
-
-            rtl_top = self.rtl_ir_builder.build(
-                system=system,
-                planned_bridges=planned_bridges,
-                design=result.design,
-            )
-            native_top_file = self.rtl_native_emitter.emit_top(request.out_dir, rtl_top)
-            result.manifest.add("rtl", native_top_file, "RtlNativeEmitter")
-
-            files_tcl = self.files_tcl_emitter.emit(
-                out_dir=request.out_dir,
-                system=system,
-                planned_bridges=planned_bridges,
-                project_dir=str(Path(request.project_file).parent),
-            )
-            result.manifest.add("hal", files_tcl, "FilesTclEmitter")
-
-            sdc_file = self.sdc_emitter.emit(out_dir=request.out_dir, system=system)
-            result.manifest.add("timing", sdc_file, "SdcEmitter")
-
-            board_tcl = self.board_tcl_emitter.emit(out_dir=request.out_dir, system=system)
-            result.manifest.add("hal", board_tcl, "BoardTclEmitter")
 
         soc_provenance = _build_soc_provenance(system, result, request.out_dir, planned_bridges)
         summary_path = self.build_summary.write(request.out_dir, soc_provenance)

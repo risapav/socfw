@@ -32,7 +32,7 @@ def test_blink01_board_tcl(tmp_path):
 def test_blink01_build_report_json(tmp_path):
     out_dir = tmp_path / "out"
     result = FullBuildPipeline(templates_dir="socfw/templates").run(
-        BuildRequest(project_file=str(FIXTURE), out_dir=str(out_dir), legacy_backend=True)
+        BuildRequest(project_file=str(FIXTURE), out_dir=str(out_dir))
     )
     assert result.ok, [str(d) for d in result.diagnostics]
-    assert (out_dir / "reports" / "build_report.json").exists()
+    assert (out_dir / "reports" / "build_provenance.json").exists()

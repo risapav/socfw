@@ -1,103 +1,44 @@
 // AUTO-GENERATED - DO NOT EDIT
 `default_nettype none
 
-module {{ module.name }} (
+module {{ module.module_name }} (
 {% for p in module.ports %}
-  {{ "input " if p.direction == "input" else "output" if p.direction == "output" else "inout " }} wire{% if p.width > 1 %} [{{ p.width - 1 }}:0]{% endif %} {{ p.name }}{{ "," if not loop.last else "" }}
+  {{ "input" if p.direction == "input" else "output" if p.direction == "output" else "inout" }} wire{% if p.width > 1 %} [{{ p.width - 1 }}:0]{% endif %} {{ p.name }}{{ "," if not loop.last else "" }}
 {% endfor %}
 );
 
-{% if module.wires %}
+{% if module.signals %}
   // Internal wires
-{% for w in module.wires %}
-  wire{% if w.width > 1 %} [{{ w.width - 1 }}:0]{% endif %} {{ w.name }};{% if w.comment %} // {{ w.comment }}{% endif %}
+{% for w in module.signals | sort(attribute='name') %}
+  {{ w.kind }}{% if w.width > 1 %} [{{ w.width - 1 }}:0]{% endif %} {{ w.name }};
 {% endfor %}
 {% endif %}
 
-{% if module.interfaces %}
-  // Interface instances
-{% for iface in module.interfaces %}
-  {{ iface.if_type -}}
-  {% if iface.params %} #(
-{% for k, v in iface.params.items() %}
-    .{{ k }}({{ v | sv_param }}){{ "," if not loop.last else "" }}
-{% endfor %}
-  ){% endif %} {{ iface.name }} ();{% if iface.comment %} // {{ iface.comment }}{% endif %}
-{% endfor %}
-{% endif %}
-
-{% if module.reset_syncs %}
-  // Reset synchronizers
-{% for rs in module.reset_syncs %}
-  rst_sync #(
-    .STAGES({{ rs.stages }})
-  ) {{ rs.name }} (
-    .clk_i   ({{ rs.clk_signal }}),
-    .arst_ni (RESET_N),
-    .srst_no ({{ rs.rst_out }})
-  );
-{% endfor %}
-{% endif %}
-
-{% if module.assigns %}
+{% if module.adapt_assigns %}
   // Top-level / adapter assigns
-{% for a in module.assigns %}
-  assign {{ a.lhs }} = {{ a.rhs }};{% if a.comment %} // {{ a.comment }}{% endif %}
+{% for a in module.adapt_assigns %}
+  assign {{ a.lhs }} = {{ a.rhs }};
 {% endfor %}
 {% endif %}
 
-{% if module.fabrics %}
-  // Bus fabrics
-{% for fab in module.fabrics %}
-  {{ fab.module }}{% if fab.params %} #(
-{% for k, v in fab.params.items() %}
-    .{{ k }}({{ v | sv_param }}){{ "," if not loop.last else "" }}
-{% endfor %}
-  ){% endif %} {{ fab.name }} (
-    .SYS_CLK({{ fab.clock_signal }}),
-    .RESET_N({{ fab.reset_signal }})
-{% for p in fab.ports %}
-    ,.{{ p.port_name }}{% if p.index is not none %}[{{ p.index }}]{% endif %}({{ p.interface_name }}.{{ p.modport }})
-{% endfor %}
-  );{% if fab.comment %} // {{ fab.comment }}{% endif %}
-{% endfor %}
-{% endif %}
-
-{% if module.irq_combiner %}
-  // IRQ combiner
-  irq_combiner #(
-    .WIDTH({{ module.irq_combiner.width }})
-  ) {{ module.irq_combiner.name }} (
-    .irq_i({
-{%- for src in module.irq_combiner.sources | sort(attribute="irq_id", reverse=True) %}
-      {{ src.signal }}{{ "," if not loop.last else "" }}
-{%- endfor %}
-    }),
-    .irq_o({{ module.irq_combiner.cpu_irq_signal }})
-  );
-
-{% endif %}
 {% if module.instances %}
   // Module instances
-{% for inst in module.instances %}
-{% if inst.params %}
+{% for inst in module.instances | sort(attribute='instance') %}
+{% if inst.parameters %}
   {{ inst.module }} #(
-{% for k, v in inst.params.items() %}
-    .{{ k }}({{ v | sv_param }}){{ "," if not loop.last else "" }}
+{% for p in inst.parameters %}
+    .{{ p.name }}({{ p.value | sv_param }}){{ "," if not loop.last else "" }}
 {% endfor %}
-  ) u_{{ inst.name }} (
+  ) {{ inst.instance }} (
 {% else %}
-  {{ inst.module }} u_{{ inst.name }} (
+  {{ inst.module }} {{ inst.instance }} (
 {% endif %}
-{% for c in inst.conns %}
-    .{{ c.port }}({{ c.signal }}){{ "," if not loop.last or inst.bus_conns else "" }}
+{% for c in inst.connections %}
+    .{{ c.port }}({{ c.expr }}){{ "," if not loop.last else "" }}
 {% endfor %}
-{% for bc in inst.bus_conns %}
-    .{{ bc.port }}({{ bc.interface_name }}.{{ bc.modport }}){{ "," if not loop.last else "" }}
-{% endfor %}
-  );{% if inst.comment %} // {{ inst.comment }}{% endif %}
+  );
 {% endfor %}
 {% endif %}
 
-endmodule : {{ module.name }}
+endmodule : {{ module.module_name }}
 `default_nettype wire

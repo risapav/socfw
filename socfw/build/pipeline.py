@@ -10,7 +10,6 @@ from socfw.builders.board_ir_builder import BoardIRBuilder
 from socfw.builders.docs_ir_builder import DocsIRBuilder
 from socfw.builders.peripheral_shell_ir_builder import PeripheralShellIRBuilder
 from socfw.builders.register_block_ir_builder import RegisterBlockIRBuilder
-from socfw.builders.rtl_ir_builder import RtlIRBuilder
 from socfw.builders.software_ir_builder import SoftwareIRBuilder
 from socfw.builders.timing_ir_builder import TimingIRBuilder
 from socfw.core.diagnostics import Diagnostic, Severity
@@ -49,7 +48,6 @@ class BuildPipeline:
         self.elaborator = Elaborator(registry)
         self.board_ir_builder = BoardIRBuilder()
         self.timing_ir_builder = TimingIRBuilder()
-        self.rtl_ir_builder = RtlIRBuilder()
         self.software_ir_builder = SoftwareIRBuilder()
         self.docs_ir_builder = DocsIRBuilder()
         self.regblk_ir_builder = RegisterBlockIRBuilder()
@@ -82,7 +80,7 @@ class BuildPipeline:
 
         board_ir = self.board_ir_builder.build(design)
         timing_ir = self.timing_ir_builder.build(design)
-        rtl_ir = self.rtl_ir_builder.build(design)
+        rtl_ir = None
         software_ir = self.software_ir_builder.build(design)
         docs_ir = self.docs_ir_builder.build(design)
 

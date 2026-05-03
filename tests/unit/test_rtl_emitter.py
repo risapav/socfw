@@ -14,7 +14,7 @@ def test_rtl_emitter_writes_top(tmp_path):
         ],
     )
 
-    out = RtlEmitter().emit_top(str(tmp_path), top)
+    out = RtlEmitter().emit(str(tmp_path), top)
     text = (tmp_path / "rtl" / "soc_top.sv").read_text(encoding="utf-8")
 
     assert out.endswith("soc_top.sv")
@@ -35,7 +35,7 @@ def test_rtl_emitter_writes_top_with_ports(tmp_path):
         ],
     )
 
-    RtlEmitter().emit_top(str(tmp_path), top)
+    RtlEmitter().emit(str(tmp_path), top)
     text = (tmp_path / "rtl" / "soc_top.sv").read_text(encoding="utf-8")
 
     assert "module soc_top (" in text
@@ -57,7 +57,7 @@ def test_rtl_emitter_writes_top_with_ports_and_signals(tmp_path):
         ],
     )
 
-    RtlEmitter().emit_top(str(tmp_path), top)
+    RtlEmitter().emit(str(tmp_path), top)
     text = (tmp_path / "rtl" / "soc_top.sv").read_text(encoding="utf-8")
 
     assert "module soc_top (" in text
@@ -79,7 +79,7 @@ def test_rtl_emitter_writes_parameter_overrides(tmp_path):
         ],
     )
 
-    RtlEmitter().emit_top(str(tmp_path), top)
+    RtlEmitter().emit(str(tmp_path), top)
     text = (tmp_path / "rtl" / "soc_top.sv").read_text()
 
     assert "blink_test #(" in text

@@ -1,3 +1,4 @@
+// AUTO-GENERATED - DO NOT EDIT
 `default_nettype none
 
 module soc_top (
@@ -15,10 +16,13 @@ module soc_top (
   output wire ZS_WE_N
 );
 
+  // Internal wires
   wire reset_n;
 
+  // Top-level / adapter assigns
   assign reset_n = RESET_N;
 
+  // Module instances
   sdram_ctrl sdram0 (
     .clk(SYS_CLK),
     .reset_n(reset_n),
@@ -33,7 +37,6 @@ module soc_top (
     .zs_ras_n(ZS_RAS_N),
     .zs_we_n(ZS_WE_N)
   );
-
   simple_bus_to_wishbone_bridge u_bridge_sdram0 (
     .clk(SYS_CLK),
     .reset_n(reset_n),
@@ -54,6 +57,5 @@ module soc_top (
     .wb_ack(1'b0)
   );
 
-endmodule
-
+endmodule : soc_top
 `default_nettype wire

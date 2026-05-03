@@ -1,3 +1,4 @@
+// AUTO-GENERATED - DO NOT EDIT
 `default_nettype none
 
 module soc_top (
@@ -5,6 +6,9 @@ module soc_top (
   input wire SYS_CLK
 );
 
+
+
+  // Module instances
   blink_test #(
     .CLK_FREQ(50000000)
   ) blink_test (
@@ -12,6 +16,5 @@ module soc_top (
     .SYS_CLK(SYS_CLK)
   );
 
-endmodule
-
+endmodule : soc_top
 `default_nettype wire

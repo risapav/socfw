@@ -1,3 +1,4 @@
+// AUTO-GENERATED - DO NOT EDIT
 `default_nettype none
 
 module soc_top (
@@ -8,14 +9,17 @@ module soc_top (
   input wire SYS_CLK
 );
 
+  // Internal wires
   wire clkpll_c0;
   wire clkpll_locked;
   wire reset_n;
   wire [5:0] w_blink_02_leds_o;
 
+  // Top-level / adapter assigns
   assign reset_n = RESET_N;
   assign PMOD_J10_LED8 = { 2'b0, w_blink_02_leds_o };
 
+  // Module instances
   blink_test #(
     .CLK_FREQ(100000000)
   ) blink_01 (
@@ -23,7 +27,6 @@ module soc_top (
     .leds_o(ONB_LEDS),
     .rst_ni(reset_n)
   );
-
   blink_test #(
     .CLK_FREQ(100000000)
   ) blink_02 (
@@ -31,7 +34,6 @@ module soc_top (
     .leds_o(w_blink_02_leds_o),
     .rst_ni(reset_n)
   );
-
   blink_test #(
     .CLK_FREQ(50000000)
   ) blink_03 (
@@ -39,7 +41,6 @@ module soc_top (
     .leds_o(PMOD_J11_LED),
     .rst_ni(reset_n)
   );
-
   clkpll clkpll (
     .areset(~reset_n),
     .c0(clkpll_c0),
@@ -47,6 +48,5 @@ module soc_top (
     .locked(clkpll_locked)
   );
 
-endmodule
-
+endmodule : soc_top
 `default_nettype wire

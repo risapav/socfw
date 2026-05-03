@@ -6,7 +6,7 @@ project:
   mode: standalone
   board: qmtech_ep4ce55
   board_file: ../boards/qmtech_ep4ce55.board.yaml
-  output_dir: build/gen
+  output_dir: build
   debug: true
 
 registries:

@@ -6,7 +6,7 @@ project:
   mode: soc
   board: qmtech_ep4ce55
   board_file: board.yaml
-  output_dir: build/gen
+  output_dir: build
   debug: true
 
 registries:
@@ -52,7 +52,7 @@ firmware:
   enabled: false
   src_dir: fw
   out_dir: build/fw
-  linker_script: build/gen/sw/sections.lds
+  linker_script: build/sw/sections.lds
   elf_file: firmware.elf
   bin_file: firmware.bin
   hex_file: firmware.hex

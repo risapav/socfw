@@ -31,7 +31,7 @@ def cmd_build(args) -> int:
     result = pipeline.run(BuildRequest(
         project_file=args.project,
         out_dir=args.out,
-        legacy_backend=getattr(args, "legacy_backend", False),
+        trace=getattr(args, "trace", False),
     ))
 
     _print_diags(result.diagnostics)
@@ -276,6 +276,37 @@ def cmd_build_fw(args) -> int:
     return 0 if result.ok else 1
 
 
+def cmd_simulate(args) -> int:
+    from socfw.build.context import BuildRequest
+    from socfw.build.full_pipeline import FullBuildPipeline
+    from socfw.tools.sim_runner import SimRunner
+
+    pipeline = FullBuildPipeline(templates_dir=args.templates)
+    result = pipeline.run(BuildRequest(
+        project_file=args.project,
+        out_dir=args.out,
+    ))
+
+    _print_diags(result.diagnostics)
+
+    if not result.ok:
+        return 1
+
+    for art in result.manifest.artifacts:
+        if art.family == "sim":
+            print(f"[sim] {art.path}")
+
+    sim = SimRunner().run_iverilog(args.out, waveform=args.vcd)
+    _print_diags(sim.diagnostics)
+
+    if sim.ok:
+        vcd = Path(args.out) / "sim" / "wave.vcd"
+        if vcd.exists():
+            print(f"[vcd] {vcd}")
+
+    return 0 if sim.ok else 1
+
+
 def cmd_sim_smoke(args) -> int:
     from socfw.build.context import BuildRequest
     from socfw.build.two_pass_flow import TwoPassBuildFlow
@@ -338,7 +369,7 @@ def cmd_init(args) -> int:
         print("")
         print("Next:")
         print(f"  socfw validate {out_dir}/project.yaml")
-        print(f"  socfw build {out_dir}/project.yaml --out {out_dir}/build/gen")
+        print(f"  socfw build {out_dir}/project.yaml --out {out_dir}/build")
         return 0
 
     from socfw.scaffold.generator import ScaffoldGenerator
@@ -443,12 +474,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     b = sub.add_parser("build", help="Generate all artifacts")
     b.add_argument("project")
-    b.add_argument("--out", default="build/gen")
+    b.add_argument("--out", default="build")
     b.add_argument("--templates", default=_default_templates_dir())
     b.add_argument(
-        "--legacy-backend",
+        "--trace",
         action="store_true",
-        help="Use deprecated legacy backend instead of native emitters",
+        help="Print RTL IR to stderr after build (for debugging)",
     )
     b.set_defaults(func=cmd_build)
 
@@ -484,20 +515,30 @@ def build_parser() -> argparse.ArgumentParser:
 
     g = sub.add_parser("graph", help="Build and emit the topology graph")
     g.add_argument("project")
-    g.add_argument("--out", default="build/gen")
+    g.add_argument("--out", default="build")
     g.add_argument("--templates", default=_default_templates_dir())
     g.set_defaults(func=cmd_graph)
 
     bf = sub.add_parser("build-fw", help="Two-pass build with firmware compilation")
     bf.add_argument("project")
-    bf.add_argument("--out", default="build/gen")
+    bf.add_argument("--out", default="build")
     bf.add_argument("--templates", default=_default_templates_dir())
     bf.add_argument("--provenance-json", default=None, help="Export build provenance to JSON file")
     bf.set_defaults(func=cmd_build_fw)
 
+    sim = sub.add_parser("simulate", help="Build and run iverilog simulation")
+    sim.add_argument("project")
+    sim.add_argument("--out", default="build")
+    sim.add_argument("--templates", default=_default_templates_dir())
+    sim.add_argument("--vcd", action="store_true", default=True,
+                     help="Capture waveform to sim/wave.vcd (default: on)")
+    sim.add_argument("--no-vcd", dest="vcd", action="store_false",
+                     help="Disable VCD waveform capture")
+    sim.set_defaults(func=cmd_simulate)
+
     s = sub.add_parser("sim-smoke", help="Two-pass build + iverilog smoke simulation")
     s.add_argument("project")
-    s.add_argument("--out", default="build/gen")
+    s.add_argument("--out", default="build")
     s.add_argument("--templates", default=_default_templates_dir())
     s.set_defaults(func=cmd_sim_smoke)
 

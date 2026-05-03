@@ -3,7 +3,7 @@ version: 2
 project:
   name: soc_simple_bus
   board: qmtech_ep4ce55
-  output_dir: build/gen
+  output_dir: build
 
 cpu:
   type: picorv32
