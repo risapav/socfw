@@ -1,0 +1,84 @@
+version: 2
+kind: timing
+
+timing:
+  derive_uncertainty: true
+
+  clocks:
+    - name: SYS_CLK
+      source: SYS_CLK
+      period_ns: 20.0
+      reset:
+        source: RESET_N
+        active_low: true
+        sync_stages: 2
+
+  generated_clocks:
+    - name: clk_pixel
+      source:
+        instance: clkpll
+        output: c0
+        # 65 MHz pixel clock for 1024x768 @ 60 Hz (VESA) 13/10 = 65 MHz from 50 MHz input
+        # 40 Mhz pixel clock for 800x600x480 @ 60 Hz (VESA) 4/5 = 40 MHz from 50 MHz input
+      multiply_by: 4
+      divide_by: 5
+    - name: clk_pixel5x
+      source:
+        instance: clkpll
+        output: c1
+        # 200 Mhz pixel clock for 800x600 @ 60 Hz (VESA) 4/1 = 200 MHz from 50 MHz input
+      multiply_by: 4
+      divide_by: 1
+
+  clock_groups:
+    - type: asynchronous
+      groups:
+        - [SYS_CLK]
+        - [clk_pixel]
+        - [clk_pixel5x]
+
+  io_delays:
+    auto: true
+    default_clock: SYS_CLK
+    default_input_max_ns: 2.0
+    default_input_min_ns: 0.5
+    default_output_max_ns: 3.0
+    default_output_min_ns: 0.5
+    overrides:
+      # VGA výstupné signály sú taktované pixelovým hodinami
+      - port: VGA_R[*]
+        direction: output
+        clock: clk_pixel
+        max_ns: 3.0
+        min_ns: 0.5
+        comment: VGA RGB data (pixel clock domain)
+      - port: VGA_G[*]
+        direction: output
+        clock: clk_pixel
+        max_ns: 3.0
+        min_ns: 0.5
+        comment: VGA RGB data (pixel clock domain)
+      - port: VGA_B[*]
+        direction: output
+        clock: clk_pixel
+        max_ns: 3.0
+        min_ns: 0.5
+        comment: VGA RGB data (pixel clock domain)
+      - port: VGA_HS
+        direction: output
+        clock: clk_pixel
+        max_ns: 3.0
+        min_ns: 0.5
+        comment: VGA HSYNC
+      - port: VGA_VS
+        direction: output
+        clock: clk_pixel
+        max_ns: 3.0
+        min_ns: 0.5
+        comment: VGA VSYNC
+
+  false_paths:
+    - comment: Async reset na všetky registre
+      from_port: RESET_N
+    - comment: HDMI TMDS DDR výstup — self-clocked, štandardné IO delay analýza neplatí
+      to_port: PMOD_J11_HDMI_OUT

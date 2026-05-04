@@ -1,0 +1,89 @@
+version: 2
+kind: ip
+
+ip:
+  name: video_stream_fifo_sync
+  module: video_stream_fifo_sync
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: []
+  outputs: []
+
+parameters:
+  - name: DEPTH
+    type: int
+    default: 1024
+
+ports:
+  - name: clk_i
+    direction: input
+    width: 1
+  - name: rst_ni
+    direction: input
+    width: 1
+  - name: s_axis_data_i
+    direction: input
+    width: 16
+  - name: s_axis_valid_i
+    direction: input
+    width: 1
+  - name: s_axis_ready_o
+    direction: output
+    width: 1
+  - name: s_axis_sof_i
+    direction: input
+    width: 1
+  - name: s_axis_eol_i
+    direction: input
+    width: 1
+  - name: s_axis_eof_i
+    direction: input
+    width: 1
+  - name: m_axis_data_o
+    direction: output
+    width: 16
+  - name: m_axis_valid_o
+    direction: output
+    width: 1
+  - name: m_axis_ready_i
+    direction: input
+    width: 1
+  - name: m_axis_sof_o
+    direction: output
+    width: 1
+  - name: m_axis_eol_o
+    direction: output
+    width: 1
+  - name: m_axis_eof_o
+    direction: output
+    width: 1
+  - name: fill_o
+    direction: output
+    width_expr: "$clog2(DEPTH+1)"
+
+artifacts:
+  synthesis:
+    - ../rtl/video/video_pkg.sv
+    - ../rtl/video/video_stream_fifo_sync.sv
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - video_stream_fifo_sync

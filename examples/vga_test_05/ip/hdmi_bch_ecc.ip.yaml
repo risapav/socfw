@@ -1,0 +1,49 @@
+version: 2
+kind: ip
+
+ip:
+  name: hdmi_bch_ecc
+  module: hdmi_bch_ecc
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: false
+  dependency_only: true
+
+reset:
+  port: null
+  active_high: false
+
+clocking:
+  primary_input_port: null
+  additional_input_ports: []
+  outputs: []
+
+parameters:
+  - name: DATA_BITS
+    type: int
+    default: 24
+
+ports:
+  - name: data_i
+    direction: input
+    width_expr: "DATA_BITS"
+  - name: ecc_o
+    direction: output
+    width: 8
+
+artifacts:
+  synthesis:
+    - ../rtl/hdmi/hdmi_bch_ecc.sv
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - hdmi_bch_ecc

@@ -1,0 +1,137 @@
+version: 2
+kind: ip
+
+ip:
+  name: vga_rgb565_stream
+  module: vga_rgb565_stream
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: []
+  outputs: []
+
+parameters:
+  - name: H_ACTIVE
+    type: int
+    default: 640
+  - name: H_FP
+    type: int
+    default: 16
+  - name: H_SYNC
+    type: int
+    default: 96
+  - name: H_BP
+    type: int
+    default: 48
+  - name: V_ACTIVE
+    type: int
+    default: 480
+  - name: V_FP
+    type: int
+    default: 10
+  - name: V_SYNC
+    type: int
+    default: 2
+  - name: V_BP
+    type: int
+    default: 33
+  - name: HSYNC_POL
+    type: bit
+    default: false
+  - name: VSYNC_POL
+    type: bit
+    default: false
+
+ports:
+  - name: clk_i
+    direction: input
+    width: 1
+  - name: rst_ni
+    direction: input
+    width: 1
+  - name: s_axis_data_i
+    direction: input
+    width: 16
+  - name: s_axis_valid_i
+    direction: input
+    width: 1
+  - name: s_axis_ready_o
+    direction: output
+    width: 1
+  - name: s_axis_sof_i
+    direction: input
+    width: 1
+  - name: s_axis_eol_i
+    direction: input
+    width: 1
+  - name: s_axis_eof_i
+    direction: input
+    width: 1
+  - name: vga_r_o
+    direction: output
+    width: 5
+  - name: vga_g_o
+    direction: output
+    width: 6
+  - name: vga_b_o
+    direction: output
+    width: 5
+  - name: vga_hs_o
+    direction: output
+    width: 1
+  - name: vga_vs_o
+    direction: output
+    width: 1
+  - name: active_video_o
+    direction: output
+    width: 1
+  - name: frame_start_o
+    direction: output
+    width: 1
+  - name: line_start_o
+    direction: output
+    width: 1
+  - name: stream_active_o
+    direction: output
+    width: 1
+  - name: stream_frame_start_o
+    direction: output
+    width: 1
+  - name: pixel_x_o
+    direction: output
+    width_expr: "$clog2(H_ACTIVE)"
+  - name: pixel_y_o
+    direction: output
+    width_expr: "$clog2(V_ACTIVE)"
+  - name: underflow_o
+    direction: output
+    width: 1
+  - name: sync_error_o
+    direction: output
+    width: 1
+
+artifacts:
+  synthesis:
+    - ../rtl/video/video_pkg.sv
+    - ../rtl/video/vga_rgb565_stream.sv
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - vga_rgb565_stream

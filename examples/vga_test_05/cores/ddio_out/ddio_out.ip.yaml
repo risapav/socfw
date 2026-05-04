@@ -1,0 +1,46 @@
+version: 2
+kind: ip
+
+ip:
+  name: ddio_out
+  module: ddio_out
+  category: io_primitive
+
+origin:
+  kind: generated
+  packaging: quartus_ip
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: false
+  dependency_only: true
+
+reset:
+  port: null
+  active_high: false
+
+clocking:
+  primary_input_port: outclock
+  additional_input_ports: []
+  outputs: []
+
+ports:
+  - name: datain_h
+    direction: input
+    width: 1
+  - name: datain_l
+    direction: input
+    width: 1
+  - name: outclock
+    direction: input
+    width: 1
+  - name: dataout
+    direction: output
+    width: 1
+
+artifacts:
+  synthesis:
+    - ddio_out.qip
+  simulation: []
+  metadata: []

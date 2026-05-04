@@ -1,0 +1,7 @@
+
+State Machine - |soc_top|video_stream_frame_aligner:falign0|state
+Name state.ST_DROP_BROKEN_FRAME state.ST_STREAM_FRAME state.ST_WAIT_FRAME_START state.ST_SEARCH_SOF 
+state.ST_SEARCH_SOF 0 0 0 0 
+state.ST_WAIT_FRAME_START 0 0 1 1 
+state.ST_STREAM_FRAME 0 1 0 1 
+state.ST_DROP_BROKEN_FRAME 1 0 0 1 

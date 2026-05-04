@@ -1,0 +1,75 @@
+version: 2
+kind: ip
+
+ip:
+  name: vga_output_adapter
+  module: vga_output_adapter
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: []
+  outputs: []
+
+ports:
+  - name: clk_i
+    direction: input
+    width: 1
+  - name: rst_ni
+    direction: input
+    width: 1
+  - name: pixel_i
+    direction: input
+    width: 16
+  - name: de_i
+    direction: input
+    width: 1
+  - name: hsync_i
+    direction: input
+    width: 1
+  - name: vsync_i
+    direction: input
+    width: 1
+  - name: vga_r_o
+    direction: output
+    width: 5
+  - name: vga_g_o
+    direction: output
+    width: 6
+  - name: vga_b_o
+    direction: output
+    width: 5
+  - name: vga_hs_o
+    direction: output
+    width: 1
+  - name: vga_vs_o
+    direction: output
+    width: 1
+  - name: active_video_o
+    direction: output
+    width: 1
+
+artifacts:
+  synthesis:
+    - ../rtl/video/video_pkg.sv
+    - ../rtl/video/vga_output_adapter.sv
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - vga_output_adapter

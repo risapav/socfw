@@ -1,0 +1,99 @@
+version: 2
+kind: ip
+
+ip:
+  name: video_stream_frame_aligner
+  module: video_stream_frame_aligner
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: []
+  outputs: []
+
+ports:
+  - name: clk_i
+    direction: input
+    width: 1
+  - name: rst_ni
+    direction: input
+    width: 1
+  - name: pixel_req_i
+    direction: input
+    width: 1
+  - name: frame_start_i
+    direction: input
+    width: 1
+  - name: de_i
+    direction: input
+    width: 1
+  - name: last_active_x_req_i
+    direction: input
+    width: 1
+  - name: last_active_pixel_req_i
+    direction: input
+    width: 1
+  - name: s_axis_data_i
+    direction: input
+    width: 16
+  - name: s_axis_valid_i
+    direction: input
+    width: 1
+  - name: s_axis_ready_o
+    direction: output
+    width: 1
+  - name: s_axis_sof_i
+    direction: input
+    width: 1
+  - name: s_axis_eol_i
+    direction: input
+    width: 1
+  - name: s_axis_eof_i
+    direction: input
+    width: 1
+  - name: pixel_o
+    direction: output
+    width: 16
+  - name: pixel_loaded_o
+    direction: output
+    width: 1
+  - name: synced_o
+    direction: output
+    width: 1
+  - name: underflow_o
+    direction: output
+    width: 1
+  - name: underflow_sticky_o
+    direction: output
+    width: 1
+  - name: sync_error_o
+    direction: output
+    width: 1
+  - name: clear_errors_i
+    direction: input
+    width: 1
+
+artifacts:
+  synthesis:
+    - ../rtl/video/video_pkg.sv
+    - ../rtl/video/video_stream_frame_aligner.sv
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - video_stream_frame_aligner

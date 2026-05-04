@@ -1,0 +1,122 @@
+version: 2
+kind: ip
+
+ip:
+  name: video_timing_generator
+  module: video_timing_generator
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: []
+  outputs: []
+
+parameters:
+  - name: H_ACTIVE
+    type: int
+    default: 640
+  - name: H_FP
+    type: int
+    default: 16
+  - name: H_SYNC
+    type: int
+    default: 96
+  - name: H_BP
+    type: int
+    default: 48
+  - name: V_ACTIVE
+    type: int
+    default: 480
+  - name: V_FP
+    type: int
+    default: 10
+  - name: V_SYNC
+    type: int
+    default: 2
+  - name: V_BP
+    type: int
+    default: 33
+  - name: HSYNC_POL
+    type: bit
+    default: false
+  - name: VSYNC_POL
+    type: bit
+    default: false
+
+ports:
+  - name: clk_i
+    direction: input
+    width: 1
+  - name: rst_ni
+    direction: input
+    width: 1
+  - name: de_o
+    direction: output
+    width: 1
+  - name: hsync_o
+    direction: output
+    width: 1
+  - name: vsync_o
+    direction: output
+    width: 1
+  - name: pixel_req_o
+    direction: output
+    width: 1
+  - name: frame_start_o
+    direction: output
+    width: 1
+  - name: line_start_o
+    direction: output
+    width: 1
+  - name: x_o
+    direction: output
+    width_expr: "$clog2(H_ACTIVE)"
+  - name: y_o
+    direction: output
+    width_expr: "$clog2(V_ACTIVE)"
+  - name: hblank_o
+    direction: output
+    width: 1
+  - name: vblank_o
+    direction: output
+    width: 1
+  - name: last_active_x_req_o
+    direction: output
+    width: 1
+  - name: last_active_pixel_req_o
+    direction: output
+    width: 1
+  - name: blank_remaining_o
+    direction: output
+    width: 16
+  - name: h_cnt_o
+    direction: output
+    width_expr: "$clog2(H_ACTIVE + H_FP + H_SYNC + H_BP)"
+  - name: v_cnt_o
+    direction: output
+    width_expr: "$clog2(V_ACTIVE + V_FP + V_SYNC + V_BP)"
+
+artifacts:
+  synthesis:
+    - ../rtl/video/video_pkg.sv
+    - ../rtl/video/video_timing_generator.sv
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - video_timing_generator

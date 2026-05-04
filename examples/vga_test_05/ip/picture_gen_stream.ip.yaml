@@ -1,0 +1,98 @@
+version: 2
+kind: ip
+
+ip:
+  name: picture_gen_stream
+  module: picture_gen_stream
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: []
+  outputs: []
+
+parameters:
+  - name: H_RES
+    type: int
+    default: 640
+  - name: V_RES
+    type: int
+    default: 480
+  - name: MAX_MODES
+    type: int
+    default: 8
+
+ports:
+  - name: clk_i
+    direction: input
+    width: 1
+  - name: rst_ni
+    direction: input
+    width: 1
+  - name: enable_i
+    direction: input
+    width: 1
+  - name: start_i
+    direction: input
+    width: 1
+  - name: stop_i
+    direction: input
+    width: 1
+  - name: continuous_i
+    direction: input
+    width: 1
+  - name: mode_i
+    direction: input
+    width: 3
+  - name: m_axis_data_o
+    direction: output
+    width: 16
+  - name: m_axis_valid_o
+    direction: output
+    width: 1
+  - name: m_axis_ready_i
+    direction: input
+    width: 1
+  - name: m_axis_sof_o
+    direction: output
+    width: 1
+  - name: m_axis_eol_o
+    direction: output
+    width: 1
+  - name: m_axis_eof_o
+    direction: output
+    width: 1
+  - name: busy_o
+    direction: output
+    width: 1
+  - name: x_o
+    direction: output
+    width_expr: "$clog2(H_RES)"
+  - name: y_o
+    direction: output
+    width_expr: "$clog2(V_RES)"
+
+artifacts:
+  synthesis:
+    - ../rtl/video/video_pkg.sv
+    - ../rtl/video/picture_gen_stream.sv
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - picture_gen_stream

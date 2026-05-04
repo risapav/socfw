@@ -1,0 +1,253 @@
+version: 2
+kind: project
+
+project:
+  name: vga_test_05
+  mode: standalone
+  board: qmtech_ep4ce55
+
+registries:
+  packs:
+    - ../../packs/builtin
+  ip:
+    - ip
+    - cores/clkpll
+    - cores/ddio_out
+
+timing:
+  file: timing_config.yaml
+
+reset_driver: rst_sync0.rst_no
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+  generated:
+    - domain: clk_pixel
+      source:
+        instance: clkpll
+        output: c0
+      frequency_hz: 40000000
+      reset:
+        sync_from: sys_clk
+        sync_stages: 2
+    - domain: clk_pixel5x
+      source:
+        instance: clkpll
+        output: c1
+      frequency_hz: 200000000
+
+features:
+  use:
+    - board:onboard.seg
+    - board:onboard.dig
+    - board:onboard.vga.vga_r
+    - board:onboard.vga.vga_g
+    - board:onboard.vga.vga_b
+    - board:onboard.vga.vga_hsync
+    - board:onboard.vga.vga_vsync
+    - board:external.pmod.j11_hdmi_out
+
+modules:
+  - instance: clkpll
+    type: clkpll
+    clocks:
+      inclk0:
+        domain: sys_clk
+        no_reset: true
+    reset: "~RESET_N"
+
+  - instance: rst_sync0
+    type: cdc_reset_synchronizer
+    clocks:
+      clk_i: clk_pixel
+    reset: null
+    params:
+      STAGES: 3
+
+  - instance: pgen0
+    type: picture_gen_stream
+    clocks:
+      clk_i: clk_pixel
+    params:
+      H_RES: 800
+      V_RES: 600
+
+  - instance: vtgen0
+    type: video_timing_generator
+    clocks:
+      clk_i: clk_pixel
+    params:
+      # 800x600 @ 60 Hz (VESA) — pixel clock 40 MHz
+      H_ACTIVE: 800
+      H_FP: 40
+      H_SYNC: 128
+      H_BP: 88
+      V_ACTIVE: 600
+      V_FP: 1
+      V_SYNC: 4
+      V_BP: 23
+      HSYNC_POL: "1'b1"
+      VSYNC_POL: "1'b1"
+
+  - instance: vfifo0
+    type: video_stream_fifo_sync
+    clocks:
+      clk_i: clk_pixel
+    params:
+      DEPTH: 1600
+
+  - instance: falign0
+    type: video_stream_frame_aligner
+    clocks:
+      clk_i: clk_pixel
+
+  - instance: vgaout0
+    type: vga_output_adapter
+    clocks:
+      clk_i: clk_pixel
+    bind:
+      ports:
+        vga_r_o:
+          target: board:onboard.vga.vga_r
+        vga_g_o:
+          target: board:onboard.vga.vga_g
+        vga_b_o:
+          target: board:onboard.vga.vga_b
+        vga_hs_o:
+          target: board:onboard.vga.vga_hsync
+        vga_vs_o:
+          target: board:onboard.vga.vga_vsync
+
+  - instance: hdmi_tx0
+    type: vga_hdmi_tx
+    clocks:
+      clk_i: clk_pixel
+      clk_x_i: clk_pixel5x
+    bind:
+      ports:
+        hdmi_p_o:
+          target: board:external.pmod.j11_hdmi_out
+        vga_r_i:
+          target: board:onboard.vga.vga_r
+        vga_g_i:
+          target: board:onboard.vga.vga_g
+        vga_b_i:
+          target: board:onboard.vga.vga_b
+        vga_hs_i:
+          target: board:onboard.vga.vga_hsync
+        vga_vs_i:
+          target: board:onboard.vga.vga_vsync
+
+  - instance: mode_gen0
+    type: mode_gen
+    clocks:
+      clk_i: clk_pixel
+    params:
+      CLOCK_FREQ_HZ: 40000000
+      NUM_DIGITS: 3
+      CHANGE_PERIOD_MS: 2000
+
+  - instance: seven_seg_mux0
+    type: seven_seg_mux
+    clocks:
+      clk_i: clk_pixel
+    params:
+      CLOCK_FREQ_HZ: 40000000
+      NUM_DIGITS: 3
+      DIGIT_REFRESH_HZ: 250
+      COMMON_ANODE: 1
+    bind:
+      ports:
+        digit_sel_o:
+          target: board:onboard.dig
+        segment_sel_o:
+          target: board:onboard.seg
+
+connections:
+  # PLL locked → synchrónny reset cez cdc_reset_synchronizer
+  - from: clkpll.locked
+    to: rst_sync0.rst_ni
+
+  # PLL lock povolí generátor
+  - from: clkpll.locked
+    to: pgen0.enable_i
+  - from: clkpll.locked
+    to: pgen0.start_i
+
+  # AXI-Stream: picture_gen_stream → video_stream_fifo_sync
+  - from: pgen0.m_axis_data_o
+    to: vfifo0.s_axis_data_i
+  - from: pgen0.m_axis_valid_o
+    to: vfifo0.s_axis_valid_i
+  - from: vfifo0.s_axis_ready_o
+    to: pgen0.m_axis_ready_i
+  - from: pgen0.m_axis_sof_o
+    to: vfifo0.s_axis_sof_i
+  - from: pgen0.m_axis_eol_o
+    to: vfifo0.s_axis_eol_i
+  - from: pgen0.m_axis_eof_o
+    to: vfifo0.s_axis_eof_i
+
+  # AXI-Stream: video_stream_fifo_sync → video_stream_frame_aligner
+  - from: vfifo0.m_axis_data_o
+    to: falign0.s_axis_data_i
+  - from: vfifo0.m_axis_valid_o
+    to: falign0.s_axis_valid_i
+  - from: falign0.s_axis_ready_o
+    to: vfifo0.m_axis_ready_i
+  - from: vfifo0.m_axis_sof_o
+    to: falign0.s_axis_sof_i
+  - from: vfifo0.m_axis_eol_o
+    to: falign0.s_axis_eol_i
+  - from: vfifo0.m_axis_eof_o
+    to: falign0.s_axis_eof_i
+
+  # Timing → frame_aligner (look-ahead req-phase signals)
+  - from: vtgen0.pixel_req_o
+    to: falign0.pixel_req_i
+  - from: vtgen0.frame_start_o
+    to: falign0.frame_start_i
+  - from: vtgen0.de_o
+    to: falign0.de_i
+  - from: vtgen0.last_active_x_req_o
+    to: falign0.last_active_x_req_i
+  - from: vtgen0.last_active_pixel_req_o
+    to: falign0.last_active_pixel_req_i
+
+  # frame_aligner pixel → vga_output_adapter
+  - from: falign0.pixel_o
+    to: vgaout0.pixel_i
+
+  # Timing → vga_output_adapter
+  - from: vtgen0.de_o
+    to: vgaout0.de_i
+  - from: vtgen0.hsync_o
+    to: vgaout0.hsync_i
+  - from: vtgen0.vsync_o
+    to: vgaout0.vsync_i
+
+  # VGA výstupy → HDMI vstup (DE nemá board pin, ostáva explicitná spojenie)
+  - from: vgaout0.active_video_o
+    to: hdmi_tx0.vga_de_i
+
+  # Timing → HDMI TX (pre scheduler: hblank/vblank/blank_remaining)
+  - from: vtgen0.hblank_o
+    to: hdmi_tx0.hblank_i
+  - from: vtgen0.vblank_o
+    to: hdmi_tx0.vblank_i
+  - from: vtgen0.frame_start_o
+    to: hdmi_tx0.frame_start_i
+  - from: vtgen0.blank_remaining_o
+    to: hdmi_tx0.blank_remaining_i
+
+  # Výber módu: mode_gen → picture_gen_stream
+  - from: mode_gen0.mode_o
+    to: pgen0.mode_i
+
+  # Zobrazenie módu na 7-segmentovom displeji
+  - from: mode_gen0.digits_o
+    to: seven_seg_mux0.digits_i
+  - from: mode_gen0.dots_o
+    to: seven_seg_mux0.dots_i
