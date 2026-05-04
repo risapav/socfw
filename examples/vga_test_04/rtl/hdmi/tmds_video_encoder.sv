@@ -94,14 +94,15 @@ module tmds_video_encoder (
       logic [4:0]        ones_out;
       logic signed [4:0] rd_next;
 
-      // Disparity of the q_m word: ones - zeros = 2*ones - 8
+      // Disparity of q_m[7:0]: N1 - N0 = 2*N1 - 8
       char_disp = $signed({1'b0, ones_r}) * 2 - 5'sd8;
       neutral   = (char_disp == 5'sd0);
 
-      if (neutral)
-        invert = q_m_r[8];          // prefer fewer transitions
-      else if (rd == 5'sd0)
-        invert = (char_disp > 5'sd0);
+      // DVI 1.0 §3.3.3 two-case decision:
+      //   Case 1 (cnt==0 or balanced): preferred encoding — invert iff XNOR path
+      //   Case 2 (otherwise): steer disparity toward zero
+      if (rd == 5'sd0 || neutral)
+        invert = ~q_m_r[8];         // Case 1: invert iff XNOR path was used
       else
         invert = (rd > 5'sd0) ? (char_disp > 5'sd0) : (char_disp < 5'sd0);
 

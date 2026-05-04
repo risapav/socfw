@@ -77,8 +77,12 @@ module packet_scheduler #(
         packet_ready_o = 1'b1;
         packet_o       = (idx == 0) ? GCP_HEADER : GCP_BYTE0;
         if (idx == 1) begin
-          state_next = ST_AVI_HEADER;
           idx_next   = 6'd0;
+          // Skip AVI header+payload entirely if disabled
+          if      (len_avi   > 0) state_next = ST_AVI_HEADER;
+          else if (len_spd   > 0) state_next = ST_SPD_HEADER;
+          else if (len_audio > 0) state_next = ST_AUDIO_HEADER;
+          else                    state_next = ST_IDLE;
         end else begin
           idx_next = idx + 1;
         end
@@ -89,7 +93,9 @@ module packet_scheduler #(
         packet_o       = header_avi[idx[1:0]];
         if (idx == 2) begin
           idx_next   = 6'd0;
-          state_next = (len_avi > 0) ? ST_AVI_PAYLOAD : ST_SPD_HEADER;
+          state_next = (len_avi > 0) ? ST_AVI_PAYLOAD :
+                       (len_spd > 0) ? ST_SPD_HEADER :
+                       (len_audio > 0) ? ST_AUDIO_HEADER : ST_IDLE;
         end else begin
           idx_next = idx + 1;
         end
@@ -100,7 +106,10 @@ module packet_scheduler #(
         packet_o       = payload_avi[idx];
         if (idx == len_avi - 1) begin
           idx_next   = 6'd0;
-          state_next = ST_SPD_HEADER;
+          // Skip SPD header+payload if disabled
+          if      (len_spd   > 0) state_next = ST_SPD_HEADER;
+          else if (len_audio > 0) state_next = ST_AUDIO_HEADER;
+          else                    state_next = ST_IDLE;
         end else begin
           idx_next = idx + 1;
         end
@@ -111,7 +120,8 @@ module packet_scheduler #(
         packet_o       = header_spd[idx[1:0]];
         if (idx == 2) begin
           idx_next   = 6'd0;
-          state_next = (len_spd > 0) ? ST_SPD_PAYLOAD : ST_AUDIO_HEADER;
+          state_next = (len_spd > 0) ? ST_SPD_PAYLOAD :
+                       (len_audio > 0) ? ST_AUDIO_HEADER : ST_IDLE;
         end else begin
           idx_next = idx + 1;
         end
@@ -122,7 +132,8 @@ module packet_scheduler #(
         packet_o       = payload_spd[idx];
         if (idx == len_spd - 1) begin
           idx_next   = 6'd0;
-          state_next = ST_AUDIO_HEADER;
+          // Skip Audio header+payload if disabled
+          state_next = (len_audio > 0) ? ST_AUDIO_HEADER : ST_IDLE;
         end else begin
           idx_next = idx + 1;
         end

@@ -66,34 +66,18 @@ module vga_hdmi_tx #(
     .ch2_o         (ch2)
   );
 
-  // ── PHY: 4-channel serializer (ch0=B, ch1=G, ch2=R, ch3=CLK) ─────────────
+  // ── PHY: word-aligned DDR serializer (ch0=B, ch1=G, ch2=R, ch3=CLK) ──────
   localparam tmds_word_t TMDS_CLK = 10'b1111100000;
 
-  logic [9:0] phy_words [4];
-  assign phy_words[0] = ch0;
-  assign phy_words[1] = ch1;
-  assign phy_words[2] = ch2;
-  assign phy_words[3] = TMDS_CLK;
-
-  logic data_req;
-  logic hdmi_p_unpacked [4];
-  assign hdmi_p_o = {hdmi_p_unpacked[3], hdmi_p_unpacked[2],
-                     hdmi_p_unpacked[1], hdmi_p_unpacked[0]};
-
-  generic_serializer #(
-    .DDRIO           (1),
-    .NUM_PHY_CHANNELS(4),
-    .WORD_WIDTH      (10),
-    .LSB_FIRST       (1),
-    .IDLE_WORD       ('0)
-  ) u_phy (
-    .rst_ni        (rst_ni),
-    .enable_i      (1'b1),
-    .clk_i         (clk_i),
-    .clk_x_i       (clk_x_i),
-    .word_i        (phy_words),
-    .data_request_o(data_req),
-    .phys_o        (hdmi_p_unpacked)
+  tmds_phy_ddr_aligned u_phy (
+    .pix_clk_i (clk_i),
+    .clk_x_i   (clk_x_i),
+    .rst_ni    (rst_ni),
+    .ch0_i     (ch0),
+    .ch1_i     (ch1),
+    .ch2_i     (ch2),
+    .clk_ch_i  (TMDS_CLK),
+    .hdmi_p_o  (hdmi_p_o)
   );
 
 endmodule

@@ -183,10 +183,9 @@ module picture_gen_stream #(
             end
 
             MODE_MOVING_BAR: begin
-                if (((x_q + X_WIDTH'(scroll_offset_q)) & 8'h3F) < 16)
-                    data_next = RED;
-                else
-                    data_next = BLACK;
+                logic [15:0] x_scroll;
+                x_scroll = 16'(x_q) + 16'(scroll_offset_q);
+                data_next = (x_scroll[5:0] < 6'd16) ? RED : BLACK;
             end
 
             MODE_COLOR_BARS: begin

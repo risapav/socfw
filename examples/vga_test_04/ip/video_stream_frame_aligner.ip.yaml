@@ -68,7 +68,7 @@ ports:
   - name: pixel_o
     direction: output
     width: 16
-  - name: pixel_valid_o
+  - name: pixel_loaded_o
     direction: output
     width: 1
   - name: synced_o

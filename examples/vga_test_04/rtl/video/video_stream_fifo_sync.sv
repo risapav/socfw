@@ -30,6 +30,11 @@ module video_stream_fifo_sync #(
 );
 
   localparam int AW = $clog2(DEPTH);
+  localparam logic [AW-1:0] DEPTH_LAST = AW'(DEPTH - 1);
+
+  initial begin
+    assert (DEPTH >= 2) else $error("video_stream_fifo_sync: DEPTH must be >= 2");
+  end
 
   rgb565_t data_mem [0:DEPTH-1];
   logic    sof_mem  [0:DEPTH-1];
@@ -42,7 +47,7 @@ module video_stream_fifo_sync #(
 
   // Correct wrap for arbitrary (non-power-of-two) DEPTH
   function automatic logic [AW-1:0] ptr_next(input logic [AW-1:0] ptr);
-    return (ptr == AW'(DEPTH - 1)) ? '0 : ptr + 1'b1;
+    return (ptr == DEPTH_LAST) ? '0 : ptr + 1'b1;
   endfunction
 
   wire push = s_axis_valid_i && s_axis_ready_o;

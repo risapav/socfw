@@ -41,7 +41,7 @@ module video_stream_frame_aligner #(
 
   // Output to display adapter
   output rgb565_t pixel_o,
-  output logic    pixel_valid_o,
+  output logic    pixel_loaded_o,
 
   // Status
   output logic synced_o,
@@ -136,10 +136,10 @@ module video_stream_frame_aligner #(
   always_ff @(posedge clk_i) begin
     if (!rst_ni) begin
       pixel_o       <= DEFAULT_COLOR;
-      pixel_valid_o <= 1'b0;
+      pixel_loaded_o <= 1'b0;
     end else begin
-      // pixel_valid_o is valid only when a real pixel was produced for DE
-      pixel_valid_o <= pixel_take && de_i;
+      // pixel_loaded_o is valid only when a real pixel was produced for DE
+      pixel_loaded_o <= pixel_take && de_i;
       if (pixel_req_i)
         pixel_o <= pixel_take ? s_axis_data_i : DEFAULT_COLOR;
       else if (!de_i)

@@ -1,0 +1,81 @@
+version: 2
+kind: ip
+
+ip:
+  name: vga_hdmi_tx
+  module: vga_hdmi_tx
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports:
+    - clk_x_i
+  outputs: []
+
+ports:
+  - name: clk_i
+    direction: input
+    width: 1
+  - name: clk_x_i
+    direction: input
+    width: 1
+  - name: rst_ni
+    direction: input
+    width: 1
+  - name: vga_r_i
+    direction: input
+    width: 5
+  - name: vga_g_i
+    direction: input
+    width: 6
+  - name: vga_b_i
+    direction: input
+    width: 5
+  - name: vga_hs_i
+    direction: input
+    width: 1
+  - name: vga_vs_i
+    direction: input
+    width: 1
+  - name: vga_de_i
+    direction: input
+    width: 1
+  - name: hdmi_p_o
+    direction: output
+    width: 4
+
+artifacts:
+  synthesis:
+    - ../cores/ddio_out/ddio_out.qip
+    - ../rtl/hdmi/hdmi_pkg.sv
+    - ../rtl/video/video_pkg.sv
+    - ../rtl/hdmi/tmds_video_encoder.sv
+    - ../rtl/hdmi/tmds_control_encoder.sv
+    - ../rtl/hdmi/terc4_encoder.sv
+    - ../rtl/hdmi/hdmi_period_scheduler.sv
+    - ../rtl/hdmi/hdmi_channel_mux.sv
+    - ../rtl/hdmi/infoframe_builder.sv
+    - ../rtl/hdmi/packet_scheduler.sv
+    - ../rtl/hdmi/hdmi_tx_core.sv
+    - ../rtl/hdmi/tmds_phy_ddr_aligned.sv
+    - ../rtl/hdmi/vga_hdmi_tx.sv
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - vga_hdmi_tx
