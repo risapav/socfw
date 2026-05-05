@@ -6,11 +6,20 @@ import hdmi_pkg::*;
 // symbols for each of the three TMDS channels based on period_i.
 //
 // All inputs must be already latency-aligned (same pipeline depth).
+//
+// vsync_i / hsync_i must be the raw (non-TMDS-encoded) sync values at the
+// same pipeline phase as ctrl_ch0_i.  They are used to compute the
+// data-island guard-band ch0 symbol: TERC4({1, vsync, hsync, 1}) per
+// HDMI 1.3 spec section 5.2.3.2.
 module hdmi_channel_mux (
   input  logic clk_i,
   input  logic rst_ni,
 
   input  hdmi_period_t period_i,
+
+  // Sync values aligned with ctrl_ch0_i (raw, not TMDS-encoded)
+  input  logic vsync_i,
+  input  logic hsync_i,
 
   // Video encoder outputs (channels 2=R, 1=G, 0=B)
   input  tmds_word_t video_ch2_i,
@@ -36,8 +45,17 @@ module hdmi_channel_mux (
   // Guard-band symbols (HDMI 1.3 spec, section 5.2.2)
   localparam tmds_word_t GB_VIDEO   = 10'b1011001100;  // TERC4(0b1000), ch1/ch2 video GB
   localparam tmds_word_t GB_DATA_N  = 10'b0100110011;  // fixed per spec, ch1/ch2 data island GB
-  // ch0 data island GB should be TERC4({1,vsync,hsync,1}) — dynamic, deferred; fixed approx here
-  localparam tmds_word_t GB_DATA_0  = 10'b0100110011;
+  // ch0 data island GB: TERC4({1, vsync, hsync, 1}) — HDMI 1.3 spec section 5.2.3.2
+  // nibble = {1, vsync, hsync, 1}: only {vsync,hsync} vary, so 4 possible values.
+  tmds_word_t gb_data_ch0;
+  always_comb begin
+    unique case ({vsync_i, hsync_i})
+      2'b00: gb_data_ch0 = 10'b0100111001;  // TERC4(4'b1001)
+      2'b01: gb_data_ch0 = 10'b1011000110;  // TERC4(4'b1011)
+      2'b10: gb_data_ch0 = 10'b1001110001;  // TERC4(4'b1101)
+      2'b11: gb_data_ch0 = 10'b1011000011;  // TERC4(4'b1111)
+    endcase
+  end
 
   // Preamble type tokens: ch1 encodes {CTL3,CTL2} to signal what period follows.
   // ch0 carries {vsync,hsync} throughout; ch2 stays ctrl(2'b00).
@@ -82,7 +100,7 @@ module hdmi_channel_mux (
       HDMI_PERIOD_DATA_GB_TRAIL: begin
         ch2_next = GB_DATA_N;
         ch1_next = GB_DATA_N;
-        ch0_next = GB_DATA_0;
+        ch0_next = gb_data_ch0;
       end
       HDMI_PERIOD_DATA_PAYLOAD: begin
         ch2_next = data_ch2_i;
