@@ -64,8 +64,22 @@ module hdmi_period_scheduler #(
   // ── Full HDMI scheduler ───────────────────────────────────────────────────
   if (ENABLE_DATA_ISLAND) begin : gen_hdmi
 
-    // Video preamble budget: 8-symbol preamble + 2-symbol guard band before DE
+    // Video preamble budget: 8-symbol preamble + 2-symbol guard band = 10 scheduler cycles.
     localparam int VIDEO_PRE_TOTAL = PREAMBLE_LEN + GUARD_LEN;  // 10
+
+    // Pipeline from vtg h_cnt to channel_mux TMDS output:
+    //   vtg blank_remaining_comb → blank_remaining_o (1 reg)
+    //   blank_remaining_o → blank_remaining_r / stage-1 (1 reg)
+    //   state_next → state / period_o (1 reg, same posedge)
+    //   period_o → period_d1 (1 reg)
+    //   period_d1 → channel_mux output (1 reg)
+    //   Total: 5 cycles
+    //
+    // For TMDS VIDEO to start exactly at h_cnt=0 (first active pixel),
+    // the trigger must fire 5 cycles before the state-machine count would suggest.
+    localparam int PIPELINE_DELAY  = 5;
+    // Trigger threshold: blank_remaining_i == VIDEO_TRIG starts preamble FSM.
+    localparam int VIDEO_TRIG      = VIDEO_PRE_TOTAL + PIPELINE_DELAY;  // 15
 
     typedef enum logic [2:0] {
       ST_CONTROL,
@@ -95,14 +109,16 @@ module hdmi_period_scheduler #(
             // but handle gracefully — e.g. first frame after reset)
             state_next = ST_VIDEO;
           end else if (hblank_i && packet_pending_i &&
-                       blank_remaining_i >= 16'(ISLAND_TOTAL + VIDEO_PRE_TOTAL)) begin
+                       blank_remaining_i >= 16'(ISLAND_TOTAL + VIDEO_TRIG)) begin
             // Start data island only if enough room remains for island + video preamble
             state_next     = ST_DATA_PREAMBLE;
             sym_cnt_next   = PREAMBLE_LEN - 1;
             packet_start_o = 1'b1;
           end else if (hblank_i &&
-                       blank_remaining_i == 16'(VIDEO_PRE_TOTAL)) begin
-            // 10 cycles before DE: enter video preamble
+                       blank_remaining_i == 16'(VIDEO_TRIG)) begin
+            // VIDEO_TRIG cycles before h_cnt=0: enter video preamble.
+            // Accounting for 5-cycle pipeline: preamble+GB in scheduler completes
+            // exactly as the TMDS mux output transitions to VIDEO at h_cnt=0.
             state_next   = ST_VIDEO_PREAMBLE;
             sym_cnt_next = PREAMBLE_LEN - 1;
           end
