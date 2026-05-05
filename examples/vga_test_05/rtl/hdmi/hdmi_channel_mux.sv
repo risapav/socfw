@@ -33,10 +33,19 @@ module hdmi_channel_mux (
   output tmds_word_t ch0_o
 );
 
-  // Guard-band symbols (HDMI spec, section 5.2.2)
-  localparam tmds_word_t GB_VIDEO  = 10'b1011001100;
-  localparam tmds_word_t GB_DATA_0 = 10'b0100110011;  // ch0 leading/trailing GB
-  localparam tmds_word_t GB_DATA_N = 10'b0100110011;  // ch1/ch2 leading/trailing GB
+  // Guard-band symbols (HDMI 1.3 spec, section 5.2.2)
+  localparam tmds_word_t GB_VIDEO   = 10'b1011001100;  // TERC4(0b1000), ch1/ch2 video GB
+  localparam tmds_word_t GB_DATA_N  = 10'b0100110011;  // fixed per spec, ch1/ch2 data island GB
+  // ch0 data island GB should be TERC4({1,vsync,hsync,1}) — dynamic, deferred; fixed approx here
+  localparam tmds_word_t GB_DATA_0  = 10'b0100110011;
+
+  // Preamble type tokens: ch1 encodes {CTL3,CTL2} to signal what period follows.
+  // ch0 carries {vsync,hsync} throughout; ch2 stays ctrl(2'b00).
+  // HDMI 1.3 spec Table 5-7:
+  //   video preamble:  CTL2=1, CTL3=0  → ctrl(2'b01) = 10'b0010101011
+  //   data  preamble:  CTL2=1, CTL3=1  → ctrl(2'b11) = 10'b1010101011
+  localparam tmds_word_t PRE_VIDEO_CH1 = 10'b0010101011;  // ctrl(2'b01)
+  localparam tmds_word_t PRE_DATA_CH1  = 10'b1010101011;  // ctrl(2'b11)
 
   tmds_word_t ch2_next, ch1_next, ch0_next;
 
@@ -51,16 +60,22 @@ module hdmi_channel_mux (
         ch1_next = video_ch1_i;
         ch0_next = video_ch0_i;
       end
+      HDMI_PERIOD_VIDEO_PREAMBLE: begin
+        // ch1 signals "video period follows"; ch0 carries {vsync,hsync}; ch2=ctrl(0)
+        ch2_next = ctrl_ch2_i;
+        ch1_next = PRE_VIDEO_CH1;
+        ch0_next = ctrl_ch0_i;
+      end
       HDMI_PERIOD_VIDEO_GB: begin
-        // Video guard band: fixed symbols per HDMI spec
+        // Video guard band: fixed TERC4(8) on ch1/ch2; ch0 carries control
         ch2_next = GB_VIDEO;
         ch1_next = GB_VIDEO;
-        ch0_next = ctrl_ch0_i;  // ch0 carries control during VGB
+        ch0_next = ctrl_ch0_i;
       end
       HDMI_PERIOD_DATA_PREAMBLE: begin
-        // During preamble ch0 carries control, ch1/ch2 fixed preamble value
+        // ch1 signals "data island follows"; ch0 carries {vsync,hsync}; ch2=ctrl(0)
         ch2_next = ctrl_ch2_i;
-        ch1_next = ctrl_ch1_i;
+        ch1_next = PRE_DATA_CH1;
         ch0_next = ctrl_ch0_i;
       end
       HDMI_PERIOD_DATA_GB_LEAD,

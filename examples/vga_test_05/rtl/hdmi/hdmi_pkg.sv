@@ -8,15 +8,16 @@ package hdmi_pkg;
   typedef logic [9:0] tmds_word_t;
   typedef logic [7:0] tmds_data_t;
 
-  // Seven-state HDMI period type (covers DVI + full HDMI data islands)
+  // Eight-state HDMI period type (covers DVI + full HDMI data islands)
   typedef enum logic [2:0] {
-    HDMI_PERIOD_CONTROL,       // blanking: HS/VS control symbols
-    HDMI_PERIOD_VIDEO,         // active video: TMDS video encoding
-    HDMI_PERIOD_VIDEO_GB,      // video guard band (2 pixels before/after active)
-    HDMI_PERIOD_DATA_PREAMBLE, // 8-symbol preamble before data island
-    HDMI_PERIOD_DATA_GB_LEAD,  // 2-symbol leading guard band
-    HDMI_PERIOD_DATA_PAYLOAD,  // 32-symbol packet payload (TERC4)
-    HDMI_PERIOD_DATA_GB_TRAIL  // 2-symbol trailing guard band
+    HDMI_PERIOD_CONTROL,         // blanking: HS/VS control symbols
+    HDMI_PERIOD_VIDEO,           // active video: TMDS video encoding
+    HDMI_PERIOD_VIDEO_PREAMBLE,  // 8-symbol preamble before video guard band
+    HDMI_PERIOD_VIDEO_GB,        // video guard band (2 pixels before active)
+    HDMI_PERIOD_DATA_PREAMBLE,   // 8-symbol preamble before data island
+    HDMI_PERIOD_DATA_GB_LEAD,    // 2-symbol leading guard band
+    HDMI_PERIOD_DATA_PAYLOAD,    // 32-symbol packet payload (TERC4)
+    HDMI_PERIOD_DATA_GB_TRAIL    // 2-symbol trailing guard band
   } hdmi_period_t;
 
   typedef struct packed {
