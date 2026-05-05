@@ -64,8 +64,13 @@ module hdmi_period_scheduler #(
   // ── Full HDMI scheduler ───────────────────────────────────────────────────
   if (ENABLE_DATA_ISLAND) begin : gen_hdmi
 
+    // Video preamble budget: 8-symbol preamble + 2-symbol guard band before DE
+    localparam int VIDEO_PRE_TOTAL = PREAMBLE_LEN + GUARD_LEN;  // 10
+
     typedef enum logic [2:0] {
       ST_CONTROL,
+      ST_VIDEO_PREAMBLE,
+      ST_VIDEO_GB,
       ST_VIDEO,
       ST_DATA_PREAMBLE,
       ST_DATA_GUARD_LEAD,
@@ -85,14 +90,38 @@ module hdmi_period_scheduler #(
       unique case (state)
 
         ST_CONTROL: begin
-          if (de_i)
+          if (de_i) begin
+            // Arrived at DE without preamble (shouldn't happen in normal flow,
+            // but handle gracefully — e.g. first frame after reset)
             state_next = ST_VIDEO;
-          else if (hblank_i && packet_pending_i &&
-                   blank_remaining_i >= 16'(ISLAND_TOTAL)) begin
+          end else if (hblank_i && packet_pending_i &&
+                       blank_remaining_i >= 16'(ISLAND_TOTAL + VIDEO_PRE_TOTAL)) begin
+            // Start data island only if enough room remains for island + video preamble
             state_next     = ST_DATA_PREAMBLE;
             sym_cnt_next   = PREAMBLE_LEN - 1;
             packet_start_o = 1'b1;
+          end else if (hblank_i &&
+                       blank_remaining_i == 16'(VIDEO_PRE_TOTAL)) begin
+            // 10 cycles before DE: enter video preamble
+            state_next   = ST_VIDEO_PREAMBLE;
+            sym_cnt_next = PREAMBLE_LEN - 1;
           end
+        end
+
+        ST_VIDEO_PREAMBLE: begin
+          if (sym_cnt == 0) begin
+            state_next   = ST_VIDEO_GB;
+            sym_cnt_next = GUARD_LEN - 1;
+          end else begin
+            sym_cnt_next = sym_cnt - 1;
+          end
+        end
+
+        ST_VIDEO_GB: begin
+          if (sym_cnt == 0)
+            state_next = ST_VIDEO;
+          else
+            sym_cnt_next = sym_cnt - 1;
         end
 
         ST_VIDEO: begin
@@ -155,6 +184,8 @@ module hdmi_period_scheduler #(
       end else begin
         unique case (state_next)
           ST_CONTROL:         period_o <= HDMI_PERIOD_CONTROL;
+          ST_VIDEO_PREAMBLE:  period_o <= HDMI_PERIOD_VIDEO_PREAMBLE;
+          ST_VIDEO_GB:        period_o <= HDMI_PERIOD_VIDEO_GB;
           ST_VIDEO:           period_o <= HDMI_PERIOD_VIDEO;
           ST_DATA_PREAMBLE:   period_o <= HDMI_PERIOD_DATA_PREAMBLE;
           ST_DATA_GUARD_LEAD: period_o <= HDMI_PERIOD_DATA_GB_LEAD;
