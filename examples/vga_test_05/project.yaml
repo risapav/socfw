@@ -125,6 +125,8 @@ modules:
     clocks:
       clk_i: clk_pixel
       clk_x_i: clk_pixel5x
+    params:
+      ENABLE_DATA_ISLAND: 1
     bind:
       ports:
         hdmi_p_o:

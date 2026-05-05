@@ -26,6 +26,11 @@ clocking:
     - clk_x_i
   outputs: []
 
+parameters:
+  - name: ENABLE_DATA_ISLAND
+    type: bit
+    default: 0
+
 ports:
   - name: clk_i
     direction: input
@@ -81,7 +86,8 @@ artifacts:
     - ../rtl/hdmi/hdmi_period_scheduler.sv
     - ../rtl/hdmi/hdmi_channel_mux.sv
     - ../rtl/hdmi/infoframe_builder.sv
-    - ../rtl/hdmi/packet_scheduler.sv
+    - ../rtl/hdmi/hdmi_bch_ecc.sv
+    - ../rtl/hdmi/data_island_formatter.sv
     - ../rtl/hdmi/hdmi_tx_core.sv
     - ../rtl/hdmi/tmds_phy_ddr_aligned.sv
     - ../rtl/hdmi/vga_hdmi_tx.sv

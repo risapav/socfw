@@ -31,6 +31,14 @@ timing:
       divide_by: 1
 
   clock_groups:
+    # Všetky tri hodiny sú v samostatných asynchrónnych skupinách.
+    # clk_pixel a clk_pixel5x pochádzajú z toho istého PLL (vzťah 1:5),
+    # ale bez multicycle_path podpory v socfw ich Quartus nemôže správne
+    # analyzovať — false timing failures by vznikali pre PHY CDC.
+    # PHY DDR serializer rieši CDC štrukturálne cez pair_cnt 0..4 aligned design.
+    # TODO: až socfw podporí multicycle_path, pridať:
+    #   set_multicycle_path -setup -from clk_pixel -to clk_pixel5x -num_cycles 5
+    #   set_multicycle_path -hold  -from clk_pixel -to clk_pixel5x -num_cycles 4
     - type: asynchronous
       groups:
         - [SYS_CLK]
