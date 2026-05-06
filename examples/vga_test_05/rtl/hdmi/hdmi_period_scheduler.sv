@@ -67,30 +67,56 @@ module hdmi_period_scheduler #(
     // Video preamble budget: 8-symbol preamble + 2-symbol guard band = 10 scheduler cycles.
     localparam int VIDEO_PRE_TOTAL = PREAMBLE_LEN + GUARD_LEN;  // 10
 
-    // Pipeline from vtg blank_remaining_comb to channel_mux TMDS output:
-    //   vtg blank_remaining_comb → blank_remaining_o (1 reg)
-    //   blank_remaining_o → blank_remaining_r / hdmi_tx stage-1 (1 reg)
-    //   blank_remaining_r → blank_remaining_rr / extra align reg (1 reg)
-    //   state_next → state / period_o (1 reg, same posedge)
+    // Pipeline from blank_remaining_rr (scheduler input) to ch*_o:
+    //   state_next → state / period_o (1 reg)
     //   period_o → period_d1 (1 reg)
-    //   period_d1 → channel_mux output (1 reg)
-    //   Total: 6 cycles (PIPELINE_DELAY)
+    //   period_d1 → channel_mux output / ch*_o (1 reg)
+    //   Total scheduler-to-output: 3 cycles
     //
-    // Video data path from vtg de_comb to first valid TMDS at ch*_o:
-    //   de_comb → de_o (vtg, 1 reg) → active_video_o (vga_output_adapter, 1 reg)
-    //   → de_r (hdmi_tx stage-1, 1 reg) → encoder stage-1 (1 reg)
-    //   → encoder stage-2 / tmds_o (1 reg) → channel_mux (1 reg)
-    //   Total: 6 cycles (VIDEO_DATA_LATENCY)
+    // Pipeline from blank_remaining_comb to blank_remaining_rr:
+    //   blank_remaining_comb → blank_remaining_o (vtg reg, 1)
+    //   blank_remaining_o → blank_remaining_r (hdmi stage-1, 1)
+    //   blank_remaining_r → blank_remaining_rr (align reg, 1)
+    //   Total: 3 cycles — so blank_remaining_rr = N means N+3 posedges until de_comb rises.
     //
-    // For TMDS VIDEO to start exactly when the first valid encoded pixel
-    // arrives at ch*_o, VIDEO_TRIG = VIDEO_PRE_TOTAL + PIPELINE_DELAY
-    //                                 - VIDEO_DATA_LATENCY = 10 + 6 - 6 = 10.
+    // Video data path from de_comb to first valid TMDS at ch*_o:
+    //   de_comb → de_o (vtg, 1) → active_video_o (vga_output_adapter, 1)
+    //   → de_r (stage-1, 1) → encoder stage-1 (1) → encoder stage-2 (1)
+    //   → channel_mux / ch*_o (1) = 6 cycles
+    //
+    // At blank_remaining_rr = VIDEO_TRIG (trigger posedge T):
+    //   de_comb rises at T + VIDEO_TRIG + 3 posedges (3 lag from blank_remaining pipeline)
+    //   Preamble+GB = VIDEO_PRE_TOTAL = 10 scheduler cycles → ch*_o shows VIDEO at T + 10 + 3
+    //   TMDS(pixel[0]) arrives at ch*_o at de_comb_rise + 6 = T + VIDEO_TRIG + 3 + 6
+    //
+    // For alignment: T + 10 + 3 = T + VIDEO_TRIG + 9
+    //   → VIDEO_TRIG = 10 + 3 - 9 = 4? No — let's count from first principles.
+    //
+    // Concrete trace (800×600, H_TOTAL=1056):
+    //   P_{1049}: blank_remaining_rr becomes 10; de_comb is still 0; triggers VIDEO_PREAMBLE.
+    //   Preamble runs P_{1049}..P_{1056}=P0 (8 cyc), GB runs P0,P1 (2 cyc): VIDEO at ch*_o at P0+3.
+    //   de_comb=1 at P0; TMDS(pixel[0]) at ch*_o at P0+6.
+    //   VIDEO too early by 3 cycles → VIDEO_TRIG=10 was wrong.
+    //
+    //   With blank_remaining_rr = 9 at P_{1050}:
+    //   Preamble P_{1050}..P_{1057}=P1 (8 cyc), GB P1,P2 (2 cyc): VIDEO at ch*_o at P1+3 = P4? No.
+    //   Actually preamble lasts 8 registered cycles, counted by sym_cnt 7→0.
+    //   Trigger at T=P_{1050}: state→VIDEO_PREAMBLE, period_o=VIDEO_PREAMBLE at P_{1051},
+    //   period_d1=VIDEO_PREAMBLE at P_{1052}, ch*_o=PREAMBLE at P_{1053}.
+    //   sym_cnt counts 7→0 over 8 cycles; ST_VIDEO_GB entered at T+8=P_{1058}=P2.
+    //   period_o=VIDEO_GB at P2+1=P3, period_d1 at P4, ch*_o VIDEO_GB at P5.
+    //   sym_cnt 1→0 for GB (2 cycles); ST_VIDEO entered at T+10=P_{1060}=P4.
+    //   period_o=VIDEO at P5, period_d1 at P6, ch*_o VIDEO at P6.
+    //   TMDS(pixel[0]) = encoder(de_r=1 at P2) out at P2+2=P4, ch*_o at P5? No, mux adds 1 → P6.
+    //   Wait: de_comb=1 at P0; de_o=1 at P1; vga_out=1 at P2; de_r=1 at P3;
+    //         enc stage-1 at P4; enc stage-2=tmds_o at P5; ch*_o at P6.
+    //   VIDEO period at ch*_o = P6; TMDS(pixel[0]) at ch*_o = P6 → ALIGNED.
+    //
+    // Therefore VIDEO_TRIG = VIDEO_PRE_TOTAL - 1 = 9.
     localparam int PIPELINE_DELAY  = 6;
     // Trigger threshold: blank_remaining_i <= VIDEO_TRIG starts preamble FSM.
-    // Because PIPELINE_DELAY == VIDEO_DATA_LATENCY (both 6), the terms cancel
-    // and VIDEO_TRIG == VIDEO_PRE_TOTAL.  The period and valid TMDS data arrive
-    // at ch*_o in the same cycle.
-    localparam int VIDEO_TRIG      = VIDEO_PRE_TOTAL;  // 10
+    // VIDEO_TRIG = VIDEO_PRE_TOTAL - 1 = 9.  See pipeline trace above.
+    localparam int VIDEO_TRIG      = VIDEO_PRE_TOTAL - 1;  // 9
 
     typedef enum logic [2:0] {
       ST_CONTROL,
