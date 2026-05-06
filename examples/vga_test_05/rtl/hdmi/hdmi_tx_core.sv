@@ -189,9 +189,20 @@ module hdmi_tx_core #(
   generate
   if (ENABLE_DATA_ISLAND) begin : gen_data_island
 
-    // AVI InfoFrame builder (combinational, static configuration)
-    logic [7:0] hdr_avi [0:2];
-    logic [7:0] pl_avi  [0:31];
+    // ── GCP builder (combinational) ───────────────────────────────────────
+    logic [7:0] hb_gcp [0:2];
+    logic [7:0] pb_gcp [0:27];
+
+    gcp_packet_builder u_gcp (
+      .avmute_i      (1'b0),
+      .clear_avmute_i(1'b0),
+      .hb_o          (hb_gcp),
+      .pb_o          (pb_gcp)
+    );
+
+    // ── AVI InfoFrame builder (combinational) ─────────────────────────────
+    logic [7:0] hb_avi [0:2];
+    logic [7:0] pl_avi [0:31];
     int         len_avi_int;
 
     infoframe_builder #(.IF_TYPE(INFO_AVI)) u_avi_builder (
@@ -203,38 +214,40 @@ module hdmi_tx_core #(
       .product_desc_i  ('0),
       .source_device_i ('0),
       .audio_channels_i(3'd0),
-      .header_o        (hdr_avi),
+      .header_o        (hb_avi),
       .payload_o       (pl_avi),
       .payload_len_o   (len_avi_int)
     );
 
-    // packet_pending: set on vsync rising edge (once per frame).
-    // With the VTG fix (last vblank line has proper hblank_o/blank_remaining),
-    // the scheduler will insert the data island during the last vblank line's
-    // blanking period — safely before the first active pixel and well after
-    // the VSYNC pulse ends.  The vsync_r edge trigger is simple and correct
-    // here; the original 2-row shift was caused by the island firing on line-0
-    // blanking, which no longer happens.
-    logic vsync_prev;
-    always_ff @(posedge pix_clk_i) vsync_prev <= vsync_r;
-
-    logic pending;
-    always_ff @(posedge pix_clk_i) begin
-      if (!rst_ni)                    pending <= 1'b0;
-      else if (vsync_r && !vsync_prev) pending <= 1'b1;
-      else if (packet_start)           pending <= 1'b0;
-    end
-    assign packet_pending = pending;
-
-    // Payload bytes for data_island_formatter: 4 subpackets × 7 bytes = 28 B.
-    // Take pl_avi[0..27]; bytes past len_avi_int are zeroed.
+    // Trim AVI payload to 28 bytes (formatter width)
     logic [7:0] pb_avi [0:27];
     always_comb begin
       for (int i = 0; i < 28; i++)
         pb_avi[i] = (i < len_avi_int) ? pl_avi[i] : 8'h00;
     end
 
-    // Data island formatter: BCH/ECC + correct HDMI channel bit mapping
+    // ── Packet arbiter: GCP → AVI per frame ──────────────────────────────
+    // Fires on vsync_r rising edge.  With the VTG fix (last vblank line has
+    // proper hblank_o/blank_remaining), both packets are sent during the last
+    // vblank line's blanking period — safely before line 0 active pixels.
+    logic [7:0] arb_hb [0:2];
+    logic [7:0] arb_pb [0:27];
+
+    hdmi_packet_arbiter u_arbiter (
+      .clk_i         (pix_clk_i),
+      .rst_ni        (rst_ni),
+      .vsync_i       (vsync_r),
+      .hb_gcp_i      (hb_gcp),
+      .pb_gcp_i      (pb_gcp),
+      .hb_avi_i      (hb_avi),
+      .pb_avi_i      (pb_avi),
+      .packet_valid_o(packet_pending),
+      .packet_start_i(packet_start),
+      .hb_o          (arb_hb),
+      .pb_o          (arb_pb)
+    );
+
+    // ── Data island formatter: BCH/ECC + HDMI channel bit mapping ─────────
     logic [3:0] di_ch0, di_ch1, di_ch2;
     logic       di_active;
 
@@ -245,8 +258,8 @@ module hdmi_tx_core #(
       .advance_i(packet_pop),
       .hsync_i  (hsync_enc),
       .vsync_i  (vsync_enc),
-      .hb       (hdr_avi),
-      .pb       (pb_avi),
+      .hb       (arb_hb),
+      .pb       (arb_pb),
       .ch0_o    (di_ch0),
       .ch1_o    (di_ch1),
       .ch2_o    (di_ch2),
