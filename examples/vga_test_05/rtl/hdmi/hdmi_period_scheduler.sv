@@ -115,10 +115,13 @@ module hdmi_period_scheduler #(
             sym_cnt_next   = PREAMBLE_LEN - 1;
             packet_start_o = 1'b1;
           end else if (hblank_i &&
-                       blank_remaining_i == 16'(VIDEO_TRIG)) begin
+                       blank_remaining_i != 16'd0 &&
+                       blank_remaining_i <= 16'(VIDEO_TRIG)) begin
             // VIDEO_TRIG cycles before h_cnt=0: enter video preamble.
-            // Accounting for 5-cycle pipeline: preamble+GB in scheduler completes
-            // exactly as the TMDS mux output transitions to VIDEO at h_cnt=0.
+            // Use <= (not ==) so the trigger fires even when a data island ends
+            // one cycle late (blank_remaining passes through VIDEO_TRIG by 1
+            // and the scheduler re-enters ST_CONTROL at VIDEO_TRIG-1).
+            // blank_remaining != 0 guards against spurious trigger during active video.
             state_next   = ST_VIDEO_PREAMBLE;
             sym_cnt_next = PREAMBLE_LEN - 1;
           end
