@@ -112,16 +112,25 @@ module video_timing_generator #(
 
   // ── blank_remaining: pixel clocks until next active-video region ──────────
   // During hblank (v_active, !h_active): cycles remaining = H_TOTAL - h_cnt
-  // During vblank (!v_active): use sentinel 0xFFFF (far more than any data island)
+  // During last vblank line (v_cnt==V_TOTAL-1): count the same way so the
+  //   period scheduler can fire VIDEO_PREAMBLE before the very first active
+  //   pixel of each frame.  Without this, hblank_o is 0 throughout vblank,
+  //   the trigger never fires, and the sink misses the first ~2 pixels.
+  // All other vblank lines: sentinel 0xFFFF.
   // During active video (de): 0
+  wire is_last_vblank_line = (v_cnt == V_TOTAL - 1'd1);
+
   logic [15:0] blank_remaining_comb;
   always_comb begin
-    if (!v_active)
-      blank_remaining_comb = 16'hFFFF;
-    else if (!h_active)
+    if (de)
+      blank_remaining_comb = 16'd0;
+    else if (v_active || is_last_vblank_line)
+      // Covers regular hblank (v_active && !h_active), active-h portion of
+      // last vblank line (counted so scheduler knows budget), and last vblank
+      // blanking portion.  Formula H_TOTAL - h_cnt gives exact cycles left.
       blank_remaining_comb = 16'(H_TOTAL) - 16'(h_cnt);
     else
-      blank_remaining_comb = 16'd0;
+      blank_remaining_comb = 16'hFFFF;
   end
 
   // ── Registered outputs ────────────────────────────────────────────────────
@@ -149,7 +158,7 @@ module video_timing_generator #(
       pixel_req_o             <= de_next;
       frame_start_o           <= frame_start_next;
       line_start_o            <= line_start_next;
-      hblank_o                <= ~de && v_active;
+      hblank_o                <= (~de && v_active) || (is_last_vblank_line && !h_active);
       vblank_o                <= ~v_active;
       last_active_x_req_o     <= last_active_x_req_next;
       last_active_pixel_req_o <= last_active_pixel_req_next;

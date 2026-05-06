@@ -208,29 +208,21 @@ module hdmi_tx_core #(
       .payload_len_o   (len_avi_int)
     );
 
-    // packet_pending: schedule AVI after 4th vblank line (not on vsync edge).
-    // Firing on vsync rising edge places a data island near the sensitive
-    // VSYNC transition, which can cause HDMI sinks to shift the frame start
-    // by 1–2 lines.  Waiting until the 4th vblank line gives the sink time
-    // to recognise VSYNC before we insert data island traffic.
-    logic [7:0] vblank_line_cnt;
-    logic       pending;
+    // packet_pending: set on vsync rising edge (once per frame).
+    // With the VTG fix (last vblank line has proper hblank_o/blank_remaining),
+    // the scheduler will insert the data island during the last vblank line's
+    // blanking period — safely before the first active pixel and well after
+    // the VSYNC pulse ends.  The vsync_r edge trigger is simple and correct
+    // here; the original 2-row shift was caused by the island firing on line-0
+    // blanking, which no longer happens.
+    logic vsync_prev;
+    always_ff @(posedge pix_clk_i) vsync_prev <= vsync_r;
+
+    logic pending;
     always_ff @(posedge pix_clk_i) begin
-      if (!rst_ni) begin
-        vblank_line_cnt <= 8'd0;
-        pending         <= 1'b0;
-      end else begin
-        if (frame_start_r) begin
-          vblank_line_cnt <= 8'd0;
-          pending         <= 1'b0;
-        end else if (line_start_r && vblank_r) begin
-          vblank_line_cnt <= vblank_line_cnt + 1'b1;
-          if (vblank_line_cnt == 8'd4)
-            pending <= 1'b1;
-        end
-        if (packet_start)
-          pending <= 1'b0;
-      end
+      if (!rst_ni)                    pending <= 1'b0;
+      else if (vsync_r && !vsync_prev) pending <= 1'b1;
+      else if (packet_start)           pending <= 1'b0;
     end
     assign packet_pending = pending;
 
