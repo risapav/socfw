@@ -241,6 +241,8 @@ connections:
     to: hdmi_tx0.vblank_i
   - from: vtgen0.frame_start_o
     to: hdmi_tx0.frame_start_i
+  - from: vtgen0.line_start_o
+    to: hdmi_tx0.line_start_i
   - from: vtgen0.blank_remaining_o
     to: hdmi_tx0.blank_remaining_i
 

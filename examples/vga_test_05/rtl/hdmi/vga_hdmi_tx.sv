@@ -37,6 +37,7 @@ module vga_hdmi_tx #(
   input  logic        hblank_i,          // horizontal blank
   input  logic        vblank_i,          // vertical blank
   input  logic        frame_start_i,     // first pixel of each frame
+  input  logic        line_start_i,      // one-cycle pulse at start of each line
   input  logic [15:0] blank_remaining_i, // cycles until next active video
 
   // HDMI TMDS output (positive side of differential pairs)
@@ -66,6 +67,7 @@ module vga_hdmi_tx #(
     .hblank_i         (hblank_i),
     .vblank_i         (vblank_i),
     .frame_start_i    (frame_start_i),
+    .line_start_i     (line_start_i),
     .blank_remaining_i(blank_remaining_i),
     .info_cfg_i       ('0),
     .color_fmt_i      (COLOR_FORMAT_RGB),

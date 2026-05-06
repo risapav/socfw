@@ -41,6 +41,7 @@ module hdmi_tx_core #(
   input  logic        hblank_i,
   input  logic        vblank_i,
   input  logic        frame_start_i,
+  input  logic        line_start_i,      // one-cycle pulse at start of each line
   input  logic [15:0] blank_remaining_i,
 
   // InfoFrame configuration (static or quasi-static)
@@ -59,7 +60,7 @@ module hdmi_tx_core #(
   // ── Stage 1 input registers ───────────────────────────────────────────────
   logic [7:0]  red_r, grn_r, blu_r;
   logic        de_r, hsync_r, vsync_r;
-  logic        hblank_r, vblank_r;
+  logic        hblank_r, vblank_r, line_start_r, frame_start_r;
   logic [15:0] blank_remaining_r;
 
   always_ff @(posedge pix_clk_i) begin
@@ -68,6 +69,8 @@ module hdmi_tx_core #(
       de_r              <= 1'b0; hsync_r <= 1'b0; vsync_r <= 1'b0;
       hblank_r          <= 1'b0;
       vblank_r          <= 1'b0;
+      line_start_r      <= 1'b0;
+      frame_start_r     <= 1'b0;
       blank_remaining_r <= '0;
     end else begin
       red_r             <= red_i;
@@ -78,6 +81,8 @@ module hdmi_tx_core #(
       vsync_r           <= vsync_i;
       hblank_r          <= hblank_i;
       vblank_r          <= vblank_i;
+      line_start_r      <= line_start_i;
+      frame_start_r     <= frame_start_i;
       blank_remaining_r <= blank_remaining_i;
     end
   end
@@ -203,16 +208,29 @@ module hdmi_tx_core #(
       .payload_len_o   (len_avi_int)
     );
 
-    // packet_pending: set on vsync rising edge (once per frame), cleared on
-    // packet_start so only one data island per frame is scheduled.
-    logic vsync_prev;
-    always_ff @(posedge pix_clk_i) vsync_prev <= vsync_r;
-
-    logic pending;
+    // packet_pending: schedule AVI after 4th vblank line (not on vsync edge).
+    // Firing on vsync rising edge places a data island near the sensitive
+    // VSYNC transition, which can cause HDMI sinks to shift the frame start
+    // by 1–2 lines.  Waiting until the 4th vblank line gives the sink time
+    // to recognise VSYNC before we insert data island traffic.
+    logic [7:0] vblank_line_cnt;
+    logic       pending;
     always_ff @(posedge pix_clk_i) begin
-      if (!rst_ni)       pending <= 1'b0;
-      else if (vsync_r && !vsync_prev) pending <= 1'b1;
-      else if (packet_start)           pending <= 1'b0;
+      if (!rst_ni) begin
+        vblank_line_cnt <= 8'd0;
+        pending         <= 1'b0;
+      end else begin
+        if (frame_start_r) begin
+          vblank_line_cnt <= 8'd0;
+          pending         <= 1'b0;
+        end else if (line_start_r && vblank_r) begin
+          vblank_line_cnt <= vblank_line_cnt + 1'b1;
+          if (vblank_line_cnt == 8'd4)
+            pending <= 1'b1;
+        end
+        if (packet_start)
+          pending <= 1'b0;
+      end
     end
     assign packet_pending = pending;
 
@@ -233,8 +251,8 @@ module hdmi_tx_core #(
       .rst_ni   (rst_ni),
       .start_i  (packet_start),
       .advance_i(packet_pop),
-      .hsync_i  (hsync_r),
-      .vsync_i  (vsync_r),
+      .hsync_i  (hsync_enc),
+      .vsync_i  (vsync_enc),
       .hb       (hdr_avi),
       .pb       (pb_avi),
       .ch0_o    (di_ch0),

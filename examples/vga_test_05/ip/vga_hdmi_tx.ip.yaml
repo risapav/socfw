@@ -68,6 +68,9 @@ ports:
   - name: frame_start_i
     direction: input
     width: 1
+  - name: line_start_i
+    direction: input
+    width: 1
   - name: blank_remaining_i
     direction: input
     width: 16
