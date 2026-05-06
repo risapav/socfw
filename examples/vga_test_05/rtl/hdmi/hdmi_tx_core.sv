@@ -82,6 +82,26 @@ module hdmi_tx_core #(
     end
   end
 
+  // ── Extra pipeline stage to align blank_remaining with video data path ───────
+  // blank_remaining from vtg has 2 register stages to de_r (vtg_reg + hdmi_stage1).
+  // vga_de_i goes through vga_output_adapter (3 stages to de_r).  Without
+  // alignment the VIDEO period switch leads valid TMDS by 5 symbols per line.
+  // Adding one extra register makes both paths 3 stages deep.  VIDEO_TRIG in
+  // the scheduler is then set to VIDEO_PRE_TOTAL so that VIDEO appears at
+  // ch*_o exactly when the first valid TMDS word leaves the encoder.
+  logic [15:0] blank_remaining_rr;
+  logic        hblank_rr;
+
+  always_ff @(posedge pix_clk_i) begin
+    if (!rst_ni) begin
+      blank_remaining_rr <= '0;
+      hblank_rr          <= 1'b0;
+    end else begin
+      blank_remaining_rr <= blank_remaining_r;
+      hblank_rr          <= hblank_r;
+    end
+  end
+
   // ── Period scheduler ──────────────────────────────────────────────────────
   hdmi_period_t period;
   logic         packet_pending;
@@ -93,9 +113,9 @@ module hdmi_tx_core #(
     .clk_i             (pix_clk_i),
     .rst_ni            (rst_ni),
     .de_i              (de_r),
-    .hblank_i          (hblank_r),
+    .hblank_i          (hblank_rr),
     .vblank_i          (vblank_r),
-    .blank_remaining_i (blank_remaining_r),
+    .blank_remaining_i (blank_remaining_rr),
     .packet_pending_i  (packet_pending),
     .packet_start_o    (packet_start),
     .packet_pop_o      (packet_pop),

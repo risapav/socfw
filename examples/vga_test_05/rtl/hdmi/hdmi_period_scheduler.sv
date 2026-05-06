@@ -67,19 +67,30 @@ module hdmi_period_scheduler #(
     // Video preamble budget: 8-symbol preamble + 2-symbol guard band = 10 scheduler cycles.
     localparam int VIDEO_PRE_TOTAL = PREAMBLE_LEN + GUARD_LEN;  // 10
 
-    // Pipeline from vtg h_cnt to channel_mux TMDS output:
+    // Pipeline from vtg blank_remaining_comb to channel_mux TMDS output:
     //   vtg blank_remaining_comb → blank_remaining_o (1 reg)
-    //   blank_remaining_o → blank_remaining_r / stage-1 (1 reg)
+    //   blank_remaining_o → blank_remaining_r / hdmi_tx stage-1 (1 reg)
+    //   blank_remaining_r → blank_remaining_rr / extra align reg (1 reg)
     //   state_next → state / period_o (1 reg, same posedge)
     //   period_o → period_d1 (1 reg)
     //   period_d1 → channel_mux output (1 reg)
-    //   Total: 5 cycles
+    //   Total: 6 cycles (PIPELINE_DELAY)
     //
-    // For TMDS VIDEO to start exactly at h_cnt=0 (first active pixel),
-    // the trigger must fire 5 cycles before the state-machine count would suggest.
-    localparam int PIPELINE_DELAY  = 5;
-    // Trigger threshold: blank_remaining_i == VIDEO_TRIG starts preamble FSM.
-    localparam int VIDEO_TRIG      = VIDEO_PRE_TOTAL + PIPELINE_DELAY;  // 15
+    // Video data path from vtg de_comb to first valid TMDS at ch*_o:
+    //   de_comb → de_o (vtg, 1 reg) → active_video_o (vga_output_adapter, 1 reg)
+    //   → de_r (hdmi_tx stage-1, 1 reg) → encoder stage-1 (1 reg)
+    //   → encoder stage-2 / tmds_o (1 reg) → channel_mux (1 reg)
+    //   Total: 6 cycles (VIDEO_DATA_LATENCY)
+    //
+    // For TMDS VIDEO to start exactly when the first valid encoded pixel
+    // arrives at ch*_o, VIDEO_TRIG = VIDEO_PRE_TOTAL + PIPELINE_DELAY
+    //                                 - VIDEO_DATA_LATENCY = 10 + 6 - 6 = 10.
+    localparam int PIPELINE_DELAY  = 6;
+    // Trigger threshold: blank_remaining_i <= VIDEO_TRIG starts preamble FSM.
+    // Because PIPELINE_DELAY == VIDEO_DATA_LATENCY (both 6), the terms cancel
+    // and VIDEO_TRIG == VIDEO_PRE_TOTAL.  The period and valid TMDS data arrive
+    // at ch*_o in the same cycle.
+    localparam int VIDEO_TRIG      = VIDEO_PRE_TOTAL;  // 10
 
     typedef enum logic [2:0] {
       ST_CONTROL,
