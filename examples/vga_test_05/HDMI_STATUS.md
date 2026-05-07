@@ -1,6 +1,6 @@
 # HDMI implementácia — aktuálny stav (vga_test_05)
 
-> Stav k: 2026-05-05  
+> Stav k: 2026-05-07  
 > Quartus: 0 errors, 16 warnings (len historické truncation warnings)
 
 ---
@@ -15,22 +15,31 @@ video_timing_generator
   │  blank_remaining[15:0], frame_start
   │  last_active_x_req, last_active_pixel_req
   ▼
+vga_output_adapter
+  │  active_video_o, vga_r/g/b_o, vga_hs/vs_o (1 register stage)
+  ▼
 vga_hdmi_tx  (parameter ENABLE_DATA_ISLAND=1)
-  │
+  │  RGB565 → RGB888 (kombinačné)
+  │  vga_de_i = active_video_o (priamy drôt, nie cez board pin)
+  │  vga_r/g/b/hs/vs_i = VGA_R/G/B/HS/VS (top-level output wire)
   ▼
 hdmi_tx_core
   ├── Stage-1 input registers (de, hs, vs, hblank, vblank, blank_remaining)
+  ├── Extra align reg: blank_remaining_rr, hblank_rr  (→ 3-stage blank_remaining pipeline)
   │
   ├── hdmi_period_scheduler  ──── HDMI period FSM (8 stavov)
   │     CONTROL → DATA_PREAMBLE → DATA_GB_LEAD → DATA_PAYLOAD
   │           → DATA_GB_TRAIL → CONTROL
   │     CONTROL → VIDEO_PREAMBLE → VIDEO_GB → VIDEO → CONTROL
+  │     VIDEO_TRIG = 10  (blank_remaining_rr <= 10 spúšťa VIDEO_PREAMBLE)
   │
   ├── tmds_video_encoder × 3   (R, G, B; latency=2, running disparity reset)
   ├── tmds_control_encoder × 3 (ch0={vsync,hsync}, ch1=2'b00, ch2=2'b00)
   │
   ├── [gen_data_island]
+  │     gcp_packet_builder     (GCP — statický, kombinačný)
   │     infoframe_builder AVI  (kombinačný, R/G/B, 4:3, full-range, VIC=0)
+  │     hdmi_packet_arbiter    (GCP→AVI per frame, triggered na vsync_r rising edge)
   │     data_island_formatter  (BCH/ECC, shift-reg serializer, 32 symboly)
   │     terc4_encoder × 3      (latency=2)
   │
@@ -40,7 +49,7 @@ hdmi_tx_core
         VIDEO_GB:       ch1/ch2=TERC4(8)=0b1011001100, ch0=ctrl
         VIDEO:          video encoder výstup
         DATA_PREAMBLE:  ch1=ctrl(2'b11) [CTL2=1,CTL3=1], ch0={vs,hs}
-        DATA_GB_LEAD/TRAIL: ch1/ch2=0b0100110011, ch0=0b0100110011 (*)
+        DATA_GB_LEAD/TRAIL: ch1/ch2=0b0100110011, ch0=TERC4({1,vsync,hsync,1})
         DATA_PAYLOAD:   TERC4 data island výstup
   ▼
 tmds_phy_ddr_aligned  (clk_x_i = 5× pixel, pair_cnt 0..4, ALTDDIO_OUT)
@@ -48,8 +57,37 @@ tmds_phy_ddr_aligned  (clk_x_i = 5× pixel, pair_cnt 0..4, ALTDDIO_OUT)
 HDMI PMOD výstup (4× diff pair: B, G, R, CLK)
 ```
 
-(*) ch0 guard band by mal byť TERC4({1,vsync,hsync,1}) — dynamická hodnota,
-    zatiaľ aproximovaná fixnou konštantou.
+---
+
+## Pipeline zarovnanie — VIDEO_TRIG
+
+VIDEO_TRIG = 10 je analyticky overená hodnota.
+
+**Pipeline (trigger posedge T, blank_remaining_rr = N = VIDEO_TRIG):**
+
+| Signál | Latencia od T |
+|--------|--------------|
+| de_comb = 1 | T+N−3 (blank_remaining má 3 fázy) |
+| de_o (VTG reg) | T+N−2 |
+| active_video_o (vgaout0) | T+N−1 |
+| de_r (hdmi stage-1) | T+N — encoder vidí stabilnú hodnotu 1 |
+| enc stage-1 (posedge T+N+1) | T+N+1 |
+| TMDS(pixel[0]) na tmds_o | T+N+2 |
+| ch\*\_o pri channel_mux (posedge T+N+3) | T+N+3 |
+
+**Period FSM (nezávisí od N):**
+
+| Stav | Čas pri ch\*\_o |
+|------|----------------|
+| VIDEO_PREAMBLE na period_o | T+1 … T+8 |
+| VIDEO_GB na period_o | T+9, T+10 |
+| VIDEO na period_o | T+11 |
+| VIDEO na period_d1 | T+12 |
+| VIDEO na ch\*\_o | **T+13** |
+
+Zarovnanie: T+N+3 = T+13 → **N = 10 = VIDEO_TRIG** ✓
+
+Data island guard: `blank_remaining_rr >= ISLAND_TOTAL + VIDEO_TRIG = 44 + 10 = 54`
 
 ---
 
@@ -57,45 +95,41 @@ HDMI PMOD výstup (4× diff pair: B, G, R, CLK)
 
 | Modul | Súbor | Stav | Poznámka |
 |---|---|---|---|
-| `hdmi_pkg` | hdmi_pkg.sv | ✅ hotový | 8 period stavov, typy, enums, calc_checksum |
+| `hdmi_pkg` | hdmi_pkg.sv | ✅ hotový | 8 period stavov, typy, enums |
 | `tmds_video_encoder` | tmds_video_encoder.sv | ✅ hotový | DVI §3.3.3 algo, running disparity, latency=2 |
 | `tmds_control_encoder` | tmds_control_encoder.sv | ✅ hotový | 4 TMDS control slová, latency=2 |
 | `terc4_encoder` | terc4_encoder.sv | ✅ hotový | LUT z HDMI spec, latency=2 |
-| `hdmi_bch_ecc` | hdmi_bch_ecc.sv | ✅ overený | poly x^8+x^4+x^3+x^2+1, init=0xFF, kombinačný |
-| `infoframe_builder` | infoframe_builder.sv | ✅ hotový | AVI/SPD/Audio, kombinačný, checksum auto |
-| `data_island_formatter` | data_island_formatter.sv | ✅ hotový | 32 symboly, 4 subpackety, BCH, shift-reg |
-| `hdmi_period_scheduler` | hdmi_period_scheduler.sv | ✅ hotový | 8-stavový FSM, blank_remaining guard (>=54) |
-| `hdmi_channel_mux` | hdmi_channel_mux.sv | ✅ hotový | správne CTL hodnoty pre oba preamble typy |
+| `hdmi_bch_ecc` | hdmi_bch_ecc.sv | ✅ overený | poly x^8+x^4+x^3+x^2+1, init=0xFF |
+| `infoframe_builder` | infoframe_builder.sv | ✅ hotový | AVI/SPD/Audio, kombinačný |
+| `gcp_packet_builder` | gcp_packet_builder.sv | ✅ hotový | GCP, kombinačný |
+| `hdmi_packet_arbiter` | hdmi_packet_arbiter.sv | ✅ hotový | GCP→AVI per frame, vsync_r trigger |
+| `data_island_formatter` | data_island_formatter.sv | ✅ hotový | 32 symboly, BCH/ECC, shift-reg |
+| `hdmi_period_scheduler` | hdmi_period_scheduler.sv | ✅ hotový | 8-stavový FSM, VIDEO_TRIG=10, guard>=54 |
+| `hdmi_channel_mux` | hdmi_channel_mux.sv | ✅ hotový | CTL hodnoty, dynamický ch0 GB |
 | `tmds_phy_ddr_aligned` | tmds_phy_ddr_aligned.sv | ✅ hotový | pair_cnt, ALTDDIO_OUT, LSB-first |
 | `vga_hdmi_tx` | vga_hdmi_tx.sv | ✅ hotový | RGB565→RGB888, bridge do hdmi_tx_core + PHY |
-| `hdmi_tx_core` | hdmi_tx_core.sv | ✅ hotový | ENABLE_DATA_ISLAND=1 aktívny |
-| `packet_scheduler` | packet_scheduler.sv | ⚠️ osirotený | byte-stream FSM, nie je zapojený do core |
+| `hdmi_tx_core` | hdmi_tx_core.sv | ✅ hotový | ENABLE_DATA_ISLAND=1, extra blank_remaining_rr stage |
 
 ---
 
 ## Čo funguje (verifikované)
 
+### Testbench simulácie (Questa FSE)
+- `tb_hdmi_period_scheduler.sv` — 4 scenáre, ALL TESTS PASSED
+  - Scenár 1: No island — VIDEO_PREAMBLE=8, VIDEO_GB=2
+  - Scenár 2: Min-budget island (hblank=256) — payload=32, vid_pre=8
+  - Scenár 3: All period counts — all expected values matched
+  - Scenár 4: Tight budget (hblank=54) — island+videopre musia sa zmestiť
+- `tb_data_island_formatter.sv` — PASSED
+- `tb_hdmi_bch_ecc.sv` — PASSED
+
 ### BCH/ECC matematika (Python cross-check)
 - Polynóm `x^8+x^4+x^3+x^2+1`, XOR maska 0x1D, init 0xFF
-- Bit order: LSB-first per byte, byte order `pb[0]..pb[6]`
 - AVI header ECC: HB=[0x82,0x02,0x0D] → 0x67 ✓
-- SP0 ECC (checksum+PB1..PB6): → 0x51 ✓
-- SP1-SP3 ECC (nuly): → 0xF5 ✓
+- SP0 ECC → 0x51 ✓; SP1-SP3 ECC → 0xF5 ✓
 
 ### AVI InfoFrame obsah
-- HB0=0x82 (typ), HB1=0x02 (verzia), HB2=0x0D (dĺžka=13)
-- PB0=0x3F (checksum, verifikovaný: suma všetkých = 0x00)
-- PB1=0x10 (Y1Y0=00 RGB, A0=1 AFI present)
-- PB2=0x18 (M1M0=01 4:3, R=same as picture)
-- PB3=0x08 (Q1Q0=10 full range)
-- PB4=0x00 (VIC=0, 800×600 nie je CEA-861 mód)
-
-### Period scheduler timing (analyticky overené)
-- Video preamble trigger: `blank_remaining == 10` (2 pipeline stages od vtg)
-- Preamble TMDS výstup: cykly V+5..V+12 (8 cyklov) ✓
-- Guard band TMDS výstup: V+13..V+14 (2 cykly) ✓
-- Prvý video pixel TMDS výstup: V+15 ✓
-- Data island guard: `blank_remaining >= 54` (44 island + 10 video pre)
+- PB0=0x3F (checksum), PB1=0x10 (RGB), PB2=0x18 (4:3), PB3=0x08 (full range)
 
 ### CTL signálovanie (HDMI 1.3 Table 5-7)
 - Video preamble: ch1=ctrl(2'b01) = 0b0010101011 (CTL2=1, CTL3=0) ✓
@@ -103,87 +137,39 @@ HDMI PMOD výstup (4× diff pair: B, G, R, CLK)
 
 ---
 
-## Čo nie je hotové / zostáva
+## Otvorené problémy — nahlásené z HW
 
-### Priorita 1 — overenie na HW
-- **Reálny test na FPGA**: pripojiť HDMI monitor / HDMI analyzer,
-  overiť či obraz zobrazuje (DVI path) a či monitor akceptuje AVI InfoFrame
-- **fázové zarovnanie** pair_cnt a pixel clock: zatiaľ analyticky správne,
-  treba overiť na osciloskope (pair_cnt==0 musí byť eye center)
+### 1. 2-riadkový vertikálny posun (vyšetruje sa)
 
-### Priorita 2 — guard band ch0 (drobná nesprávnosť)
-- `DATA_GB_LEAD/TRAIL` ch0 by mal byť `TERC4({1,vsync,hsync,1})` (dynamicky)
-- Teraz je fixné `0b0100110011` — pre väčšinu monitorov pravdepodobne OK,
-  ale nie je 100% spec-kompatibilné
-- Oprava: v channel_mux pridať `vsync_i`/`hsync_i` vstupy a terc4 LUT
+Prvé 2 riadky zobrazovaného obrazu sú nevalidné / celý obraz je posunutý nadol o 2 riadky.
 
-### Priorita 3 — SDC multicycle path pre PHY
-- `clk_pixel → clk_pixel5x` CDC v PHY je štrukturálne bezpečné (pair_cnt),
-  ale Quartus to nevie bez explicitného:
-  ```
-  set_multicycle_path -setup -from clk_pixel -to clk_pixel5x -num_cycles 5
-  set_multicycle_path -hold  -from clk_pixel -to clk_pixel5x -num_cycles 4
-  ```
-- Zatiaľ `set_clock_groups -asynchronous` medzi nimi → timing sa neanalizuje
+**Hypotézy (od najpravdepodobnejšej):**
+1. `video_stream_frame_aligner` potrebuje 2 riadky na sync pri prvom frame
+2. Data islands na poslednej vblank línii zasahujú do prvej aktívnej línie (malo by byť vylúčené guardom >= 54)
+3. `picture_gen_stream` nezačína generovať pixely dostatočne skoro
 
-### Priorita 4 — packet_scheduler.sv
-- Modul existuje ale nie je zapojený (osirotený kód)
-- Pre AVI one-per-frame prístup nie je potrebný
-- Pre multi-packet scenár (GCP + AVI + SPD + Audio) by bol potrebný packet arbiter
-
-### Priorita 5 — viacero paketov za frame
-- Aktuálna logika: **jeden AVI packet per vsync**, pending flag sa nastaví
-  na vsync rising edge a vymaže po `packet_start`
-- Neposiela GCP (General Control Packet) pred AVI — podľa HDMI spec by mal
-  GCP predchádzať každý data island slot
-- Viacero paketov by vyžadovalo packet arbiter + frontu
-
-### Priorita 6 — TMDS video encoder verifikácia
-- Running disparity algoritmus je implementovaný podľa DVI §3.3.3
-- Nebolo robené funkčné testbench porovnanie voči referenčnému modelu
-- DC balance vlastnosti neboli kvantitatívne overené
-
-### Budúcnosť — audio (nie je začaté)
-- ACR (Audio Clock Regeneration) paket: N/CTS hodnoty
-- Audio Sample paketizér (IEC 60958 → HDMI pakety)
-- I2S vstup alebo interný sínusový generátor pre test
-- Audio InfoFrame
+**Ďalší krok:** simulovať celý VTG → frame_aligner → vga_output_adapter → hdmi_tx_core pipeline pre prvé 3 aktívne línie a overiť, kedy sa prvý platný pixel objaví na ch\*\_o.
 
 ---
 
-## Navrhované ďalšie úlohy (poradie)
+## Čo zostáva — poradie priorít
 
 ```
-1. [HW test]   Nahrať bitstream, pripojiť HDMI, overiť obraz
-               → zistíme, či DVI path funguje bez ďalšej práce
-
-2. [HW test]   Overiť AVI InfoFrame HDMI analyzerom (napr. Extron EDID manager
-               alebo software HDMI capture + infoframe dump)
-               → potvrdenie BCH/ECC a packet path
-
-3. [RTL fix]   ch0 guard band: dynamický TERC4({1,vsync,hsync,1})
-               → pridať vsync_i/hsync_i do hdmi_channel_mux
-
-4. [SDC]       Pridať multicycle path constraints pre pair_cnt PHY
-               → buď custom SDC snippet alebo socfw rozšírenie
-
-5. [RTL]       GCP pred AVI: General Control Packet (header=0x03, PB0=0x00)
-               odoslať jeden slot pred AVI InfoFrame každý frame
-
-6. [Simulation] TMDS encoder testbench: ref model v Pythone / C vs SV výstup
-               → kvantitatívne overenie DC balance a bit patterns
-
-7. [Audio]     Začať ACR paket: N=6144, CTS=f(pixel_clock/audio_clock)
+1. [HW] Nahrať nový bitstream (VIDEO_TRIG=10 fix), overiť horizontálny posun
+2. [HW] Vyšetriť 2-riadkový vertikálny posun — simul. alebo osciloskop
+3. [RTL] SDC multicycle path pre PHY (pix_clk → clk_pixel5x)
+4. [Audio] ACR paket: N=6144, CTS=f(pixel_clock/audio_clock)
+5. [Audio] Audio InfoFrame + Audio Sample packetizer
+6. [RTL] EDID/DDC I2C master + EDID parser
 ```
 
 ---
 
-## Čo sa zmenilo v tejto serii commitov
+## Historia commitov (táto séria)
 
 | Commit | Zmena |
 |---|---|
-| `d3fefda` | vytvorenie vga_test_05 z vga_test_04; hdmi_tx_core rozšírený o hblank/vblank/blank_remaining |
-| `...` | hdmi_bch_ecc.sv (nový), data_island_formatter.sv (nový), infoframe_builder zapojený |
-| `4959199` | CTL preamble hodnoty v channel_mux (video=ctrl01, data=ctrl11) + HDMI_PERIOD_VIDEO_PREAMBLE enum |
-| `0657024` | video preamble + guard band FSM stavy v period_scheduler |
-| `8369627` | ENABLE_DATA_ISLAND=1, BCH overenie, timing_config dokumentácia |
+| `f2cfabb` | ~~VIDEO_TRIG 10→9~~ (chybná zmena — spôsobila 1-pixelový right shift) |
+| `ca1187d` | GCP + packet arbiter (GCP→AVI per frame) |
+| `7401d3b` | VTG fix: VIDEO_PREAMBLE pred prvou aktívnou líniou (last vblank line) |
+| aktuálny | VIDEO_TRIG reverted 9→10 — analyticky správne pre 3-stage blank_remaining + 3-stage DE pipeline |
