@@ -61,7 +61,9 @@ module vga_hdmi_tx #(
   tmds_word_t ch0, ch1, ch2;
 
   hdmi_tx_core #(
-    .ENABLE_DATA_ISLAND(ENABLE_DATA_ISLAND)
+    .ENABLE_DATA_ISLAND(ENABLE_DATA_ISLAND),
+    .PIXEL_CLK_HZ      (40_000_000),
+    .AUDIO_SAMPLE_RATE (48_000)
   ) u_core (
     .pix_clk_i        (clk_i),
     .rst_ni           (rst_ni),

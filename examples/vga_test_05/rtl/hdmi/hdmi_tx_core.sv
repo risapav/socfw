@@ -24,7 +24,9 @@ module hdmi_tx_core #(
   parameter bit ENABLE_DATA_ISLAND = 0,
   parameter bit ENABLE_AVI         = 1,
   parameter bit ENABLE_SPD         = 0,
-  parameter bit ENABLE_AUDIO_IF    = 0
+  parameter bit ENABLE_AUDIO_IF    = 0,
+  parameter int PIXEL_CLK_HZ       = 40_000_000,
+  parameter int AUDIO_SAMPLE_RATE  = 48_000
 )(
   input  logic pix_clk_i,
   input  logic rst_ni,
@@ -247,28 +249,84 @@ module hdmi_tx_core #(
       .valid_o    (valid_acr)
     );
 
-    // ── Packet arbiter: GCP → AVI → ACR per frame ────────────────────────
-    // Fires on vsync_r rising edge.  All packets are sent during the last
-    // vblank line's blanking period — safely before line 0 active pixels.
-    // ACR slot is skipped when valid_acr is low (audio disabled).
+    // ── Audio InfoFrame builder (combinational) ───────────────────────────
+    logic [7:0] hb_audio_if [0:2];
+    logic [7:0] pl_audio_if [0:31];
+    int         len_audio_if_int;
+
+    infoframe_builder #(.IF_TYPE(INFO_AUDIO)) u_audio_if_builder (
+      .color_format_i  ('0),
+      .aspect_ratio_i  ('0),
+      .quant_range_i   ('0),
+      .vic_code_i      ('0),
+      .vendor_name_i   ('0),
+      .product_desc_i  ('0),
+      .source_device_i ('0),
+      .audio_channels_i(3'd1),    // CC=1 → 2 channels
+      .header_o        (hb_audio_if),
+      .payload_o       (pl_audio_if),
+      .payload_len_o   (len_audio_if_int)
+    );
+
+    logic [7:0] pb_audio_if [0:27];
+    always_comb begin
+      for (int i = 0; i < 28; i++)
+        pb_audio_if[i] = (i < len_audio_if_int) ? pl_audio_if[i] : 8'h00;
+    end
+
+    // ── Audio test tone source (48 kHz / 1 kHz square wave) ──────────────
+    logic [15:0] w_l0, w_r0, w_l1, w_r1, w_l2, w_r2, w_l3, w_r3;
+    logic        w_valid_sample;
+    logic        w_sample_consume;
+
+    hdmi_audio_test_src #(
+      .PIXEL_CLK_HZ(PIXEL_CLK_HZ),
+      .SAMPLE_RATE (AUDIO_SAMPLE_RATE)
+    ) u_audio_src (
+      .clk_i    (pix_clk_i),
+      .rst_ni   (rst_ni),
+      .consume_i(w_sample_consume),
+      .l0_o(w_l0), .r0_o(w_r0),
+      .l1_o(w_l1), .r1_o(w_r1),
+      .l2_o(w_l2), .r2_o(w_r2),
+      .l3_o(w_l3), .r3_o(w_r3),
+      .valid_o  (w_valid_sample)
+    );
+
+    // ── Audio sample packet builder (combinational) ───────────────────────
+    logic [7:0] hb_sample [0:2];
+    logic [7:0] pb_sample [0:27];
+
+    audio_sample_packet_builder u_sample_pkt (
+      .l0_i(w_l0), .r0_i(w_r0),
+      .l1_i(w_l1), .r1_i(w_r1),
+      .l2_i(w_l2), .r2_i(w_r2),
+      .l3_i(w_l3), .r3_i(w_r3),
+      .hb_o(hb_sample),
+      .pb_o(pb_sample)
+    );
+
+    // ── Packet arbiter: GCP→AVI→ACR→AUDIO_IF per frame, samples in IDLE ──
     logic [7:0] arb_hb [0:2];
     logic [7:0] arb_pb [0:27];
 
     hdmi_packet_arbiter u_arbiter (
-      .clk_i         (pix_clk_i),
-      .rst_ni        (rst_ni),
-      .vsync_i       (vsync_r),
-      .hb_gcp_i      (hb_gcp),
-      .pb_gcp_i      (pb_gcp),
-      .hb_avi_i      (hb_avi),
-      .pb_avi_i      (pb_avi),
-      .hb_acr_i      (hb_acr),
-      .pb_acr_i      (pb_acr),
-      .valid_acr_i   (valid_acr),
-      .packet_valid_o(packet_pending),
-      .packet_start_i(packet_start),
-      .hb_o          (arb_hb),
-      .pb_o          (arb_pb)
+      .clk_i           (pix_clk_i),
+      .rst_ni          (rst_ni),
+      .vsync_i         (vsync_r),
+      .hb_gcp_i        (hb_gcp),        .pb_gcp_i       (pb_gcp),
+      .hb_avi_i        (hb_avi),        .pb_avi_i       (pb_avi),
+      .hb_acr_i        (hb_acr),        .pb_acr_i       (pb_acr),
+      .valid_acr_i     (valid_acr),
+      .hb_audio_if_i   (hb_audio_if),   .pb_audio_if_i  (pb_audio_if),
+      .valid_audio_if_i(enable_audio_i),
+      .hb_sample_i     (hb_sample),     .pb_sample_i    (pb_sample),
+      .valid_sample_i  (w_valid_sample && enable_audio_i),
+      .packet_valid_o  (packet_pending),
+      .packet_start_i  (packet_start),
+      .sample_consume_o(w_sample_consume),
+      .hb_o            (arb_hb),
+      .pb_o            (arb_pb)
     );
 
     // ── Data island formatter: BCH/ECC + HDMI channel bit mapping ─────────
