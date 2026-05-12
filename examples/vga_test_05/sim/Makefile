@@ -3,9 +3,9 @@ RTL := ../rtl/hdmi
 VLOG := vlog -sv -suppress 2892
 VSIM := vsim -c -do "run -all; quit"
 
-.PHONY: all bch_ecc data_island scheduler acr_packet clean
+.PHONY: all bch_ecc data_island scheduler acr_packet audio_sample_pkt clean
 
-all: bch_ecc data_island scheduler acr_packet
+all: bch_ecc data_island scheduler acr_packet audio_sample_pkt
 
 bch_ecc:
 	$(VLOG) $(RTL)/hdmi_bch_ecc.sv tb_hdmi_bch_ecc.sv
@@ -27,6 +27,10 @@ scheduler:
 acr_packet:
 	$(VLOG) $(RTL)/acr_packet_builder.sv tb_acr_packet_builder.sv
 	$(VSIM) tb_acr_packet_builder
+
+audio_sample_pkt:
+	$(VLOG) $(RTL)/audio_sample_packet_builder.sv tb_audio_sample_packet_builder.sv
+	$(VSIM) tb_audio_sample_packet_builder
 
 clean:
 	rm -rf work transcript *.log
