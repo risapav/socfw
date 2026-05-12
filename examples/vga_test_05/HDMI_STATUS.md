@@ -102,19 +102,24 @@ Data island guard: `blank_remaining_rr >= ISLAND_TOTAL + VIDEO_TRIG = 44 + 10 = 
 | `hdmi_bch_ecc` | hdmi_bch_ecc.sv | ✅ overený | poly x^8+x^4+x^3+x^2+1, init=0xFF |
 | `infoframe_builder` | infoframe_builder.sv | ✅ hotový | AVI/SPD/Audio, kombinačný |
 | `gcp_packet_builder` | gcp_packet_builder.sv | ✅ hotový | GCP, kombinačný |
-| `hdmi_packet_arbiter` | hdmi_packet_arbiter.sv | ✅ hotový | GCP→AVI per frame, vsync_r trigger |
+| `acr_packet_builder` | acr_packet_builder.sv | ✅ hotový | N=6144, CTS=40000, 4 subpackety, kombinačný |
+| `audio_sample_packet_builder` | audio_sample_packet_builder.sv | ✅ hotový | typ 0x02, 4×L/R 16-bit, left-justified AW, P=^sample |
+| `hdmi_audio_test_src` | hdmi_audio_test_src.sv | ✅ hotový | phase-acc 48kHz, 1kHz square wave, 4-sample accum |
+| `hdmi_packet_arbiter` | hdmi_packet_arbiter.sv | ✅ hotový | 5 stavov, GCP→AVI→ACR→AUDIO_IF per frame, IDLE=audio samples |
 | `data_island_formatter` | data_island_formatter.sv | ✅ hotový | 32 symboly, BCH/ECC, shift-reg |
 | `hdmi_period_scheduler` | hdmi_period_scheduler.sv | ✅ hotový | 8-stavový FSM, VIDEO_TRIG=10, guard>=54 |
 | `hdmi_channel_mux` | hdmi_channel_mux.sv | ✅ hotový | CTL hodnoty, dynamický ch0 GB |
 | `tmds_phy_ddr_aligned` | tmds_phy_ddr_aligned.sv | ✅ hotový | pair_cnt, ALTDDIO_OUT, LSB-first |
-| `vga_hdmi_tx` | vga_hdmi_tx.sv | ✅ hotový | RGB565→RGB888, bridge do hdmi_tx_core + PHY |
-| `hdmi_tx_core` | hdmi_tx_core.sv | ✅ hotový | ENABLE_DATA_ISLAND=1, extra blank_remaining_rr stage |
+| `vga_hdmi_tx` | vga_hdmi_tx.sv | ✅ hotový | ENABLE_AUDIO, ACR_N/CTS params, PIXEL_CLK_HZ |
+| `hdmi_tx_core` | hdmi_tx_core.sv | ✅ hotový | PIXEL_CLK_HZ/AUDIO_SAMPLE_RATE params, plný audio path |
 
 ---
 
 ## Čo funguje (verifikované)
 
 ### Testbench simulácie (Questa FSE)
+- `tb_acr_packet_builder.sv` — ALL PASSED (header, 4 subpackety, valid gating)
+- `tb_audio_sample_packet_builder.sv` — ALL PASSED (header, byte split, parity)
 - `tb_hdmi_period_scheduler.sv` — 4 scenáre, ALL TESTS PASSED
   - Scenár 1: No island — VIDEO_PREAMBLE=8, VIDEO_GB=2
   - Scenár 2: Min-budget island (hblank=256) — payload=32, vid_pre=8
@@ -155,13 +160,32 @@ Prvé 2 riadky zobrazovaného obrazu sú nevalidné / celý obraz je posunutý n
 ## Čo zostáva — poradie priorít
 
 ```
-1. [HW] Nahrať nový bitstream (VIDEO_TRIG=10 fix), overiť horizontálny posun
+1. [HW] Nahrať bitstream s ENABLE_AUDIO=1, overiť audio na TV
 2. [HW] Vyšetriť 2-riadkový vertikálny posun — simul. alebo osciloskop
 3. [RTL] SDC multicycle path pre PHY (pix_clk → clk_pixel5x)
-4. [Audio] ACR paket: N=6144, CTS=f(pixel_clock/audio_clock)
-5. [Audio] Audio InfoFrame + Audio Sample packetizer
-6. [RTL] EDID/DDC I2C master + EDID parser
+4. [Audio] I2S vstup — nahradiť hdmi_audio_test_src reálnym I2S prijímačom
+5. [RTL] EDID/DDC I2C master + EDID parser
 ```
+
+### Audio — stav (implementované 2026-05-12)
+
+Celý audio path pre 2ch LPCM 48kHz je hotový:
+
+```
+hdmi_audio_test_src  (1 kHz square wave, phase-acc 48kHz)
+  ↓ 4× (L,R) 16-bit + valid / consume
+audio_sample_packet_builder  (typ 0x02, left-justified AW, BCH cez formatter)
+  ↓ hb/pb
+hdmi_packet_arbiter  (IDLE prezentuje audio samples; vsync_rise spustí
+                      GCP → AVI → ACR → AUDIO_IF per frame)
+  ↓ arb_hb / arb_pb + packet_valid_o / packet_start_i
+data_island_formatter → TERC4 → hdmi_channel_mux → TMDS output
+```
+
+**Aktivácia:** `ENABLE_AUDIO=1` v `vga_hdmi_tx` parametroch (default 0).
+**N/CTS:** statické N=6144, CTS=40000 (40 MHz / 48 kHz).
+**Budget per hblank (256 cyklov):** GCP+AVI+ACR+AUDIO_IF = 4×44 = 176 cyklov; zostatok ~70 cyklov pre audio sample packety. Na aktívnych líniách plných 246 cyklov → 5 audio sample packetov per hblank.
+**Požadované per frame:** 200 audio sample packetov; dostupné: ≫3000. ✓
 
 ---
 
