@@ -128,6 +128,11 @@ modules:
     params:
       ENABLE_DATA_ISLAND: 1
       ENABLE_AUDIO: 1
+      # Debug isolation — Test A: only audio sample packets (no ACR, no Audio IF)
+      # Suspected root cause: audio_sample_packet format/BCH/TERC4
+      ENABLE_ACR_PACKET: 0
+      ENABLE_AUDIO_INFOFRAME: 0
+      ENABLE_AUDIO_SAMPLE: 1
     bind:
       ports:
         hdmi_p_o:

@@ -39,6 +39,15 @@ parameters:
   - name: ACR_CTS
     type: int
     default: 40000
+  - name: ENABLE_ACR_PACKET
+    type: bit
+    default: 1
+  - name: ENABLE_AUDIO_INFOFRAME
+    type: bit
+    default: 1
+  - name: ENABLE_AUDIO_SAMPLE
+    type: bit
+    default: 1
 
 ports:
   - name: clk_i

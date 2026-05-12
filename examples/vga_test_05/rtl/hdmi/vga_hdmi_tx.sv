@@ -19,14 +19,18 @@ import hdmi_pkg::*;
 //   G: {g[5:0], g[5:4]}
 //   B: {b[4:0], b[4:2]}
 module vga_hdmi_tx #(
-  parameter bit         ENABLE_DATA_ISLAND = 0,
+  parameter bit         ENABLE_DATA_ISLAND    = 0,
   // Audio Clock Regeneration static parameters.
   // ENABLE_AUDIO requires ENABLE_DATA_ISLAND=1.
   // ACR_CTS = pixel_clock_hz * ACR_N / (128 * audio_sample_rate_hz).
   // Default: 40 MHz pixel clock, 48 kHz → CTS = 40000.
-  parameter bit         ENABLE_AUDIO = 0,
-  parameter logic [19:0] ACR_N       = 20'd6144,
-  parameter logic [19:0] ACR_CTS     = 20'd40000
+  parameter bit         ENABLE_AUDIO          = 0,
+  parameter logic [19:0] ACR_N               = 20'd6144,
+  parameter logic [19:0] ACR_CTS             = 20'd40000,
+  // Debug isolation: disable individual audio packet types (default=1 = enabled).
+  parameter bit         ENABLE_ACR_PACKET     = 1,
+  parameter bit         ENABLE_AUDIO_INFOFRAME = 1,
+  parameter bit         ENABLE_AUDIO_SAMPLE   = 1
 )(
   input  logic       clk_i,    // pixel clock
   input  logic       clk_x_i,  // 5× pixel clock (DDR serializer)
@@ -61,9 +65,12 @@ module vga_hdmi_tx #(
   tmds_word_t ch0, ch1, ch2;
 
   hdmi_tx_core #(
-    .ENABLE_DATA_ISLAND(ENABLE_DATA_ISLAND),
-    .PIXEL_CLK_HZ      (40_000_000),
-    .AUDIO_SAMPLE_RATE (48_000)
+    .ENABLE_DATA_ISLAND    (ENABLE_DATA_ISLAND),
+    .ENABLE_ACR_PACKET     (ENABLE_ACR_PACKET),
+    .ENABLE_AUDIO_INFOFRAME(ENABLE_AUDIO_INFOFRAME),
+    .ENABLE_AUDIO_SAMPLE   (ENABLE_AUDIO_SAMPLE),
+    .PIXEL_CLK_HZ          (40_000_000),
+    .AUDIO_SAMPLE_RATE     (48_000)
   ) u_core (
     .pix_clk_i        (clk_i),
     .rst_ni           (rst_ni),

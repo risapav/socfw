@@ -5,7 +5,7 @@
 
 // HDMI packet arbiter — serialises packet sources into data_island_formatter.
 //
-// Per-frame sequence (triggered by vsync_i rising edge):
+// Per-frame sequence (triggered by frame_start_i one-cycle pulse):
 //   GCP → AVI → ACR (if valid_acr_i) → Audio IF (if valid_audio_if_i)
 //
 // In ARB_IDLE state the arbiter presents audio sample packets whenever
@@ -18,7 +18,7 @@ module hdmi_packet_arbiter (
   input  logic clk_i,
   input  logic rst_ni,
 
-  input  logic vsync_i,   // registered vsync (pix_clk domain)
+  input  logic frame_start_i,   // one-cycle pulse at start of frame (from vtg)
 
   // Packet sources (combinational)
   input  logic [7:0] hb_gcp_i [0:2],
@@ -51,14 +51,6 @@ module hdmi_packet_arbiter (
   output logic [7:0] pb_o [0:27]
 );
 
-  // ── vsync edge detect ─────────────────────────────────────────────────────
-  logic r_vsync_prev;
-  always_ff @(posedge clk_i) begin
-    if (!rst_ni) r_vsync_prev <= 1'b0;
-    else         r_vsync_prev <= vsync_i;
-  end
-  wire w_vsync_rise = vsync_i && !r_vsync_prev;
-
   // ── FSM ───────────────────────────────────────────────────────────────────
   typedef enum logic [2:0] {
     ARB_IDLE,       // also presents audio sample packets when valid_sample_i
@@ -77,9 +69,9 @@ module hdmi_packet_arbiter (
       case (r_state)
 
         ARB_IDLE: begin
-          // vsync_rise starts the per-frame packet sequence (takes priority
-          // over any in-progress audio sample; formatter already latched it)
-          if (w_vsync_rise)
+          // frame_start_i pulse starts the per-frame packet sequence (takes
+          // priority over any in-progress audio sample)
+          if (frame_start_i)
             r_state <= ARB_GCP;
           // else: stay in IDLE (audio sample packets handled combinatorially)
         end

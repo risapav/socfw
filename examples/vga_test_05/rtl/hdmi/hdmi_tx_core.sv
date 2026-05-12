@@ -21,12 +21,17 @@ import hdmi_pkg::*;
 // ENABLE_DATA_ISLAND=1 → full HDMI: AVI InfoFrame via data_island_formatter
 //                         with correct BCH/ECC and HDMI channel mapping.
 module hdmi_tx_core #(
-  parameter bit ENABLE_DATA_ISLAND = 0,
-  parameter bit ENABLE_AVI         = 1,
-  parameter bit ENABLE_SPD         = 0,
-  parameter bit ENABLE_AUDIO_IF    = 0,
-  parameter int PIXEL_CLK_HZ       = 40_000_000,
-  parameter int AUDIO_SAMPLE_RATE  = 48_000
+  parameter bit ENABLE_DATA_ISLAND    = 0,
+  parameter bit ENABLE_AVI            = 1,
+  parameter bit ENABLE_SPD            = 0,
+  parameter bit ENABLE_AUDIO_IF       = 0,
+  // Debug isolation: gate individual audio packet types (default=1 = enabled).
+  // Set to 0 to disable a specific packet type without changing the audio path.
+  parameter bit ENABLE_ACR_PACKET     = 1,
+  parameter bit ENABLE_AUDIO_INFOFRAME = 1,
+  parameter bit ENABLE_AUDIO_SAMPLE   = 1,
+  parameter int PIXEL_CLK_HZ         = 40_000_000,
+  parameter int AUDIO_SAMPLE_RATE    = 48_000
 )(
   input  logic pix_clk_i,
   input  logic rst_ni,
@@ -313,15 +318,15 @@ module hdmi_tx_core #(
     hdmi_packet_arbiter u_arbiter (
       .clk_i           (pix_clk_i),
       .rst_ni          (rst_ni),
-      .vsync_i         (vsync_r),
+      .frame_start_i   (frame_start_r),
       .hb_gcp_i        (hb_gcp),        .pb_gcp_i       (pb_gcp),
       .hb_avi_i        (hb_avi),        .pb_avi_i       (pb_avi),
       .hb_acr_i        (hb_acr),        .pb_acr_i       (pb_acr),
-      .valid_acr_i     (valid_acr),
+      .valid_acr_i     (ENABLE_ACR_PACKET      ? valid_acr                         : 1'b0),
       .hb_audio_if_i   (hb_audio_if),   .pb_audio_if_i  (pb_audio_if),
-      .valid_audio_if_i(enable_audio_i),
+      .valid_audio_if_i(ENABLE_AUDIO_INFOFRAME ? enable_audio_i                    : 1'b0),
       .hb_sample_i     (hb_sample),     .pb_sample_i    (pb_sample),
-      .valid_sample_i  (w_valid_sample && enable_audio_i),
+      .valid_sample_i  (ENABLE_AUDIO_SAMPLE    ? (w_valid_sample && enable_audio_i) : 1'b0),
       .packet_valid_o  (packet_pending),
       .packet_start_i  (packet_start),
       .sample_consume_o(w_sample_consume),
