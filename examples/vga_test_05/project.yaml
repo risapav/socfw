@@ -127,6 +127,7 @@ modules:
       clk_x_i: clk_pixel5x
     params:
       ENABLE_DATA_ISLAND: 1
+      ENABLE_AUDIO: 1
     bind:
       ports:
         hdmi_p_o:

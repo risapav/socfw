@@ -30,6 +30,15 @@ parameters:
   - name: ENABLE_DATA_ISLAND
     type: bit
     default: 0
+  - name: ENABLE_AUDIO
+    type: bit
+    default: 0
+  - name: ACR_N
+    type: int
+    default: 6144
+  - name: ACR_CTS
+    type: int
+    default: 40000
 
 ports:
   - name: clk_i
@@ -92,6 +101,9 @@ artifacts:
     - ../rtl/hdmi/hdmi_bch_ecc.sv
     - ../rtl/hdmi/data_island_formatter.sv
     - ../rtl/hdmi/gcp_packet_builder.sv
+    - ../rtl/hdmi/acr_packet_builder.sv
+    - ../rtl/hdmi/audio_sample_packet_builder.sv
+    - ../rtl/hdmi/hdmi_audio_test_src.sv
     - ../rtl/hdmi/hdmi_packet_arbiter.sv
     - ../rtl/hdmi/hdmi_tx_core.sv
     - ../rtl/hdmi/tmds_phy_ddr_aligned.sv
