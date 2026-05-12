@@ -255,9 +255,9 @@ module hdmi_tx_core #(
     int         len_audio_if_int;
 
     infoframe_builder #(.IF_TYPE(INFO_AUDIO)) u_audio_if_builder (
-      .color_format_i  ('0),
-      .aspect_ratio_i  ('0),
-      .quant_range_i   ('0),
+      .color_format_i  (COLOR_FORMAT_RGB),
+      .aspect_ratio_i  (ASPECT_RATIO_NONE),
+      .quant_range_i   (QUANT_RANGE_DEFAULT),
       .vic_code_i      ('0),
       .vendor_name_i   ('0),
       .product_desc_i  ('0),
