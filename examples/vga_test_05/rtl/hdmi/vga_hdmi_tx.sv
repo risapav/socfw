@@ -19,7 +19,14 @@ import hdmi_pkg::*;
 //   G: {g[5:0], g[5:4]}
 //   B: {b[4:0], b[4:2]}
 module vga_hdmi_tx #(
-  parameter bit ENABLE_DATA_ISLAND = 0
+  parameter bit         ENABLE_DATA_ISLAND = 0,
+  // Audio Clock Regeneration static parameters.
+  // ENABLE_AUDIO requires ENABLE_DATA_ISLAND=1.
+  // ACR_CTS = pixel_clock_hz * ACR_N / (128 * audio_sample_rate_hz).
+  // Default: 40 MHz pixel clock, 48 kHz → CTS = 40000.
+  parameter bit         ENABLE_AUDIO = 0,
+  parameter logic [19:0] ACR_N       = 20'd6144,
+  parameter logic [19:0] ACR_CTS     = 20'd40000
 )(
   input  logic       clk_i,    // pixel clock
   input  logic       clk_x_i,  // 5× pixel clock (DDR serializer)
@@ -74,6 +81,10 @@ module vga_hdmi_tx #(
     .aspect_ratio_i   (ASPECT_RATIO_4_3),
     .quant_range_i    (QUANT_RANGE_FULL),
     .vic_code_i       (8'd0),
+    .enable_audio_i   (ENABLE_AUDIO),
+    .acr_n_i          (ACR_N),
+    .acr_cts_i        (ACR_CTS),
+    .acr_cts_valid_i  (1'b1),
     .ch0_o            (ch0),
     .ch1_o            (ch1),
     .ch2_o            (ch2)

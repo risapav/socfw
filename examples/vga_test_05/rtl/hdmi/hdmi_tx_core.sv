@@ -51,6 +51,12 @@ module hdmi_tx_core #(
   input  quant_range_e    quant_range_i,
   input  logic [7:0]      vic_code_i,
 
+  // Audio Clock Regeneration (ACR) — ignored when ENABLE_DATA_ISLAND=0
+  input  logic        enable_audio_i,
+  input  logic [19:0] acr_n_i,
+  input  logic [19:0] acr_cts_i,
+  input  logic        acr_cts_valid_i,
+
   // Output: 10-bit TMDS words, one per pixel clock
   output tmds_word_t ch0_o,
   output tmds_word_t ch1_o,
@@ -226,10 +232,25 @@ module hdmi_tx_core #(
         pb_avi[i] = (i < len_avi_int) ? pl_avi[i] : 8'h00;
     end
 
-    // ── Packet arbiter: GCP → AVI per frame ──────────────────────────────
-    // Fires on vsync_r rising edge.  With the VTG fix (last vblank line has
-    // proper hblank_o/blank_remaining), both packets are sent during the last
+    // ── ACR packet builder (combinational) ───────────────────────────────
+    logic [7:0] hb_acr [0:2];
+    logic [7:0] pb_acr [0:27];
+    logic       valid_acr;
+
+    acr_packet_builder u_acr (
+      .enable_i   (enable_audio_i),
+      .n_i        (acr_n_i),
+      .cts_i      (acr_cts_i),
+      .cts_valid_i(acr_cts_valid_i),
+      .hb_o       (hb_acr),
+      .pb_o       (pb_acr),
+      .valid_o    (valid_acr)
+    );
+
+    // ── Packet arbiter: GCP → AVI → ACR per frame ────────────────────────
+    // Fires on vsync_r rising edge.  All packets are sent during the last
     // vblank line's blanking period — safely before line 0 active pixels.
+    // ACR slot is skipped when valid_acr is low (audio disabled).
     logic [7:0] arb_hb [0:2];
     logic [7:0] arb_pb [0:27];
 
@@ -241,6 +262,9 @@ module hdmi_tx_core #(
       .pb_gcp_i      (pb_gcp),
       .hb_avi_i      (hb_avi),
       .pb_avi_i      (pb_avi),
+      .hb_acr_i      (hb_acr),
+      .pb_acr_i      (pb_acr),
+      .valid_acr_i   (valid_acr),
       .packet_valid_o(packet_pending),
       .packet_start_i(packet_start),
       .hb_o          (arb_hb),
