@@ -51,6 +51,27 @@ module hdmi_packet_arbiter (
   output logic [7:0] pb_o [0:27]
 );
 
+  // ── Audio-ready guard ─────────────────────────────────────────────────────
+  // Prevents audio sample packets from being inserted before the first
+  // complete per-frame sequence has been sent (ACR+AudioIF needed before
+  // samples so the monitor has clock and format context).
+  logic r_audio_ready;
+
+  always_ff @(posedge clk_i) begin
+    if (!rst_ni)
+      r_audio_ready <= 1'b0;
+    else if (!r_audio_ready) begin
+      // Set after the highest-priority per-frame state that was enabled
+      // completes (AudioIF → ACR-only → AVI-only fallback)
+      if (r_state == ARB_AUDIO_IF && packet_start_i)
+        r_audio_ready <= 1'b1;
+      else if (r_state == ARB_ACR && packet_start_i && !valid_audio_if_i)
+        r_audio_ready <= 1'b1;
+      else if (r_state == ARB_AVI && packet_start_i && !valid_acr_i && !valid_audio_if_i)
+        r_audio_ready <= 1'b1;
+    end
+  end
+
   // ── FSM ───────────────────────────────────────────────────────────────────
   typedef enum logic [2:0] {
     ARB_IDLE,       // also presents audio sample packets when valid_sample_i
@@ -116,11 +137,10 @@ module hdmi_packet_arbiter (
 
     case (r_state)
       ARB_IDLE: begin
-        // Present audio sample packet when one is ready
-        hb_o           = hb_sample_i;
-        pb_o           = pb_sample_i;
-        packet_valid_o = valid_sample_i;
-        // Consume pulse when scheduler fires a data island (start of DATA_PREAMBLE)
+        // Present audio sample packet only after per-frame init sequence done
+        hb_o             = hb_sample_i;
+        pb_o             = pb_sample_i;
+        packet_valid_o   = valid_sample_i && r_audio_ready;
         sample_consume_o = packet_start_i;
       end
       ARB_GCP: begin
