@@ -9,6 +9,7 @@
 // Packet order each frame (triggered by vsync_i rising edge):
 //   1. GCP  (General Control Packet)
 //   2. AVI  InfoFrame
+//   3. ACR  (Audio Clock Regeneration) — only if valid_acr_i is high
 //
 // The arbiter presents the current packet's hb/pb on its outputs and
 // asserts packet_valid_o.  The scheduler fires packet_start_i to begin
@@ -28,6 +29,9 @@ module hdmi_packet_arbiter (
   input  logic [7:0] pb_gcp_i [0:27],
   input  logic [7:0] hb_avi_i [0:2],
   input  logic [7:0] pb_avi_i [0:27],
+  input  logic [7:0] hb_acr_i [0:2],
+  input  logic [7:0] pb_acr_i [0:27],
+  input  logic       valid_acr_i,
 
   // Handshake with hdmi_period_scheduler
   output logic       packet_valid_o,  // a packet is ready; drives packet_pending_i
@@ -50,7 +54,8 @@ module hdmi_packet_arbiter (
   typedef enum logic [1:0] {
     ARB_IDLE,     // no packets pending this frame
     ARB_GCP,      // GCP pending / being presented
-    ARB_AVI       // AVI pending / being presented
+    ARB_AVI,      // AVI pending / being presented
+    ARB_ACR       // ACR pending / being presented (only when valid_acr_i)
   } arb_state_t;
 
   arb_state_t state;
@@ -67,12 +72,17 @@ module hdmi_packet_arbiter (
 
         ARB_GCP: begin
           if (packet_start_i)
-            state <= ARB_AVI;  // GCP accepted; queue AVI next
+            state <= ARB_AVI;
         end
 
         ARB_AVI: begin
           if (packet_start_i)
-            state <= ARB_IDLE;  // AVI accepted; done for this frame
+            state <= valid_acr_i ? ARB_ACR : ARB_IDLE;
+        end
+
+        ARB_ACR: begin
+          if (packet_start_i)
+            state <= ARB_IDLE;
         end
 
         default: state <= ARB_IDLE;
@@ -91,6 +101,11 @@ module hdmi_packet_arbiter (
       ARB_AVI: begin
         hb_o           = hb_avi_i;
         pb_o           = pb_avi_i;
+        packet_valid_o = 1'b1;
+      end
+      ARB_ACR: begin
+        hb_o           = hb_acr_i;
+        pb_o           = pb_acr_i;
         packet_valid_o = 1'b1;
       end
       default: begin
