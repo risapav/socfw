@@ -107,6 +107,7 @@ module tb_acr_packet_builder;
     $display("%s (%0d failure%s)",
              fails == 0 ? "ALL PASSED" : "FAILURES DETECTED",
              fails, fails == 1 ? "" : "s");
+    if (fails != 0) $fatal(1);
     $finish;
   end
 

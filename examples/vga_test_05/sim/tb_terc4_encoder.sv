@@ -4,6 +4,10 @@ import hdmi_pkg::*;
 
 // Testbench for terc4_encoder.
 //
+// Verified contract:
+//   nibble_i sampled at cycle T appears as tmds_o at cycle T+2 (LATENCY=2).
+//   Reset output is TERC4(0x0) = 10'b1010011100.
+//
 // Guards pipeline latency = 2 against regression and verifies all 16
 // nibble -> TERC4 symbol mappings from HDMI 1.3 spec section 5.4.3.
 //
@@ -129,11 +133,13 @@ module tb_terc4_encoder;
     test_latency();
     test_exhaustive();
     $display("---");
-    if (!error_flag)
+    if (!error_flag) begin
       $display("ALL TESTS PASSED");
-    else
+      $finish;
+    end else begin
       $display("SOME TESTS FAILED");
-    $finish;
+      $fatal(1);
+    end
   end
 
 endmodule

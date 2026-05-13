@@ -252,11 +252,13 @@ module tb_hdmi_period_scheduler;
     test_full_counts();
     test_tight_budget();
     $display("---");
-    if (!error_flag)
+    if (!error_flag) begin
       $display("ALL TESTS PASSED");
-    else
+      $finish;
+    end else begin
       $display("SOME TESTS FAILED");
-    $finish;
+      $fatal(1);
+    end
   end
 
 endmodule

@@ -1,5 +1,26 @@
 # Changelog
 
+## vga_test_05 HDMI fixes (2026-05-13)
+
+### Fixed
+- `terc4_encoder`: confirmed 2-cycle pipeline, aligning with `tmds_video_encoder` and
+  `tmds_control_encoder` before `hdmi_channel_mux`.
+- `hdmi_period_scheduler`: lookahead `packet_pop_o` at `ST_DATA_GUARD_LEAD` exit so that
+  symbol 0 clears the TERC4 (2-cycle) + channel_mux (1-cycle) pipeline before the first
+  `DATA_PAYLOAD` cycle appears on `ch*_o`. Total pops: 31 (was 32, symbol-0 was duplicated
+  and symbol-31 was lost).
+- `hdmi_tx_core`: unified `ENABLE_AUDIO_IF && ENABLE_AUDIO_INFOFRAME` gating — both
+  parameters must be set to enable the audio infoframe path.
+
+### Verification
+- `tb_terc4_encoder`: reset output `TERC4(0x0)`, exact 2-cycle latency, all 16 LUT entries.
+- `tb_hdmi_period_scheduler`: `packet_pop` count updated to 31; all 4 scenarios pass.
+- `tb_hdmi_tx_core_32x10`: added `period_d2` + `di_ch*_d3` delay pipeline and `terc4_ref()`
+  LUT to verify `ch*_o` payload content cycle-accurately during `DATA_PAYLOAD`.
+- All testbenches: `$finish` on pass replaced with `$fatal(1)` on failure for CI-friendliness.
+
+---
+
 ## 0.3.0 (in progress)
 
 ### IR unification

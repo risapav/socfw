@@ -426,11 +426,13 @@ module tb_hdmi_tx_core_32x10;
 
     $display("--- End of simulation at cycle %0d ---", sim_cycle);
     $display("");
-    if (assert_fail_count == 0)
+    if (assert_fail_count == 0) begin
       $display("ALL ASSERTIONS PASSED");
-    else
+      $finish;
+    end else begin
       $display("FAILED: %0d assertion(s)", assert_fail_count);
-    $finish;
+      $fatal(1);
+    end
   end
 
 endmodule
