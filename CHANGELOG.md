@@ -2,6 +2,10 @@
 
 ## vga_test_05 HDMI fixes (2026-05-13)
 
+### Symptom
+- Monitor displayed video for: `ENABLE_DATA_ISLAND=0` (any audio), `ENABLE_DATA_ISLAND=1 ENABLE_AUDIO=0`.
+- Monitor went to sleep for: `ENABLE_DATA_ISLAND=1 ENABLE_AUDIO=1` (data island + audio enabled).
+
 ### Fixed
 - `terc4_encoder`: confirmed 2-cycle pipeline, aligning with `tmds_video_encoder` and
   `tmds_control_encoder` before `hdmi_channel_mux`.
@@ -18,6 +22,17 @@
 - `tb_hdmi_tx_core_32x10`: added `period_d2` + `di_ch*_d3` delay pipeline and `terc4_ref()`
   LUT to verify `ch*_o` payload content cycle-accurately during `DATA_PAYLOAD`.
 - All testbenches: `$finish` on pass replaced with `$fatal(1)` on failure for CI-friendliness.
+- `sim/Makefile`: `?=` variables, `LOGDIR` with per-TB `tee` logs, `regression`/`report` targets,
+  `terc4_encoder` moved before `tx_core_32x10`; `bash -o pipefail` preserves vsim exit code through pipe.
+
+### Remaining validation
+- Re-run hardware test matrix after scheduler/formatter/core fixes:
+  - `DATA=1 AUDIO=0` — data island without audio
+  - `DATA=1 AUDIO=1` ACR only
+  - `DATA=1 AUDIO=1` Audio InfoFrame only
+  - `DATA=1 AUDIO=1` Audio Sample only
+  - `DATA=1 AUDIO=1` ACR + InfoFrame
+  - `DATA=1 AUDIO=1` full audio
 
 ---
 
