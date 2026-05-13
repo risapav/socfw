@@ -91,7 +91,7 @@ class ProjectMeta(BaseModel):
     name: str
     profile: str = "default"
     board: str
-    output_dir: str = "build/gen"
+    output_dir: str = "build"
 
 
 class IpRegistryConfig(BaseModel):

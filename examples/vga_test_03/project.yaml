@@ -124,6 +124,16 @@ modules:
       ports:
         hdmi_p_o:
           target: board:external.pmod.j11_hdmi_out
+        vga_r_i:
+          target: board:onboard.vga.vga_r
+        vga_g_i:
+          target: board:onboard.vga.vga_g
+        vga_b_i:
+          target: board:onboard.vga.vga_b
+        vga_hs_i:
+          target: board:onboard.vga.vga_hsync
+        vga_vs_i:
+          target: board:onboard.vga.vga_vsync
 
   - instance: mode_gen0
     type: mode_gen
@@ -209,17 +219,7 @@ connections:
   - from: vsync0.m_axis_eof_o
     to: vga0.s_axis_eof_i
 
-  # VGA výstupy → HDMI vstup (rovnaký pixel zdroj)
-  - from: vga0.vga_r_o
-    to: hdmi_tx0.vga_r_i
-  - from: vga0.vga_g_o
-    to: hdmi_tx0.vga_g_i
-  - from: vga0.vga_b_o
-    to: hdmi_tx0.vga_b_i
-  - from: vga0.vga_hs_o
-    to: hdmi_tx0.vga_hs_i
-  - from: vga0.vga_vs_o
-    to: hdmi_tx0.vga_vs_i
+  # VGA výstupy → HDMI vstup (DE nemá board pin, ostáva explicitná spojenie)
   - from: vga0.active_video_o
     to: hdmi_tx0.vga_de_i
 

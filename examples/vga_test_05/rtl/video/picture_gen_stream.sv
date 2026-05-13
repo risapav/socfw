@@ -209,8 +209,8 @@ module picture_gen_stream #(
                 logic is_on_x_line;
                 logic is_on_y_line;
 
-                center_x = H_RES >> 1;
-                center_y = V_RES >> 1;
+                center_x = ($bits(center_x))'(H_RES >> 1);
+                center_y = ($bits(center_y))'(V_RES >> 1);
 
                 is_on_y_line = (y_q > center_y - 2) && (y_q < center_y + 2);
                 is_on_x_line = (x_q > center_x - 2) && (x_q < center_x + 2);

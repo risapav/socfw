@@ -9,7 +9,7 @@ from socfw.core.result import Result
 
 
 class SimRunner:
-    def run_iverilog(self, out_dir: str, top: str = "tb_soc_top") -> Result[str]:
+    def run_iverilog(self, out_dir: str, top: str = "tb_soc_top", waveform: bool = True) -> Result[str]:
         if shutil.which("iverilog") is None:
             return Result(diagnostics=[
                 Diagnostic(
@@ -33,14 +33,40 @@ class SimRunner:
         ]
 
         try:
-            subprocess.run(cmd_compile, check=True, cwd=out_dir)
-            subprocess.run(["vvp", str(vvp_file)], check=True, cwd=out_dir)
+            r = subprocess.run(
+                cmd_compile, check=True, cwd=out_dir,
+                capture_output=True, text=True,
+            )
         except subprocess.CalledProcessError as exc:
+            msg = exc.stderr.strip() if exc.stderr else str(exc)
             return Result(diagnostics=[
                 Diagnostic(
                     code="SIM002",
                     severity=Severity.ERROR,
-                    message=f"Simulation failed: {exc}",
+                    message=f"iverilog compile failed:\n{msg}",
+                    subject="simulation",
+                )
+            ])
+
+        vvp_cmd = ["vvp"]
+        if waveform:
+            vvp_cmd += ["-n"]
+        vvp_cmd.append(str(vvp_file))
+
+        try:
+            r = subprocess.run(
+                vvp_cmd, check=True, cwd=out_dir,
+                capture_output=True, text=True,
+            )
+            if r.stdout:
+                print(r.stdout, end="")
+        except subprocess.CalledProcessError as exc:
+            msg = exc.stdout.strip() if exc.stdout else str(exc)
+            return Result(diagnostics=[
+                Diagnostic(
+                    code="SIM003",
+                    severity=Severity.ERROR,
+                    message=f"simulation failed:\n{msg}",
                     subject="simulation",
                 )
             ])

@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.3.0 (in progress)
+
+### IR unification
+- `RtlModuleIR` removed — single unified `RtlTop` IR for all build paths
+- `soc_top.sv.j2` template revived: `RtlEmitter.emit()` now renders via Jinja2 instead of Python string building
+- Dead code removed: `RtlIRBuilder`, `emit_top()`, `RtlWire`, `RtlAssign`, `RtlConn`, `RtlModuleInstance`, `RtlIR`, backward-compat aliases
+
+### Reset architecture
+- `reset_driver: instance.port` — top-level field to derive `reset_n` from any module output
+  (typical use: PLL locked signal → CDC synchronizer → `reset_n`)
+- `modules[].reset: auto | null | "expr"` — per-module reset override:
+  `auto` = framework default, `null` = no connection, expression = wired directly
+- Circular dependency prevention: PLL can receive `reset: "~RESET_N"` to avoid deadlock
+  where PLL is held in reset by its own locked signal
+
+### Validation
+- RST010: `reset_driver` not in `instance.port` format
+- RST011: `reset_driver` references unknown instance
+- RST012: `reset_driver` references unknown port
+- RST013: `reset_driver` port is not an output
+- RST014: `reset_driver` port width is not 1
+- RST020: `reset:` override on module with no reset port (warning)
+
+### `socfw validate` — all YAML kinds
+- Previously only validated `project.yaml`; now detects `kind:` and dispatches to
+  appropriate loader: `project`, `ip`, `timing`, `board`
+
+### Debug: `socfw build --trace`
+- Prints `RtlTop` IR to stderr after build: ports, signals, adapt_assigns, instances with all connections
+- Trace goes to stderr; standard stdout output unchanged
+- Useful for diagnosing incorrect wiring without reading generated SV
+
+### Simulation subsystem
+- `socfw build` always generates `sim/tb_soc_top.sv` and `sim/files.f`
+- Testbench uses clock period from `timing_config.yaml`, reset polarity from board descriptor
+- `socfw simulate project.yaml` — builds + runs iverilog + vvp, saves `sim/wave.vcd`
+- `--no-vcd` flag to disable waveform capture
+- Vendor IP (`.qip`) automatically excluded from `sim/files.f`
+- `simulation:` artifacts in IP descriptors included in filelist
+- Error codes: `SIM001` (iverilog not found), `SIM002` (compile failed), `SIM003` (runtime failed)
+
+### Documentation
+- `docs/architecture/00_overview.md` — updated data flow, RtlTop, reset architecture, simulation
+- `docs/schema/project_v2.md` — `reset_driver`, `modules[].reset`, `connections` documented
+- `docs/user/getting_started.md` — `--trace`, `simulate`, all CLI commands
+- `docs/user/simulation.md` — new: full simulation guide
+- `docs/errors/project_diagnostics.md` — RST010–RST020, CLK001–CLK003 added
+
 ## 0.2.0 (in progress)
 
 ### RTL generation

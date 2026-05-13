@@ -1,3 +1,15 @@
+/**
+ * @file video_stream_fifo_sync.sv
+ * @brief Synchronous stream FIFO with metadata for video data.
+ * @details Supports non-power-of-two DEPTH and simultaneous push/pop when full.
+ * Compatible with Intel Quartus Prime 25.1 Lite.
+ *
+ * @param DEPTH Number of elements in FIFO (minimum 2).
+ */
+
+`ifndef VIDEO_STREAM_FIFO_SYNC_SV
+`define VIDEO_STREAM_FIFO_SYNC_SV
+
 `default_nettype none
 
 import video_pkg::*;
@@ -73,8 +85,8 @@ module video_stream_fifo_sync #(
         rd_ptr <= ptr_next(rd_ptr);
 
       unique case ({push, pop})
-        2'b10:   count <= count + 1;
-        2'b01:   count <= count - 1;
+        2'b10:   count <= count + ($bits(count))'(1);
+        2'b01:   count <= count - ($bits(count))'(1);
         default: count <= count;
       endcase
     end
@@ -88,3 +100,5 @@ module video_stream_fifo_sync #(
   assign fill_o         = count;
 
 endmodule
+
+`endif // VIDEO_STREAM_FIFO_SYNC_SV

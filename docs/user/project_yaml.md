@@ -11,7 +11,7 @@ project:
   mode: soc
   board: qmtech_ep4ce55
   board_file: board.yaml
-  output_dir: build/gen
+  output_dir: build
   debug: false
 
 registries:

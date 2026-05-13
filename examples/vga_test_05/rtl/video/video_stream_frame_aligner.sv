@@ -1,3 +1,6 @@
+`ifndef VIDEO_STREAM_FRAME_ALIGNER_SV
+`define VIDEO_STREAM_FRAME_ALIGNER_SV
+
 `default_nettype none
 
 import video_pkg::*;
@@ -171,3 +174,5 @@ module video_stream_frame_aligner #(
   end
 
 endmodule
+
+`endif // VIDEO_STREAM_FRAME_ALIGNER_SV

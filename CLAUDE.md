@@ -1,22 +1,71 @@
-# Inštrukcie pre konštrukciu projektu
+# Projekt Overview
 
-## Filozofia návrhu
-Všetky inštrukcie pre budovanie projektu sa nachádzajú v priečinku
-`filozofia_navrhu/`. Súbory sú číslované a musia byť spracované
-**presne v tomto poradí**.
+Tento repository obsahuje:
+- Python framework pre HW vývoj, nazýva sa socfw
+- SystemVerilog aplikácie v examples/
+- interné build/sim tooling
 
-## Postup pri spustení
-1. Prečítaj všetky súbory v `filozofia_navrhu/` zoradené podľa názvu
-2. Spracuj každý súbor postupne — jeden po druhom
-3. Pre každý súbor vykonaj všetky odporúčania ktoré obsahuje
-4. Až po dokončení krokov z jedného súboru pokračuj na ďalší
-5. Po každom súbore commitni postup na GitHub s popisom čo bolo vykonané
+# Vývojové pravidlá
 
-## Dôležité pravidlá
-- Nepokračuj na ďalší súbor kým nie je predchádzajúci plne implementovaný
-- Pri nejasnostiach sa opýtaj pred implementáciou
-- Každý commit musí jasne popisovať ktorý krok filozofie bol splnený
+## Framework
+- Framework kód je v ./socfw
+- Pri implementácii vždy reutilizuj existujúce framework utility
+- Nevytváraj duplicity
+- Najprv hľadaj existujúce abstraction layer
 
-## Spustenie projektu
-Keď napíšem "štart" — začni čítať filozofia_navrhu/ od prvého súboru
-a postupuj zaradom až do konca.
+## SystemVerilog
+- aktuálne pracujeme na vývoji vga_test_05
+- cieľom je vyvinúť full hdmi
+- RTL je v examples/vga_test_05/rtl
+- Testbench je v examples/vga_test_05/sim
+- Používaj SystemVerilog 2005 syntax
+- Preferuj synthesizable code Quartus 25.1
+- Používaj always_ff / always_comb
+- Nepoužívaj blocking assignment v sequential logic
+- Dodržuj naming:
+  - i_* inputs
+  - o_* outputs
+  - r_* registers
+  - w_* wires
+- v examples/vga_test_05/HDMI_STATUS.md je aktuálny stav rozpracovania úlohy
+- v examples/vga_test_05/rtl/navrhy/ je komenár nezávislého dizajnéra na vývoj hdmi
+
+## Git workflow
+- Pred zmenami analyzuj git diff
+- Rob malé logické commity
+- Generuj commit messages
+- Nikdy nerebase bez explicitného povolenia
+
+## Dokumentácia
+- Každý nový modul musí mať:
+  - markdown dokumentáciu
+  - interface popis
+  - timing assumptions
+  - block diagram description
+- Aktualizuj docs pri zmene API
+
+## Bug hunting
+- Aktívne analyzuj framework na:
+  - dead code
+  - race conditions
+  - invalid assumptions
+  - simulation mismatches
+  - SV lint problémy
+  - nevyužité abstraction layer
+  - Python architectural smell
+
+## Testovanie
+- Po zmenách:
+  - spusti simulácie
+  - spusti lint
+  - spusti pytest
+- Fixni failing testy
+
+## Workflow
+Vždy:
+1. analyzuj problém
+2. navrhni plán
+3. počkaj na potvrdenie
+4. implementuj
+5. validuj
+6. vytvor dokumentáciu

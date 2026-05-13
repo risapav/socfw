@@ -1,0 +1,369 @@
+# ** Note: (vsim-220) '/home/palo/altera_lite/25.1std/questa_fse/linux_x86_64/../modelsim.ini' is used as the ini file.
+# vsim -c -do "run -all; quit" tb_hdmi_tx_core_32x10 
+# Start time: 21:51:35 on May 12,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Note: (vopt-220) '/home/palo/altera_lite/25.1std/questa_fse/linux_x86_64/../modelsim.ini' is used as the ini file.
+# ** Warning: ../rtl/hdmi/hdmi_packet_arbiter.sv(24): (vopt-13314) Defaulting port 'hb_gcp_i' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: ../rtl/hdmi/hdmi_packet_arbiter.sv(25): (vopt-13314) Defaulting port 'pb_gcp_i' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: ../rtl/hdmi/hdmi_packet_arbiter.sv(27): (vopt-13314) Defaulting port 'hb_avi_i' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: ../rtl/hdmi/hdmi_packet_arbiter.sv(28): (vopt-13314) Defaulting port 'pb_avi_i' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: ../rtl/hdmi/hdmi_packet_arbiter.sv(30): (vopt-13314) Defaulting port 'hb_acr_i' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: ../rtl/hdmi/hdmi_packet_arbiter.sv(31): (vopt-13314) Defaulting port 'pb_acr_i' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: ../rtl/hdmi/hdmi_packet_arbiter.sv(34): (vopt-13314) Defaulting port 'hb_audio_if_i' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: ../rtl/hdmi/hdmi_packet_arbiter.sv(35): (vopt-13314) Defaulting port 'pb_audio_if_i' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: ../rtl/hdmi/hdmi_packet_arbiter.sv(38): (vopt-13314) Defaulting port 'hb_sample_i' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: ../rtl/hdmi/hdmi_packet_arbiter.sv(39): (vopt-13314) Defaulting port 'pb_sample_i' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: ../rtl/hdmi/data_island_formatter.sv(40): (vopt-13314) Defaulting port 'hb' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: ../rtl/hdmi/data_island_formatter.sv(42): (vopt-13314) Defaulting port 'pb' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: ../rtl/hdmi/hdmi_tx_core.sv(55): (vopt-13314) Defaulting port 'info_cfg_i' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Note: (vsim-12126) Error and warning message counts have been restored: Errors=0, Warnings=13.
+# //  Questa Altera Starter FPGA Edition-64
+# //  Version 2025.2 linux_x86_64 May 31 2025
+# //
+# // Unpublished work. Copyright 2025 Siemens
+# //
+# // This material contains trade secrets or otherwise confidential information
+# // owned by Siemens Industry Software Inc. or its affiliates (collectively,
+# // "SISW"), or its licensors. Access to and use of this information is strictly
+# // limited as set forth in the Customer's applicable agreements with SISW.
+# //
+# // This material may not be copied, distributed, or otherwise disclosed outside
+# // of the Customer's facilities without the express written permission of SISW,
+# // and may not be used in any way not expressly authorized by SISW.
+# //
+# Loading sv_std.std
+# Loading work.hdmi_pkg(fast)
+# Loading work.hdmi_channel_mux_sv_unit(fast)
+# Loading work.terc4_encoder_sv_unit(fast)
+# Loading work.data_island_formatter_sv_unit(fast)
+# Loading work.infoframe_builder_sv_unit(fast)
+# Loading work.tmds_control_encoder_sv_unit(fast)
+# Loading work.tmds_video_encoder_sv_unit(fast)
+# Loading work.hdmi_period_scheduler_sv_unit(fast)
+# Loading work.hdmi_tx_core_sv_unit(fast)
+# Loading work.video_pkg(fast)
+# Loading work.video_timing_generator_sv_unit(fast)
+# Loading work.tb_hdmi_tx_core_32x10_sv_unit(fast)
+# Loading work.tb_hdmi_tx_core_32x10(fast)
+# run -all
+# === tb_hdmi_tx_core_32x10: H_TOTAL=96 V_TOTAL=16 ===
+# === ENABLE_DATA_ISLAND=1, ENABLE_AUDIO=0 ===
+# --- Period transitions (start_cy / period / len) ---
+# ** Warning: (vsim-8315) No condition is true in the unique/priority if/case statement.
+#    Time: 0 ps  Iteration: 2  Process: /tb_hdmi_tx_core_32x10/u_dut/#implicit#unique__52 File: ../rtl/hdmi/hdmi_channel_mux.sv Line: 52
+# ** Warning: (vsim-8315) No condition is true in the unique/priority if/case statement.
+#    Time: 0 ps  Iteration: 2  Process: /tb_hdmi_tx_core_32x10/u_dut/gen_data_island/#implicit#unique__19 File: ../rtl/hdmi/terc4_encoder.sv Line: 19
+# ** Warning: (vsim-8315) No condition is true in the unique/priority if/case statement.
+#    Time: 0 ps  Iteration: 2  Process: /tb_hdmi_tx_core_32x10/u_dut/gen_data_island/#implicit#unique__19 File: ../rtl/hdmi/terc4_encoder.sv Line: 19
+# ** Warning: (vsim-8315) No condition is true in the unique/priority if/case statement.
+#    Time: 0 ps  Iteration: 2  Process: /tb_hdmi_tx_core_32x10/u_dut/gen_data_island/#implicit#unique__19 File: ../rtl/hdmi/terc4_encoder.sv Line: 19
+# ** Warning: (vsim-8315) No condition is true in the unique/priority if/case statement.
+#    Time: 0 ps  Iteration: 2  Process: /tb_hdmi_tx_core_32x10/u_dut/u_sched/gen_hdmi/#implicit#unique__132 File: ../rtl/hdmi/hdmi_period_scheduler.sv Line: 132
+#   cy=    0  CONTROL           len=4
+# ** Error: ASSERT: VIDEO outside de_r at cy=35
+#    Time: 1087500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy=    4  VIDEO             len=32
+#   cy=   36  CONTROL           len=54
+#   cy=   90  VIDEO_PREAMBLE    len=8
+#   cy=   98  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=131
+#    Time: 3487500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy=  100  VIDEO             len=32
+#   cy=  132  CONTROL           len=54
+#   cy=  186  VIDEO_PREAMBLE    len=8
+#   cy=  194  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=227
+#    Time: 5887500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy=  196  VIDEO             len=32
+#   cy=  228  CONTROL           len=54
+#   cy=  282  VIDEO_PREAMBLE    len=8
+#   cy=  290  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=323
+#    Time: 8287500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy=  292  VIDEO             len=32
+#   cy=  324  CONTROL           len=54
+#   cy=  378  VIDEO_PREAMBLE    len=8
+#   cy=  386  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=419
+#    Time: 10687500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy=  388  VIDEO             len=32
+#   cy=  420  CONTROL           len=54
+#   cy=  474  VIDEO_PREAMBLE    len=8
+#   cy=  482  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=515
+#    Time: 13087500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy=  484  VIDEO             len=32
+#   cy=  516  CONTROL           len=54
+#   cy=  570  VIDEO_PREAMBLE    len=8
+#   cy=  578  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=611
+#    Time: 15487500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy=  580  VIDEO             len=32
+#   cy=  612  CONTROL           len=54
+#   cy=  666  VIDEO_PREAMBLE    len=8
+#   cy=  674  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=707
+#    Time: 17887500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy=  676  VIDEO             len=32
+#   cy=  708  CONTROL           len=54
+#   cy=  762  VIDEO_PREAMBLE    len=8
+#   cy=  770  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=803
+#    Time: 20287500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy=  772  VIDEO             len=32
+#   cy=  804  CONTROL           len=54
+#   cy=  858  VIDEO_PREAMBLE    len=8
+#   cy=  866  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=899
+#    Time: 22687500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy=  868  VIDEO             len=32
+#   cy=  900  CONTROL           len=54
+#   cy=  954  VIDEO_PREAMBLE    len=8
+#   cy=  962  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=964
+#    Time: 24312500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy=  964  VIDEO             len=1
+#   cy=  965  CONTROL           len=565
+#   cy= 1530  VIDEO_PREAMBLE    len=8
+#   cy= 1538  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=1571
+#    Time: 39487500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 1540  VIDEO             len=32
+#   cy= 1572  CONTROL           len=1
+#   cy= 1573  DATA_PREAMBLE     len=8
+#   cy= 1581  DATA_GB_LEAD      len=2
+#   cy= 1583  DATA_PAYLOAD      len=32
+#   cy= 1615  DATA_GB_TRAIL     len=2
+#   cy= 1617  CONTROL           len=9
+#   cy= 1626  VIDEO_PREAMBLE    len=8
+#   cy= 1634  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=1667
+#    Time: 41887500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 1636  VIDEO             len=32
+#   cy= 1668  CONTROL           len=1
+#   cy= 1669  DATA_PREAMBLE     len=8
+#   cy= 1677  DATA_GB_LEAD      len=2
+#   cy= 1679  DATA_PAYLOAD      len=32
+#   cy= 1711  DATA_GB_TRAIL     len=2
+#   cy= 1713  CONTROL           len=9
+#   cy= 1722  VIDEO_PREAMBLE    len=8
+#   cy= 1730  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=1763
+#    Time: 44287500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 1732  VIDEO             len=32
+#   cy= 1764  CONTROL           len=54
+#   cy= 1818  VIDEO_PREAMBLE    len=8
+#   cy= 1826  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=1859
+#    Time: 46687500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 1828  VIDEO             len=32
+#   cy= 1860  CONTROL           len=54
+#   cy= 1914  VIDEO_PREAMBLE    len=8
+#   cy= 1922  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=1955
+#    Time: 49087500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 1924  VIDEO             len=32
+#   cy= 1956  CONTROL           len=54
+#   cy= 2010  VIDEO_PREAMBLE    len=8
+#   cy= 2018  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=2051
+#    Time: 51487500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 2020  VIDEO             len=32
+#   cy= 2052  CONTROL           len=54
+#   cy= 2106  VIDEO_PREAMBLE    len=8
+#   cy= 2114  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=2147
+#    Time: 53887500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 2116  VIDEO             len=32
+#   cy= 2148  CONTROL           len=54
+#   cy= 2202  VIDEO_PREAMBLE    len=8
+#   cy= 2210  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=2243
+#    Time: 56287500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 2212  VIDEO             len=32
+#   cy= 2244  CONTROL           len=54
+#   cy= 2298  VIDEO_PREAMBLE    len=8
+#   cy= 2306  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=2339
+#    Time: 58687500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 2308  VIDEO             len=32
+#   cy= 2340  CONTROL           len=54
+#   cy= 2394  VIDEO_PREAMBLE    len=8
+#   cy= 2402  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=2435
+#    Time: 61087500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 2404  VIDEO             len=32
+#   cy= 2436  CONTROL           len=54
+#   cy= 2490  VIDEO_PREAMBLE    len=8
+#   cy= 2498  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=2500
+#    Time: 62712500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 2500  VIDEO             len=1
+#   cy= 2501  CONTROL           len=565
+#   cy= 3066  VIDEO_PREAMBLE    len=8
+#   cy= 3074  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=3107
+#    Time: 77887500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 3076  VIDEO             len=32
+#   cy= 3108  CONTROL           len=1
+#   cy= 3109  DATA_PREAMBLE     len=8
+#   cy= 3117  DATA_GB_LEAD      len=2
+#   cy= 3119  DATA_PAYLOAD      len=32
+#   cy= 3151  DATA_GB_TRAIL     len=2
+#   cy= 3153  CONTROL           len=9
+#   cy= 3162  VIDEO_PREAMBLE    len=8
+#   cy= 3170  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=3203
+#    Time: 80287500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 3172  VIDEO             len=32
+#   cy= 3204  CONTROL           len=1
+#   cy= 3205  DATA_PREAMBLE     len=8
+#   cy= 3213  DATA_GB_LEAD      len=2
+#   cy= 3215  DATA_PAYLOAD      len=32
+#   cy= 3247  DATA_GB_TRAIL     len=2
+#   cy= 3249  CONTROL           len=9
+#   cy= 3258  VIDEO_PREAMBLE    len=8
+#   cy= 3266  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=3299
+#    Time: 82687500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 3268  VIDEO             len=32
+#   cy= 3300  CONTROL           len=54
+#   cy= 3354  VIDEO_PREAMBLE    len=8
+#   cy= 3362  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=3395
+#    Time: 85087500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 3364  VIDEO             len=32
+#   cy= 3396  CONTROL           len=54
+#   cy= 3450  VIDEO_PREAMBLE    len=8
+#   cy= 3458  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=3491
+#    Time: 87487500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 3460  VIDEO             len=32
+#   cy= 3492  CONTROL           len=54
+#   cy= 3546  VIDEO_PREAMBLE    len=8
+#   cy= 3554  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=3587
+#    Time: 89887500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 3556  VIDEO             len=32
+#   cy= 3588  CONTROL           len=54
+#   cy= 3642  VIDEO_PREAMBLE    len=8
+#   cy= 3650  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=3683
+#    Time: 92287500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 3652  VIDEO             len=32
+#   cy= 3684  CONTROL           len=54
+#   cy= 3738  VIDEO_PREAMBLE    len=8
+#   cy= 3746  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=3779
+#    Time: 94687500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 3748  VIDEO             len=32
+#   cy= 3780  CONTROL           len=54
+#   cy= 3834  VIDEO_PREAMBLE    len=8
+#   cy= 3842  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=3875
+#    Time: 97087500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 3844  VIDEO             len=32
+#   cy= 3876  CONTROL           len=54
+#   cy= 3930  VIDEO_PREAMBLE    len=8
+#   cy= 3938  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=3971
+#    Time: 99487500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 3940  VIDEO             len=32
+#   cy= 3972  CONTROL           len=54
+#   cy= 4026  VIDEO_PREAMBLE    len=8
+#   cy= 4034  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=4036
+#    Time: 101112500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 4036  VIDEO             len=1
+#   cy= 4037  CONTROL           len=565
+#   cy= 4602  VIDEO_PREAMBLE    len=8
+#   cy= 4610  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=4643
+#    Time: 116287500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 4612  VIDEO             len=32
+#   cy= 4644  CONTROL           len=1
+#   cy= 4645  DATA_PREAMBLE     len=8
+#   cy= 4653  DATA_GB_LEAD      len=2
+#   cy= 4655  DATA_PAYLOAD      len=32
+#   cy= 4687  DATA_GB_TRAIL     len=2
+#   cy= 4689  CONTROL           len=9
+#   cy= 4698  VIDEO_PREAMBLE    len=8
+#   cy= 4706  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=4739
+#    Time: 118687500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 4708  VIDEO             len=32
+#   cy= 4740  CONTROL           len=1
+#   cy= 4741  DATA_PREAMBLE     len=8
+#   cy= 4749  DATA_GB_LEAD      len=2
+#   cy= 4751  DATA_PAYLOAD      len=32
+#   cy= 4783  DATA_GB_TRAIL     len=2
+#   cy= 4785  CONTROL           len=9
+#   cy= 4794  VIDEO_PREAMBLE    len=8
+#   cy= 4802  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=4835
+#    Time: 121087500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 4804  VIDEO             len=32
+#   cy= 4836  CONTROL           len=54
+#   cy= 4890  VIDEO_PREAMBLE    len=8
+#   cy= 4898  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=4931
+#    Time: 123487500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 4900  VIDEO             len=32
+#   cy= 4932  CONTROL           len=54
+#   cy= 4986  VIDEO_PREAMBLE    len=8
+#   cy= 4994  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=5027
+#    Time: 125887500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 4996  VIDEO             len=32
+#   cy= 5028  CONTROL           len=54
+#   cy= 5082  VIDEO_PREAMBLE    len=8
+#   cy= 5090  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=5123
+#    Time: 128287500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 5092  VIDEO             len=32
+#   cy= 5124  CONTROL           len=54
+#   cy= 5178  VIDEO_PREAMBLE    len=8
+#   cy= 5186  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=5219
+#    Time: 130687500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 5188  VIDEO             len=32
+#   cy= 5220  CONTROL           len=54
+#   cy= 5274  VIDEO_PREAMBLE    len=8
+#   cy= 5282  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=5315
+#    Time: 133087500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 5284  VIDEO             len=32
+#   cy= 5316  CONTROL           len=54
+#   cy= 5370  VIDEO_PREAMBLE    len=8
+#   cy= 5378  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=5411
+#    Time: 135487500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 5380  VIDEO             len=32
+#   cy= 5412  CONTROL           len=54
+#   cy= 5466  VIDEO_PREAMBLE    len=8
+#   cy= 5474  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=5507
+#    Time: 137887500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 5476  VIDEO             len=32
+#   cy= 5508  CONTROL           len=54
+#   cy= 5562  VIDEO_PREAMBLE    len=8
+#   cy= 5570  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=5572
+#    Time: 139512500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 5572  VIDEO             len=1
+#   cy= 5573  CONTROL           len=565
+#   cy= 6138  VIDEO_PREAMBLE    len=8
+#   cy= 6146  VIDEO_GB          len=2
+# ** Error: ASSERT: VIDEO outside de_r at cy=6179
+#    Time: 154687500 ps  Scope: tb_hdmi_tx_core_32x10 File: tb_hdmi_tx_core_32x10.sv Line: 230
+#   cy= 6148  VIDEO             len=32
+#   cy= 6180  CONTROL           len=1
+#   cy= 6181  DATA_PREAMBLE     len=8
+#   cy= 6189  DATA_GB_LEAD      len=2
+# --- End of simulation at cycle 6193 ---
+# 
+# FAILED: 45 assertion(s)
+# ** Note: $finish    : tb_hdmi_tx_core_32x10.sv(339)
+#    Time: 155037500 ps  Iteration: 1  Instance: /tb_hdmi_tx_core_32x10
+# End time: 21:51:36 on May 12,2026, Elapsed time: 0:00:01
+# Errors: 45, Warnings: 18, Suppressed Errors: 216

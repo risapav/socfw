@@ -10,7 +10,7 @@ class ProjectMetaSchema(BaseModel):
     mode: Literal["standalone", "soc"] = "standalone"
     board: str
     board_file: str | None = None
-    output_dir: str = "build/gen"
+    output_dir: str = "build"
     debug: bool = False
 
 

@@ -1,0 +1,1 @@
+/home/palo/altera_lite/25.1std/questa_fse/linux_x86_64/VisualizerRls/bin/viscom -nolock -quiet -jmem_size 934320 work.tb_audio_sample_packet_builder -quiet -auto_acc_if_foreign -work work -allow_unnamed -o _opt1 -id 1-de7ea3850cfc-6a0336c9-325fa-3c1b

@@ -17,6 +17,7 @@ class TimingPrimaryClockSchema(BaseModel):
     period_ns: float
     uncertainty_ns: float | None = None
     reset: TimingResetSchema | None = None
+    comment: str = ""
 
 
 class TimingGeneratedClockSourceSchema(BaseModel):
@@ -33,6 +34,7 @@ class TimingGeneratedClockSchema(BaseModel):
     phase_shift_ps: int | None = None
     reset_sync_from: str | None = None
     reset_sync_stages: int | None = None
+    comment: str = ""
     reset: dict[str, Any] | None = None
 
 

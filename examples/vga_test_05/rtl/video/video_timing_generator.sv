@@ -1,3 +1,6 @@
+`ifndef VIDEO_TIMING_GENERATOR_SV
+`define VIDEO_TIMING_GENERATOR_SV
+
 `default_nettype none
 
 import video_pkg::*;
@@ -68,14 +71,15 @@ module video_timing_generator #(
       h_cnt <= '0;
       v_cnt <= '0;
     end else begin
-      if (h_cnt == H_TOTAL - 1) begin
+      // Explicitný cast pre porovnanie s parametrom
+      if (h_cnt == ($bits(h_cnt))'(H_TOTAL - 1)) begin
         h_cnt <= '0;
-        if (v_cnt == V_TOTAL - 1)
+        if (v_cnt == ($bits(v_cnt))'(V_TOTAL - 1))
           v_cnt <= '0;
         else
-          v_cnt <= v_cnt + 1;
+          v_cnt <= v_cnt + 1'b1;
       end else begin
-        h_cnt <= h_cnt + 1;
+        h_cnt <= h_cnt + 1'b1;
       end
     end
   end
@@ -93,9 +97,9 @@ module video_timing_generator #(
   logic [$clog2(V_TOTAL)-1:0] v_next;
 
   always_comb begin
-    if (h_cnt == H_TOTAL - 1) begin
+    if (h_cnt == ($bits(h_cnt))'(H_TOTAL - 1)) begin
       h_next = '0;
-      v_next = (v_cnt == V_TOTAL - 1) ? '0 : v_cnt + 1'b1;
+      v_next = (v_cnt == ($bits(v_cnt))'(V_TOTAL - 1)) ? '0 : v_cnt + 1'b1;
     end else begin
       h_next = h_cnt + 1'b1;
       v_next = v_cnt;
@@ -163,11 +167,15 @@ module video_timing_generator #(
       last_active_x_req_o     <= last_active_x_req_next;
       last_active_pixel_req_o <= last_active_pixel_req_next;
       blank_remaining_o       <= blank_remaining_comb;
-      x_o                     <= h_active ? h_cnt[$clog2(H_ACTIVE)-1:0] : '0;
-      y_o                     <= v_active ? v_cnt[$clog2(V_ACTIVE)-1:0] : '0;
+      //x_o                     <= h_active ? h_cnt[$clog2(H_ACTIVE)-1:0] : '0;
+//      y_o                     <= v_active ? v_cnt[$clog2(V_ACTIVE)-1:0] : '0;
+      x_o <= h_active ? ($bits(x_o))'(h_cnt) : '0;
+      y_o <= v_active ? ($bits(y_o))'(v_cnt) : '0;
       h_cnt_o                 <= h_cnt;
       v_cnt_o                 <= v_cnt;
     end
   end
 
 endmodule
+
+`endif // VIDEO_TIMING_GENERATOR_SV

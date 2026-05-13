@@ -43,7 +43,7 @@ Fix: Correct the duplicate entry in `project.yaml`.
 Example:
 
 ```text
-WARNING RST001 project
+WARNING RST001 project.modules
 Board reset 'RESET_N' is declared but no instantiated IP has a reset port
 ```
 
@@ -51,8 +51,7 @@ Meaning:
 
 The board defines a reset signal, but none of the instantiated IP modules
 have a `reset.port` in their descriptor. The framework will not emit the
-reset port, `reset_n`, or `RESET_N` pin in the generated RTL, to avoid
-Quartus "object assigned but never read" warnings.
+reset port or `assign reset_n = RESET_N` in the generated RTL.
 
 Fix:
 
@@ -61,36 +60,214 @@ Fix:
 
 ---
 
-## CLK003 — Unknown generated clock output
+## RST010 — reset_driver format invalid
 
 Example:
 
 ```text
-ERROR CLK003 project
-Output 'c0' on IP 'clkpll' not declared in clocking.outputs
+ERROR RST010 project.reset_driver
+reset_driver 'rst_sync0' must be in 'instance.port' format
 ```
 
 Meaning:
 
-`project.yaml` has:
+The `reset_driver:` field must specify both an instance name and a port name
+separated by a dot.
+
+Fix:
 
 ```yaml
-clocks:
-  generated:
-    - domain: sys_pll_clk
-      source:
-        instance: clkpll
-        output: c0
+reset_driver: rst_sync0.rst_no   # correct
+# not:
+reset_driver: rst_sync0          # wrong — missing port name
 ```
 
-but the IP descriptor for `clkpll` does not list `c0` in `clocking.outputs`.
+---
+
+## RST011 — reset_driver references unknown instance
+
+Example:
+
+```text
+ERROR RST011 project.reset_driver
+reset_driver references unknown instance 'rst_sync0'
+```
+
+Meaning:
+
+The instance named in `reset_driver:` does not exist in `modules:`.
+
+Fix:
+
+Add the instance to `modules:`:
+
+```yaml
+modules:
+  - instance: rst_sync0
+    type: cdc_reset_synchronizer
+    reset: null
+    params:
+      STAGES: 3
+```
+
+---
+
+## RST012 — reset_driver references unknown port
+
+Example:
+
+```text
+ERROR RST012 project.reset_driver
+reset_driver references unknown port 'rst_no' on instance 'rst_sync0' (type 'cdc_reset_synchronizer')
+```
+
+Meaning:
+
+The port named in `reset_driver:` does not appear in the IP descriptor's `ports:` list.
+
+Fix:
+
+Ensure the IP descriptor declares the port:
+
+```yaml
+ports:
+  - name: rst_no
+    direction: output
+    width: 1
+```
+
+Or correct the port name in `project.yaml`.
+
+---
+
+## RST013 — reset_driver port is not an output
+
+Example:
+
+```text
+ERROR RST013 project.reset_driver
+reset_driver port 'rst_sync0.rst_ni' is 'input', must be 'output'
+```
+
+Meaning:
+
+The port named in `reset_driver:` is an input port on the IP module.
+Only an output port can drive `reset_n`.
+
+Fix:
+
+Use an output port. For `cdc_reset_synchronizer`, the correct port is `rst_no` (output),
+not `rst_ni` (input).
+
+---
+
+## RST014 — reset_driver port is not 1-bit
+
+Example:
+
+```text
+ERROR RST014 project.reset_driver
+reset_driver port 'rst_sync0.rst_no' has width 4, must be 1
+```
+
+Meaning:
+
+The reset driver port must be a single-bit signal.
+
+Fix:
+
+Use a 1-bit output port, or check the IP descriptor port width.
+
+---
+
+## RST020 — reset override on IP with no reset port
+
+Example:
+
+```text
+WARNING RST020 project.modules.rst_sync0
+Module 'rst_sync0' has reset: 'null' but IP 'cdc_reset_synchronizer' declares no reset port —
+the expression will be ignored
+```
+
+Meaning:
+
+A `reset:` override was specified on a module instance whose IP descriptor has
+`reset.port: null`. The override has no effect because there is no port to connect.
+
+This warning is informational — it may indicate a misconfiguration or a harmless
+explicit annotation. No RTL change results from this.
+
+Fix (to suppress the warning):
+
+Remove `reset:` from the module instance, or add a `reset.port:` to the IP descriptor
+if the module actually has one.
+
+---
+
+## CLK001 — Generated clock references unknown instance
+
+Example:
+
+```text
+ERROR CLK001 project.clocks.generated
+Generated clock 'pll_clk' references unknown instance 'clkpll'
+```
+
+Meaning:
+
+`clocks.generated[].source.instance` names a module instance that does not exist in `modules:`.
+
+Fix: Add the instance or correct the name.
+
+---
+
+## CLK002 — Generated clock references unknown output port
+
+Example:
+
+```text
+ERROR CLK002 project.clocks.generated
+Generated clock 'pll_clk' references unknown output 'c0' on IP 'clkpll'
+```
+
+Meaning:
+
+The IP descriptor for the source instance does not declare the named output in `clocking.outputs`.
+
+Fix:
+
+```yaml
+# in clkpll.ip.yaml:
+clocking:
+  outputs:
+    - port: c0
+      kind: generated_clock
+      domain: pll_clk
+```
+
+---
+
+## CLK003 — Clock output is not a generated_clock
+
+Example:
+
+```text
+ERROR CLK003 project.clocks.generated
+Output 'c0' on IP 'clkpll' is 'clock_output', not a generated_clock
+```
+
+Meaning:
+
+The referenced output exists in the IP descriptor but has `kind:` other than `generated_clock`.
 
 Fix:
 
 ```yaml
 clocking:
   outputs:
-    - name: c0
+    - port: c0
+      kind: generated_clock   # must be this exact value
 ```
 
 ---
@@ -112,8 +289,6 @@ both `-max` and `-min` flags. Without a min, the hold-time side is unconstrained
 
 Fix:
 
-Add `default_input_min_ns` / `default_output_min_ns` to `io_delays`:
-
 ```yaml
 io_delays:
   default_input_max_ns: 2.0
@@ -121,8 +296,6 @@ io_delays:
   default_output_max_ns: 2.0
   default_output_min_ns: 0.5
 ```
-
-Or add per-port `min_ns` under `overrides:`.
 
 ---
 
@@ -138,9 +311,6 @@ pin D2 selected by both board:onboard.uart and board:onboard.uart.rx
 Meaning:
 
 Two entries in `features.use` both claim ownership of the same physical pin.
-This can happen when a parent resource (e.g. `board:onboard.uart`) and a
-sub-signal resource (e.g. `board:onboard.uart.rx`) are both selected — the
-parent claims all pins of the bundle.
 
 Fix:
 
@@ -149,7 +319,7 @@ Use either the bundle reference or the individual sub-signal reference, not both
 ```yaml
 features:
   use:
-    - board:onboard.uart.rx   # claim only RX pin
-    - board:onboard.uart.tx   # claim only TX pin
+    - board:onboard.uart.rx
+    - board:onboard.uart.tx
     # do NOT also add board:onboard.uart here
 ```

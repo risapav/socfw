@@ -51,6 +51,17 @@ module hdmi_packet_arbiter (
   output logic [7:0] pb_o [0:27]
 );
 
+  // ── FSM ───────────────────────────────────────────────────────────────────
+  typedef enum logic [2:0] {
+    ARB_IDLE,       // also presents audio sample packets when valid_sample_i
+    ARB_GCP,
+    ARB_AVI,
+    ARB_ACR,
+    ARB_AUDIO_IF
+  } arb_state_t;
+
+  arb_state_t r_state;
+
   // ── Audio-ready guard ─────────────────────────────────────────────────────
   // Prevents audio sample packets from being inserted before the first
   // complete per-frame sequence has been sent (ACR+AudioIF needed before
@@ -71,17 +82,6 @@ module hdmi_packet_arbiter (
         r_audio_ready <= 1'b1;
     end
   end
-
-  // ── FSM ───────────────────────────────────────────────────────────────────
-  typedef enum logic [2:0] {
-    ARB_IDLE,       // also presents audio sample packets when valid_sample_i
-    ARB_GCP,
-    ARB_AVI,
-    ARB_ACR,
-    ARB_AUDIO_IF
-  } arb_state_t;
-
-  arb_state_t r_state;
 
   always_ff @(posedge clk_i) begin
     if (!rst_ni) begin

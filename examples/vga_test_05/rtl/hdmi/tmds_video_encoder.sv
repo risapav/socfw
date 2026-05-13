@@ -114,7 +114,10 @@ module tmds_video_encoder (
       ones_out = count_ones10(word);
       rd_next  = rd + ($signed({1'b0, ones_out}) * 2 - 5'sd10);
 
-      tmds_o <= word;
+      // TMDS video symbol polarity.
+      // The internal `word` construction uses the inverse convention;
+      // invert here so tmds_o[0] is the first bit transmitted on the link.
+      tmds_o <= ~word;
       rd     <= rd_next;
     end
   end

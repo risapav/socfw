@@ -115,7 +115,7 @@ The converged flow uses:
 
 ```bash
 socfw validate <project.yaml>
-socfw build <project.yaml> --out build/gen
+socfw build <project.yaml> --out build
 ```
 
 Reference fixtures:

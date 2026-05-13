@@ -1,7 +1,5 @@
 # Getting Started
 
-The default flow is the `socfw` CLI.
-
 ## Installation
 
 ```sh
@@ -10,31 +8,166 @@ cd socfw
 pip install -e .
 ```
 
-## Validate
+## Basic workflow
 
-```bash
-socfw validate <project.yaml>
+```sh
+socfw validate project.yaml          # check YAML correctness + design rules
+socfw build project.yaml --out build  # generate all artifacts
 ```
 
-## Build
+## CLI reference
 
-```bash
-socfw build <project.yaml> --out build/gen
+### `socfw build`
+
+```sh
+socfw build <project.yaml> [--out DIR] [--trace]
 ```
 
-## Example
+Generates all artifacts into `--out` (default: `build`):
 
-```bash
-socfw validate tests/golden/fixtures/blink_converged/project.yaml
-socfw build tests/golden/fixtures/blink_converged/project.yaml --out build/blink_converged
+| Output | Description |
+|---|---|
+| `rtl/soc_top.sv` | Top-level SystemVerilog module |
+| `sim/tb_soc_top.sv` | Auto-generated simulation testbench |
+| `sim/files.f` | iverilog filelist |
+| `timing/soc_top.sdc` | Timing constraints (Quartus) |
+| `hal/files.tcl` | Source filelist TCL (Quartus) |
+| `hal/board.tcl` | Pin assignment TCL (Quartus) |
+| `reports/build_summary.md` | Build provenance report |
+
+**`--trace`** — prints the RTL IR to stderr after building, useful for debugging wiring:
+
+```sh
+socfw build project.yaml --out build --trace 2>trace.txt
 ```
 
-Outputs:
-- `build/blink_converged/rtl/soc_top.sv` — top-level SystemVerilog
-- `build/blink_converged/timing/soc_top.sdc` — timing constraints
-- `build/blink_converged/hal/board.tcl` — Quartus board TCL
-- `build/blink_converged/sw/soc_map.h` — peripheral address map header
-- `build/blink_converged/reports/build_summary.md` — build provenance report
+Output format:
+```
+[trace] RtlTop: soc_top
+─── ports (9) ──────────────────────────────────────────
+  input  SYS_CLK
+  input  RESET_N
+  output [4:0] VGA_R
+  ...
+─── signals (14) ───────────────────────────────────────
+  wire clkpll_c0
+  wire reset_n
+  wire w_clkpll_locked
+  ...
+─── adapt_assigns (1) ──────────────────────────────────
+  reset_n = w_rst_sync0_rst_no
+─── instances (8) ──────────────────────────────────────
+  clkpll clkpll
+    .areset(~RESET_N)
+    .c0(clkpll_c0)
+    ...
+```
+
+---
+
+### `socfw validate`
+
+```sh
+socfw validate <file.yaml>
+```
+
+Validates any framework YAML file. The file type is detected automatically from the `kind:` field:
+
+| Kind | Validates |
+|---|---|
+| `project` | project.yaml — modules, clocks, reset, bus, connections |
+| `ip` | *.ip.yaml — ports, clocking, artifacts |
+| `timing` | timing_config.yaml — clocks, false paths, IO delays |
+| `board` | board.yaml — pins, resources |
+
+```sh
+socfw validate project.yaml
+socfw validate ip/my_module.ip.yaml
+socfw validate timing_config.yaml
+```
+
+---
+
+### `socfw simulate`
+
+```sh
+socfw simulate <project.yaml> [--out DIR] [--no-vcd]
+```
+
+Builds the project and runs an iverilog simulation:
+
+1. Generates `sim/tb_soc_top.sv` and `sim/files.f`
+2. Compiles with `iverilog -g2012`
+3. Runs with `vvp`
+4. Saves waveform to `sim/wave.vcd` (disable with `--no-vcd`)
+
+```sh
+socfw simulate project.yaml --out build
+# → [sim] build/sim/tb_soc_top.sv
+# → [sim] build/sim/files.f
+# → [vcd] build/sim/wave.vcd
+```
+
+The generated testbench:
+- Drives the primary clock at the period from `timing_config.yaml`
+- Asserts/releases reset (`RESET_N`) with the polarity from the board descriptor
+- Runs for 1000 clock cycles then calls `$finish`
+- Captures all signals with `$dumpvars`
+
+If `iverilog` is not installed, `socfw simulate` exits 0 with a `SIM001 WARNING`.
+
+**View waveform** (requires GTKWave or similar):
+```sh
+gtkwave build/sim/wave.vcd
+```
+
+---
+
+### `socfw explain`
+
+```sh
+socfw explain clocks project.yaml
+socfw explain address-map project.yaml
+socfw explain irqs project.yaml
+socfw explain bus project.yaml
+```
+
+Prints a human-readable explanation of a design aspect.
+
+---
+
+### `socfw doctor`
+
+```sh
+socfw doctor project.yaml
+```
+
+Prints the fully resolved project configuration — effective board, IP catalog, clock domains, etc.
+Useful for understanding what the framework sees after loading all packs and descriptors.
+
+---
+
+### `socfw explain-schema`
+
+```sh
+socfw explain-schema project     # canonical project.yaml example
+socfw explain-schema ip          # canonical ip.yaml example
+socfw explain-schema timing      # canonical timing_config.yaml example
+socfw explain-schema board       # canonical board.yaml example
+socfw explain-schema list        # list all available schemas
+```
+
+---
+
+## Quick-start example
+
+```sh
+socfw init my_vga --template pll --board qmtech_ep4ce55
+cd my_vga
+socfw validate project.yaml
+socfw build project.yaml --out build
+socfw simulate project.yaml --out build
+```
 
 ## Project shape
 
@@ -43,7 +176,7 @@ version: 2
 kind: project
 
 project:
-  name: my_project
+  name: my_design
   mode: standalone
   board: qmtech_ep4ce55
 
@@ -54,46 +187,13 @@ registries:
     - ip
 
 modules:
-  - instance: blink_test
+  - instance: blink0
     type: blink_test
 ```
 
 ## Notes
 
-- Boards are resolved through packs.
-- IP descriptors are loaded from registered IP paths or packs.
-- Vendor IP should use descriptor metadata rather than ad-hoc project scripts.
-
-## Create a new project
-
-```bash
-socfw init my_blink --template blink --board qmtech_ep4ce55
-socfw validate my_blink/project.yaml
-socfw build my_blink/project.yaml --out my_blink/build/gen
-```
-
-The generated project uses the new pack-aware `project.yaml` format.
-
-## Templates
-
-```bash
-socfw init my_blink --template blink
-socfw init my_pll --template pll
-socfw init my_sdram --template sdram
-```
-
-| Template | Mode       | Description                              |
-|----------|------------|------------------------------------------|
-| `blink`  | standalone | LED blink demo, single clock domain      |
-| `pll`    | standalone | Blink with explicit timing config        |
-| `sdram`  | soc        | SDRAM controller SoC with dummy CPU      |
-
-## Additional CLI commands
-
-```
-socfw validate <project.yaml>             — validate project config
-socfw build <project.yaml> [--out DIR]    — full RTL/docs/software build
-socfw build-fw <project.yaml> [--out DIR] — firmware-aware two-pass build
-socfw sim-smoke <project.yaml> [--out DIR] — build + run simulation smoke test
-socfw explain <topic>                     — show explanation for a topic
-```
+- Boards are resolved through packs (`registries.packs`).
+- IP descriptors are loaded from `registries.ip` paths or packs.
+- `socfw build` always generates sim files — no extra flag needed.
+- Vendor IP (`.qip`) is automatically excluded from `sim/files.f`.

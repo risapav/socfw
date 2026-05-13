@@ -1,4 +1,23 @@
 
+State Machine - |soc_top|vga_hdmi_tx:hdmi_tx0|hdmi_tx_core:u_core|hdmi_packet_arbiter:gen_data_island.u_arbiter|r_state
+Name r_state.ARB_ACR r_state.ARB_AVI r_state.ARB_GCP r_state.ARB_IDLE r_state.ARB_AUDIO_IF 
+r_state.ARB_IDLE 0 0 0 0 0 
+r_state.ARB_GCP 0 0 1 1 0 
+r_state.ARB_AVI 0 1 0 1 0 
+r_state.ARB_ACR 1 0 0 1 0 
+r_state.ARB_AUDIO_IF 0 0 0 1 1 
+
+State Machine - |soc_top|vga_hdmi_tx:hdmi_tx0|hdmi_tx_core:u_core|hdmi_period_scheduler:u_sched|gen_hdmi.state
+Name gen_hdmi.state.ST_DATA_GUARD_TRAIL gen_hdmi.state.ST_DATA_PAYLOAD gen_hdmi.state.ST_DATA_GUARD_LEAD gen_hdmi.state.ST_DATA_PREAMBLE gen_hdmi.state.ST_VIDEO gen_hdmi.state.ST_VIDEO_GB gen_hdmi.state.ST_VIDEO_PREAMBLE gen_hdmi.state.ST_CONTROL 
+gen_hdmi.state.ST_CONTROL 0 0 0 0 0 0 0 0 
+gen_hdmi.state.ST_VIDEO_PREAMBLE 0 0 0 0 0 0 1 1 
+gen_hdmi.state.ST_VIDEO_GB 0 0 0 0 0 1 0 1 
+gen_hdmi.state.ST_VIDEO 0 0 0 0 1 0 0 1 
+gen_hdmi.state.ST_DATA_PREAMBLE 0 0 0 1 0 0 0 1 
+gen_hdmi.state.ST_DATA_GUARD_LEAD 0 0 1 0 0 0 0 1 
+gen_hdmi.state.ST_DATA_PAYLOAD 0 1 0 0 0 0 0 1 
+gen_hdmi.state.ST_DATA_GUARD_TRAIL 1 0 0 0 0 0 0 1 
+
 State Machine - |soc_top|video_stream_frame_aligner:falign0|state
 Name state.ST_DROP_BROKEN_FRAME state.ST_STREAM_FRAME state.ST_WAIT_FRAME_START state.ST_SEARCH_SOF 
 state.ST_SEARCH_SOF 0 0 0 0 

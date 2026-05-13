@@ -105,7 +105,7 @@ def migrate_project(legacy: dict[str, Any]) -> dict[str, Any]:
         "mode": design.get("mode", "standalone"),
         "board": board.get("type", board.get("ref", "")),
         "board_file": board.get("file", ""),
-        "output_dir": legacy.get("output_dir", "build/gen"),
+        "output_dir": legacy.get("output_dir", "build"),
         "debug": legacy.get("debug", False),
     }
 
