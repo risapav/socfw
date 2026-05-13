@@ -9,11 +9,11 @@ Fill in the session header below before recording results. Monitor model matters
 one monitor may tolerate a malformed data island that causes another to sleep.
 
 ```
-Git commit  : 
-RTL hash    :   (git rev-parse --short HEAD)
-Sim log     : sim/logs/regression_full.log
-Date        : 
-Monitor     : 
+Git commit  : d39ff93  (last HDMI RTL commit; run git rev-parse --short HEAD for bitstream hash)
+RTL hash    : d39ff93
+Sim log     : sim/logs/regression_full.log  (make report PASS, 11/11 scenarios)
+Date        : 2026-05-13
+Monitor     : <fill in before HW test>
 ```
 
 ---

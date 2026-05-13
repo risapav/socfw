@@ -25,14 +25,36 @@
 - `sim/Makefile`: `?=` variables, `LOGDIR` with per-TB `tee` logs, `regression`/`report` targets,
   `terc4_encoder` moved before `tx_core_32x10`; `bash -o pipefail` preserves vsim exit code through pipe.
 
+### Simulation baseline complete (2026-05-13)
+
+`make report` passes all 11 HDMI simulation scenarios:
+
+- `tb_hdmi_bch_ecc` PASS
+- `tb_terc4_encoder` PASS
+- `tb_data_island_formatter` PASS
+- `tb_hdmi_period_scheduler` PASS
+- `tb_acr_packet_builder` PASS
+- `tb_audio_sample_packet_builder` PASS
+- `tb_hdmi_tx_core_32x10` PASS
+- `tb_audio_acr_only` PASS (ACR=1 IF=0 SAMPLE=0)
+- `tb_audio_if_only` PASS (ACR=0 IF=1 SAMPLE=0)
+- `tb_audio_sample_only` PASS (ACR=0 IF=0 SAMPLE=1)
+- `tb_audio_full` PASS (ACR=1 IF=1 SAMPLE=1)
+
+Logs generated under `sim/logs/` (gitignored).
+ACR layout verified MSB-first across `acr_packet_builder.sv`, `tb_acr_packet_builder.sv`,
+and `docs/HDMI_PACKET_LAYOUT.md`.
+
 ### Remaining validation
-- Re-run hardware test matrix after scheduler/formatter/core fixes:
-  - `DATA=1 AUDIO=0` — data island without audio
+- Hardware test matrix on AC608 / HDMI monitor; see `docs/TEST_MATRIX.md`.
+  - `DATA=0 AUDIO=0` — baseline DVI
+  - `DATA=1 AUDIO=0` — data island (GCP + AVI only)
   - `DATA=1 AUDIO=1` ACR only
   - `DATA=1 AUDIO=1` Audio InfoFrame only
   - `DATA=1 AUDIO=1` Audio Sample only
   - `DATA=1 AUDIO=1` ACR + InfoFrame
-  - `DATA=1 AUDIO=1` full audio
+  - `DATA=1 AUDIO=1` ACR + Sample
+  - `DATA=1 AUDIO=1` ACR + InfoFrame + Sample (full audio)
 
 ---
 
