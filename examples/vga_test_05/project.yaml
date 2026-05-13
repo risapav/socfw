@@ -127,10 +127,10 @@ modules:
       clk_x_i: clk_pixel5x
     params:
       ENABLE_DATA_ISLAND: 1
-      ENABLE_AUDIO: 0
+      ENABLE_AUDIO: 1
       # Full audio path: ACR byte order fixed + audio-ready guard added
-      ENABLE_ACR_PACKET: 0
-      ENABLE_AUDIO_INFOFRAME: 0
+      ENABLE_ACR_PACKET: 1
+      ENABLE_AUDIO_INFOFRAME: 1
       ENABLE_AUDIO_SAMPLE: 1
     bind:
       ports:

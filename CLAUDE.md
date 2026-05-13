@@ -1,71 +1,96 @@
 # Projekt Overview
 
 Tento repository obsahuje:
-- Python framework pre HW vývoj, nazýva sa socfw
-- SystemVerilog aplikácie v examples/
-- interné build/sim tooling
+- **socfw**: Python framework pre HW vývoj
+- **examples/**: SystemVerilog aplikácie
+- Interné build/simulačné nástroje
+
+**Aktuálny cieľ:** Vývoj full HDMI (projekt `vga_test_05`).
+- **RTL:** `examples/vga_test_05/rtl`
+- **Simulácie:** `examples/vga_test_05/sim`
+- **Kontext:** Vždy referuj `HDMI_STATUS.md` pre aktuálny stav a `rtl/navrhy/` pre komentáre dizajnéra.
+
+---
 
 # Vývojové pravidlá
 
-## Framework
-- Framework kód je v ./socfw
-- Pri implementácii vždy reutilizuj existujúce framework utility
-- Nevytváraj duplicity
-- Najprv hľadaj existujúce abstraction layer
+## 1. SystemVerilog (Prísne pravidlá pre RTL a SVA)
+Všetok generovaný kód musí byť syntetizovateľný v **Intel Quartus Prime 25.1 Lite** a kompatibilný so **svlint** a **verilator**.
 
-## SystemVerilog
-- aktuálne pracujeme na vývoji vga_test_05
-- cieľom je vyvinúť full hdmi
-- RTL je v examples/vga_test_05/rtl
-- Testbench je v examples/vga_test_05/sim
-- Používaj SystemVerilog 2005 syntax
-- Preferuj synthesizable code Quartus 25.1
-- Používaj always_ff / always_comb
-- Nepoužívaj blocking assignment v sequential logic
-- Dodržuj naming:
-  - i_* inputs
-  - o_* outputs
-  - r_* registers
-  - w_* wires
-- v examples/vga_test_05/HDMI_STATUS.md je aktuálny stav rozpracovania úlohy
-- v examples/vga_test_05/rtl/navrhy/ je komenár nezávislého dizajnéra na vývoj hdmi
+### Formátovanie a Štruktúra
+- **Odsadzovanie:** 2 medzery, max 100 znakov na riadok, žiadne medzery na konci riadkov (trailing spaces).
+- **Koniec súboru:** Súbor musí končiť práve jedným prázdnym riadkom (newline).
+- **Hlavička súboru:** Povinný Doxygen header (`@file`, `@brief`, `@param`, `@details`).
+- **Nettype & Guards:**
+  1. Doxygen hlavička
+  2. `` `default_nettype none ``
+  3. Include guards (`` `ifndef MOD_NAME_SV``, `` `define MOD_NAME_SV``, `` `endif ``)
 
-## Git workflow
-- Pred zmenami analyzuj git diff
-- Rob malé logické commity
-- Generuj commit messages
-- Nikdy nerebase bez explicitného povolenia
+### RTL Kódovací štandard
+- **Porty a inštancie:** Používaj výhradne ANSI-style deklarácie portov. Pri inštanciách modulov vždy používaj pomenované porty a parametre (`.port(signal)`).
+- **Šírka a priradenia:** Vždy používaj explicitnú šírku (napr. `1'b0`). Pre unsized nulu použi `'0`.
+- **Logika:**
+  - `always_comb` -> používaj blocking priradenia (`=`).
+  - `always_ff` -> používaj non-blocking priradenia (`<=`).
+- **Reset:** Asynchrónny, aktívny v nule, pomenovaný `rst_ni`.
+- **Case statements:** Vždy musia obsahovať `default` vetvu a byť syntetizovateľné.
+- **Komentáre:** Iba ASCII znaky.
 
-## Dokumentácia
-- Každý nový modul musí mať:
-  - markdown dokumentáciu
-  - interface popis
-  - timing assumptions
-  - block diagram description
-- Aktualizuj docs pri zmene API
+### Zakázané konštrukcie (Strictly Forbidden)
+- `defparam`, `#delay`, `wait`, `fork/join`
+- `class`, `queue`, `mailbox`
+- System tasks v RTL (`$psprintf`, `$random`, atď.)
 
-## Bug hunting
-- Aktívne analyzuj framework na:
-  - dead code
-  - race conditions
-  - invalid assumptions
-  - simulation mismatches
-  - SV lint problémy
-  - nevyužité abstraction layer
-  - Python architectural smell
+### Naming Conventions
+- **Moduly:** `snake_case`, názov súboru sa musí zhodovať s názvom modulu (`<module>.sv`).
+- **Porty/Signály:** `i_*` (inputs), `o_*` (outputs), `r_*` (registers), `w_*` (wires).
+- **Parametre:** `CamelCase` alebo `ALL_CAPS`.
+- **Localparams:** `ALL_CAPS`.
+- **Typedefs (enum/struct/union):** Prípona `_t` alebo `_e`.
+- **Makrá:** `UPPER_SNAKE_CASE`.
+- **Generate bloky:** Predpona `g_` alebo `gen_`.
 
-## Testovanie
-- Po zmenách:
-  - spusti simulácie
-  - spusti lint
-  - spusti pytest
-- Fixni failing testy
+---
 
-## Workflow
-Vždy:
-1. analyzuj problém
-2. navrhni plán
-3. počkaj na potvrdenie
-4. implementuj
-5. validuj
-6. vytvor dokumentáciu
+## 2. Python Framework (`socfw`)
+- Framework kód sa nachádza v `./socfw`.
+- **DRY (Don't Repeat Yourself):** Pri implementácii vždy najprv hľadaj existujúcu abstraction layer a reutilizuj framework utility. Nevytváraj duplicity.
+- Analyzuj "Python architectural smell" a nevyužité abstrakčné vrstvy.
+
+---
+
+## 3. Git Workflow
+- Pred zmenami **vždy** analyzuj `git diff`.
+- Vytváraj malé, logické commity.
+- Generuj výstižné commit správy.
+- **NIKDY** nerob rebase bez explicitného povolenia od používateľa.
+
+---
+
+## 4. Dokumentácia
+Každý nový SystemVerilog modul musí obsahovať:
+- Markdown dokumentáciu.
+- Interface popis (tabuľka portov/parametrov).
+- Timing assumptions.
+- Block diagram description.
+- Aktualizuj hlavnú dokumentáciu pri akejkoľvek zmene API.
+
+---
+
+## 5. Testovanie a Validácia
+- **Po každej zmene aktívne spusti:**
+  1. Simulácie (hľadaj mismatches a race conditions).
+  2. Linter (svlint).
+  3. Pytest pre framework.
+- Vždy vyrieš failing testy a linting problémy pred pokračovaním (analyzuj dead code, invalid assumptions).
+
+---
+
+## 6. Základný AI Workflow
+Pri akejkoľvek požiadavke dodržuj tento postup:
+1. **Analyzuj problém** a prečítaj si kontextové súbory.
+2. **Navrhni plán** úprav/implementácie.
+3. **Počkaj na potvrdenie** plánu.
+4. **Implementuj** zmeny podľa pravidiel vyššie.
+5. **Validuj** (Lint, Sim, Tests).
+6. **Vytvor/Uprav dokumentáciu**.

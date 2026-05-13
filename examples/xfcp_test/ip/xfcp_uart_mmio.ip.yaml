@@ -1,0 +1,78 @@
+version: 2
+kind: ip
+
+ip:
+  name: xfcp_uart_mmio
+  module: xfcp_uart_mmio_top
+  category: debug
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: arstn
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: []
+  outputs: []
+
+params:
+  CLOCK_FREQ_HZ:
+    type: int
+    default: 50000000
+  UART_DEFAULT_BAUD_DIV:
+    type: raw
+    default: "16'd434"
+
+ports:
+  - name: uart_rx_i
+    direction: input
+    width: 1
+
+  - name: uart_tx_o
+    direction: output
+    width: 1
+
+  - name: led_o
+    direction: output
+    width: 6
+
+  - name: onboard_seg_o
+    direction: output
+    width: 8
+
+  - name: onboard_dig_o
+    direction: output
+    width: 3
+
+artifacts:
+  synthesis:
+    - ../rtl/xfcp_uart_mmio_top.sv
+    - ../rtl/axil_xfcp_mod.sv
+    - ../rtl/axil_uart_adapter.sv
+    - ../rtl/axil_regs.sv
+    - ../rtl/axil_regfile.sv
+    - ../rtl/axil_seven_seg_adapter.sv
+    - ../rtl/axil_sys_ctrl.sv
+
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - xfcp_uart_mmio_top
+    - axil_xfcp_mod
+    - axil_uart_adapter
+    - axil_regs
+    - axil_regfile
+    - axil_seven_seg_adapter
+    - axil_sys_ctrl

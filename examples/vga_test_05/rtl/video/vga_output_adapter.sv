@@ -1,3 +1,6 @@
+`ifndef VGA_OUTPUT_ADAPTER_SV
+`define VGA_OUTPUT_ADAPTER_SV
+
 `default_nettype none
 
 import video_pkg::*;
@@ -40,3 +43,5 @@ module vga_output_adapter (
   end
 
 endmodule
+
+`endif // VGA_OUTPUT_ADAPTER_SV

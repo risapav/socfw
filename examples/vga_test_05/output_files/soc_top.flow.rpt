@@ -1,5 +1,5 @@
 Flow report for soc_top
-Wed May 13 14:49:36 2026
+Wed May 13 21:18:17 2026
 Quartus Prime Version 25.1std.0 Build 1129 10/21/2025 SC Lite Edition
 
 
@@ -41,17 +41,17 @@ on the Quartus Prime software download page.
 +--------------------------------------------------------------------------------------+
 ; Flow Summary                                                                         ;
 +------------------------------------+-------------------------------------------------+
-; Flow Status                        ; Successful - Wed May 13 14:49:32 2026           ;
+; Flow Status                        ; Successful - Wed May 13 21:18:13 2026           ;
 ; Quartus Prime Version              ; 25.1std.0 Build 1129 10/21/2025 SC Lite Edition ;
 ; Revision Name                      ; soc_top                                         ;
 ; Top-level Entity Name              ; soc_top                                         ;
 ; Family                             ; Cyclone IV E                                    ;
 ; Device                             ; EP4CE55F23C8                                    ;
 ; Timing Models                      ; Final                                           ;
-; Total logic elements               ; 1,447 / 55,856 ( 3 % )                          ;
-;     Total combinational functions  ; 1,374 / 55,856 ( 2 % )                          ;
-;     Dedicated logic registers      ; 849 / 55,856 ( 2 % )                            ;
-; Total registers                    ; 857                                             ;
+; Total logic elements               ; 1,485 / 55,856 ( 3 % )                          ;
+;     Total combinational functions  ; 1,399 / 55,856 ( 3 % )                          ;
+;     Dedicated logic registers      ; 864 / 55,856 ( 2 % )                            ;
+; Total registers                    ; 872                                             ;
 ; Total pins                         ; 39 / 325 ( 12 % )                               ;
 ; Total virtual pins                 ; 0                                               ;
 ; Total memory bits                  ; 27,200 / 2,396,160 ( 1 % )                      ;
@@ -65,7 +65,7 @@ on the Quartus Prime software download page.
 +-------------------+---------------------+
 ; Option            ; Setting             ;
 +-------------------+---------------------+
-; Start date & time ; 05/13/2026 14:49:01 ;
+; Start date & time ; 05/13/2026 21:17:44 ;
 ; Main task         ; Compilation         ;
 ; Revision Name     ; soc_top             ;
 +-------------------+---------------------+
@@ -76,7 +76,7 @@ on the Quartus Prime software download page.
 +-------------------------------------+----------------------------------------+---------------+-------------+------------+
 ; Assignment Name                     ; Value                                  ; Default Value ; Entity Name ; Section Id ;
 +-------------------------------------+----------------------------------------+---------------+-------------+------------+
-; COMPILER_SIGNATURE_ID               ; 246631037098300.177867654120812        ; --            ; --          ; --         ;
+; COMPILER_SIGNATURE_ID               ; 246631037098300.177869986419220        ; --            ; --          ; --         ;
 ; MAX_CORE_JUNCTION_TEMP              ; 85                                     ; --            ; --          ; --         ;
 ; MIN_CORE_JUNCTION_TEMP              ; 0                                      ; --            ; --          ; --         ;
 ; MISC_FILE                           ; cores/clkpll/clkpll_bb.v               ; --            ; --          ; --         ;
@@ -100,11 +100,11 @@ on the Quartus Prime software download page.
 +----------------------+--------------+-------------------------+---------------------+------------------------------------+
 ; Module Name          ; Elapsed Time ; Average Processors Used ; Peak Virtual Memory ; Total CPU Time (on all processors) ;
 +----------------------+--------------+-------------------------+---------------------+------------------------------------+
-; Analysis & Synthesis ; 00:00:14     ; 1.0                     ; 640 MB              ; 00:00:28                           ;
-; Fitter               ; 00:00:12     ; 1.1                     ; 1262 MB             ; 00:00:16                           ;
-; Assembler            ; 00:00:01     ; 1.0                     ; 593 MB              ; 00:00:02                           ;
-; Timing Analyzer      ; 00:00:02     ; 1.2                     ; 740 MB              ; 00:00:03                           ;
-; Total                ; 00:00:29     ; --                      ; --                  ; 00:00:49                           ;
+; Analysis & Synthesis ; 00:00:13     ; 1.0                     ; 640 MB              ; 00:00:26                           ;
+; Fitter               ; 00:00:12     ; 1.1                     ; 1263 MB             ; 00:00:16                           ;
+; Assembler            ; 00:00:02     ; 1.0                     ; 586 MB              ; 00:00:02                           ;
+; Timing Analyzer      ; 00:00:03     ; 1.2                     ; 741 MB              ; 00:00:03                           ;
+; Total                ; 00:00:30     ; --                      ; --                  ; 00:00:47                           ;
 +----------------------+--------------+-------------------------+---------------------+------------------------------------+
 
 
