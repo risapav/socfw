@@ -4,9 +4,9 @@ VRTL := ../rtl/video
 VLOG := vlog -sv -suppress 2892
 VSIM := vsim -c -do "run -all; quit"
 
-.PHONY: all bch_ecc data_island scheduler acr_packet audio_sample_pkt tx_core_32x10 clean
+.PHONY: all bch_ecc data_island scheduler acr_packet audio_sample_pkt tx_core_32x10 terc4_encoder clean
 
-all: bch_ecc data_island scheduler acr_packet audio_sample_pkt tx_core_32x10
+all: bch_ecc data_island scheduler acr_packet audio_sample_pkt tx_core_32x10 terc4_encoder
 
 bch_ecc:
 	$(VLOG) $(RTL)/hdmi_bch_ecc.sv tb_hdmi_bch_ecc.sv
@@ -54,6 +54,12 @@ tx_core_32x10:
 	        $(RTL)/hdmi_tx_core.sv \
 	        tb_hdmi_tx_core_32x10.sv
 	$(VSIM) tb_hdmi_tx_core_32x10
+
+terc4_encoder:
+	$(VLOG) $(RTL)/hdmi_pkg.sv \
+	        $(RTL)/terc4_encoder.sv \
+	        tb_terc4_encoder.sv
+	$(VSIM) tb_terc4_encoder
 
 clean:
 	rm -rf work transcript *.log
