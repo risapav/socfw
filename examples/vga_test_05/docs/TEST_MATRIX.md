@@ -5,6 +5,17 @@ earlier configurations confirm basic functionality before enabling more features
 
 Board: AC608 (Cyclone IV), 800×600 @ 60 Hz (40 MHz pixel clock), HDMI monitor.
 
+Fill in the session header below before recording results. Monitor model matters —
+one monitor may tolerate a malformed data island that causes another to sleep.
+
+```
+Git commit  : 
+RTL hash    :   (git rev-parse --short HEAD)
+Sim log     : sim/logs/regression_full.log
+Date        : 
+Monitor     : 
+```
+
 ---
 
 ## Simulation regression (must pass before any hardware test)

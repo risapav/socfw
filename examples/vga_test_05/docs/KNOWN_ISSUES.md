@@ -61,6 +61,42 @@ the audio sample rate against the ACR-advertised rate may flag a mismatch.
 
 ---
 
+## PKT-002: InfoFrame enable/config path not fully connected
+
+**Component:** `hdmi_tx_core.sv`, `vga_hdmi_tx.sv`
+
+**Description:**
+`hdmi_tx_core` declares two parameters (`ENABLE_AVI`, `ENABLE_SPD`) and one port
+(`info_cfg_i` of type `hdmi_info_cfg_t`) that are not used in the module body:
+
+```systemverilog
+parameter bit ENABLE_AVI = 1,   // declared, never referenced
+parameter bit ENABLE_SPD = 0,   // declared, never referenced
+input hdmi_info_cfg_t info_cfg_i // declared, never referenced
+```
+
+Current behavior:
+- AVI InfoFrame is always sent every frame when `ENABLE_DATA_ISLAND=1` (the packet
+  arbiter sequences GCP→AVI regardless of any enable flag).
+- `vga_hdmi_tx` passes `.info_cfg_i('0)`, but the field values (`send_avi`, `send_audio`,
+  `send_spd`, `rgb_quant_full`) have no effect.
+- AVI content is correct for the hardcoded defaults (RGB, 4:3, full quantization, VIC=0).
+
+**Risk:** AVI is sent unconditionally. If a future use case requires suppressing AVI
+(e.g., DVI sink on an HDMI cable), `ENABLE_AVI=0` will have no effect.
+
+**Recommended fix (future):**
+1. Wire `ENABLE_AVI` and `ENABLE_SPD` into the arbiter (add `valid_avi_i` / `valid_spd_i`
+   inputs, or gate the packet builders).
+2. Replace `.info_cfg_i('0)` in `vga_hdmi_tx` with a default config struct that sets
+   `send_avi=1` (so behavior is explicit, not accidental).
+3. Route `info_cfg_i.rgb_quant_full` through to `quant_range_i` if runtime config is needed.
+
+**Priority:** low — current behavior is correct for the target use case (HDMI RGB monitor).
+Address before adding SPD InfoFrame or DVI-compatibility mode.
+
+---
+
 ## SIM-001: audio_scenarios threshold allows one missed AVI/ACR per simulation
 
 **Component:** `tb_hdmi_tx_core_audio.sv`
