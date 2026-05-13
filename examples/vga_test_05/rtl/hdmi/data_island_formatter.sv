@@ -33,8 +33,8 @@ module data_island_formatter (
   input  logic start_i,    // pulse: latch packet and reset counter
   input  logic advance_i,  // pulse: advance to next symbol (once per payload period)
 
-  input  logic hsync_i,    // current HSYNC value (passed to ch0[1])
-  input  logic vsync_i,    // current VSYNC value (passed to ch0[0])
+  input  logic hsync_i,    // current HSYNC value (passed to ch0[0])
+  input  logic vsync_i,    // current VSYNC value (passed to ch0[1])
 
   // Packet header bytes HB0-HB2
   input  logic [7:0] hb [0:2],
