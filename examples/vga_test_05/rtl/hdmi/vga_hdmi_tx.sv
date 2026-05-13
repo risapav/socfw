@@ -28,9 +28,10 @@ module vga_hdmi_tx #(
   parameter logic [19:0] ACR_N               = 20'd6144,
   parameter logic [19:0] ACR_CTS             = 20'd40000,
   // Debug isolation: disable individual audio packet types (default=1 = enabled).
-  parameter bit         ENABLE_ACR_PACKET     = 1,
-  parameter bit         ENABLE_AUDIO_INFOFRAME = 1,
-  parameter bit         ENABLE_AUDIO_SAMPLE   = 1
+  // These propagate to hdmi_tx_core to allow selective enable in project.yaml.
+  parameter bit         ENABLE_ACR_PACKET      = 1,
+  parameter bit         ENABLE_AUDIO_INFOFRAME  = 1,
+  parameter bit         ENABLE_AUDIO_SAMPLE     = 1
 )(
   input  logic       clk_i,    // pixel clock
   input  logic       clk_x_i,  // 5× pixel clock (DDR serializer)

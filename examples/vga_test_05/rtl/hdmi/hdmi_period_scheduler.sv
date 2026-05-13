@@ -189,13 +189,20 @@ module hdmi_period_scheduler #(
           if (sym_cnt == 0) begin
             state_next   = ST_DATA_PAYLOAD;
             sym_cnt_next = ($bits(sym_cnt_next))'(PAYLOAD_LEN - 1);
+            // Lookahead advance: push formatter one cycle early so that
+            // symbol 0 clears the 2-cycle TERC4 + 1-cycle mux pipeline
+            // before the first DATA_PAYLOAD cycle appears on ch*_o.
+            packet_pop_o = 1'b1;
           end else begin
             sym_cnt_next = ($bits(sym_cnt_next))'(sym_cnt - 1);
           end
         end
 
         ST_DATA_PAYLOAD: begin
-          packet_pop_o = 1'b1;
+          // Advance only while there is a next symbol to prepare.
+          // The last symbol (sym_cnt==0) is already in the TERC4 pipeline
+          // from the previous cycle's advance.
+          packet_pop_o = (sym_cnt > 6'd1);
           if (sym_cnt == 0) begin
             state_next   = ST_DATA_GUARD_TRAIL;
             sym_cnt_next = ($bits(sym_cnt_next))'(GUARD_LEN - 1);

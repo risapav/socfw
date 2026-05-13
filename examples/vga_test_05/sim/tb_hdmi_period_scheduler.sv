@@ -203,10 +203,12 @@ module tb_hdmi_period_scheduler;
       $display("FAIL: one or more counts wrong");
       error_flag = 1;
     end
-    if (pop == 32)
-      $display("PASS: packet_pop fires exactly 32 times");
+    // 1 lookahead pop at guard-lead exit + 30 pops during payload (sym_cnt 31..2)
+    // = 31 total. The last symbol needs no advance (already in TERC4 pipeline).
+    if (pop == 31)
+      $display("PASS: packet_pop fires exactly 31 times");
     else begin
-      $display("FAIL: packet_pop = %0d (expected 32)", pop);
+      $display("FAIL: packet_pop = %0d (expected 31)", pop);
       error_flag = 1;
     end
     if (!dep)

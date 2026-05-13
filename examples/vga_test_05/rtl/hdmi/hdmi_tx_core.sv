@@ -324,7 +324,7 @@ module hdmi_tx_core #(
       .hb_acr_i        (hb_acr),        .pb_acr_i       (pb_acr),
       .valid_acr_i     (ENABLE_ACR_PACKET      ? valid_acr                         : 1'b0),
       .hb_audio_if_i   (hb_audio_if),   .pb_audio_if_i  (pb_audio_if),
-      .valid_audio_if_i(ENABLE_AUDIO_INFOFRAME ? enable_audio_i                    : 1'b0),
+      .valid_audio_if_i((ENABLE_AUDIO_IF && ENABLE_AUDIO_INFOFRAME) ? enable_audio_i : 1'b0),
       .hb_sample_i     (hb_sample),     .pb_sample_i    (pb_sample),
       .valid_sample_i  (ENABLE_AUDIO_SAMPLE    ? (w_valid_sample && enable_audio_i) : 1'b0),
       .packet_valid_o  (packet_pending),

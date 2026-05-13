@@ -173,21 +173,66 @@ module tb_hdmi_tx_core_32x10;
   wire hdmi_period_t w_period_d1 = u_dut.period_d1;
   wire               w_de_r      = u_dut.de_r;
 
+  // Formatter nibble outputs (combinational from data_island_formatter)
+  wire [3:0] w_di_ch0 = u_dut.gen_data_island.di_ch0;
+  wire [3:0] w_di_ch1 = u_dut.gen_data_island.di_ch1;
+  wire [3:0] w_di_ch2 = u_dut.gen_data_island.di_ch2;
+
   // Pipeline-aligned de_r delays for pipeline-stage assertions.
   // period_o is registered from state_next, so it is 1 cycle behind de_r:
   //   period_o VIDEO = de_r_d1 VIDEO range  (both D+1..D+H_ACTIVE)
   //   period_d1 VIDEO = de_r_d2 VIDEO range (both D+2..D+H_ACTIVE+1)
   logic w_de_r_d1, w_de_r_d2;
+  // period_d2: period_d1 delayed by 1 — aligns with ch*_o output stage.
+  // When period_d2 == DATA_PAYLOAD the ch*_o bus carries TERC4 payload symbols.
+  hdmi_period_t w_period_d2;
+
+  // di_ch* delayed 3 cycles to align with ch*_o.
+  // ch*_o = TERC4(di_ch* at T-3), so di_ch*_d3 at cycle T == nibble for ch*_o at T.
+  logic [3:0] di_ch0_d1, di_ch0_d2, di_ch0_d3;
+  logic [3:0] di_ch1_d1, di_ch1_d2, di_ch1_d3;
+  logic [3:0] di_ch2_d1, di_ch2_d2, di_ch2_d3;
 
   always_ff @(posedge pix_clk) begin
     if (!rst_n) begin
-      w_de_r_d1 <= 1'b0;
-      w_de_r_d2 <= 1'b0;
+      w_de_r_d1  <= 1'b0;
+      w_de_r_d2  <= 1'b0;
+      w_period_d2 <= HDMI_PERIOD_CONTROL;
+      di_ch0_d1  <= '0; di_ch0_d2 <= '0; di_ch0_d3 <= '0;
+      di_ch1_d1  <= '0; di_ch1_d2 <= '0; di_ch1_d3 <= '0;
+      di_ch2_d1  <= '0; di_ch2_d2 <= '0; di_ch2_d3 <= '0;
     end else begin
-      w_de_r_d1 <= w_de_r;
-      w_de_r_d2 <= w_de_r_d1;
+      w_de_r_d1  <= w_de_r;
+      w_de_r_d2  <= w_de_r_d1;
+      w_period_d2 <= w_period_d1;
+      di_ch0_d1  <= w_di_ch0; di_ch0_d2 <= di_ch0_d1; di_ch0_d3 <= di_ch0_d2;
+      di_ch1_d1  <= w_di_ch1; di_ch1_d2 <= di_ch1_d1; di_ch1_d3 <= di_ch1_d2;
+      di_ch2_d1  <= w_di_ch2; di_ch2_d2 <= di_ch2_d1; di_ch2_d3 <= di_ch2_d2;
     end
   end
+
+  // TERC4 reference LUT — must match terc4_encoder.sv exactly.
+  function automatic tmds_word_t terc4_ref(input logic [3:0] n);
+    case (n)
+      4'h0: return 10'b1010011100;
+      4'h1: return 10'b1001100011;
+      4'h2: return 10'b1011100100;
+      4'h3: return 10'b1011100010;
+      4'h4: return 10'b0101110001;
+      4'h5: return 10'b0100011110;
+      4'h6: return 10'b0110001110;
+      4'h7: return 10'b0100111100;
+      4'h8: return 10'b1011001100;
+      4'h9: return 10'b0100111001;
+      4'ha: return 10'b0110011100;
+      4'hb: return 10'b1011000110;
+      4'hc: return 10'b1010001110;
+      4'hd: return 10'b1001110001;
+      4'he: return 10'b0101100011;
+      4'hf: return 10'b1011000011;
+      default: return 10'b1010011100;
+    endcase
+  endfunction
 
   // ── Cycle counter and period logger ──────────────────────────────────────
   int           sim_cycle;
@@ -268,6 +313,28 @@ module tb_hdmi_tx_core_32x10;
       if (w_period == HDMI_PERIOD_DATA_PAYLOAD && w_de_r) begin
         $error("ASSERT: DATA_PAYLOAD during de_r at cy=%0d", sim_cycle);
         assert_fail_count = assert_fail_count + 1;
+      end
+
+      // ── DATA_PAYLOAD ch*_o content (period_d2 = output stage) ───────────
+      // ch*_o at cycle T == TERC4(di_ch* at cycle T-3).
+      // di_ch*_d3 is di_ch* delayed by 3 cycles, so it matches ch*_o now.
+      // This catches symbol-0 duplication and other payload misalignments.
+      if (w_period_d2 == HDMI_PERIOD_DATA_PAYLOAD) begin
+        if (ch0 !== terc4_ref(di_ch0_d3)) begin
+          $error("ASSERT: ch0 payload mismatch at cy=%0d: got=%010b exp=%010b (nibble=0x%0h)",
+                 sim_cycle, ch0, terc4_ref(di_ch0_d3), di_ch0_d3);
+          assert_fail_count = assert_fail_count + 1;
+        end
+        if (ch1 !== terc4_ref(di_ch1_d3)) begin
+          $error("ASSERT: ch1 payload mismatch at cy=%0d: got=%010b exp=%010b (nibble=0x%0h)",
+                 sim_cycle, ch1, terc4_ref(di_ch1_d3), di_ch1_d3);
+          assert_fail_count = assert_fail_count + 1;
+        end
+        if (ch2 !== terc4_ref(di_ch2_d3)) begin
+          $error("ASSERT: ch2 payload mismatch at cy=%0d: got=%010b exp=%010b (nibble=0x%0h)",
+                 sim_cycle, ch2, terc4_ref(di_ch2_d3), di_ch2_d3);
+          assert_fail_count = assert_fail_count + 1;
+        end
       end
 
       // ── Period-length checkers ───────────────────────────────────────────
