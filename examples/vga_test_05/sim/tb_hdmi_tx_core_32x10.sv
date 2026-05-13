@@ -169,8 +169,25 @@ module tb_hdmi_tx_core_32x10;
   );
 
   // ── Internal signal probes ────────────────────────────────────────────────
-  wire hdmi_period_t w_period = u_dut.period;
-  wire               w_de_r   = u_dut.de_r;
+  wire hdmi_period_t w_period    = u_dut.period;
+  wire hdmi_period_t w_period_d1 = u_dut.period_d1;
+  wire               w_de_r      = u_dut.de_r;
+
+  // Pipeline-aligned de_r delays for pipeline-stage assertions.
+  // period_o is registered from state_next, so it is 1 cycle behind de_r:
+  //   period_o VIDEO = de_r_d1 VIDEO range  (both D+1..D+H_ACTIVE)
+  //   period_d1 VIDEO = de_r_d2 VIDEO range (both D+2..D+H_ACTIVE+1)
+  logic w_de_r_d1, w_de_r_d2;
+
+  always_ff @(posedge pix_clk) begin
+    if (!rst_n) begin
+      w_de_r_d1 <= 1'b0;
+      w_de_r_d2 <= 1'b0;
+    end else begin
+      w_de_r_d1 <= w_de_r;
+      w_de_r_d2 <= w_de_r_d1;
+    end
+  end
 
   // ── Cycle counter and period logger ──────────────────────────────────────
   int           sim_cycle;
@@ -225,9 +242,19 @@ module tb_hdmi_tx_core_32x10;
       video_pre_cnt     = 0;
     end else if (sim_cycle > 20) begin
 
-      // ── VIDEO ↔ de_r alignment ──────────────────────────────────────────
-      if (w_period == HDMI_PERIOD_VIDEO && !w_de_r) begin
-        $error("ASSERT: VIDEO outside de_r at cy=%0d", sim_cycle);
+      // ── VIDEO ↔ de_r pipeline alignment ────────────────────────────────
+      // period_o is driven from state_next (1-cycle lookahead), so it is
+      // offset by exactly 1 cycle vs de_r.  The correct pairing is:
+      //   period_o VIDEO  ↔ de_r_d1  (de_r from previous cycle)
+      //   period_d1 VIDEO ↔ de_r_d2  (de_r two cycles back)
+      // This ensures period_d1 at the channel_mux aligns with the 2-cycle
+      // encoder latency, producing correct ch*_o output.
+      if (w_period == HDMI_PERIOD_VIDEO && !w_de_r_d1) begin
+        $error("ASSERT: period_o VIDEO outside de_r_d1 at cy=%0d", sim_cycle);
+        assert_fail_count = assert_fail_count + 1;
+      end
+      if (w_period_d1 == HDMI_PERIOD_VIDEO && !w_de_r_d2) begin
+        $error("ASSERT: period_d1 VIDEO outside de_r_d2 at cy=%0d", sim_cycle);
         assert_fail_count = assert_fail_count + 1;
       end
       if (w_period != HDMI_PERIOD_VIDEO && w_period != HDMI_PERIOD_VIDEO_GB &&

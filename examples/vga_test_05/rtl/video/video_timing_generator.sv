@@ -115,23 +115,27 @@ module video_timing_generator #(
   wire last_active_pixel_req_next = de_next && (h_next == H_ACTIVE - 1) && (v_next == V_ACTIVE - 1);
 
   // ── blank_remaining: pixel clocks until next active-video region ──────────
-  // During hblank (v_active, !h_active): cycles remaining = H_TOTAL - h_cnt
-  // During last vblank line (v_cnt==V_TOTAL-1): count the same way so the
-  //   period scheduler can fire VIDEO_PREAMBLE before the very first active
-  //   pixel of each frame.  Without this, hblank_o is 0 throughout vblank,
-  //   the trigger never fires, and the sink misses the first ~2 pixels.
+  // During hblank of active lines 0..V_ACTIVE-2: H_TOTAL - h_cnt counts down
+  //   so the period scheduler can fire VIDEO_PREAMBLE for the next line.
+  // During last active line (v_cnt==V_ACTIVE-1) hblank: sentinel 0xFFFF.
+  //   The next "line" is vblank, not active video, so no VIDEO_PREAMBLE should
+  //   fire here.  Without this guard the scheduler fires VIDEO_PREAMBLE at the
+  //   end of the last active line's blank, producing a spurious VIDEO(1) at the
+  //   vblank boundary that confuses sink devices (observed as first-lines shift).
+  // During last vblank line (v_cnt==V_TOTAL-1): count normally so the
+  //   scheduler can fire VIDEO_PREAMBLE for the first line of the next frame.
   // All other vblank lines: sentinel 0xFFFF.
-  // During active video (de): 0
-  wire is_last_vblank_line = (v_cnt == V_TOTAL - 1'd1);
+  // During active video (de): 0.
+  wire is_last_vblank_line  = (v_cnt == ($bits(v_cnt))'(V_TOTAL  - 1));
+  wire is_last_active_line  = (v_cnt == ($bits(v_cnt))'(V_ACTIVE - 1));
 
   logic [15:0] blank_remaining_comb;
   always_comb begin
     if (de)
       blank_remaining_comb = 16'd0;
-    else if (v_active || is_last_vblank_line)
-      // Covers regular hblank (v_active && !h_active), active-h portion of
-      // last vblank line (counted so scheduler knows budget), and last vblank
-      // blanking portion.  Formula H_TOTAL - h_cnt gives exact cycles left.
+    else if (is_last_vblank_line)
+      blank_remaining_comb = 16'(H_TOTAL) - 16'(h_cnt);
+    else if (v_active && !is_last_active_line)
       blank_remaining_comb = 16'(H_TOTAL) - 16'(h_cnt);
     else
       blank_remaining_comb = 16'hFFFF;
