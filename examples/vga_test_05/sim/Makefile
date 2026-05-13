@@ -9,11 +9,32 @@ LOGDIR ?= logs
 VLOG := vlog -sv -suppress 2892
 VSIM := vsim -c -do "run -all; quit"
 
+# RTL source list shared by tx_core_32x10 and audio_scenarios
+TX_CORE_SRCS = \
+        $(RTL)/hdmi_pkg.sv \
+        $(VRTL)/video_pkg.sv \
+        $(VRTL)/video_timing_generator.sv \
+        $(RTL)/tmds_video_encoder.sv \
+        $(RTL)/tmds_control_encoder.sv \
+        $(RTL)/terc4_encoder.sv \
+        $(RTL)/hdmi_period_scheduler.sv \
+        $(RTL)/hdmi_channel_mux.sv \
+        $(RTL)/infoframe_builder.sv \
+        $(RTL)/hdmi_bch_ecc.sv \
+        $(RTL)/data_island_formatter.sv \
+        $(RTL)/gcp_packet_builder.sv \
+        $(RTL)/acr_packet_builder.sv \
+        $(RTL)/audio_sample_packet_builder.sv \
+        $(RTL)/hdmi_audio_test_src.sv \
+        $(RTL)/hdmi_packet_arbiter.sv \
+        $(RTL)/hdmi_tx_core.sv
+
 .PHONY: all regression report clean \
         bch_ecc terc4_encoder data_island scheduler \
-        acr_packet audio_sample_pkt tx_core_32x10
+        acr_packet audio_sample_pkt tx_core_32x10 audio_scenarios
 
-all: bch_ecc terc4_encoder data_island scheduler acr_packet audio_sample_pkt tx_core_32x10
+all: bch_ecc terc4_encoder data_island scheduler acr_packet audio_sample_pkt \
+     tx_core_32x10 audio_scenarios
 
 $(LOGDIR):
 	mkdir -p $(LOGDIR)
@@ -58,26 +79,24 @@ audio_sample_pkt: $(LOGDIR)
 	$(VSIM) tb_audio_sample_packet_builder | tee $(LOGDIR)/tb_audio_sample_packet_builder.log
 
 tx_core_32x10: $(LOGDIR)
-	$(VLOG) \
-	        $(RTL)/hdmi_pkg.sv \
-	        $(VRTL)/video_pkg.sv \
-	        $(VRTL)/video_timing_generator.sv \
-	        $(RTL)/tmds_video_encoder.sv \
-	        $(RTL)/tmds_control_encoder.sv \
-	        $(RTL)/terc4_encoder.sv \
-	        $(RTL)/hdmi_period_scheduler.sv \
-	        $(RTL)/hdmi_channel_mux.sv \
-	        $(RTL)/infoframe_builder.sv \
-	        $(RTL)/hdmi_bch_ecc.sv \
-	        $(RTL)/data_island_formatter.sv \
-	        $(RTL)/gcp_packet_builder.sv \
-	        $(RTL)/acr_packet_builder.sv \
-	        $(RTL)/audio_sample_packet_builder.sv \
-	        $(RTL)/hdmi_audio_test_src.sv \
-	        $(RTL)/hdmi_packet_arbiter.sv \
-	        $(RTL)/hdmi_tx_core.sv \
-	        tb_hdmi_tx_core_32x10.sv
+	$(VLOG) $(TX_CORE_SRCS) tb_hdmi_tx_core_32x10.sv
 	$(VSIM) tb_hdmi_tx_core_32x10 | tee $(LOGDIR)/tb_hdmi_tx_core_32x10.log
+
+# audio_scenarios: compile once, run vsim 4 times with different -G parameter overrides.
+# Scenarios: ACR-only, AudioIF-only, Sample-only, full (all enabled).
+audio_scenarios: $(LOGDIR)
+	$(VLOG) $(TX_CORE_SRCS) tb_hdmi_tx_core_audio.sv
+	vsim -G ENABLE_ACR_PACKET=1 -G ENABLE_AUDIO_INFOFRAME=0 -G ENABLE_AUDIO_SAMPLE=0 \
+	     -c -do "run -all; quit" tb_hdmi_tx_core_audio \
+	     | tee $(LOGDIR)/tb_audio_acr_only.log
+	vsim -G ENABLE_ACR_PACKET=0 -G ENABLE_AUDIO_INFOFRAME=1 -G ENABLE_AUDIO_SAMPLE=0 \
+	     -c -do "run -all; quit" tb_hdmi_tx_core_audio \
+	     | tee $(LOGDIR)/tb_audio_if_only.log
+	vsim -G ENABLE_ACR_PACKET=0 -G ENABLE_AUDIO_INFOFRAME=0 -G ENABLE_AUDIO_SAMPLE=1 \
+	     -c -do "run -all; quit" tb_hdmi_tx_core_audio \
+	     | tee $(LOGDIR)/tb_audio_sample_only.log
+	vsim -c -do "run -all; quit" tb_hdmi_tx_core_audio \
+	     | tee $(LOGDIR)/tb_audio_full.log
 
 clean:
 	rm -rf work transcript *.log $(LOGDIR)
