@@ -24,8 +24,10 @@ module hdmi_tx_core #(
   parameter bit ENABLE_DATA_ISLAND    = 0,
   parameter bit ENABLE_AVI            = 1,
   parameter bit ENABLE_SPD            = 0,
-  // Debug isolation: gate individual audio packet types (default=1 = enabled).
-  // Set to 0 to disable a specific packet type without changing the audio path.
+  // Debug isolation: gate individual packet types (default=1 = enabled).
+  // Set to 0 to suppress a specific packet type for bring-up diagnostics.
+  parameter bit ENABLE_GCP_PACKET      = 1,
+  parameter bit ENABLE_AVI_PACKET      = 1,
   parameter bit ENABLE_ACR_PACKET      = 1,
   parameter bit ENABLE_AUDIO_INFOFRAME = 1,
   parameter bit ENABLE_AUDIO_SAMPLE    = 1,
@@ -319,7 +321,9 @@ module hdmi_tx_core #(
       .rst_ni          (rst_ni),
       .frame_start_i   (frame_start_r),
       .hb_gcp_i        (hb_gcp),        .pb_gcp_i       (pb_gcp),
+      .valid_gcp_i     (ENABLE_GCP_PACKET      ? 1'b1 : 1'b0),
       .hb_avi_i        (hb_avi),        .pb_avi_i       (pb_avi),
+      .valid_avi_i     (ENABLE_AVI_PACKET      ? 1'b1 : 1'b0),
       .hb_acr_i        (hb_acr),        .pb_acr_i       (pb_acr),
       .valid_acr_i     (ENABLE_ACR_PACKET      ? valid_acr                         : 1'b0),
       .hb_audio_if_i   (hb_audio_if),   .pb_audio_if_i  (pb_audio_if),

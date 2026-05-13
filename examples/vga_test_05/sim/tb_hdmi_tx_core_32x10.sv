@@ -11,11 +11,11 @@ import hdmi_pkg::*;
 // Checks:
 //   1. period_o == VIDEO  ↔  de_r == 1  (bidirectional alignment)
 //   2. DATA_PAYLOAD never overlaps de_r
-//   3. DATA_PAYLOAD length = 32
-//   4. DATA_PREAMBLE length = 8
-//   5. DATA_GB_{LEAD,TRAIL} length = 2
-//   6. VIDEO_PREAMBLE length = 8
-//   7. VIDEO_GB length = 2
+//   3. DATA_PAYLOAD length = 32; ch*_o carries TERC4(di_ch*) cycle-accurately
+//   4. DATA_PREAMBLE length = 8; ch1 == PRE_DATA_CH1; ch2 == ctrl(00)
+//   5. DATA_GB_{LEAD,TRAIL} length = 2; ch1/ch2 == GB_DATA_N; ch0 == TERC4({1,vs,hs,1})
+//   6. VIDEO_PREAMBLE length = 8; ch1 == PRE_VIDEO_CH1; ch2 == ctrl(00)
+//   7. VIDEO_GB length = 2; ch1/ch2 == GB_VIDEO
 //
 // Logs every period transition with cycle count and duration.
 //
@@ -178,6 +178,12 @@ module tb_hdmi_tx_core_32x10;
   wire [3:0] w_di_ch1 = u_dut.gen_data_island.di_ch1;
   wire [3:0] w_di_ch2 = u_dut.gen_data_island.di_ch2;
 
+  // vsync_enc / hsync_enc: 2 cycles after vsync_r in the DUT, already at the
+  // channel_mux input phase. One more register aligns with ch*_o output (w_vsync_ch).
+  wire w_vsync_enc = u_dut.vsync_enc;
+  wire w_hsync_enc = u_dut.hsync_enc;
+  logic w_vsync_ch, w_hsync_ch;
+
   // Pipeline-aligned de_r delays for pipeline-stage assertions.
   // period_o is registered from state_next, so it is 1 cycle behind de_r:
   //   period_o VIDEO = de_r_d1 VIDEO range  (both D+1..D+H_ACTIVE)
@@ -195,21 +201,32 @@ module tb_hdmi_tx_core_32x10;
 
   always_ff @(posedge pix_clk) begin
     if (!rst_n) begin
-      w_de_r_d1  <= 1'b0;
-      w_de_r_d2  <= 1'b0;
+      w_de_r_d1   <= 1'b0;
+      w_de_r_d2   <= 1'b0;
       w_period_d2 <= HDMI_PERIOD_CONTROL;
+      w_vsync_ch  <= 1'b0;
+      w_hsync_ch  <= 1'b0;
       di_ch0_d1  <= '0; di_ch0_d2 <= '0; di_ch0_d3 <= '0;
       di_ch1_d1  <= '0; di_ch1_d2 <= '0; di_ch1_d3 <= '0;
       di_ch2_d1  <= '0; di_ch2_d2 <= '0; di_ch2_d3 <= '0;
     end else begin
-      w_de_r_d1  <= w_de_r;
-      w_de_r_d2  <= w_de_r_d1;
+      w_de_r_d1   <= w_de_r;
+      w_de_r_d2   <= w_de_r_d1;
       w_period_d2 <= w_period_d1;
+      w_vsync_ch  <= w_vsync_enc;
+      w_hsync_ch  <= w_hsync_enc;
       di_ch0_d1  <= w_di_ch0; di_ch0_d2 <= di_ch0_d1; di_ch0_d3 <= di_ch0_d2;
       di_ch1_d1  <= w_di_ch1; di_ch1_d2 <= di_ch1_d1; di_ch1_d3 <= di_ch1_d2;
       di_ch2_d1  <= w_di_ch2; di_ch2_d2 <= di_ch2_d1; di_ch2_d3 <= di_ch2_d2;
     end
   end
+
+  // ── Fixed TMDS symbols — must match hdmi_channel_mux.sv exactly ──────────
+  localparam tmds_word_t CTRL_00       = 10'b1101010100;  // ctrl(2'b00)
+  localparam tmds_word_t PRE_VIDEO_CH1 = 10'b0010101011;  // ctrl(2'b01) — video preamble ch1
+  localparam tmds_word_t PRE_DATA_CH1  = 10'b1010101011;  // ctrl(2'b11) — data preamble ch1
+  localparam tmds_word_t GB_VIDEO      = 10'b1011001100;  // TERC4(0x8) — video guard ch1/ch2
+  localparam tmds_word_t GB_DATA_N     = 10'b0100110011;  // fixed — data island guard ch1/ch2
 
   // TERC4 reference LUT — must match terc4_encoder.sv exactly.
   function automatic tmds_word_t terc4_ref(input logic [3:0] n);
@@ -333,6 +350,73 @@ module tb_hdmi_tx_core_32x10;
         if (ch2 !== terc4_ref(di_ch2_d3)) begin
           $error("ASSERT: ch2 payload mismatch at cy=%0d: got=%010b exp=%010b (nibble=0x%0h)",
                  sim_cycle, ch2, terc4_ref(di_ch2_d3), di_ch2_d3);
+          assert_fail_count = assert_fail_count + 1;
+        end
+      end
+
+      // ── DATA_PREAMBLE ch1/ch2 symbols ───────────────────────────────────
+      if (w_period_d2 == HDMI_PERIOD_DATA_PREAMBLE) begin
+        if (ch1 !== PRE_DATA_CH1) begin
+          $error("ASSERT: DATA_PREAMBLE ch1=%010b exp=%010b at cy=%0d",
+                 ch1, PRE_DATA_CH1, sim_cycle);
+          assert_fail_count = assert_fail_count + 1;
+        end
+        if (ch2 !== CTRL_00) begin
+          $error("ASSERT: DATA_PREAMBLE ch2=%010b exp=%010b at cy=%0d",
+                 ch2, CTRL_00, sim_cycle);
+          assert_fail_count = assert_fail_count + 1;
+        end
+      end
+
+      // ── DATA guard band ch0/ch1/ch2 symbols ─────────────────────────────
+      if (w_period_d2 == HDMI_PERIOD_DATA_GB_LEAD ||
+          w_period_d2 == HDMI_PERIOD_DATA_GB_TRAIL) begin
+        if (ch1 !== GB_DATA_N) begin
+          $error("ASSERT: DATA_GB ch1=%010b exp=%010b at cy=%0d",
+                 ch1, GB_DATA_N, sim_cycle);
+          assert_fail_count = assert_fail_count + 1;
+        end
+        if (ch2 !== GB_DATA_N) begin
+          $error("ASSERT: DATA_GB ch2=%010b exp=%010b at cy=%0d",
+                 ch2, GB_DATA_N, sim_cycle);
+          assert_fail_count = assert_fail_count + 1;
+        end
+        // ch0 = TERC4({1, vsync, hsync, 1}) — vsync/hsync pipeline-aligned to ch*_o
+        begin
+          automatic tmds_word_t exp_ch0;
+          exp_ch0 = terc4_ref({1'b1, w_vsync_ch, w_hsync_ch, 1'b1});
+          if (ch0 !== exp_ch0) begin
+            $error("ASSERT: DATA_GB ch0=%010b exp=%010b (vs=%b hs=%b) at cy=%0d",
+                   ch0, exp_ch0, w_vsync_ch, w_hsync_ch, sim_cycle);
+            assert_fail_count = assert_fail_count + 1;
+          end
+        end
+      end
+
+      // ── VIDEO_PREAMBLE ch1/ch2 symbols ──────────────────────────────────
+      if (w_period_d2 == HDMI_PERIOD_VIDEO_PREAMBLE) begin
+        if (ch1 !== PRE_VIDEO_CH1) begin
+          $error("ASSERT: VIDEO_PREAMBLE ch1=%010b exp=%010b at cy=%0d",
+                 ch1, PRE_VIDEO_CH1, sim_cycle);
+          assert_fail_count = assert_fail_count + 1;
+        end
+        if (ch2 !== CTRL_00) begin
+          $error("ASSERT: VIDEO_PREAMBLE ch2=%010b exp=%010b at cy=%0d",
+                 ch2, CTRL_00, sim_cycle);
+          assert_fail_count = assert_fail_count + 1;
+        end
+      end
+
+      // ── VIDEO_GB ch1/ch2 symbols ─────────────────────────────────────────
+      if (w_period_d2 == HDMI_PERIOD_VIDEO_GB) begin
+        if (ch1 !== GB_VIDEO) begin
+          $error("ASSERT: VIDEO_GB ch1=%010b exp=%010b at cy=%0d",
+                 ch1, GB_VIDEO, sim_cycle);
+          assert_fail_count = assert_fail_count + 1;
+        end
+        if (ch2 !== GB_VIDEO) begin
+          $error("ASSERT: VIDEO_GB ch2=%010b exp=%010b at cy=%0d",
+                 ch2, GB_VIDEO, sim_cycle);
           assert_fail_count = assert_fail_count + 1;
         end
       end

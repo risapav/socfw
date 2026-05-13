@@ -23,9 +23,11 @@ module hdmi_packet_arbiter (
   // Packet sources (combinational)
   input  logic [7:0] hb_gcp_i [0:2],
   input  logic [7:0] pb_gcp_i [0:27],
+  input  logic       valid_gcp_i,   // 0 = skip GCP this frame (debug)
 
   input  logic [7:0] hb_avi_i [0:2],
   input  logic [7:0] pb_avi_i [0:27],
+  input  logic       valid_avi_i,   // 0 = skip AVI this frame (debug)
 
   input  logic [7:0] hb_acr_i [0:2],
   input  logic [7:0] pb_acr_i [0:27],
@@ -73,12 +75,14 @@ module hdmi_packet_arbiter (
       r_audio_ready <= 1'b0;
     else if (!r_audio_ready) begin
       // Set after the highest-priority per-frame state that was enabled
-      // completes (AudioIF → ACR-only → AVI-only fallback)
+      // completes (AudioIF → ACR-only → AVI-only fallback).
+      // Also triggers when AVI is skipped (!valid_avi_i) with no audio path.
       if (r_state == ARB_AUDIO_IF && packet_start_i)
         r_audio_ready <= 1'b1;
       else if (r_state == ARB_ACR && packet_start_i && !valid_audio_if_i)
         r_audio_ready <= 1'b1;
-      else if (r_state == ARB_AVI && packet_start_i && !valid_acr_i && !valid_audio_if_i)
+      else if (r_state == ARB_AVI && (packet_start_i || !valid_avi_i) &&
+               !valid_acr_i && !valid_audio_if_i)
         r_audio_ready <= 1'b1;
     end
   end
@@ -98,12 +102,14 @@ module hdmi_packet_arbiter (
         end
 
         ARB_GCP: begin
-          if (packet_start_i)
+          // Skip immediately when GCP is disabled; otherwise wait for acceptance.
+          if (!valid_gcp_i || packet_start_i)
             r_state <= ARB_AVI;
         end
 
         ARB_AVI: begin
-          if (packet_start_i) begin
+          // Skip immediately when AVI is disabled; otherwise wait for acceptance.
+          if (!valid_avi_i || packet_start_i) begin
             if      (valid_acr_i)      r_state <= ARB_ACR;
             else if (valid_audio_if_i) r_state <= ARB_AUDIO_IF;
             else                       r_state <= ARB_IDLE;
@@ -146,12 +152,12 @@ module hdmi_packet_arbiter (
       ARB_GCP: begin
         hb_o           = hb_gcp_i;
         pb_o           = pb_gcp_i;
-        packet_valid_o = 1'b1;
+        packet_valid_o = valid_gcp_i;
       end
       ARB_AVI: begin
         hb_o           = hb_avi_i;
         pb_o           = pb_avi_i;
-        packet_valid_o = 1'b1;
+        packet_valid_o = valid_avi_i;
       end
       ARB_ACR: begin
         hb_o           = hb_acr_i;

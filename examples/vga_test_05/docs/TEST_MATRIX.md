@@ -3,7 +3,7 @@
 Hardware test results for `vga_test_05`. Run each configuration in order —
 earlier configurations confirm basic functionality before enabling more features.
 
-Board: AC608 (Cyclone IV), 800×600 @ 60 Hz (40 MHz pixel clock), HDMI monitor.
+Board: QMTech EP4CE55F23C8 (Cyclone IV), 800×600 @ 60 Hz (40 MHz pixel clock), HDMI monitor.
 
 Fill in the session header below before recording results. Monitor model matters —
 one monitor may tolerate a malformed data island that causes another to sleep.
@@ -13,7 +13,7 @@ Git commit  : d39ff93  (last HDMI RTL commit; run git rev-parse --short HEAD for
 RTL hash    : d39ff93
 Sim log     : sim/logs/regression_full.log  (make report PASS, 11/11 scenarios)
 Date        : 2026-05-13
-Monitor     : <fill in before HW test>
+Monitor     : SAMSUNG LS29E790CNS/EN
 ```
 
 ---
@@ -54,13 +54,31 @@ Parameters (`project.yaml` overrides or `soc_top.sv` generics):
 
 | #  | DATA | AUDIO | ACR | IF | SAMPLE | Expected                    | Result | Notes |
 |----|------|-------|-----|----|--------|-----------------------------|--------|-------|
-| 1  | 0    | 0     | —   | —  | —      | Stable image, no audio      |        |       |
+| 1  | 0    | 0     | —   | —  | —      | Stable image, no audio      | PASS   |       |
 
 ### Data island only
 
 | #  | DATA | AUDIO | ACR | IF | SAMPLE | Expected                    | Result | Notes |
 |----|------|-------|-----|----|--------|-----------------------------|--------|-------|
-| 2  | 1    | 0     | —   | —  | —      | Stable image, GCP+AVI every frame, no audio |  |  |
+| 2  | 1    | 0     | —   | —  | —      | Stable image, GCP+AVI every frame, no audio | FAIL | no signal immediately after enabling DATA=1/AUDIO=0; DVI baseline #1 PASS same bitstream/monitor |
+
+### Data island debug sub-matrix
+
+Run before proceeding to audio tests. Add `ENABLE_GCP_PACKET` / `ENABLE_AVI_PACKET`
+overrides in `project.yaml` (both default to 1 when `ENABLE_DATA_ISLAND=1`).
+
+| #  | DATA | AUDIO | GCP | AVI | Expected                          | Result | Notes |
+|----|------|-------|-----|-----|-----------------------------------|--------|-------|
+| 2A | 1    | 0     | 0   | 0   | Stable image; no packets inserted |        |       |
+| 2B | 1    | 0     | 1   | 0   | Stable image; GCP only            |        |       |
+| 2C | 1    | 0     | 0   | 1   | Stable image; AVI only            |        |       |
+| 2D | 1    | 0     | 1   | 1   | Stable image; GCP+AVI (= test #2) | FAIL   | no signal |
+
+**Interpretation:**
+- 2A FAIL → data-island timing/guard/preamble/mux corrupt video, not packet content
+- 2A PASS, 2B FAIL → GCP packet layout or BCH/ECC error
+- 2A PASS, 2C FAIL → AVI InfoFrame checksum or BCH/ECC error
+- 2B PASS, 2C PASS, 2D FAIL → multi-packet sequencing or arbiter timing issue
 
 ### Audio packets — isolation matrix
 
