@@ -57,6 +57,9 @@ parameters:
   - name: GCP_FRAME_PERIOD
     type: int
     default: 1
+  - name: VBLANK_ONLY
+    type: bit
+    default: 0
 
 ports:
   - name: clk_i

@@ -131,10 +131,11 @@ modules:
       ENABLE_ACR_PACKET: 0
       ENABLE_AUDIO_INFOFRAME: 0
       ENABLE_AUDIO_SAMPLE: 0
-      # 2C: AVI only (GCP=0) -- distinguishes common packet path vs GCP-specific
+      # 2C-vblank: AVI only, data islands restricted to vblank only
       ENABLE_GCP_PACKET: 0
       ENABLE_AVI_PACKET: 1
       GCP_FRAME_PERIOD: 1
+      VBLANK_ONLY: 1
     bind:
       ports:
         hdmi_p_o:

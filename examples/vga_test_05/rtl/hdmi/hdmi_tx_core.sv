@@ -36,6 +36,9 @@ module hdmi_tx_core #(
   parameter bit ENABLE_AUDIO_SAMPLE    = 1,
   // GCP send rate: 1=every frame (normal), N>1=once per N frames (2B-rare debug).
   parameter int GCP_FRAME_PERIOD      = 1,
+  // Restrict data islands to vblank only (debug: some monitors reject
+  // data islands sent during active-line hblank).
+  parameter bit VBLANK_ONLY           = 0,
   parameter int PIXEL_CLK_HZ         = 40_000_000,
   parameter int AUDIO_SAMPLE_RATE    = 48_000
 )(
@@ -132,7 +135,8 @@ module hdmi_tx_core #(
   logic         packet_start, packet_pop;
 
   hdmi_period_scheduler #(
-    .ENABLE_DATA_ISLAND(ENABLE_DATA_ISLAND)
+    .ENABLE_DATA_ISLAND(ENABLE_DATA_ISLAND),
+    .VBLANK_ONLY       (VBLANK_ONLY)
   ) u_sched (
     .clk_i             (pix_clk_i),
     .rst_ni            (rst_ni),

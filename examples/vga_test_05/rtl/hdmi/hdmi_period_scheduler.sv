@@ -22,7 +22,10 @@ import hdmi_pkg::*;
 //   trailing GB  : 2 symbols
 //   total        : 44 symbols
 module hdmi_period_scheduler #(
-  parameter bit ENABLE_DATA_ISLAND = 1
+  parameter bit ENABLE_DATA_ISLAND = 1,
+  // Restrict data islands to vertical blanking only (debug: some monitors
+  // reject data islands sent during active-line hblank periods).
+  parameter bit VBLANK_ONLY        = 0
 )(
   input  logic clk_i,
   input  logic rst_ni,
@@ -143,6 +146,7 @@ module hdmi_period_scheduler #(
             state_next = ST_VIDEO;
           end else if (hblank_i && packet_pending_i &&
                        r_ctrl_cnt >= 5'(MIN_CTRL_PRE_ISLAND) &&
+                       (!VBLANK_ONLY || vblank_i) &&
                        blank_remaining_i >= 16'(ISLAND_TOTAL + VIDEO_TRIG)) begin
             // Start data island only if enough room remains for island + video preamble
             // and spec-required minimum CONTROL period has elapsed.

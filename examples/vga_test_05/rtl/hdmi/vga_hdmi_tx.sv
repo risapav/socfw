@@ -35,7 +35,9 @@ module vga_hdmi_tx #(
   parameter bit         ENABLE_AUDIO_INFOFRAME  = 1,
   parameter bit         ENABLE_AUDIO_SAMPLE     = 1,
   // GCP rate: 1=every frame (normal), N>1=once per N frames (2B-rare debug).
-  parameter int         GCP_FRAME_PERIOD        = 1
+  parameter int         GCP_FRAME_PERIOD        = 1,
+  // Restrict data islands to vblank only (debug).
+  parameter bit         VBLANK_ONLY             = 0
 )(
   input  logic       clk_i,    // pixel clock
   input  logic       clk_x_i,  // 5× pixel clock (DDR serializer)
@@ -77,6 +79,7 @@ module vga_hdmi_tx #(
     .ENABLE_AUDIO_INFOFRAME(ENABLE_AUDIO_INFOFRAME),
     .ENABLE_AUDIO_SAMPLE   (ENABLE_AUDIO_SAMPLE),
     .GCP_FRAME_PERIOD      (GCP_FRAME_PERIOD),
+    .VBLANK_ONLY           (VBLANK_ONLY),
     .PIXEL_CLK_HZ          (40_000_000),
     .AUDIO_SAMPLE_RATE     (48_000)
   ) u_core (
