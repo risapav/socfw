@@ -109,6 +109,10 @@ module hdmi_period_scheduler #(
     // VIDEO_TRIG = VIDEO_PRE_TOTAL = 10.  See pipeline trace above.
     localparam int VIDEO_TRIG      = VIDEO_PRE_TOTAL;  // 10
 
+    // HDMI spec §5.2.3: each Data Island Preamble must be preceded by at least
+    // 8 TMDS clock cycles of Control Period.  Use 12 for margin.
+    localparam int MIN_CTRL_PRE_ISLAND = 12;
+
     typedef enum logic [2:0] {
       ST_CONTROL,
       ST_VIDEO_PREAMBLE,
@@ -122,6 +126,7 @@ module hdmi_period_scheduler #(
 
     sched_state_t state, state_next;
     logic [5:0]   sym_cnt, sym_cnt_next;
+    logic [4:0]   r_ctrl_cnt;
 
     always_comb begin
       state_next    = state;
@@ -137,8 +142,10 @@ module hdmi_period_scheduler #(
             // but handle gracefully — e.g. first frame after reset)
             state_next = ST_VIDEO;
           end else if (hblank_i && packet_pending_i &&
+                       r_ctrl_cnt >= 5'(MIN_CTRL_PRE_ISLAND) &&
                        blank_remaining_i >= 16'(ISLAND_TOTAL + VIDEO_TRIG)) begin
             // Start data island only if enough room remains for island + video preamble
+            // and spec-required minimum CONTROL period has elapsed.
             state_next     = ST_DATA_PREAMBLE;
             sym_cnt_next   = ($bits(sym_cnt_next))'(PREAMBLE_LEN - 1);
             packet_start_o = 1'b1;
@@ -218,16 +225,26 @@ module hdmi_period_scheduler #(
             sym_cnt_next = ($bits(sym_cnt_next))'(sym_cnt - 1);
         end
 
+        default: begin
+          state_next = ST_CONTROL;
+        end
+
       endcase
     end
 
     always_ff @(posedge clk_i) begin
       if (!rst_ni) begin
-        state   <= ST_CONTROL;
-        sym_cnt <= '0;
+        state      <= ST_CONTROL;
+        sym_cnt    <= '0;
+        r_ctrl_cnt <= '0;
       end else begin
         state   <= state_next;
         sym_cnt <= sym_cnt_next;
+        if (state == ST_CONTROL)
+          r_ctrl_cnt <= (r_ctrl_cnt < 5'(MIN_CTRL_PRE_ISLAND)) ?
+                        r_ctrl_cnt + 1'b1 : r_ctrl_cnt;
+        else
+          r_ctrl_cnt <= '0;
       end
     end
 

@@ -30,14 +30,14 @@ module tb_hdmi_tx_core_32x10;
   parameter bit ENABLE_AVI_PACKET = 1;
 
   // ── Tiny timing parameters ────────────────────────────────────────────────
-  // H_BLANK = H_FP+H_SYNC+H_BP = 8+8+48 = 64 (>= ISLAND_TOTAL+VIDEO_TRIG=54)
-  // Chose H_BP=48 so there are ≥ 8 CONTROL cycles between data island
-  // trailing guard and VIDEO_PREAMBLE (64-44-10=10 cycles of CONTROL). ✓
+  // H_BLANK = H_FP+H_SYNC+H_BP = 8+8+64 = 80
+  // Needs: MIN_CTRL_PRE_ISLAND(12) + ISLAND_TOTAL(44) + VIDEO_TRIG(10) = 66 <= 80 ✓
+  // CONTROL cycles after island: 80-12-44-10 = 14 ✓
   localparam int H_ACTIVE = 32;
   localparam int H_FP     = 8;
   localparam int H_SYNC   = 8;
-  localparam int H_BP     = 48;
-  localparam int H_TOTAL  = H_ACTIVE + H_FP + H_SYNC + H_BP;  // 96
+  localparam int H_BP     = 64;
+  localparam int H_TOTAL  = H_ACTIVE + H_FP + H_SYNC + H_BP;  // 112
 
   localparam int V_ACTIVE = 10;
   localparam int V_FP     = 2;
@@ -231,7 +231,13 @@ module tb_hdmi_tx_core_32x10;
 
   // Packet arbiter output — to count packet types as they are scheduled
   wire [7:0] w_arb_hb0  = u_dut.gen_data_island.arb_hb[0];
+  wire [7:0] w_arb_hb1  = u_dut.gen_data_island.arb_hb[1];
+  wire [7:0] w_arb_hb2  = u_dut.gen_data_island.arb_hb[2];
+  wire [7:0] w_arb_pb0  = u_dut.gen_data_island.arb_pb[0];
   wire       w_pkt_start = u_dut.packet_start;
+  // Formatter BCH parity wires (combinational, valid at packet_start cycle)
+  wire [7:0] w_fmt_bch_hdr = u_dut.gen_data_island.u_formatter.bch_hdr;
+  wire [7:0] w_fmt_bch_sp0 = u_dut.gen_data_island.u_formatter.bch_sp[0];
 
   // ── Fixed TMDS symbols — must match hdmi_channel_mux.sv exactly ──────────
   localparam tmds_word_t CTRL_00       = 10'b1101010100;  // ctrl(2'b00)
@@ -448,9 +454,37 @@ module tb_hdmi_tx_core_32x10;
         end
       end
 
-      // ── Packet type counting (HB0 sampled at packet_start pulse) ─────────
+      // ── Packet content + BCH checks at packet_start ──────────────────────
       if (w_pkt_start) begin
-        if (w_arb_hb0 == 8'h00) cnt_gcp = cnt_gcp + 1;
+        if (w_arb_hb0 == 8'h00) begin
+          // GCP packet: HB={00,00,00}, PB0=00
+          // BCH_HDR for all-zero 3-byte header (init=0xFF) = 0x0E
+          // BCH_SP0 for all-zero 7-byte subpacket (init=0xFF) = 0xF5
+          cnt_gcp = cnt_gcp + 1;
+          $display("  GCP at cy=%0d: HB={%02X %02X %02X} PB0=%02X BCH_HDR=%02X BCH_SP0=%02X",
+                   sim_cycle, w_arb_hb0, w_arb_hb1, w_arb_hb2, w_arb_pb0,
+                   w_fmt_bch_hdr, w_fmt_bch_sp0);
+          if (w_arb_hb1 !== 8'h00) begin
+            $error("ASSERT GCP: HB1=0x%02X exp 0x00 at cy=%0d", w_arb_hb1, sim_cycle);
+            assert_fail_count = assert_fail_count + 1;
+          end
+          if (w_arb_hb2 !== 8'h00) begin
+            $error("ASSERT GCP: HB2=0x%02X exp 0x00 at cy=%0d", w_arb_hb2, sim_cycle);
+            assert_fail_count = assert_fail_count + 1;
+          end
+          if (w_arb_pb0 !== 8'h00) begin
+            $error("ASSERT GCP: PB0=0x%02X exp 0x00 at cy=%0d", w_arb_pb0, sim_cycle);
+            assert_fail_count = assert_fail_count + 1;
+          end
+          if (w_fmt_bch_hdr !== 8'h0E) begin
+            $error("ASSERT GCP: BCH_HDR=0x%02X exp 0x0E at cy=%0d", w_fmt_bch_hdr, sim_cycle);
+            assert_fail_count = assert_fail_count + 1;
+          end
+          if (w_fmt_bch_sp0 !== 8'hF5) begin
+            $error("ASSERT GCP: BCH_SP0=0x%02X exp 0xF5 at cy=%0d", w_fmt_bch_sp0, sim_cycle);
+            assert_fail_count = assert_fail_count + 1;
+          end
+        end
         if (w_arb_hb0 == 8'h82) cnt_avi = cnt_avi + 1;
       end
 

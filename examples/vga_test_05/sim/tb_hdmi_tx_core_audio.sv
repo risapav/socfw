@@ -28,12 +28,13 @@ module tb_hdmi_tx_core_audio #(
 );
 
   // ── 32x10 timing ────────────────────────────────────────────────────────
-  // H_BLANK = 64 >= ISLAND_TOTAL(44) + VIDEO_TRIG(10) = 54 -> one island/line.
+  // H_BLANK = H_FP+H_SYNC+H_BP = 8+8+64 = 80
+  // Needs: MIN_CTRL_PRE_ISLAND(12) + ISLAND_TOTAL(44) + VIDEO_TRIG(10) = 66 <= 80 ✓
   localparam int H_ACTIVE = 32;
   localparam int H_FP     = 8;
   localparam int H_SYNC   = 8;
-  localparam int H_BP     = 48;
-  localparam int H_TOTAL  = H_ACTIVE + H_FP + H_SYNC + H_BP;  // 96
+  localparam int H_BP     = 64;
+  localparam int H_TOTAL  = H_ACTIVE + H_FP + H_SYNC + H_BP;  // 112
 
   localparam int V_ACTIVE = 10;
   localparam int V_FP     = 2;
