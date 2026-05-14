@@ -128,12 +128,13 @@ modules:
     params:
       ENABLE_DATA_ISLAND: 1
       ENABLE_AUDIO: 0
-      # Full audio path: ACR byte order fixed + audio-ready guard added
       ENABLE_ACR_PACKET: 0
       ENABLE_AUDIO_INFOFRAME: 0
       ENABLE_AUDIO_SAMPLE: 0
-      ENABLE_GCP_PACKET: 1
-      ENABLE_AVI_PACKET: 0
+      # 2C: AVI only (GCP=0) -- distinguishes common packet path vs GCP-specific
+      ENABLE_GCP_PACKET: 0
+      ENABLE_AVI_PACKET: 1
+      GCP_FRAME_PERIOD: 1
     bind:
       ports:
         hdmi_p_o:

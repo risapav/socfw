@@ -39,6 +39,12 @@ parameters:
   - name: ACR_CTS
     type: int
     default: 40000
+  - name: ENABLE_GCP_PACKET
+    type: bit
+    default: 1
+  - name: ENABLE_AVI_PACKET
+    type: bit
+    default: 1
   - name: ENABLE_ACR_PACKET
     type: bit
     default: 1
@@ -47,6 +53,9 @@ parameters:
     default: 1
   - name: ENABLE_AUDIO_SAMPLE
     type: bit
+    default: 1
+  - name: GCP_FRAME_PERIOD
+    type: int
     default: 1
 
 ports:
@@ -101,21 +110,21 @@ artifacts:
     - ../cores/ddio_out/ddio_out.qip
     - ../rtl/hdmi/hdmi_pkg.sv
     - ../rtl/video/video_pkg.sv
-    - ../rtl/hdmi/tmds_video_encoder.sv
-    - ../rtl/hdmi/tmds_control_encoder.sv
-    - ../rtl/hdmi/terc4_encoder.sv
-    - ../rtl/hdmi/hdmi_period_scheduler.sv
-    - ../rtl/hdmi/hdmi_channel_mux.sv
-    - ../rtl/hdmi/infoframe_builder.sv
-    - ../rtl/hdmi/hdmi_bch_ecc.sv
-    - ../rtl/hdmi/data_island_formatter.sv
-    - ../rtl/hdmi/gcp_packet_builder.sv
     - ../rtl/hdmi/acr_packet_builder.sv
     - ../rtl/hdmi/audio_sample_packet_builder.sv
+    - ../rtl/hdmi/data_island_formatter.sv
+    - ../rtl/hdmi/gcp_packet_builder.sv
     - ../rtl/hdmi/hdmi_audio_test_src.sv
+    - ../rtl/hdmi/hdmi_bch_ecc.sv
+    - ../rtl/hdmi/hdmi_channel_mux.sv
     - ../rtl/hdmi/hdmi_packet_arbiter.sv
+    - ../rtl/hdmi/hdmi_period_scheduler.sv
     - ../rtl/hdmi/hdmi_tx_core.sv
+    - ../rtl/hdmi/infoframe_builder.sv
+    - ../rtl/hdmi/terc4_encoder.sv
+    - ../rtl/hdmi/tmds_control_encoder.sv
     - ../rtl/hdmi/tmds_phy_ddr_aligned.sv
+    - ../rtl/hdmi/tmds_video_encoder.sv
     - ../rtl/hdmi/vga_hdmi_tx.sv
   simulation: []
   metadata: []

@@ -1,3 +1,6 @@
+`ifndef HDMI_TX_CORE_SV
+`define HDMI_TX_CORE_SV
+
 `default_nettype none
 
 import hdmi_pkg::*;
@@ -31,6 +34,8 @@ module hdmi_tx_core #(
   parameter bit ENABLE_ACR_PACKET      = 1,
   parameter bit ENABLE_AUDIO_INFOFRAME = 1,
   parameter bit ENABLE_AUDIO_SAMPLE    = 1,
+  // GCP send rate: 1=every frame (normal), N>1=once per N frames (2B-rare debug).
+  parameter int GCP_FRAME_PERIOD      = 1,
   parameter int PIXEL_CLK_HZ         = 40_000_000,
   parameter int AUDIO_SAMPLE_RATE    = 48_000
 )(
@@ -49,7 +54,7 @@ module hdmi_tx_core #(
   input  logic        hblank_i,
   input  logic        vblank_i,
   input  logic        frame_start_i,
-  input  logic        line_start_i,      // one-cycle pulse at start of each line
+  input  logic        line_start_i,      // one-cycle pulse at start of each line, reserved
   input  logic [15:0] blank_remaining_i,
 
   // InfoFrame configuration (static or quasi-static)
@@ -214,6 +219,30 @@ module hdmi_tx_core #(
       .pb_o          (pb_gcp)
     );
 
+    // ── GCP rate gate: allow GCP every GCP_FRAME_PERIOD frames ───────────
+    // r_gcp_allow is set at frame_start and stable for the whole frame so
+    // the arbiter can sample it any time during blanking.
+    logic [7:0] r_gcp_frame_cnt;
+    logic       r_gcp_allow;
+
+    always_ff @(posedge pix_clk_i) begin
+      if (!rst_ni) begin
+        r_gcp_frame_cnt <= '0;
+        r_gcp_allow     <= 1'b1;
+      end else if (frame_start_r) begin
+        if (r_gcp_frame_cnt >= 8'(GCP_FRAME_PERIOD - 1)) begin
+          r_gcp_frame_cnt <= '0;
+          r_gcp_allow     <= 1'b1;
+        end else begin
+          r_gcp_frame_cnt <= r_gcp_frame_cnt + 1'b1;
+          r_gcp_allow     <= 1'b0;
+        end
+      end
+    end
+
+    wire w_gcp_valid = ENABLE_GCP_PACKET ?
+                       ((GCP_FRAME_PERIOD <= 1) ? 1'b1 : r_gcp_allow) : 1'b0;
+
     // ── AVI InfoFrame builder (combinational) ─────────────────────────────
     logic [7:0] hb_avi [0:2];
     logic [7:0] pl_avi [0:31];
@@ -321,7 +350,7 @@ module hdmi_tx_core #(
       .rst_ni          (rst_ni),
       .frame_start_i   (frame_start_r),
       .hb_gcp_i        (hb_gcp),        .pb_gcp_i       (pb_gcp),
-      .valid_gcp_i     (ENABLE_GCP_PACKET      ? 1'b1 : 1'b0),
+      .valid_gcp_i     (w_gcp_valid),
       .hb_avi_i        (hb_avi),        .pb_avi_i       (pb_avi),
       .valid_avi_i     (ENABLE_AVI_PACKET      ? 1'b1 : 1'b0),
       .hb_acr_i        (hb_acr),        .pb_acr_i       (pb_acr),
@@ -395,3 +424,5 @@ module hdmi_tx_core #(
   );
 
 endmodule
+
+`endif // HDMI_TX_CORE_SV

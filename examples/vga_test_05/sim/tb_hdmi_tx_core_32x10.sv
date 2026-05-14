@@ -456,6 +456,9 @@ module tb_hdmi_tx_core_32x10;
 
       // ── Packet content + BCH checks at packet_start ──────────────────────
       if (w_pkt_start) begin
+        $display("PKT_START cy=%0d col=%0d row=%0d blank_rem=%0d vblank=%0b hb=%02X %02X %02X",
+                 sim_cycle, tb_col, tb_row, vtg_blank_remaining, vtg_vblank,
+                 w_arb_hb0, w_arb_hb1, w_arb_hb2);
         if (w_arb_hb0 == 8'h00) begin
           // GCP packet: HB={00,00,00}, PB0=00
           // BCH_HDR for all-zero 3-byte header (init=0xFF) = 0x0E
