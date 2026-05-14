@@ -16,12 +16,18 @@ import hdmi_pkg::*;
 //   5. DATA_GB_{LEAD,TRAIL} length = 2; ch1/ch2 == GB_DATA_N; ch0 == TERC4({1,vs,hs,1})
 //   6. VIDEO_PREAMBLE length = 8; ch1 == PRE_VIDEO_CH1; ch2 == ctrl(00)
 //   7. VIDEO_GB length = 2; ch1/ch2 == GB_VIDEO
+//   8. 2A: no data-island periods when GCP=0 AND AVI=0
+//   9. GCP/AVI packet counts match ENABLE_GCP_PACKET / ENABLE_AVI_PACKET
 //
 // Logs every period transition with cycle count and duration.
 //
-// Run:
-//   make tx_core_32x10
+// Override ENABLE_GCP_PACKET / ENABLE_AVI_PACKET via -G for isolation scenarios:
+//   make di_isolation   (runs 2A/2B/2C/2D in sequence)
 module tb_hdmi_tx_core_32x10;
+
+  // ── Packet isolation parameters (overridable with vsim -G) ───────────────
+  parameter bit ENABLE_GCP_PACKET = 1;
+  parameter bit ENABLE_AVI_PACKET = 1;
 
   // ── Tiny timing parameters ────────────────────────────────────────────────
   // H_BLANK = H_FP+H_SYNC+H_BP = 8+8+48 = 64 (>= ISLAND_TOTAL+VIDEO_TRIG=54)
@@ -135,6 +141,8 @@ module tb_hdmi_tx_core_32x10;
 
   hdmi_tx_core #(
     .ENABLE_DATA_ISLAND    (1),
+    .ENABLE_GCP_PACKET     (ENABLE_GCP_PACKET),
+    .ENABLE_AVI_PACKET     (ENABLE_AVI_PACKET),
     .ENABLE_ACR_PACKET     (0),
     .ENABLE_AUDIO_INFOFRAME(0),
     .ENABLE_AUDIO_SAMPLE   (0),
@@ -221,6 +229,10 @@ module tb_hdmi_tx_core_32x10;
     end
   end
 
+  // Packet arbiter output — to count packet types as they are scheduled
+  wire [7:0] w_arb_hb0  = u_dut.gen_data_island.arb_hb[0];
+  wire       w_pkt_start = u_dut.packet_start;
+
   // ── Fixed TMDS symbols — must match hdmi_channel_mux.sv exactly ──────────
   localparam tmds_word_t CTRL_00       = 10'b1101010100;  // ctrl(2'b00)
   localparam tmds_word_t PRE_VIDEO_CH1 = 10'b0010101011;  // ctrl(2'b01) — video preamble ch1
@@ -291,11 +303,14 @@ module tb_hdmi_tx_core_32x10;
 
   // ── All assertions and period-length checks — single always block ─────────
   int assert_fail_count;
+  int cnt_gcp, cnt_avi;
   int data_payload_cnt, data_pre_cnt, data_gb_lead_cnt, data_gb_trail_cnt;
   int video_gb_cnt, video_pre_cnt;
 
   always @(posedge pix_clk) begin
     if (!rst_n) begin
+      cnt_gcp           = 0;
+      cnt_avi           = 0;
       data_payload_cnt  = 0;
       data_pre_cnt      = 0;
       data_gb_lead_cnt  = 0;
@@ -421,6 +436,24 @@ module tb_hdmi_tx_core_32x10;
         end
       end
 
+      // ── 2A: no data-island periods when both packets disabled ────────────
+      if (!ENABLE_GCP_PACKET && !ENABLE_AVI_PACKET) begin
+        if (w_period == HDMI_PERIOD_DATA_PREAMBLE ||
+            w_period == HDMI_PERIOD_DATA_GB_LEAD  ||
+            w_period == HDMI_PERIOD_DATA_PAYLOAD  ||
+            w_period == HDMI_PERIOD_DATA_GB_TRAIL) begin
+          $error("ASSERT 2A: data period %s with GCP=0 AVI=0 at cy=%0d",
+                 period_name(w_period), sim_cycle);
+          assert_fail_count = assert_fail_count + 1;
+        end
+      end
+
+      // ── Packet type counting (HB0 sampled at packet_start pulse) ─────────
+      if (w_pkt_start) begin
+        if (w_arb_hb0 == 8'h00) cnt_gcp = cnt_gcp + 1;
+        if (w_arb_hb0 == 8'h82) cnt_avi = cnt_avi + 1;
+      end
+
       // ── Period-length checkers ───────────────────────────────────────────
       // DATA_PAYLOAD = 32
       if (w_period == HDMI_PERIOD_DATA_PAYLOAD)
@@ -501,14 +534,37 @@ module tb_hdmi_tx_core_32x10;
   // 4 complete frames = 4 × (V_TOTAL × H_TOTAL) = 4 × 16 × 96 = 6144 cycles
   initial begin
     assert_fail_count = 0;
+    cnt_gcp = 0;
+    cnt_avi = 0;
     $display("=== tb_hdmi_tx_core_32x10: H_TOTAL=%0d V_TOTAL=%0d ===", H_TOTAL, V_TOTAL);
-    $display("=== ENABLE_DATA_ISLAND=1, ENABLE_AUDIO=0 ===");
+    $display("=== ENABLE_DATA_ISLAND=1 GCP=%0b AVI=%0b AUDIO=0 ===",
+             ENABLE_GCP_PACKET, ENABLE_AVI_PACKET);
     $display("--- Period transitions (start_cy / period / len) ---");
 
     wait (rst_n === 1'b1);
     repeat (4 * V_TOTAL * H_TOTAL + 50) @(posedge pix_clk);
 
     $display("--- End of simulation at cycle %0d ---", sim_cycle);
+    $display("  GCP packets: %0d  (ENABLE_GCP_PACKET=%0b)", cnt_gcp, ENABLE_GCP_PACKET);
+    $display("  AVI packets: %0d  (ENABLE_AVI_PACKET=%0b)", cnt_avi, ENABLE_AVI_PACKET);
+
+    if (ENABLE_GCP_PACKET && cnt_gcp == 0) begin
+      $error("ASSERT: GCP enabled but cnt_gcp=0");
+      assert_fail_count = assert_fail_count + 1;
+    end
+    if (!ENABLE_GCP_PACKET && cnt_gcp != 0) begin
+      $error("ASSERT: GCP disabled but cnt_gcp=%0d", cnt_gcp);
+      assert_fail_count = assert_fail_count + 1;
+    end
+    if (ENABLE_AVI_PACKET && cnt_avi == 0) begin
+      $error("ASSERT: AVI enabled but cnt_avi=0");
+      assert_fail_count = assert_fail_count + 1;
+    end
+    if (!ENABLE_AVI_PACKET && cnt_avi != 0) begin
+      $error("ASSERT: AVI disabled but cnt_avi=%0d", cnt_avi);
+      assert_fail_count = assert_fail_count + 1;
+    end
+
     $display("");
     if (assert_fail_count == 0) begin
       $display("ALL ASSERTIONS PASSED");

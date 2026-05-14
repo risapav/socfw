@@ -31,7 +31,8 @@ TX_CORE_SRCS = \
 
 .PHONY: all regression report clean \
         bch_ecc terc4_encoder data_island scheduler \
-        acr_packet audio_sample_pkt tx_core_32x10 audio_scenarios
+        acr_packet audio_sample_pkt tx_core_32x10 audio_scenarios \
+        di_isolation
 
 all: bch_ecc terc4_encoder data_island scheduler acr_packet audio_sample_pkt \
      tx_core_32x10 audio_scenarios
@@ -97,6 +98,23 @@ audio_scenarios: $(LOGDIR)
 	     | tee $(LOGDIR)/tb_audio_sample_only.log
 	vsim -c -do "run -all; quit" tb_hdmi_tx_core_audio \
 	     | tee $(LOGDIR)/tb_audio_full.log
+
+# di_isolation: compile once, run vsim 4x with GCP/AVI isolation flags.
+# 2A=no packets, 2B=GCP-only, 2C=AVI-only, 2D=both (mirrors hardware debug sub-matrix).
+di_isolation: $(LOGDIR)
+	$(VLOG) $(TX_CORE_SRCS) tb_hdmi_tx_core_32x10.sv
+	vsim -G ENABLE_GCP_PACKET=0 -G ENABLE_AVI_PACKET=0 \
+	     -c -do "run -all; quit" tb_hdmi_tx_core_32x10 \
+	     | tee $(LOGDIR)/tb_di_2a.log
+	vsim -G ENABLE_GCP_PACKET=1 -G ENABLE_AVI_PACKET=0 \
+	     -c -do "run -all; quit" tb_hdmi_tx_core_32x10 \
+	     | tee $(LOGDIR)/tb_di_2b.log
+	vsim -G ENABLE_GCP_PACKET=0 -G ENABLE_AVI_PACKET=1 \
+	     -c -do "run -all; quit" tb_hdmi_tx_core_32x10 \
+	     | tee $(LOGDIR)/tb_di_2c.log
+	vsim -G ENABLE_GCP_PACKET=1 -G ENABLE_AVI_PACKET=1 \
+	     -c -do "run -all; quit" tb_hdmi_tx_core_32x10 \
+	     | tee $(LOGDIR)/tb_di_2d.log
 
 clean:
 	rm -rf work transcript *.log $(LOGDIR)
