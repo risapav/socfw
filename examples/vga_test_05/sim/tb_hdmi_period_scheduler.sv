@@ -92,7 +92,11 @@ module tb_hdmi_period_scheduler;
       blank_remaining = 16'(i);
       @(posedge clk);
       #1;  // wait for NBA to propagate period_o
-      if (packet_start) packet_pending = 0;
+      // Clear packet_pending on the registered period transition to DATA_PREAMBLE.
+      // Do NOT use the combinational packet_start_o: it can fire spuriously in a
+      // delta cycle after r_ctrl_cnt increments via NBA (one cycle before the actual
+      // state transition), which would mask packet_pending from the real island start.
+      if (period == HDMI_PERIOD_DATA_PREAMBLE) packet_pending = 0;
       case (period)
         HDMI_PERIOD_CONTROL:        ctrl_cnt++;
         HDMI_PERIOD_DATA_PREAMBLE:  data_pre_cnt++;
@@ -219,16 +223,18 @@ module tb_hdmi_period_scheduler;
     end
   endtask
 
-  // ── Scenario 4: Tight minimum budget — island guard boundary ─────────────
-  // Drive a line where hblank has exactly ISLAND_TOTAL + VIDEO_TRIG = 44+10 = 54 cycles.
-  // Island starts at blank_remaining=54, runs 44 cycles, ends at blank_remaining=10.
-  // FSM returns to ST_CONTROL; blank_remaining=10 <= VIDEO_TRIG=10 → video preamble fires.
+  // ── Scenario 4: Minimum budget — island guard boundary ───────────────────
+  // After reset_dut, r_ctrl_cnt=1; it needs 11 more hblank cycles to reach
+  // MIN_CTRL_PRE_ISLAND=12.  Minimum blank budget is therefore:
+  //   (MIN_CTRL_PRE_ISLAND - 1) + ISLAND_TOTAL + VIDEO_TRIG = 11 + 44 + 10 = 65.
+  // Use blank=66 (one cycle of margin): island fires at blank_remaining=55 (≥ 54),
+  // completes with blank_remaining=11, then VIDEO_TRIG fires at blank_remaining=10.
   task automatic test_tight_budget;
     int ctrl_cnt, data_pre, lead_gb, payload, trail_gb, vid_pre, vid_gb, pop;
     bit dep;
-    $display("=== Scenario 4: Tight budget (hblank=54) ===");
+    $display("=== Scenario 4: Minimum budget (hblank=66) ===");
     reset_dut();
-    drive_line(54, 800, 1, ctrl_cnt, data_pre, lead_gb, payload, trail_gb, vid_pre, vid_gb, pop, dep);
+    drive_line(66, 800, 1, ctrl_cnt, data_pre, lead_gb, payload, trail_gb, vid_pre, vid_gb, pop, dep);
 
     if (vid_pre >= 7)
       $display("PASS: VIDEO_PREAMBLE = %0d after tight island", vid_pre);

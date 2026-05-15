@@ -41,9 +41,16 @@ $(LOGDIR):
 	mkdir -p $(LOGDIR)
 
 regression: all
-	@echo "======================================"
-	@echo " HDMI SIM REGRESSION PASSED"
-	@echo "======================================"
+	@if grep -ql "FAIL\|\*\* Fatal:" $(LOGDIR)/tb_*.log 2>/dev/null; then \
+		echo "======================================"; \
+		echo " HDMI SIM REGRESSION FAILED"; \
+		echo "======================================"; \
+		exit 1; \
+	else \
+		echo "======================================"; \
+		echo " HDMI SIM REGRESSION PASSED"; \
+		echo "======================================"; \
+	fi
 
 report: clean $(LOGDIR)
 	$(MAKE) regression 2>&1 | tee $(LOGDIR)/regression_full.log
