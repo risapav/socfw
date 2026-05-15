@@ -89,7 +89,7 @@ overrides in `project.yaml` (both default to 1 when `ENABLE_DATA_ISLAND=1`).
 | T1 | 1                   | DATA_PREAMBLE only               | PASS   | stable image; preamble alone does not disrupt monitor |
 | T2 | 2                   | preamble + data guard bands      | FAIL   | monitor rejects malformed island (0 payload symbols); guard band Ch0 nibble also fixed ({1,VSYNC,HSYNC,1}→{1,1,VSYNC,HSYNC}) |
 | T3 | 3                   | preamble + guard + 1 payload sym | SKIP   | Samsung rejects malformed island structure; T2 fails same way |
-| T0 | 0                   | full 32-symbol payload           | FAIL   | parity missing vsync/hsync (CTL0/CTL1); fixed; re-test pending |
+| T0 | 0                   | full 32-symbol payload           | FAIL   | parity fixed; preamble Ch1/Ch2 CTL wrong (ctrl(11) vs ctrl(01)); re-test pending |
 
 **Interpretation:**
 - T1 PASS, T2 FAIL → fault is in DATA_GB_LEAD / DATA_GB_TRAIL symbols or channel assignment
@@ -97,6 +97,14 @@ overrides in `project.yaml` (both default to 1 when `ENABLE_DATA_ISLAND=1`).
 - T3 PASS, T0 FAIL → fault is in payload length, 32-symbol sequencing, ECC, or trailing boundary
 - NOTE: Samsung LS29E790CNS rejects malformed island structure — T2/T3 not viable on this monitor.
   Guard band nibble fixed per spec. Proceeding to T0 (full 32-symbol island).
+
+**Bugs fixed after T0 FAIL (both in hdmi_channel_mux.sv):**
+- Bug A: Data Island Preamble Ch1 was `ctrl(2'b11)` (CTL0=1 CTL1=1), Ch2 was `ctrl(2'b00)`.
+  Spec (Table 5-7) requires CTL0=1 CTL1=0 CTL2=1 CTL3=0 → both Ch1 and Ch2 = `ctrl(2'b01)`.
+  Monitor did not recognise the data island preamble → subsequent guard+payload seen as garbage.
+- Bug B: Video Guard Band Ch0 carried live control symbols; Ch1 carried `GB_VIDEO`.
+  Spec requires Ch0=Ch2=`GB_VIDEO` (1011001100) and Ch1=`GB_DATA_N` (0100110011).
+  (Video was tolerant but spec non-compliant.)
 
 ### Audio packets — isolation matrix
 

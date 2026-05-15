@@ -131,9 +131,9 @@ modules:
       ENABLE_ACR_PACKET: 0
       ENABLE_AUDIO_INFOFRAME: 0
       ENABLE_AUDIO_SAMPLE: 0
-      # T0: full 32-symbol island, AVI only, vblank only — first valid structural test
-      ENABLE_GCP_PACKET: 0
-      ENABLE_AVI_PACKET: 1
+      # 2B re-test: GCP only — confirm structural path after preamble+guard fixes
+      ENABLE_GCP_PACKET: 1
+      ENABLE_AVI_PACKET: 0
       GCP_FRAME_PERIOD: 1
       VBLANK_ONLY: 1
       DEBUG_ISLAND_PHASES: 0
