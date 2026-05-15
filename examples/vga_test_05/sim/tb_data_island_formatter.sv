@@ -3,15 +3,16 @@
 
 // Standalone testbench for data_island_formatter.
 //
-// Test case: AVI InfoFrame, all-zero configuration inputs.
+// Scenario 1: AVI InfoFrame, hsync=0 vsync=0 throughout.
 //   HB = {0x82, 0x02, 0x0D}
 //   PB[0] = 0x57 (checksum), PB[1]=0x10, PB[2]=0x08, PB[3..27]=0x00
-//   bch_hdr = 0x67
-//   bch_sp[0] = 0x69, bch_sp[1..3] = 0xF5
-//   hsync=0, vsync=0 throughout
+//   Expected nibbles computed by Python reference model.
 //
-// Expected nibbles computed by Python reference model.
-// Parity correctness is also verified independently each cycle.
+// Scenario 2: same packet, hsync=1 vsync=0 throughout.
+//   ch0[0] becomes 1; parity flips (P_n includes CTL0=HSYNC per spec).
+//   Verifies that parity = XOR(hdr_bit, vsync, hsync, sp_bits) is correct.
+//
+// Parity correctness is verified independently each cycle for both scenarios.
 //
 // Run:
 //   vlog -sv -suppress 2892 ../rtl/hdmi/hdmi_bch_ecc.sv \
@@ -67,32 +68,41 @@ module tb_data_island_formatter;
     4'h0, 4'h0, 4'h0, 4'h0, 4'h5, 4'h5, 4'hF, 4'hF
   };
 
+  // Scenario 2: hsync=1, vsync=0.  ch0 = old ^ 4'b1001 (bit[0]=hsync, bit[3]=parity flips).
+  logic [3:0] exp_ch0_2 [0:31] = '{
+    4'h9, 4'hD, 4'h1, 4'h1, 4'h9, 4'h9, 4'h1, 4'h5,
+    4'h9, 4'hD, 4'h9, 4'h9, 4'h9, 4'h9, 4'h9, 4'h9,
+    4'h5, 4'h9, 4'h5, 4'h5, 4'h9, 4'h9, 4'h9, 4'h9,
+    4'h5, 4'h5, 4'h5, 4'h9, 4'h9, 4'h5, 4'hD, 4'h1
+  };
+
   int fails = 0;
 
-  task check_sym(input int p);
+  task automatic check_sym(input int p,
+                            input logic [3:0] e0, e1, e2);
     logic par;
-    // Verify parity: parity = XOR(ch0[2]=hdr_bit, ch1[3:0], ch2[3:0])
-    par = ch0_o[2];
+    // Parity = XOR(hdr_bit=ch0[2], vsync=ch0[1], hsync=ch0[0], ch1[3:0], ch2[3:0])
+    // per HDMI spec Table 5-11.
+    par = ch0_o[2] ^ ch0_o[1] ^ ch0_o[0];
     for (int b = 0; b < 4; b++) par ^= ch1_o[b] ^ ch2_o[b];
     if (par !== ch0_o[3]) begin
       $display("FAIL p=%0d: parity mismatch — computed=%b, ch0[3]=%b", p, par, ch0_o[3]);
       fails++;
     end
-    if (ch0_o !== exp_ch0[p]) begin
-      $display("FAIL p=%0d: ch0 got 0x%X expected 0x%X", p, ch0_o, exp_ch0[p]);
+    if (ch0_o !== e0) begin
+      $display("FAIL p=%0d: ch0 got 0x%X expected 0x%X", p, ch0_o, e0);
       fails++;
     end
-    if (ch1_o !== exp_ch1[p]) begin
-      $display("FAIL p=%0d: ch1 got 0x%X expected 0x%X", p, ch1_o, exp_ch1[p]);
+    if (ch1_o !== e1) begin
+      $display("FAIL p=%0d: ch1 got 0x%X expected 0x%X", p, ch1_o, e1);
       fails++;
     end
-    if (ch2_o !== exp_ch2[p]) begin
-      $display("FAIL p=%0d: ch2 got 0x%X expected 0x%X", p, ch2_o, exp_ch2[p]);
+    if (ch2_o !== e2) begin
+      $display("FAIL p=%0d: ch2 got 0x%X expected 0x%X", p, ch2_o, e2);
       fails++;
     end
-    if (fails == 0 || $time < 10)  // suppress per-symbol noise after first fail
-      if (ch0_o === exp_ch0[p] && ch1_o === exp_ch1[p] && ch2_o === exp_ch2[p])
-        $display("  p=%2d  ch0=0x%X ch1=0x%X ch2=0x%X  OK", p, ch0_o, ch1_o, ch2_o);
+    if (ch0_o === e0 && ch1_o === e1 && ch2_o === e2)
+      $display("  p=%2d  ch0=0x%X ch1=0x%X ch2=0x%X  OK", p, ch0_o, ch1_o, ch2_o);
   endtask
 
   initial begin
@@ -108,24 +118,23 @@ module tb_data_island_formatter;
     rst_ni = 1;
     @(posedge clk);
 
-    // Pulse start_i — formatter latches the packet
+    // ── Scenario 1: vsync=0, hsync=0 ────────────────────────────────────────
+    $display("=== Scenario 1: vsync=0 hsync=0 ===");
+    hsync_i = 0; vsync_i = 0;
     start_i = 1;
-    @(posedge clk); // registers load on this edge
+    @(posedge clk);
     start_i = 0;
-    #1; // settle
-    check_sym(0);
+    #1;
+    check_sym(0, exp_ch0[0], exp_ch1[0], exp_ch2[0]);
 
-    // 31 advance cycles (p=1..31)
     for (int p = 1; p < 32; p++) begin
       advance_i = 1;
       @(posedge clk);
       advance_i = 0;
       #1;
-      check_sym(p);
+      check_sym(p, exp_ch0[p], exp_ch1[p], exp_ch2[p]);
     end
 
-    // 32nd advance — terminates the formatter (sym_cnt==31 → active=0)
-    // Matches the scheduler's 32nd packet_pop_o pulse (sym_cnt==0 in DATA_PAYLOAD).
     advance_i = 1;
     @(posedge clk);
     advance_i = 0;
@@ -135,6 +144,25 @@ module tb_data_island_formatter;
       fails++;
     end else
       $display("  active_o=0 after 32nd advance  OK");
+
+    // ── Scenario 2: vsync=0, hsync=1 — catches missing CTL0 in parity ───────
+    // parity must flip for every symbol vs scenario 1.
+    $display("=== Scenario 2: vsync=0 hsync=1 ===");
+    hsync_i = 1; vsync_i = 0;
+    @(posedge clk);
+    start_i = 1;
+    @(posedge clk);
+    start_i = 0;
+    #1;
+    check_sym(0, exp_ch0_2[0], exp_ch1[0], exp_ch2[0]);
+
+    for (int p = 1; p < 32; p++) begin
+      advance_i = 1;
+      @(posedge clk);
+      advance_i = 0;
+      #1;
+      check_sym(p, exp_ch0_2[p], exp_ch1[p], exp_ch2[p]);
+    end
 
     $display("");
     $display("%s (%0d failure%s)",

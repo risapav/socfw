@@ -140,7 +140,9 @@ module data_island_formatter (
   wire        hdr_bit  = hdr_sr[0];
   wire [3:0]  ch1_data = {sp_sr[1][1:0], sp_sr[0][1:0]};
   wire [3:0]  ch2_data = {sp_sr[3][1:0], sp_sr[2][1:0]};
-  wire        parity   = hdr_bit
+  // Parity = XOR of all 9 bits in the same TERC4 symbol (HDMI spec Table 5-11):
+  // HB_n, CTL1=VSYNC, CTL0=HSYNC, and the 8 subpacket bits on ch1/ch2.
+  wire        parity   = hdr_bit ^ vsync_i ^ hsync_i
                          ^ ch1_data[3] ^ ch1_data[2] ^ ch1_data[1] ^ ch1_data[0]
                          ^ ch2_data[3] ^ ch2_data[2] ^ ch2_data[1] ^ ch2_data[0];
 
