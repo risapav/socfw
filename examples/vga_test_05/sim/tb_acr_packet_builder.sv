@@ -1,3 +1,11 @@
+/**
+ * @file tb_acr_packet_builder.sv
+ * @brief Testbench pre HDMI ACR Packet Builder
+ * @details
+ * Purely combinational testbench. Checks header bytes,
+ * all 4 identical subpackets, and valid_o gating.
+ */
+
 `timescale 1ns/1ps
 `default_nettype none
 
