@@ -131,12 +131,12 @@ modules:
       ENABLE_ACR_PACKET: 0
       ENABLE_AUDIO_INFOFRAME: 0
       ENABLE_AUDIO_SAMPLE: 0
-      # T2-vblank: preamble + data guard bands, no payload — isolates guard vs payload
+      # T0: full 32-symbol island, AVI only, vblank only — first valid structural test
       ENABLE_GCP_PACKET: 0
       ENABLE_AVI_PACKET: 1
       GCP_FRAME_PERIOD: 1
       VBLANK_ONLY: 1
-      DEBUG_ISLAND_PHASES: 2
+      DEBUG_ISLAND_PHASES: 0
     bind:
       ports:
         hdmi_p_o:

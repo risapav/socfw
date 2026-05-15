@@ -87,14 +87,16 @@ overrides in `project.yaml` (both default to 1 when `ENABLE_DATA_ISLAND=1`).
 | #  | DEBUG_ISLAND_PHASES | Content                          | Result | Notes |
 |----|---------------------|----------------------------------|--------|-------|
 | T1 | 1                   | DATA_PREAMBLE only               | PASS   | stable image; preamble alone does not disrupt monitor |
-| T2 | 2                   | preamble + data guard bands      | FAIL   | no signal; guard band Ch0 nibble was {1,VSYNC,HSYNC,1} — fixed to {1,1,VSYNC,HSYNC} per spec; re-test pending |
-| T3 | 3                   | preamble + guard + 1 payload sym |        |       |
+| T2 | 2                   | preamble + data guard bands      | FAIL   | monitor rejects malformed island (0 payload symbols); guard band Ch0 nibble also fixed ({1,VSYNC,HSYNC,1}→{1,1,VSYNC,HSYNC}) |
+| T3 | 3                   | preamble + guard + 1 payload sym | SKIP   | Samsung rejects malformed island structure; T2 fails same way |
 | T0 | 0                   | full 32-symbol payload           | FAIL   | same as 2B/2D; no signal |
 
 **Interpretation:**
 - T1 PASS, T2 FAIL → fault is in DATA_GB_LEAD / DATA_GB_TRAIL symbols or channel assignment
 - T2 PASS, T3 FAIL → fault is in TERC4 encoding, formatter/mux pipeline alignment, or first payload symbol
 - T3 PASS, T0 FAIL → fault is in payload length, 32-symbol sequencing, ECC, or trailing boundary
+- NOTE: Samsung LS29E790CNS rejects malformed island structure — T2/T3 not viable on this monitor.
+  Guard band nibble fixed per spec. Proceeding to T0 (full 32-symbol island).
 
 ### Audio packets — isolation matrix
 
