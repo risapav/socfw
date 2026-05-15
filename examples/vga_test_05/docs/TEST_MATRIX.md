@@ -80,6 +80,22 @@ overrides in `project.yaml` (both default to 1 when `ENABLE_DATA_ISLAND=1`).
 - 2A PASS, 2C FAIL → AVI InfoFrame checksum or BCH/ECC error
 - 2B PASS, 2C PASS, 2D FAIL → multi-packet sequencing or arbiter timing issue
 
+### Data island phase isolation
+
+`VBLANK_ONLY=1` throughout. `ENABLE_GCP_PACKET=0`, `ENABLE_AVI_PACKET=1` for all phases.
+
+| #  | DEBUG_ISLAND_PHASES | Content                          | Result | Notes |
+|----|---------------------|----------------------------------|--------|-------|
+| T1 | 1                   | DATA_PREAMBLE only               | PASS   | stable image; preamble alone does not disrupt monitor |
+| T2 | 2                   | preamble + data guard bands      |        |       |
+| T3 | 3                   | preamble + guard + 1 payload sym |        |       |
+| T0 | 0                   | full 32-symbol payload           | FAIL   | same as 2B/2D; no signal |
+
+**Interpretation:**
+- T1 PASS, T2 FAIL → fault is in DATA_GB_LEAD / DATA_GB_TRAIL symbols or channel assignment
+- T2 PASS, T3 FAIL → fault is in TERC4 encoding, formatter/mux pipeline alignment, or first payload symbol
+- T3 PASS, T0 FAIL → fault is in payload length, 32-symbol sequencing, ECC, or trailing boundary
+
 ### Audio packets — isolation matrix
 
 Run with `ENABLE_DATA_ISLAND=1`.
