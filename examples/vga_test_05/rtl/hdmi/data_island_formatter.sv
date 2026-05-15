@@ -1,3 +1,6 @@
+`ifndef DATA_ISLAND_FORMATTER_SV
+`define DATA_ISLAND_FORMATTER_SV
+
 `default_nettype none
 
 import hdmi_pkg::*;
@@ -146,3 +149,5 @@ module data_island_formatter (
   assign ch0_o = {parity, hdr_bit, vsync_i, hsync_i};
 
 endmodule
+
+`endif // DATA_ISLAND_FORMATTER_SV

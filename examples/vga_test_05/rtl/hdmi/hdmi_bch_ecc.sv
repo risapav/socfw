@@ -1,3 +1,6 @@
+`ifndef HDMI_BCH_ECC_SV
+`define HDMI_BCH_ECC_SV
+
 `default_nettype none
 
 // HDMI BCH error-correction code generator.
@@ -35,3 +38,5 @@ module hdmi_bch_ecc #(
   assign ecc_o = lfsr;
 
 endmodule
+
+`endif // HDMI_BCH_ECC_SV

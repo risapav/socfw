@@ -1,6 +1,7 @@
-`default_nettype none
 `ifndef AUDIO_SAMPLE_PACKET_BUILDER_SV
 `define AUDIO_SAMPLE_PACKET_BUILDER_SV
+
+`default_nettype none
 
 // HDMI Audio Sample Packet builder — combinational.
 //
@@ -53,4 +54,4 @@ module audio_sample_packet_builder (
   end
 
 endmodule
-`endif
+`endif // AUDIO_SAMPLE_PACKET_BUILDER_SV

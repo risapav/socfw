@@ -1,3 +1,6 @@
+`ifndef TMDS_CONTROL_ENCODER_SV
+`define TMDS_CONTROL_ENCODER_SV
+
 `default_nettype none
 
 import hdmi_pkg::*;
@@ -38,3 +41,5 @@ module tmds_control_encoder (
   end
 
 endmodule
+
+`endif // TMDS_CONTROL_ENCODER_SV

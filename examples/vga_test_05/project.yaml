@@ -131,11 +131,12 @@ modules:
       ENABLE_ACR_PACKET: 0
       ENABLE_AUDIO_INFOFRAME: 0
       ENABLE_AUDIO_SAMPLE: 0
-      # 2C-vblank: AVI only, data islands restricted to vblank only
+      # T1-vblank: preamble only during vblank — isolates preamble vs guard/payload
       ENABLE_GCP_PACKET: 0
       ENABLE_AVI_PACKET: 1
       GCP_FRAME_PERIOD: 1
       VBLANK_ONLY: 1
+      DEBUG_ISLAND_PHASES: 1
     bind:
       ports:
         hdmi_p_o:

@@ -25,7 +25,12 @@ module hdmi_period_scheduler #(
   parameter bit ENABLE_DATA_ISLAND = 1,
   // Restrict data islands to vertical blanking only (debug: some monitors
   // reject data islands sent during active-line hblank periods).
-  parameter bit VBLANK_ONLY        = 0
+  parameter bit VBLANK_ONLY        = 0,
+  // T1/T2/T3 phase-isolation diagnostic (0=normal):
+  //   1 = T1: preamble only      (no guard / payload)
+  //   2 = T2: preamble + guards  (no payload)
+  //   3 = T3: preamble + guards + 1 payload symbol
+  parameter int DEBUG_ISLAND_PHASES = 0
 )(
   input  logic clk_i,
   input  logic rst_ni,
@@ -189,8 +194,13 @@ module hdmi_period_scheduler #(
 
         ST_DATA_PREAMBLE: begin
           if (sym_cnt == 0) begin
-            state_next   = ST_DATA_GUARD_LEAD;
-            sym_cnt_next = ($bits(sym_cnt_next))'(GUARD_LEN - 1);
+            if (DEBUG_ISLAND_PHASES == 1) begin
+              // T1: preamble only — return to control, skip guard/payload
+              state_next = ST_CONTROL;
+            end else begin
+              state_next   = ST_DATA_GUARD_LEAD;
+              sym_cnt_next = ($bits(sym_cnt_next))'(GUARD_LEN - 1);
+            end
           end else begin
             sym_cnt_next = ($bits(sym_cnt_next))'(sym_cnt - 1);
           end
@@ -198,12 +208,21 @@ module hdmi_period_scheduler #(
 
         ST_DATA_GUARD_LEAD: begin
           if (sym_cnt == 0) begin
-            state_next   = ST_DATA_PAYLOAD;
-            sym_cnt_next = ($bits(sym_cnt_next))'(PAYLOAD_LEN - 1);
-            // Lookahead advance: push formatter one cycle early so that
-            // symbol 0 clears the 2-cycle TERC4 + 1-cycle mux pipeline
-            // before the first DATA_PAYLOAD cycle appears on ch*_o.
-            packet_pop_o = 1'b1;
+            if (DEBUG_ISLAND_PHASES == 2) begin
+              // T2: guards only — skip payload, jump to trailing guard
+              state_next   = ST_DATA_GUARD_TRAIL;
+              sym_cnt_next = ($bits(sym_cnt_next))'(GUARD_LEN - 1);
+            end else begin
+              // T3 (==3): load 1-symbol payload; normal (==0): full payload.
+              state_next   = ST_DATA_PAYLOAD;
+              sym_cnt_next = (DEBUG_ISLAND_PHASES == 3) ?
+                             6'd0 :
+                             ($bits(sym_cnt_next))'(PAYLOAD_LEN - 1);
+              // Lookahead advance: push formatter one cycle early so that
+              // symbol 0 clears the 2-cycle TERC4 + 1-cycle mux pipeline
+              // before the first DATA_PAYLOAD cycle appears on ch*_o.
+              packet_pop_o = 1'b1;
+            end
           end else begin
             sym_cnt_next = ($bits(sym_cnt_next))'(sym_cnt - 1);
           end
@@ -213,7 +232,8 @@ module hdmi_period_scheduler #(
           // Advance only while there is a next symbol to prepare.
           // The last symbol (sym_cnt==0) is already in the TERC4 pipeline
           // from the previous cycle's advance.
-          packet_pop_o = (sym_cnt > 6'd1);
+          // T3 has sym_cnt==0 from the start, so no advance is issued.
+          packet_pop_o = (DEBUG_ISLAND_PHASES == 0) ? (sym_cnt > 6'd1) : 1'b0;
           if (sym_cnt == 0) begin
             state_next   = ST_DATA_GUARD_TRAIL;
             sym_cnt_next = ($bits(sym_cnt_next))'(GUARD_LEN - 1);

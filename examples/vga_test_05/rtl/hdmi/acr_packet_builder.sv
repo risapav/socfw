@@ -23,10 +23,11 @@
  * BCH/ECC is not generated here. It is computed combinatorially
  * over PB0..PB6 by the data_island_formatter.
  */
-`default_nettype none
 
 `ifndef ACR_PACKET_BUILDER_SV
 `define ACR_PACKET_BUILDER_SV
+
+`default_nettype none
 
 module acr_packet_builder (
   input  logic        enable_i,

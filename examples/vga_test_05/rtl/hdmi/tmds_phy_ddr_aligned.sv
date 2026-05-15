@@ -1,3 +1,6 @@
+`ifndef TMDS_PHY_DDR_ALIGNED_SV
+`define TMDS_PHY_DDR_ALIGNED_SV
+
 `default_nettype none
 
 import hdmi_pkg::*;
@@ -88,3 +91,5 @@ module tmds_phy_ddr_aligned (
   );
 
 endmodule
+
+`endif // TMDS_PHY_DDR_ALIGNED_SV

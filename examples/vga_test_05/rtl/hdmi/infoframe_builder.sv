@@ -104,6 +104,13 @@ module infoframe_builder #(
         // Other bytes remain 0
       end
 
+      default: begin
+        // Bezpečný fallback, ktorý utíši Quartus aj Linter
+        header_o      = '{default: 8'h00};
+        payload_o     = '{default: 8'h00};
+        payload_len_o = 0;
+      end
+
     endcase
 
     // Compute and insert checksum into PB0

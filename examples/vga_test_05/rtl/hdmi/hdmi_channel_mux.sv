@@ -1,3 +1,6 @@
+`ifndef HDMI_CHANNEL_MUX_SV
+`define HDMI_CHANNEL_MUX_SV
+
 `default_nettype none
 
 import hdmi_pkg::*;
@@ -54,6 +57,7 @@ module hdmi_channel_mux (
       2'b01: gb_data_ch0 = 10'b1011000110;  // TERC4(4'b1011)
       2'b10: gb_data_ch0 = 10'b1001110001;  // TERC4(4'b1101)
       2'b11: gb_data_ch0 = 10'b1011000011;  // TERC4(4'b1111)
+      default: gb_data_ch0 = 10'b0100111001; // Bezpečný fallback (zhodný s 2'b00)
     endcase
   end
 
@@ -128,3 +132,5 @@ module hdmi_channel_mux (
   end
 
 endmodule
+
+`endif // HDMI_CHANNEL_MUX_SV

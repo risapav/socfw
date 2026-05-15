@@ -1,3 +1,6 @@
+`ifndef TMDS_VIDEO_ENCODER_SV
+`define TMDS_VIDEO_ENCODER_SV
+
 `default_nettype none
 
 import hdmi_pkg::*;
@@ -95,7 +98,7 @@ module tmds_video_encoder (
       logic signed [4:0] rd_next;
 
       // Disparity of q_m[7:0]: N1 - N0 = 2*N1 - 8
-      char_disp = $signed({1'b0, ones_r}) * 2 - 5'sd8;
+      char_disp = $signed({1'b0, ones_r}) * 5'sd2 - 5'sd8;
       neutral   = (char_disp == 5'sd0);
 
       // DVI 1.0 §3.3.3 two-case decision:
@@ -112,7 +115,7 @@ module tmds_video_encoder (
         word = {1'b0, q_m_r[8],  q_m_r[7:0]};
 
       ones_out = count_ones10(word);
-      rd_next  = rd + ($signed({1'b0, ones_out}) * 2 - 5'sd10);
+      rd_next  = rd + ($signed({1'b0, ones_out}) * 5'sd2 - 5'sd10);
 
       // TMDS video symbol polarity.
       // The internal `word` construction uses the inverse convention;
@@ -123,3 +126,5 @@ module tmds_video_encoder (
   end
 
 endmodule
+
+`endif // TMDS_VIDEO_ENCODER_SV

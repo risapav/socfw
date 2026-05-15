@@ -1,3 +1,6 @@
+`ifndef TERC4_ENCODER_SV
+`define TERC4_ENCODER_SV
+
 `default_nettype none
 
 import hdmi_pkg::*;
@@ -57,3 +60,5 @@ module terc4_encoder (
   end
 
 endmodule
+
+`endif // TERC4_ENCODER_SV

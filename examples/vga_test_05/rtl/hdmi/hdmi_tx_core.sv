@@ -39,6 +39,8 @@ module hdmi_tx_core #(
   // Restrict data islands to vblank only (debug: some monitors reject
   // data islands sent during active-line hblank).
   parameter bit VBLANK_ONLY           = 0,
+  // T1/T2/T3 phase-isolation (0=normal, 1=preamble-only, 2=+guards, 3=+1sym).
+  parameter int DEBUG_ISLAND_PHASES   = 0,
   parameter int PIXEL_CLK_HZ         = 40_000_000,
   parameter int AUDIO_SAMPLE_RATE    = 48_000
 )(
@@ -135,8 +137,9 @@ module hdmi_tx_core #(
   logic         packet_start, packet_pop;
 
   hdmi_period_scheduler #(
-    .ENABLE_DATA_ISLAND(ENABLE_DATA_ISLAND),
-    .VBLANK_ONLY       (VBLANK_ONLY)
+    .ENABLE_DATA_ISLAND  (ENABLE_DATA_ISLAND),
+    .VBLANK_ONLY         (VBLANK_ONLY),
+    .DEBUG_ISLAND_PHASES (DEBUG_ISLAND_PHASES)
   ) u_sched (
     .clk_i             (pix_clk_i),
     .rst_ni            (rst_ni),

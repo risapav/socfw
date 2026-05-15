@@ -1,6 +1,7 @@
-`default_nettype none
 `ifndef HDMI_AUDIO_TEST_SRC_SV
 `define HDMI_AUDIO_TEST_SRC_SV
+
+`default_nettype none
 
 // Internal 1 kHz square-wave test tone for HDMI audio bring-up.
 //
@@ -97,4 +98,5 @@ module hdmi_audio_test_src #(
   assign l3_o = r_buf_l[3];  assign r3_o = r_buf_r[3];
 
 endmodule
-`endif
+
+`endif // HDMI_AUDIO_TEST_SRC_SV

@@ -60,6 +60,9 @@ parameters:
   - name: VBLANK_ONLY
     type: bit
     default: 0
+  - name: DEBUG_ISLAND_PHASES
+    type: int
+    default: 0
 
 ports:
   - name: clk_i
