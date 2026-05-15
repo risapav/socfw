@@ -87,7 +87,7 @@ overrides in `project.yaml` (both default to 1 when `ENABLE_DATA_ISLAND=1`).
 | #  | DEBUG_ISLAND_PHASES | Content                          | Result | Notes |
 |----|---------------------|----------------------------------|--------|-------|
 | T1 | 1                   | DATA_PREAMBLE only               | PASS   | stable image; preamble alone does not disrupt monitor |
-| T2 | 2                   | preamble + data guard bands      |        |       |
+| T2 | 2                   | preamble + data guard bands      | FAIL   | no signal; guard band Ch0 nibble was {1,VSYNC,HSYNC,1} — fixed to {1,1,VSYNC,HSYNC} per spec; re-test pending |
 | T3 | 3                   | preamble + guard + 1 payload sym |        |       |
 | T0 | 0                   | full 32-symbol payload           | FAIL   | same as 2B/2D; no signal |
 

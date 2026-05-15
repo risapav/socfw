@@ -13,7 +13,7 @@ import hdmi_pkg::*;
 //   2. DATA_PAYLOAD never overlaps de_r
 //   3. DATA_PAYLOAD length = 32; ch*_o carries TERC4(di_ch*) cycle-accurately
 //   4. DATA_PREAMBLE length = 8; ch1 == PRE_DATA_CH1; ch2 == ctrl(00)
-//   5. DATA_GB_{LEAD,TRAIL} length = 2; ch1/ch2 == GB_DATA_N; ch0 == TERC4({1,vs,hs,1})
+//   5. DATA_GB_{LEAD,TRAIL} length = 2; ch1/ch2 == GB_DATA_N; ch0 == TERC4({1,1,vs,hs})
 //   6. VIDEO_PREAMBLE length = 8; ch1 == PRE_VIDEO_CH1; ch2 == ctrl(00)
 //   7. VIDEO_GB length = 2; ch1/ch2 == GB_VIDEO
 //   8. 2A: no data-island periods when GCP=0 AND AVI=0
@@ -402,10 +402,10 @@ module tb_hdmi_tx_core_32x10;
                  ch2, GB_DATA_N, sim_cycle);
           assert_fail_count = assert_fail_count + 1;
         end
-        // ch0 = TERC4({1, vsync, hsync, 1}) — vsync/hsync pipeline-aligned to ch*_o
+        // ch0 = TERC4({1,1,VSYNC,HSYNC}) per HDMI spec Table 5-4
         begin
           automatic tmds_word_t exp_ch0;
-          exp_ch0 = terc4_ref({1'b1, w_vsync_ch, w_hsync_ch, 1'b1});
+          exp_ch0 = terc4_ref({1'b1, 1'b1, w_vsync_ch, w_hsync_ch});
           if (ch0 !== exp_ch0) begin
             $error("ASSERT: DATA_GB ch0=%010b exp=%010b (vs=%b hs=%b) at cy=%0d",
                    ch0, exp_ch0, w_vsync_ch, w_hsync_ch, sim_cycle);

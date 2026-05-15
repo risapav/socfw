@@ -12,8 +12,8 @@ import hdmi_pkg::*;
 //
 // vsync_i / hsync_i must be the raw (non-TMDS-encoded) sync values at the
 // same pipeline phase as ctrl_ch0_i.  They are used to compute the
-// data-island guard-band ch0 symbol: TERC4({1, vsync, hsync, 1}) per
-// HDMI 1.3 spec section 5.2.3.2.
+// data-island guard-band ch0 symbol: TERC4({1,1,VSYNC,HSYNC}) per
+// HDMI 1.3 spec Table 5-4 (CTL3=1 CTL2=1 CTL1=VSYNC CTL0=HSYNC).
 module hdmi_channel_mux (
   input  logic clk_i,
   input  logic rst_ni,
@@ -48,16 +48,16 @@ module hdmi_channel_mux (
   // Guard-band symbols (HDMI 1.3 spec, section 5.2.2)
   localparam tmds_word_t GB_VIDEO   = 10'b1011001100;  // TERC4(0b1000), ch1/ch2 video GB
   localparam tmds_word_t GB_DATA_N  = 10'b0100110011;  // fixed per spec, ch1/ch2 data island GB
-  // ch0 data island GB: TERC4({1, vsync, hsync, 1}) — HDMI 1.3 spec section 5.2.3.2
-  // nibble = {1, vsync, hsync, 1}: only {vsync,hsync} vary, so 4 possible values.
+  // ch0 data island GB: TERC4({CTL3,CTL2,CTL1,CTL0}) = TERC4({1,1,VSYNC,HSYNC})
+  // CTL3=1 CTL2=1 fixed; CTL1=VSYNC CTL0=HSYNC vary.
   tmds_word_t gb_data_ch0;
   always_comb begin
     unique case ({vsync_i, hsync_i})
-      2'b00: gb_data_ch0 = 10'b0100111001;  // TERC4(4'b1001)
-      2'b01: gb_data_ch0 = 10'b1011000110;  // TERC4(4'b1011)
-      2'b10: gb_data_ch0 = 10'b1001110001;  // TERC4(4'b1101)
+      2'b00: gb_data_ch0 = 10'b1010001110;  // TERC4(4'b1100)
+      2'b01: gb_data_ch0 = 10'b1001110001;  // TERC4(4'b1101)
+      2'b10: gb_data_ch0 = 10'b0101100011;  // TERC4(4'b1110)
       2'b11: gb_data_ch0 = 10'b1011000011;  // TERC4(4'b1111)
-      default: gb_data_ch0 = 10'b0100111001; // Bezpečný fallback (zhodný s 2'b00)
+      default: gb_data_ch0 = 10'b1010001110;
     endcase
   end
 
