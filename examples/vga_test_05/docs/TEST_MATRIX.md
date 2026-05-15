@@ -70,7 +70,7 @@ overrides in `project.yaml` (both default to 1 when `ENABLE_DATA_ISLAND=1`).
 | #  | DATA | AUDIO | GCP | AVI | Expected                          | Result | Notes |
 |----|------|-------|-----|-----|-----------------------------------|--------|-------|
 | 2A | 1    | 0     | 0   | 0   | Stable image; no packets inserted | PASS   | stable image; confirms DATA_ISLAND enable does not corrupt video by itself |
-| 2B | 1    | 0     | 1   | 0   | Stable image; GCP only            |        |       |
+| 2B | 1    | 0     | 1   | 0   | Stable image; GCP only            | FAIL   | no signal; GCP-only fails while 2A (no packets) passes |
 | 2C | 1    | 0     | 0   | 1   | Stable image; AVI only            |        |       |
 | 2D | 1    | 0     | 1   | 1   | Stable image; GCP+AVI (= test #2) | FAIL   | no signal |
 
