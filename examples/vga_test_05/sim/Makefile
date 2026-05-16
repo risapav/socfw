@@ -32,10 +32,10 @@ TX_CORE_SRCS = \
 .PHONY: all regression report clean \
         bch_ecc terc4_encoder data_island scheduler \
         acr_packet audio_sample_pkt tx_core_32x10 audio_scenarios \
-        di_isolation tmds_decode
+        di_isolation tmds_decode phy_loopback dvi_vs_2a
 
 all: bch_ecc terc4_encoder data_island scheduler acr_packet audio_sample_pkt \
-     tx_core_32x10 audio_scenarios tmds_decode
+     tx_core_32x10 di_isolation audio_scenarios tmds_decode phy_loopback dvi_vs_2a
 
 $(LOGDIR):
 	mkdir -p $(LOGDIR)
@@ -126,6 +126,19 @@ di_isolation: $(LOGDIR)
 tmds_decode: $(LOGDIR)
 	$(VLOG) $(TX_CORE_SRCS) tb_hdmi_tmds_decode.sv
 	$(VSIM) tb_hdmi_tmds_decode | tee $(LOGDIR)/tb_hdmi_tmds_decode.log
+
+# phy_loopback: behavioral ddio_out model compiled first (replaces Quartus megafunction),
+# then PHY module and testbench.  Verifies 10-bit symbol serialization end-to-end.
+phy_loopback: $(LOGDIR)
+	$(VLOG) $(RTL)/hdmi_pkg.sv \
+	        ddio_out_sim.sv \
+	        $(RTL)/tmds_phy_ddr_aligned.sv \
+	        tb_tmds_phy_loopback.sv
+	$(VSIM) tb_tmds_phy_loopback | tee $(LOGDIR)/tb_tmds_phy_loopback.log
+
+dvi_vs_2a: $(LOGDIR)
+	$(VLOG) $(TX_CORE_SRCS) tb_dvi_vs_2a.sv
+	$(VSIM) tb_dvi_vs_2a | tee $(LOGDIR)/tb_dvi_vs_2a.log
 
 clean:
 	rm -rf work transcript *.log $(LOGDIR)

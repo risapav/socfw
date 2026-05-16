@@ -1,3 +1,27 @@
+/**
+ * @file hdmi_channel_mux.sv
+ * @brief Multiplexor pre 3 TMDS kanály HDMI vysielača
+ * @details Modul vyberá medzi video dátami, riadiacimi symbolmi a Data Island
+ * paketmi na základe aktuálnej periódy (FSM).
+ * @param clk_i Pixel clock
+ * @param rst_ni Asynchrónny aktívne-low reset
+ * @param period_i Aktuálny stav HDMI periódy
+ * @param vsync_i Surový VSYNC signál
+ * @param hsync_i Surový HSYNC signál
+ * @param video_ch2_i TMDS video dáta pre kanál 2 (Červená)
+ * @param video_ch1_i TMDS video dáta pre kanál 1 (Zelená)
+ * @param video_ch0_i TMDS video dáta pre kanál 0 (Modrá)
+ * @param ctrl_ch2_i TMDS riadiace dáta pre kanál 2
+ * @param ctrl_ch1_i TMDS riadiace dáta pre kanál 1
+ * @param ctrl_ch0_i TMDS riadiace dáta pre kanál 0
+ * @param data_ch2_i TMDS Data Island dáta pre kanál 2
+ * @param data_ch1_i TMDS Data Island dáta pre kanál 1
+ * @param data_ch0_i TMDS Data Island dáta pre kanál 0
+ * @param ch2_o Výstupný TMDS symbol pre kanál 2
+ * @param ch1_o Výstupný TMDS symbol pre kanál 1
+ * @param ch0_o Výstupný TMDS symbol pre kanál 0
+ */
+
 `ifndef HDMI_CHANNEL_MUX_SV
 `define HDMI_CHANNEL_MUX_SV
 
@@ -46,11 +70,14 @@ module hdmi_channel_mux (
 );
 
   // Guard-band symbols (HDMI 1.3 spec, section 5.2.2)
-  localparam tmds_word_t GB_VIDEO   = 10'b1011001100;  // TERC4(0b1000), ch1/ch2 video GB
-  localparam tmds_word_t GB_DATA_N  = 10'b0100110011;  // fixed per spec, ch1/ch2 data island GB
+  localparam tmds_word_t GB_VIDEO    = 10'b1011001100;  // TERC4(4'h8); Video GB Ch0+Ch2
+  localparam tmds_word_t GB_DATA_N   = 10'b0100110011;  // Video GB Ch1 (complement of GB_VIDEO)
+  localparam tmds_word_t GB_DATA_CH1 = 10'b0101110001;  // TERC4(4'h4); Data Island GB Ch1
+  localparam tmds_word_t GB_DATA_CH2 = 10'b1011000110;  // TERC4(4'hB); Data Island GB Ch2
   // ch0 data island GB: TERC4({CTL3,CTL2,CTL1,CTL0}) = TERC4({1,1,VSYNC,HSYNC})
   // CTL3=1 CTL2=1 fixed; CTL1=VSYNC CTL0=HSYNC vary.
   tmds_word_t gb_data_ch0;
+
   always_comb begin
     unique case ({vsync_i, hsync_i})
       2'b00: gb_data_ch0 = 10'b1010001110;  // TERC4(4'b1100)
@@ -69,7 +96,9 @@ module hdmi_channel_mux (
   //     ch1=ctrl(2'b01)  ch2=ctrl(2'b01)   <-- both channels identical
   localparam tmds_word_t PRE_VIDEO_CH1 = 10'b0010101011;  // ctrl(2'b01)
 
-  tmds_word_t ch2_next, ch1_next, ch0_next;
+  tmds_word_t ch2_next;
+  tmds_word_t ch1_next;
+  tmds_word_t ch0_next;
 
   always_comb begin
     ch2_next = ctrl_ch2_i;
@@ -82,18 +111,21 @@ module hdmi_channel_mux (
         ch1_next = video_ch1_i;
         ch0_next = video_ch0_i;
       end
+
       HDMI_PERIOD_VIDEO_PREAMBLE: begin
         // ch1 signals "video period follows"; ch0 carries {vsync,hsync}; ch2=ctrl(0)
         ch2_next = ctrl_ch2_i;
         ch1_next = PRE_VIDEO_CH1;
         ch0_next = ctrl_ch0_i;
       end
+
       HDMI_PERIOD_VIDEO_GB: begin
         // HDMI 1.3 spec 5.2.3.3: Ch0/Ch2 = GB_VIDEO, Ch1 = GB_DATA_N
         ch2_next = GB_VIDEO;
         ch1_next = GB_DATA_N;
         ch0_next = GB_VIDEO;
       end
+
       HDMI_PERIOD_DATA_PREAMBLE: begin
         // HDMI 1.3 Table 5-7: CTL0=1 CTL1=0 CTL2=1 CTL3=0
         // ch1={CTL1=0,CTL0=1}=ctrl(2'b01)  ch2={CTL3=0,CTL2=1}=ctrl(2'b01)
@@ -101,17 +133,20 @@ module hdmi_channel_mux (
         ch1_next = PRE_VIDEO_CH1;
         ch0_next = ctrl_ch0_i;
       end
+
       HDMI_PERIOD_DATA_GB_LEAD,
       HDMI_PERIOD_DATA_GB_TRAIL: begin
-        ch2_next = GB_DATA_N;
-        ch1_next = GB_DATA_N;
+        ch2_next = GB_DATA_CH2;
+        ch1_next = GB_DATA_CH1;
         ch0_next = gb_data_ch0;
       end
+
       HDMI_PERIOD_DATA_PAYLOAD: begin
         ch2_next = data_ch2_i;
         ch1_next = data_ch1_i;
         ch0_next = data_ch0_i;
       end
+
       default: begin
         ch2_next = ctrl_ch2_i;
         ch1_next = ctrl_ch1_i;

@@ -218,7 +218,7 @@ module tb_hdmi_tmds_decode;
   logic [63:0] sp_cap[4];   // subpacket streams: [55:0]=PB data [63:56]=BCH_sp
 
   int          assert_fail_count;
-  int          cnt_gcp, cnt_avi;
+  int          cnt_gcp, cnt_avi, cnt_gb;
 
   // ── Packet verification ─────────────────────────────────────────────────
   task automatic verify_packet();
@@ -346,6 +346,25 @@ module tb_hdmi_tmds_decode;
         verify_packet();
         pkt_sym = 0;
       end
+    end else if (w_period_d2 == HDMI_PERIOD_DATA_GB_LEAD ||
+                 w_period_d2 == HDMI_PERIOD_DATA_GB_TRAIL) begin
+      // HDMI 1.3 Table 5-8: Ch2=TERC4(4'hB), Ch1=TERC4(4'h4),
+      // Ch0=TERC4({1,1,VSYNC,HSYNC})
+      if (ch2 !== 10'b1011000110) begin
+        $error("DATA_GB ch2=0b%010b exp TERC4(4'hB)=0b1011000110", ch2);
+        assert_fail_count = assert_fail_count + 1;
+      end
+      if (ch1 !== 10'b0101110001) begin
+        $error("DATA_GB ch1=0b%010b exp TERC4(4'h4)=0b0101110001", ch1);
+        assert_fail_count = assert_fail_count + 1;
+      end
+      if (ch0 !== 10'b1010001110 && ch0 !== 10'b1001110001 &&
+          ch0 !== 10'b0101100011 && ch0 !== 10'b1011000011) begin
+        $error("DATA_GB ch0=0b%010b not a valid TERC4({1,1,VSYNC,HSYNC})", ch0);
+        assert_fail_count = assert_fail_count + 1;
+      end
+      cnt_gb = cnt_gb + 1;
+      pkt_sym = 0;
     end else begin
       pkt_sym = 0;
     end
@@ -356,18 +375,23 @@ module tb_hdmi_tmds_decode;
     assert_fail_count = 0;
     cnt_gcp           = 0;
     cnt_avi           = 0;
+    cnt_gb            = 0;
     $display("=== tb_hdmi_tmds_decode: TERC4 black-box decode, GCP+AVI ===");
 
     wait (rst_n === 1'b1);
     repeat (4 * V_TOTAL * H_TOTAL + 50) @(posedge pix_clk);
 
-    $display("--- GCP decoded: %0d  AVI decoded: %0d ---", cnt_gcp, cnt_avi);
+    $display("--- GCP decoded: %0d  AVI decoded: %0d  guard bands: %0d ---",
+             cnt_gcp, cnt_avi, cnt_gb);
 
     if (cnt_gcp == 0) begin
       $error("No GCP packets decoded"); assert_fail_count = assert_fail_count + 1;
     end
     if (cnt_avi == 0) begin
       $error("No AVI packets decoded"); assert_fail_count = assert_fail_count + 1;
+    end
+    if (cnt_gb == 0) begin
+      $error("No data island guard bands seen"); assert_fail_count = assert_fail_count + 1;
     end
 
     if (assert_fail_count == 0) begin

@@ -131,9 +131,10 @@ modules:
       ENABLE_ACR_PACKET: 0
       ENABLE_AUDIO_INFOFRAME: 0
       ENABLE_AUDIO_SAMPLE: 0
-      # 2B re-test: GCP only — confirm structural path after preamble+guard fixes
-      ENABLE_GCP_PACKET: 1
-      ENABLE_AVI_PACKET: 0
+      # 2C test: AVI only — Samsung needs AVI InfoFrame to enter HDMI mode
+      # sim tb_dvi_vs_2a confirmed pipeline alignment is correct; green line = Samsung compat issue
+      ENABLE_GCP_PACKET: 0
+      ENABLE_AVI_PACKET: 1
       GCP_FRAME_PERIOD: 1
       VBLANK_ONLY: 1
       DEBUG_ISLAND_PHASES: 0

@@ -13,7 +13,7 @@ import hdmi_pkg::*;
 //   2. DATA_PAYLOAD never overlaps de_r
 //   3. DATA_PAYLOAD length = 32; ch*_o carries TERC4(di_ch*) cycle-accurately
 //   4. DATA_PREAMBLE length = 8; ch1/ch2 == PRE_VIDEO_CH1 (CTL0=1 CTL2=1 per Table 5-7)
-//   5. DATA_GB_{LEAD,TRAIL} length = 2; ch1/ch2 == GB_DATA_N; ch0 == TERC4({1,1,vs,hs})
+//   5. DATA_GB_{LEAD,TRAIL} length = 2; ch1==TERC4(4'h4) ch2==TERC4(4'hB); ch0==TERC4({1,1,vs,hs})
 //   6. VIDEO_PREAMBLE length = 8; ch1 == PRE_VIDEO_CH1; ch2 == ctrl(00)
 //   7. VIDEO_GB length = 2; ch0/ch2 == GB_VIDEO; ch1 == GB_DATA_N
 //   8. 2A: no data-island periods when GCP=0 AND AVI=0
@@ -242,8 +242,10 @@ module tb_hdmi_tx_core_32x10;
   // ── Fixed TMDS symbols — must match hdmi_channel_mux.sv exactly ──────────
   localparam tmds_word_t CTRL_00       = 10'b1101010100;  // ctrl(2'b00)
   localparam tmds_word_t PRE_VIDEO_CH1 = 10'b0010101011;  // ctrl(2'b01) — preamble ch1 and data-pre ch1/ch2
-  localparam tmds_word_t GB_VIDEO      = 10'b1011001100;  // TERC4(0x8) — video guard ch0/ch2
-  localparam tmds_word_t GB_DATA_N     = 10'b0100110011;  // fixed — data island guard ch1/ch2; video guard ch1
+  localparam tmds_word_t GB_VIDEO      = 10'b1011001100;  // TERC4(4'h8) — video guard ch0/ch2
+  localparam tmds_word_t GB_DATA_N     = 10'b0100110011;  // video guard ch1 (complement of GB_VIDEO)
+  localparam tmds_word_t GB_DATA_CH1   = 10'b0101110001;  // TERC4(4'h4) — data island guard ch1
+  localparam tmds_word_t GB_DATA_CH2   = 10'b1011000110;  // TERC4(4'hB) — data island guard ch2
 
   // TERC4 reference LUT — must match terc4_encoder.sv exactly.
   function automatic tmds_word_t terc4_ref(input logic [3:0] n);
@@ -394,14 +396,14 @@ module tb_hdmi_tx_core_32x10;
       // ── DATA guard band ch0/ch1/ch2 symbols ─────────────────────────────
       if (w_period_d2 == HDMI_PERIOD_DATA_GB_LEAD ||
           w_period_d2 == HDMI_PERIOD_DATA_GB_TRAIL) begin
-        if (ch1 !== GB_DATA_N) begin
+        if (ch1 !== GB_DATA_CH1) begin
           $error("ASSERT: DATA_GB ch1=%010b exp=%010b at cy=%0d",
-                 ch1, GB_DATA_N, sim_cycle);
+                 ch1, GB_DATA_CH1, sim_cycle);
           assert_fail_count = assert_fail_count + 1;
         end
-        if (ch2 !== GB_DATA_N) begin
+        if (ch2 !== GB_DATA_CH2) begin
           $error("ASSERT: DATA_GB ch2=%010b exp=%010b at cy=%0d",
-                 ch2, GB_DATA_N, sim_cycle);
+                 ch2, GB_DATA_CH2, sim_cycle);
           assert_fail_count = assert_fail_count + 1;
         end
         // ch0 = TERC4({1,1,VSYNC,HSYNC}) per HDMI spec Table 5-4

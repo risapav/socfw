@@ -11,7 +11,7 @@ one monitor may tolerate a malformed data island that causes another to sleep.
 ```
 Git commit  : (run git rev-parse --short HEAD)
 RTL hash    : (same)
-Sim log     : sim/logs/regression_full.log  (make report PASS, 12/12 scenarios)
+Sim log     : sim/logs/regression_full.log  (make report PASS, 14/14 scenarios)
 Date        : 2026-05-16
 Monitor     : SAMSUNG LS29E790CNS/EN
 ```
@@ -40,6 +40,8 @@ make report
 | tb_audio_sample_only            | PASS   |
 | tb_audio_full                   | PASS   |
 | tb_hdmi_tmds_decode             | PASS   |
+| tb_tmds_phy_loopback            | PASS   |
+| tb_dvi_vs_2a                    | PASS   |
 
 ---
 
@@ -70,9 +72,9 @@ overrides in `project.yaml` (both default to 1 when `ENABLE_DATA_ISLAND=1`).
 
 | #  | DATA | AUDIO | GCP | AVI | Expected                          | Result | Notes |
 |----|------|-------|-----|-----|-----------------------------------|--------|-------|
-| 2A | 1    | 0     | 0   | 0   | Stable image; no packets inserted | PASS   | stable image; confirms DATA_ISLAND enable does not corrupt video by itself |
-| 2B | 1    | 0     | 1   | 0   | Stable image; GCP only            | FAIL   | no signal; GCP-only fails while 2A (no packets) passes |
-| 2C | 1    | 0     | 0   | 1   | Stable image; AVI only            |        |       |
+| 2A | 1    | 0     | 0   | 0   | Stable image; no packets inserted | PARTIAL | image visible but shifted right, green line at left edge; sim (tb_dvi_vs_2a) confirms pipeline alignment is correct — Samsung does not recognize HDMI VIDEO_PREAMBLE in 800x600 without AVI InfoFrame |
+| 2B | 1    | 0     | 1   | 0   | Stable image; GCP only            | FAIL   | screen blank after Bug C fix too — Samsung requires AVI InfoFrame |
+| 2C | 1    | 0     | 0   | 1   | Stable image; AVI only            | FAIL   | FAIL after Bug C fix; AVI InfoFrame alone not sufficient — Samsung still rejects HDMI mode in 800x600 |
 | 2D | 1    | 0     | 1   | 1   | Stable image; GCP+AVI (= test #2) | FAIL   | no signal |
 
 **Interpretation:**
@@ -90,7 +92,7 @@ overrides in `project.yaml` (both default to 1 when `ENABLE_DATA_ISLAND=1`).
 | T1 | 1                   | DATA_PREAMBLE only               | PASS   | stable image; preamble alone does not disrupt monitor |
 | T2 | 2                   | preamble + data guard bands      | FAIL   | Samsung rejects malformed island (no payload = not spec-compliant); confirmed again after preamble CTL + video GB fixes — expected behavior |
 | T3 | 3                   | preamble + guard + 1 payload sym | SKIP   | Samsung rejects malformed island structure; not viable on this monitor |
-| T0 | 0                   | full 32-symbol payload           | FAIL   | parity fixed; preamble CTL fixed; video GB fixed; re-test pending |
+| T0 | 0                   | full 32-symbol payload           | FAIL   | confirmed FAIL after all fixes (preamble CTL Bug A, video GB Bug B); sim 12/12 PASS; Samsung screen blank; GCP=1 AVI=0 — Samsung likely requires AVI InfoFrame |
 
 **Interpretation:**
 - T1 PASS, T2 FAIL → fault is in DATA_GB_LEAD / DATA_GB_TRAIL symbols or channel assignment
@@ -99,13 +101,18 @@ overrides in `project.yaml` (both default to 1 when `ENABLE_DATA_ISLAND=1`).
 - NOTE: Samsung LS29E790CNS rejects malformed island structure — T2/T3 not viable on this monitor.
   Guard band nibble fixed per spec. Proceeding to T0 (full 32-symbol island).
 
-**Bugs fixed after T0 FAIL (both in hdmi_channel_mux.sv):**
+**Bugs fixed after T0 FAIL (all in hdmi_channel_mux.sv):**
 - Bug A: Data Island Preamble Ch1 was `ctrl(2'b11)` (CTL0=1 CTL1=1), Ch2 was `ctrl(2'b00)`.
   Spec (Table 5-7) requires CTL0=1 CTL1=0 CTL2=1 CTL3=0 → both Ch1 and Ch2 = `ctrl(2'b01)`.
   Monitor did not recognise the data island preamble → subsequent guard+payload seen as garbage.
 - Bug B: Video Guard Band Ch0 carried live control symbols; Ch1 carried `GB_VIDEO`.
   Spec requires Ch0=Ch2=`GB_VIDEO` (1011001100) and Ch1=`GB_DATA_N` (0100110011).
   (Video was tolerant but spec non-compliant.)
+- Bug C: Data Island Guard Band Ch1 and Ch2 both carried `GB_DATA_N` (0100110011) — the Video GB
+  Ch1 complement symbol. Spec Table 5-8 requires Ch1=TERC4(4'h4)=0101110001 and
+  Ch2=TERC4(4'hB)=1011000110. Neither is a valid TERC4 value — Samsung drops every island.
+  Found by 2B+2C both failing; sim did not catch it (tb_hdmi_tmds_decode only captured DATA_PAYLOAD).
+  Fixed: added GB_DATA_CH1/GB_DATA_CH2 constants; testbench extended to verify guard band periods.
 
 ### Audio packets — isolation matrix
 
