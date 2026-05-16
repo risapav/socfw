@@ -32,10 +32,10 @@ TX_CORE_SRCS = \
 .PHONY: all regression report clean \
         bch_ecc terc4_encoder data_island scheduler \
         acr_packet audio_sample_pkt tx_core_32x10 audio_scenarios \
-        di_isolation
+        di_isolation tmds_decode
 
 all: bch_ecc terc4_encoder data_island scheduler acr_packet audio_sample_pkt \
-     tx_core_32x10 audio_scenarios
+     tx_core_32x10 audio_scenarios tmds_decode
 
 $(LOGDIR):
 	mkdir -p $(LOGDIR)
@@ -122,6 +122,10 @@ di_isolation: $(LOGDIR)
 	vsim -G ENABLE_GCP_PACKET=1 -G ENABLE_AVI_PACKET=1 \
 	     -c -do "run -all; quit" tb_hdmi_tx_core_32x10 \
 	     | tee $(LOGDIR)/tb_di_2d.log
+
+tmds_decode: $(LOGDIR)
+	$(VLOG) $(TX_CORE_SRCS) tb_hdmi_tmds_decode.sv
+	$(VSIM) tb_hdmi_tmds_decode | tee $(LOGDIR)/tb_hdmi_tmds_decode.log
 
 clean:
 	rm -rf work transcript *.log $(LOGDIR)

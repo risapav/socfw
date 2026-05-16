@@ -9,10 +9,10 @@ Fill in the session header below before recording results. Monitor model matters
 one monitor may tolerate a malformed data island that causes another to sleep.
 
 ```
-Git commit  : d39ff93  (last HDMI RTL commit; run git rev-parse --short HEAD for bitstream hash)
-RTL hash    : d39ff93
-Sim log     : sim/logs/regression_full.log  (make report PASS, 11/11 scenarios)
-Date        : 2026-05-13
+Git commit  : (run git rev-parse --short HEAD)
+RTL hash    : (same)
+Sim log     : sim/logs/regression_full.log  (make report PASS, 12/12 scenarios)
+Date        : 2026-05-16
 Monitor     : SAMSUNG LS29E790CNS/EN
 ```
 
@@ -39,6 +39,7 @@ make report
 | tb_audio_if_only                | PASS   |
 | tb_audio_sample_only            | PASS   |
 | tb_audio_full                   | PASS   |
+| tb_hdmi_tmds_decode             | PASS   |
 
 ---
 
@@ -87,9 +88,9 @@ overrides in `project.yaml` (both default to 1 when `ENABLE_DATA_ISLAND=1`).
 | #  | DEBUG_ISLAND_PHASES | Content                          | Result | Notes |
 |----|---------------------|----------------------------------|--------|-------|
 | T1 | 1                   | DATA_PREAMBLE only               | PASS   | stable image; preamble alone does not disrupt monitor |
-| T2 | 2                   | preamble + data guard bands      | FAIL   | monitor rejects malformed island (0 payload symbols); guard band Ch0 nibble also fixed ({1,VSYNC,HSYNC,1}→{1,1,VSYNC,HSYNC}) |
-| T3 | 3                   | preamble + guard + 1 payload sym | SKIP   | Samsung rejects malformed island structure; T2 fails same way |
-| T0 | 0                   | full 32-symbol payload           | FAIL   | parity fixed; preamble Ch1/Ch2 CTL wrong (ctrl(11) vs ctrl(01)); re-test pending |
+| T2 | 2                   | preamble + data guard bands      | FAIL   | Samsung rejects malformed island (no payload = not spec-compliant); confirmed again after preamble CTL + video GB fixes — expected behavior |
+| T3 | 3                   | preamble + guard + 1 payload sym | SKIP   | Samsung rejects malformed island structure; not viable on this monitor |
+| T0 | 0                   | full 32-symbol payload           | FAIL   | parity fixed; preamble CTL fixed; video GB fixed; re-test pending |
 
 **Interpretation:**
 - T1 PASS, T2 FAIL → fault is in DATA_GB_LEAD / DATA_GB_TRAIL symbols or channel assignment
