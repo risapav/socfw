@@ -22,6 +22,8 @@ features:
     - board:onboard.leds
     - board:onboard.seg
     - board:onboard.dig
+    - board:external.pmod.j10_led8
+    - board:external.pmod.j11_led8
 
 clocks:
   primary:
@@ -44,8 +46,12 @@ modules:
           target: board:onboard.uart.rx
         uart_tx_o:
           target: board:onboard.uart.tx
-        led_o:
+        led_00_o:
           target: board:onboard.leds
+        led_01_o:
+          target: board:external.pmod.j10_led8
+        led_02_o:
+          target: board:external.pmod.j11_led8
         onboard_seg_o:
           target: board:onboard.seg
         onboard_dig_o:

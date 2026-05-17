@@ -13,7 +13,7 @@ set_global_assignment -name NUM_PARALLEL_PROCESSORS 4
 
 # --- 2. Definícia zdrojových súborov ---
 # Generated top-level wrapper (socfw build -> build/rtl/soc_top.sv)
-set_global_assignment -name SYSTEMVERILOG_FILE "build/rtl/soc_top.sv"
+set_global_assignment -name SYSTEMVERILOG_FILE build/rtl/soc_top.sv
 
 # IP source files (paths relative to project root)
 source build/hal/files.tcl
@@ -25,7 +25,7 @@ source build/hal/board.tcl
 set_global_assignment -name VERILOG_SHOW_LMF_MAPPING_MESSAGES OFF
 
 # --- 4. Časové obmedzenia (SDC) ---
-set_global_assignment -name SDC_FILE "build/timing/soc_top.sdc"
+set_global_assignment -name SDC_FILE build/timing/soc_top.sdc
 
 # --- 5. Globálne nastavenia Partície ---
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top

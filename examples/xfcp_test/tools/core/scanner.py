@@ -53,9 +53,14 @@ class DynamicScanner:
                 cls  = self.CLASS_MAP.get(name)
 
                 if cls:
-                    inventory[name] = cls(self.bus, addr, name=name)
+                    key = name
+                    n = 0
+                    while key in inventory:
+                        n += 1
+                        key = f"{name}{n}"
+                    inventory[key] = cls(self.bus, addr, name=key)
                     print(f"  [Slot {slot:X}] {Fore.GREEN}OK{Style.RESET_ALL} "
-                          f"- {name} ({cls.__name__}) @ {hex(addr)}")
+                          f"- {key} ({cls.__name__}) @ {hex(addr)}")
                 else:
                     print(f"  [Slot {slot:X}] {Fore.YELLOW}Neznáme ID: "
                           f"'{name}'{Style.RESET_ALL} @ {hex(addr)}")

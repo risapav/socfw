@@ -42,9 +42,17 @@ ports:
     direction: output
     width: 1
 
-  - name: led_o
+  - name: led_00_o
     direction: output
     width: 6
+
+  - name: led_01_o
+    direction: output
+    width: 8
+
+  - name: led_02_o
+    direction: output
+    width: 8
 
   - name: onboard_seg_o
     direction: output
@@ -83,7 +91,7 @@ artifacts:
     - ../rtl/xfcp/xfcp_rx_parser.sv
     - ../rtl/xfcp/xfcp_tx_packetizer.sv
     - ../rtl/xfcp/xfcp_axi_engine.sv
-    - ../rtl/xfcp/xfcp_axil_bridge_2.sv
+    - ../rtl/xfcp/xfcp_axil_bridge.sv
     # Top-level
     - ../rtl/xfcp_uart_mmio_top.sv
 

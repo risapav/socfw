@@ -79,76 +79,104 @@ class SevenSeg(BasePeripheral):
 
     MAPOVANIE REGISTROV:
     0x00 [RO] : COMPONENT_ID - ASCII "SEG7"
-    0x04 [RW] : DATA_REG     - Packed formát pre 4 digity (každý po 5 bitov).
+    0x04 [RW] : DATA_REG     - Packed formát pre N digitov (každý po 5 bitov).
     """
 
-    # Definujeme jednotlivé digity ako samostatné registre na tom istom offsete 0x04
+    # Konfigurácia počtu fyzicky pripojených digitov (dynamicky ovplyvňuje správanie)
+    num_digits = 2
+
+    # Abstrakcia pre ID register
+    id_val = AxilRegister(0x00, doc="ASCII ID modulu")
+
+    # Definujeme registre pre maximálnu kapacitu (4 digity).
+    # Logika nižšie zabezpečí, že sa využijú len tie aktívne.
     digit0 = AxilRegister(0x04, bit_offset=0,  bit_width=5, readonly=False)
     digit1 = AxilRegister(0x04, bit_offset=5,  bit_width=5, readonly=False)
     digit2 = AxilRegister(0x04, bit_offset=10, bit_width=5, readonly=False)
     digit3 = AxilRegister(0x04, bit_offset=15, bit_width=5, readonly=False)
 
     def set_number(self, val):
-        """Rozloží integer na jednotlivé číslice displeja."""
-        s_val = str(val).zfill(4)
+        """Rozloží integer na jednotlivé číslice displeja podľa počtu digitov."""
+        # Prevedieme na string, orežeme zľava ak je dlhší (napr. 9999 pre 3 digity -> 999),
+        # a doplníme nuly ak je kratší (napr. 5 -> 005)
+        s_val = str(val).zfill(self.num_digits)[-self.num_digits:]
         try:
-            self.digit3 = int(s_val[0], 16)
-            self.digit2 = int(s_val[1], 16)
-            self.digit1 = int(s_val[2], 16)
-            self.digit0 = int(s_val[3], 16)
+            for i in range(self.num_digits):
+                # digit0 je úplne vpravo (zodpovedá poslednému znaku stringu)
+                val_int = int(s_val[self.num_digits - 1 - i], 16)
+                setattr(self, f"digit{i}", val_int)
         except ValueError:
             pass
 
     def get_live_metrics(self):
-        # Ak vieš, že konkrétny kus hardvéru na adrese blbne,
-        # pridaj sem try-except alebo kontrolu adresy
         try:
             val = self.read32(0x04)
             if val is None:
                 return {"raw": f"{Fore.RED}TIMEOUT{Fore.RESET}"}
+            # Voliteľne by sa tu dala pridať maska pre výpis len aktívnych bitov,
+            # ale z hľadiska diagnostiky je lepšie vidieť celý HW 32-bit register.
             return {"raw": f"0x{val:08X}"}
         except:
             return {"raw": "ERROR"}
 
     def set_digits_safe(self, values):
-        """Zapíše len toľko digitov, koľko hardvér reálne má."""
+        """Zapíše len toľko digitov, koľko hardvér reálne má (podľa self.num_digits)."""
         packed_val = 0
-        for i, v in enumerate(values[:4]): # Max 4 digity
+        for i, v in enumerate(values[:self.num_digits]):
             packed_val |= (int(v) & 0x1F) << (i * 5)
         self.write32(0x04, packed_val)
 
     def run_test(self):
-        print(f"  [SEG7] Testovanie multiplexu (1.2.3.4)...", end=" ", flush=True)
-        # Nastavíme "1.2.3.4" (každý digit: bit4=bodka, bity 3:0=hodnota)
-        val = (0x11 << 0) | (0x12 << 5) | (0x13 << 10) | (0x14 << 15)
-        self.bus.write32(self.base + 0x04, val)
-        time.sleep(1)
-        print(f"{Fore.GREEN}1. OK{Fore.RESET}")
         """
-        self.bus.write32.write32(self.base + 0x04, 0x1234)
-        time.sleep(1)
-        print(f"{Fore.GREEN}2. OK{Fore.RESET}")
-
-        self.bus.write32.write32(self.base + 0x04, 0x2010)
-        time.sleep(1)
-        print(f"{Fore.GREEN}3. OK{Fore.RESET}")
-
-        self.bus.write32.write32(self.base + 0x04, 0x123) # Zobrazí "123"
-        time.sleep(1)
-        print(f"{Fore.GREEN}4. OK{Fore.RESET}")
-
-        self.bus.write32.write32(self.base + 0x04, 0x777)
-        time.sleep(1)
-        print(f"{Fore.GREEN}5. OK{Fore.RESET}")
-
-        self.bus.write32.write32(self.base + 0x04, 0xFFFFFFFF)
-        time.sleep(1)
-        print(f"{Fore.GREEN}5. OK{Fore.RESET}")
+        Spustí diagnostickú sekvenciu pre overenie funkčnosti 7-segmentového displeja.
+        Dynamicky sa prispôsobuje počtu dostupných digitov (self.num_digits).
         """
+        print(f"{Fore.CYAN}Spúšťam diagnostiku displeja (Component ID: {self.id_val})...{Fore.RESET}")
 
-        #self.set_digits_safe(0x123)
-        #self.bus.write32(self.base + 0x04, 0x2010)
-        #self.bus.write32(self.base + 0x04, 0x777)
-        self.write32(0x04, 0x777)
-        print(f"{Fore.GREEN}5. {hex(self.digit3)} {hex(self.digit2)} {hex(self.digit1)} {hex(self.digit0)} OK{Fore.RESET}")
+        try:
+            # 1. TEST: Všetky segmenty a bodky
+            print(f"Efekt 1/4: Všetky segmenty a bodky ({self.num_digits} digity)")
+            # Vytvorí pole [0x18, 0x18, ...] presne podľa počtu digitov
+            self.set_digits_safe([0x18] * self.num_digits)
+            time.sleep(1.0)
+
+            # 2. TEST: Rýchle počítanie
+            print("Efekt 2/4: Dekadické počítanie")
+            # Vygeneruje postupnosť: napr. [0, 111, 222, ... 999] pre 3 digity
+            count_seq = [0] + [int(str(x) * self.num_digits) for x in range(1, 10)]
+            for i in count_seq:
+                self.set_number(i)
+                time.sleep(0.15)
+            time.sleep(0.5)
+
+            # 3. TEST: Hexadecimálny posun
+            print("Efekt 3/4: Hexadecimálny shift (AbCdEF)")
+            hex_sequence = [0xA, 0xB, 0xC, 0xD, 0xE, 0xF]
+            # Uistíme sa, že sekvencia je dlhšia ako samotný displej
+            if len(hex_sequence) >= self.num_digits:
+                for i in range(len(hex_sequence) - self.num_digits + 1):
+                    # Vytvoríme výsek a otočíme ho (nultý prvok pola sa posiela do digit0)
+                    window = hex_sequence[i : i + self.num_digits]
+                    self.set_digits_safe(window[::-1])
+                    time.sleep(0.4)
+            time.sleep(0.5)
+
+            # 4. TEST: Bežiaca bodka
+            print("Efekt 4/4: Bežiaca desatinná čiarka")
+            for _ in range(2):
+                for pos in range(self.num_digits):
+                    vals = [0x00] * self.num_digits
+                    vals[pos] = 0x10
+                    self.set_digits_safe(vals)
+                    time.sleep(0.2)
+
+            print(f"{Fore.GREEN}Test dokončený.{Fore.RESET}")
+
+        except Exception as e:
+            print(f"{Fore.RED}Chyba počas testu: {e}{Fore.RESET}")
+
+        finally:
+            # Upratanie: Zhasnutie displeja
+            self.set_digits_safe([0x00] * self.num_digits)
+
         return True

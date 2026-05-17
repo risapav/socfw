@@ -1,17 +1,19 @@
 /**
  * @file  xfcp_uart_mmio_top.sv
- * @brief Top-level: XFCP-over-UART bridge with 4 AXI-Lite peripherals.
+ * @brief Top-level: XFCP-over-UART bridge with 6 AXI-Lite peripherals.
  * @param CLOCK_FREQ_HZ          System clock in Hz (default 50 MHz, QMTech EP4CE55).
  * @param UART_DEFAULT_BAUD_DIV  Reset value for baud prescaler (default 434 = 50 MHz/115200).
  * @details
  *   Integrates xfcp_axil_bridge with four AXI-Lite peripherals through an
  *   inline 1-to-4 AXI-Lite address decoder.
  *
- *   Address map (AWADDR[17:16] = slot index):
+ *   Address map (AWADDR[18:16] = slot index):
  *     Slot 0 @ 0xFF000000 : axil_sys_ctrl    (ID "SYSC")
  *     Slot 1 @ 0xFF010000 : axil_uart_adapter (ID "UART")
  *     Slot 2 @ 0xFF020000 : axil_regs / LED   (ID "OUT_")
- *     Slot 3 @ 0xFF030000 : axil_seven_seg    (ID "SEG7")
+ *     Slot 3 @ 0xFF030000 : axil_regs / LED   (ID "OUT_")
+ *     Slot 4 @ 0xFF040000 : axil_regs / LED   (ID "OUT_")
+ *     Slot 5 @ 0xFF050000 : axil_seven_seg    (ID "SEG7")
  *
  *   XFCP protocol (xfcp_axil_bridge): SOP=0xFE, READ=0x10, WRITE=0x11.
  *   axis_uart_rx is instantiated with AXIS_TLAST=0: UART is a byte stream;
@@ -36,7 +38,9 @@ module xfcp_uart_mmio_top #(
   input  logic       rst_ni,
   input  logic       uart_rx_i,
   output logic       uart_tx_o,
-  output logic [5:0] led_o,
+  output logic [5:0] led_00_o,
+  output logic [7:0] led_01_o,
+  output logic [7:0] led_02_o,
   output logic [7:0] onboard_seg_o,
   output logic [2:0] onboard_dig_o
 );
@@ -58,7 +62,11 @@ module xfcp_uart_mmio_top #(
       (.ACLK(clk_i), .ARESETn(rst_ni));
   axi4lite_if #(.ADDR_WIDTH(32), .DATA_WIDTH(32)) axil_uart_s
       (.ACLK(clk_i), .ARESETn(rst_ni));
-  axi4lite_if #(.ADDR_WIDTH(32), .DATA_WIDTH(32)) axil_led
+  axi4lite_if #(.ADDR_WIDTH(32), .DATA_WIDTH(32)) axil_led_00
+      (.ACLK(clk_i), .ARESETn(rst_ni));
+  axi4lite_if #(.ADDR_WIDTH(32), .DATA_WIDTH(32)) axil_led_01
+      (.ACLK(clk_i), .ARESETn(rst_ni));
+  axi4lite_if #(.ADDR_WIDTH(32), .DATA_WIDTH(32)) axil_led_02
       (.ACLK(clk_i), .ARESETn(rst_ni));
   axi4lite_if #(.ADDR_WIDTH(32), .DATA_WIDTH(32)) axil_seg
       (.ACLK(clk_i), .ARESETn(rst_ni));
@@ -125,17 +133,17 @@ module xfcp_uart_mmio_top #(
   );
 
   // --------------------------------------------------------------------------
-  // AXI-Lite 1-to-4 decoder  (slot = addr[17:16])
+  // AXI-Lite 1-to-6 decoder  (slot = addr[18:16])
   // --------------------------------------------------------------------------
-  logic [1:0] aw_slot_w, ar_slot_w, wr_slot_r, rd_slot_r;
+  logic [2:0] aw_slot_w, ar_slot_w, wr_slot_r, rd_slot_r;
 
-  assign aw_slot_w = axil_m.AWADDR[17:16];
-  assign ar_slot_w = axil_m.ARADDR[17:16];
+  assign aw_slot_w = axil_m.AWADDR[18:16];
+  assign ar_slot_w = axil_m.ARADDR[18:16];
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
-      wr_slot_r <= 2'h0;
-      rd_slot_r <= 2'h0;
+      wr_slot_r <= 3'h0;
+      rd_slot_r <= 3'h0;
     end else begin
       if (axil_m.AWVALID && axil_m.AWREADY) wr_slot_r <= aw_slot_w;
       if (axil_m.ARVALID && axil_m.ARREADY) rd_slot_r <= ar_slot_w;
@@ -147,8 +155,12 @@ module xfcp_uart_mmio_top #(
   assign axil_sysc.AWPROT    = axil_m.AWPROT;
   assign axil_uart_s.AWADDR  = axil_m.AWADDR;
   assign axil_uart_s.AWPROT  = axil_m.AWPROT;
-  assign axil_led.AWADDR     = axil_m.AWADDR;
-  assign axil_led.AWPROT     = axil_m.AWPROT;
+  assign axil_led_00.AWADDR     = axil_m.AWADDR;
+  assign axil_led_00.AWPROT     = axil_m.AWPROT;
+  assign axil_led_01.AWADDR     = axil_m.AWADDR;
+  assign axil_led_01.AWPROT     = axil_m.AWPROT;
+  assign axil_led_02.AWADDR     = axil_m.AWADDR;
+  assign axil_led_02.AWPROT     = axil_m.AWPROT;
   assign axil_seg.AWADDR     = axil_m.AWADDR;
   assign axil_seg.AWPROT     = axil_m.AWPROT;
 
@@ -156,8 +168,12 @@ module xfcp_uart_mmio_top #(
   assign axil_sysc.WSTRB     = axil_m.WSTRB;
   assign axil_uart_s.WDATA   = axil_m.WDATA;
   assign axil_uart_s.WSTRB   = axil_m.WSTRB;
-  assign axil_led.WDATA      = axil_m.WDATA;
-  assign axil_led.WSTRB      = axil_m.WSTRB;
+  assign axil_led_00.WDATA      = axil_m.WDATA;
+  assign axil_led_00.WSTRB      = axil_m.WSTRB;
+  assign axil_led_01.WDATA      = axil_m.WDATA;
+  assign axil_led_01.WSTRB      = axil_m.WSTRB;
+  assign axil_led_02.WDATA      = axil_m.WDATA;
+  assign axil_led_02.WSTRB      = axil_m.WSTRB;
   assign axil_seg.WDATA      = axil_m.WDATA;
   assign axil_seg.WSTRB      = axil_m.WSTRB;
 
@@ -165,47 +181,63 @@ module xfcp_uart_mmio_top #(
   assign axil_sysc.ARPROT    = axil_m.ARPROT;
   assign axil_uart_s.ARADDR  = axil_m.ARADDR;
   assign axil_uart_s.ARPROT  = axil_m.ARPROT;
-  assign axil_led.ARADDR     = axil_m.ARADDR;
-  assign axil_led.ARPROT     = axil_m.ARPROT;
+  assign axil_led_00.ARADDR     = axil_m.ARADDR;
+  assign axil_led_00.ARPROT     = axil_m.ARPROT;
+  assign axil_led_01.ARADDR     = axil_m.ARADDR;
+  assign axil_led_01.ARPROT     = axil_m.ARPROT;
+  assign axil_led_02.ARADDR     = axil_m.ARADDR;
+  assign axil_led_02.ARPROT     = axil_m.ARPROT;
   assign axil_seg.ARADDR     = axil_m.ARADDR;
   assign axil_seg.ARPROT     = axil_m.ARPROT;
 
   // AW valid: gated by slot (combinatorial decode)
   assign axil_sysc.AWVALID   = axil_m.AWVALID & (aw_slot_w == 2'h0);
   assign axil_uart_s.AWVALID = axil_m.AWVALID & (aw_slot_w == 2'h1);
-  assign axil_led.AWVALID    = axil_m.AWVALID & (aw_slot_w == 2'h2);
-  assign axil_seg.AWVALID    = axil_m.AWVALID & (aw_slot_w == 2'h3);
+  assign axil_led_00.AWVALID    = axil_m.AWVALID & (aw_slot_w == 2'h2);
+  assign axil_led_01.AWVALID    = axil_m.AWVALID & (aw_slot_w == 2'h3);
+  assign axil_led_02.AWVALID    = axil_m.AWVALID & (aw_slot_w == 3'h4);
+  assign axil_seg.AWVALID    = axil_m.AWVALID & (aw_slot_w == 3'h5);
 
   // W valid: follows AW slot (axil_xfcp_mod sends AW+W simultaneously)
   assign axil_sysc.WVALID    = axil_m.WVALID & (aw_slot_w == 2'h0);
   assign axil_uart_s.WVALID  = axil_m.WVALID & (aw_slot_w == 2'h1);
-  assign axil_led.WVALID     = axil_m.WVALID & (aw_slot_w == 2'h2);
-  assign axil_seg.WVALID     = axil_m.WVALID & (aw_slot_w == 2'h3);
+  assign axil_led_00.WVALID     = axil_m.WVALID & (aw_slot_w == 2'h2);
+  assign axil_led_01.WVALID     = axil_m.WVALID & (aw_slot_w == 2'h3);
+  assign axil_led_02.WVALID     = axil_m.WVALID & (aw_slot_w == 3'h4);
+  assign axil_seg.WVALID     = axil_m.WVALID & (aw_slot_w == 3'h5);
 
   // B ready: gated by registered write slot
   assign axil_sysc.BREADY    = axil_m.BREADY & (wr_slot_r == 2'h0);
   assign axil_uart_s.BREADY  = axil_m.BREADY & (wr_slot_r == 2'h1);
-  assign axil_led.BREADY     = axil_m.BREADY & (wr_slot_r == 2'h2);
-  assign axil_seg.BREADY     = axil_m.BREADY & (wr_slot_r == 2'h3);
+  assign axil_led_00.BREADY     = axil_m.BREADY & (wr_slot_r == 2'h2);
+  assign axil_led_01.BREADY     = axil_m.BREADY & (wr_slot_r == 2'h3);
+  assign axil_led_02.BREADY     = axil_m.BREADY & (wr_slot_r == 3'h4);
+  assign axil_seg.BREADY     = axil_m.BREADY & (wr_slot_r == 3'h5);
 
   // AR valid: gated by slot
   assign axil_sysc.ARVALID   = axil_m.ARVALID & (ar_slot_w == 2'h0);
   assign axil_uart_s.ARVALID = axil_m.ARVALID & (ar_slot_w == 2'h1);
-  assign axil_led.ARVALID    = axil_m.ARVALID & (ar_slot_w == 2'h2);
-  assign axil_seg.ARVALID    = axil_m.ARVALID & (ar_slot_w == 2'h3);
+  assign axil_led_00.ARVALID    = axil_m.ARVALID & (ar_slot_w == 2'h2);
+  assign axil_led_01.ARVALID    = axil_m.ARVALID & (ar_slot_w == 2'h3);
+  assign axil_led_02.ARVALID    = axil_m.ARVALID & (ar_slot_w == 3'h4);
+  assign axil_seg.ARVALID    = axil_m.ARVALID & (ar_slot_w == 3'h5);
 
   // R ready: gated by registered read slot
   assign axil_sysc.RREADY    = axil_m.RREADY & (rd_slot_r == 2'h0);
   assign axil_uart_s.RREADY  = axil_m.RREADY & (rd_slot_r == 2'h1);
-  assign axil_led.RREADY     = axil_m.RREADY & (rd_slot_r == 2'h2);
-  assign axil_seg.RREADY     = axil_m.RREADY & (rd_slot_r == 2'h3);
+  assign axil_led_00.RREADY     = axil_m.RREADY & (rd_slot_r == 2'h2);
+  assign axil_led_01.RREADY     = axil_m.RREADY & (rd_slot_r == 2'h3);
+  assign axil_led_02.RREADY     = axil_m.RREADY & (rd_slot_r == 3'h4);
+  assign axil_seg.RREADY     = axil_m.RREADY & (rd_slot_r == 3'h5);
 
   // AW ready: mux from selected slave
   always_comb begin
     case (aw_slot_w)
-      2'h0:    axil_m.AWREADY = axil_sysc.AWREADY;
-      2'h1:    axil_m.AWREADY = axil_uart_s.AWREADY;
-      2'h2:    axil_m.AWREADY = axil_led.AWREADY;
+      3'h0:    axil_m.AWREADY = axil_sysc.AWREADY;
+      3'h1:    axil_m.AWREADY = axil_uart_s.AWREADY;
+      3'h2:    axil_m.AWREADY = axil_led_00.AWREADY;
+      3'h3:    axil_m.AWREADY = axil_led_01.AWREADY;
+      3'h4:    axil_m.AWREADY = axil_led_02.AWREADY;
       default: axil_m.AWREADY = axil_seg.AWREADY;
     endcase
   end
@@ -213,9 +245,11 @@ module xfcp_uart_mmio_top #(
   // W ready: mux from selected slave
   always_comb begin
     case (aw_slot_w)
-      2'h0:    axil_m.WREADY = axil_sysc.WREADY;
-      2'h1:    axil_m.WREADY = axil_uart_s.WREADY;
-      2'h2:    axil_m.WREADY = axil_led.WREADY;
+      3'h0:    axil_m.WREADY = axil_sysc.WREADY;
+      3'h1:    axil_m.WREADY = axil_uart_s.WREADY;
+      3'h2:    axil_m.WREADY = axil_led_00.WREADY;
+      3'h3:    axil_m.WREADY = axil_led_01.WREADY;
+      3'h4:    axil_m.WREADY = axil_led_02.WREADY;
       default: axil_m.WREADY = axil_seg.WREADY;
     endcase
   end
@@ -223,9 +257,11 @@ module xfcp_uart_mmio_top #(
   // B: mux from registered write slot slave
   always_comb begin
     case (wr_slot_r)
-      2'h0:    begin axil_m.BVALID = axil_sysc.BVALID;   axil_m.BRESP = axil_sysc.BRESP;   end
-      2'h1:    begin axil_m.BVALID = axil_uart_s.BVALID; axil_m.BRESP = axil_uart_s.BRESP; end
-      2'h2:    begin axil_m.BVALID = axil_led.BVALID;    axil_m.BRESP = axil_led.BRESP;    end
+      3'h0:    begin axil_m.BVALID = axil_sysc.BVALID;   axil_m.BRESP = axil_sysc.BRESP;   end
+      3'h1:    begin axil_m.BVALID = axil_uart_s.BVALID; axil_m.BRESP = axil_uart_s.BRESP; end
+      3'h2:    begin axil_m.BVALID = axil_led_00.BVALID;    axil_m.BRESP = axil_led_00.BRESP;    end
+      3'h3:    begin axil_m.BVALID = axil_led_01.BVALID;    axil_m.BRESP = axil_led_01.BRESP;    end
+      3'h4:    begin axil_m.BVALID = axil_led_02.BVALID;    axil_m.BRESP = axil_led_02.BRESP;    end
       default: begin axil_m.BVALID = axil_seg.BVALID;    axil_m.BRESP = axil_seg.BRESP;    end
     endcase
   end
@@ -233,9 +269,11 @@ module xfcp_uart_mmio_top #(
   // AR ready: mux from selected slave
   always_comb begin
     case (ar_slot_w)
-      2'h0:    axil_m.ARREADY = axil_sysc.ARREADY;
-      2'h1:    axil_m.ARREADY = axil_uart_s.ARREADY;
-      2'h2:    axil_m.ARREADY = axil_led.ARREADY;
+      3'h0:    axil_m.ARREADY = axil_sysc.ARREADY;
+      3'h1:    axil_m.ARREADY = axil_uart_s.ARREADY;
+      3'h2:    axil_m.ARREADY = axil_led_00.ARREADY;
+      3'h3:    axil_m.ARREADY = axil_led_01.ARREADY;
+      3'h4:    axil_m.ARREADY = axil_led_02.ARREADY;
       default: axil_m.ARREADY = axil_seg.ARREADY;
     endcase
   end
@@ -243,20 +281,30 @@ module xfcp_uart_mmio_top #(
   // R: mux from registered read slot slave
   always_comb begin
     case (rd_slot_r)
-      2'h0: begin
+      3'h0: begin
         axil_m.RVALID = axil_sysc.RVALID;
         axil_m.RDATA  = axil_sysc.RDATA;
         axil_m.RRESP  = axil_sysc.RRESP;
       end
-      2'h1: begin
+      3'h1: begin
         axil_m.RVALID = axil_uart_s.RVALID;
         axil_m.RDATA  = axil_uart_s.RDATA;
         axil_m.RRESP  = axil_uart_s.RRESP;
       end
-      2'h2: begin
-        axil_m.RVALID = axil_led.RVALID;
-        axil_m.RDATA  = axil_led.RDATA;
-        axil_m.RRESP  = axil_led.RRESP;
+      3'h2: begin
+        axil_m.RVALID = axil_led_00.RVALID;
+        axil_m.RDATA  = axil_led_00.RDATA;
+        axil_m.RRESP  = axil_led_00.RRESP;
+      end
+      3'h3: begin
+        axil_m.RVALID = axil_led_01.RVALID;
+        axil_m.RDATA  = axil_led_01.RDATA;
+        axil_m.RRESP  = axil_led_01.RRESP;
+      end
+      3'h4: begin
+        axil_m.RVALID = axil_led_02.RVALID;
+        axil_m.RDATA  = axil_led_02.RDATA;
+        axil_m.RRESP  = axil_led_02.RRESP;
       end
       default: begin
         axil_m.RVALID = axil_seg.RVALID;
@@ -307,19 +355,47 @@ module xfcp_uart_mmio_top #(
   // --------------------------------------------------------------------------
   // Slot 2: LED output register (OUT_)
   // --------------------------------------------------------------------------
-  logic [31:0] led_data_w;
+  logic [31:0] led_data_00_w;
 
-  axil_regs u_led_regs (
+  axil_regs u_led_regs_00 (
     .clk_i (clk_i),
     .rst_ni(rst_ni),
-    .s_axil(axil_led.slave),
-    .data_o(led_data_w)
+    .s_axil(axil_led_00.slave),
+    .data_o(led_data_00_w)
   );
 
-  assign led_o = led_data_w[5:0];
+  assign led_00_o = led_data_00_w[5:0];
 
   // --------------------------------------------------------------------------
-  // Slot 3: 7-segment display adapter (SEG7)
+  // Slot 3: LED output register (OUT_)
+  // --------------------------------------------------------------------------
+  logic [31:0] led_data_01_w;
+
+  axil_regs u_led_regs_01 (
+    .clk_i (clk_i),
+    .rst_ni(rst_ni),
+    .s_axil(axil_led_01.slave),
+    .data_o(led_data_01_w)
+  );
+
+  assign led_01_o = led_data_01_w[7:0];
+
+  // --------------------------------------------------------------------------
+  // Slot 4: LED output register (OUT_)
+  // --------------------------------------------------------------------------
+  logic [31:0] led_data_02_w;
+
+  axil_regs u_led_regs_02 (
+    .clk_i (clk_i),
+    .rst_ni(rst_ni),
+    .s_axil(axil_led_02.slave),
+    .data_o(led_data_02_w)
+  );
+
+  assign led_02_o = led_data_02_w[7:0];
+
+  // --------------------------------------------------------------------------
+  // Slot 5: 7-segment display adapter (SEG7)
   // --------------------------------------------------------------------------
   axil_seven_seg_adapter #(
     .CLOCK_FREQ_HZ   (CLOCK_FREQ_HZ),
