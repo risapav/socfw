@@ -21,6 +21,8 @@
 
 `default_nettype none
 
+import uart_pkg::*;
+
 module uart_baud_gen #(
     parameter integer PRESCALE_WIDTH = 16
 ) (

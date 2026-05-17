@@ -101,7 +101,11 @@ module uart_core_rx #(
       UART_DATA:  if (end_tick_i && bit_cnt_q == 4'd1)
                      state_d = (cfg_i.parity == 2'b00) ? UART_STOP : UART_PARITY;
       UART_PARITY: if (end_tick_i) state_d = UART_STOP;
-      UART_STOP:  if (end_tick_i && stop_cnt_q == 2'd1) state_d = UART_IDLE;
+      UART_STOP:  if (end_tick_i && stop_cnt_q == 2'd1) begin
+                    // Back-to-back byte: start_edge simultaneous with stop end
+                    if (start_edge) state_d = UART_START;
+                    else            state_d = UART_IDLE;
+                  end
       default:    state_d = UART_IDLE;
     endcase
   end
@@ -110,7 +114,10 @@ module uart_core_rx #(
   // 4. Kombinačné výstupy – zero latency
   // ==========================================================================
   always_comb begin
-    rx_start_pulse_o = (state_q == UART_IDLE) && start_edge;
+    // Also fire on UART_STOP→UART_START shortcut (back-to-back bytes)
+    rx_start_pulse_o = ((state_q == UART_IDLE) ||
+                        (state_q == UART_STOP && end_tick_i && stop_cnt_q == 2'd1))
+                       && start_edge;
 
     // VALID sa aktivuje presne po poslednom stop bite
     valid_o = (state_q == UART_STOP) && end_tick_i && (stop_cnt_q == 2'd1);

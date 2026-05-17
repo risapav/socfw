@@ -1,68 +1,143 @@
 # =============================================================================
-# SoC Framework v3 - Makefile.common (Opravená verzia s argumentmi)
+# SoC Framework v3 - Makefile.common
 # =============================================================================
 
-# --- Nastavenia ciest ---
-ROOT        := $(shell cd ../../ && pwd)
-CFG         := project.yaml
-BUILD_DIR   := build
-GEN_DIR     := $(BUILD_DIR)/gen
+# --- Cesty a konfigurácia ---
+ROOT      := $(shell cd ../../ && pwd)
+CFG       := project.yaml
+BUILD_DIR := build
+GEN_DIR   := $(BUILD_DIR)/gen
 
-# Výber príkazu a sledovaného súboru podľa režimu HAS_SW
 ifeq ($(HAS_SW),1)
 SOCFW_CMD := build-fw
 SENTINEL  := $(GEN_DIR)/sections.lds
 else
 SOCFW_CMD := build
-SENTINEL  := $(GEN_DIR)/files.tcl
+SENTINEL  := $(BUILD_DIR)/hal/files.tcl
 endif
 
-# Pridané 'build' do PHONY, aby sa nebiu s adresárom build/
-.PHONY: all gen sw validate clean help build
+# --- Quartus: project name auto-detected from *.qpf ---
+PROJECT ?= $(basename $(notdir $(firstword $(wildcard *.qpf))))
+SOF     := output_files/$(PROJECT).sof
 
-# --- Predvolený cieľ ---
+# =============================================================================
+# socfw ciele
+# =============================================================================
+.PHONY: all gen build sw validate clean help
+
 all: gen
 
-# --- Validácia projektu ---
-# Opravené: pridaný argument $(CFG)
 validate:
 	@echo "[CHECK] Validujem konfiguráciu: $(CFG)..."
 	socfw validate $(CFG)
 
-# --- Generovanie (Build) ---
-# Opravené: pridaný argument $(CFG) k príkazu socfw
 $(SENTINEL): $(CFG)
-	@echo "[SOCFW] Spúšťam $(SOCFW_CMD) pre: $(DEMO_NAME)..."
+	@echo "[SOCFW] Spúšťam $(SOCFW_CMD)..."
 	@mkdir -p $(BUILD_DIR)
 	socfw $(SOCFW_CMD) $(CFG)
-	@echo "[OK] Artefakty úspešne vygenerované v $(GEN_DIR)."
+	@echo "[OK] Artefakty vygenerované v $(BUILD_DIR)."
 
 gen: $(SENTINEL)
 
-# Pomocný cieľ pre manuálne spustenie buildu
 build: gen
 
-# --- Firmware ---
 sw:
-	@echo "[SOCFW] Spúšťam build-fw pre firmware..."
+	@echo "[SOCFW] Spúšťam build-fw..."
 	socfw build-fw $(CFG)
 
-# --- Vyčistenie ---
+# =============================================================================
+# Quartus ciele
+# =============================================================================
+.PHONY: syn fit asm sta compile timing program full
+
+# --- Analysis & Synthesis ---
+syn:
+	@test -n "$(PROJECT)" || { echo "[!] Nenájdený *.qpf v $(CURDIR)"; exit 1; }
+	@echo "[MAP] Analysis & Synthesis — $(PROJECT)"
+	@mkdir -p output_files
+	quartus_map $(PROJECT) --read_settings_files=on
+
+# --- Fitter (Place & Route) ---
+fit:
+	@test -n "$(PROJECT)" || { echo "[!] Nenájdený *.qpf v $(CURDIR)"; exit 1; }
+	@echo "[FIT] Fitter — $(PROJECT)"
+	quartus_fit $(PROJECT) --read_settings_files=on
+
+# --- Assembler (generuje .sof) ---
+asm:
+	@test -n "$(PROJECT)" || { echo "[!] Nenájdený *.qpf v $(CURDIR)"; exit 1; }
+	@echo "[ASM] Assembler — $(PROJECT)"
+	quartus_asm $(PROJECT)
+
+# --- Timing Analysis ---
+sta:
+	@test -n "$(PROJECT)" || { echo "[!] Nenájdený *.qpf v $(CURDIR)"; exit 1; }
+	@echo "[STA] Timing Analysis — $(PROJECT)"
+	quartus_sta $(PROJECT)
+
+# --- Plný Quartus flow: map → fit → asm → sta ---
+compile:
+	@test -n "$(PROJECT)" || { echo "[!] Nenájdený *.qpf v $(CURDIR)"; exit 1; }
+	@echo "[COMPILE] Plný Quartus flow — $(PROJECT)"
+	@mkdir -p output_files
+	quartus_map $(PROJECT) --read_settings_files=on
+	quartus_fit $(PROJECT) --read_settings_files=on
+	quartus_asm $(PROJECT)
+	quartus_sta $(PROJECT)
+	@echo ""
+	@echo "[DONE] Bitfile: $(SOF)"
+	@grep "Fmax" output_files/$(PROJECT).sta.rpt 2>/dev/null | grep "MHz" | head -2 || true
+
+# --- Fmax summary z posledného timing reportu ---
+timing:
+	@test -f output_files/$(PROJECT).sta.rpt || \
+	    { echo "[!] Spusti najprv: make sta"; exit 1; }
+	@grep -A4 "Slow 1200mV 85C Model Fmax Summary" \
+	    output_files/$(PROJECT).sta.rpt | grep "MHz"
+
+# --- Programovanie FPGA cez JTAG (USB-Blaster) ---
+program:
+	@test -f $(SOF) || \
+	    { echo "[!] $(SOF) neexistuje — spusti: make compile"; exit 1; }
+	@echo "[PGM] Programujem FPGA — $(SOF)"
+	quartus_pgm -m jtag -o "p;$(SOF)"
+
+# --- Kompletný flow: socfw gen + Quartus compile ---
+full: gen compile
+
+# =============================================================================
+# Vyčistenie
+# =============================================================================
 clean:
-	@echo "[CLEAN] Odstraňujem artefakty v $(DEMO_NAME)..."
+	@echo "[CLEAN] Odstraňujem artefakty..."
 	rm -rf $(BUILD_DIR)
 	rm -rf db incremental_db output_files
 	rm -f *.rpt *.summary *.smsg *.pin *.done *.flow.rpt *.jdi *.sld
 	rm -f *.asm.rpt *.fit.rpt *.map.rpt *.sta.rpt *.eda.rpt
-	rm -f *.qpf.bak *.qsf.bak *.txt
+	rm -f *.qpf.bak *.qsf.bak
 	@echo "[OK] Projekt je čistý."
 
-# --- Pomocník ---
+# =============================================================================
+# Pomocník
+# =============================================================================
 help:
-	@echo "SoC Framework v3 - Makefile (socfw CLI)"
-	@echo "---------------------------------------"
-	@echo "make validate - Skontroluje project.yaml"
-	@echo "make gen      - Vygeneruje kompletný build (RTL + HAL)"
-	@echo "make sw       - Spustí build-fw (vhodné pre SoC režim)"
-	@echo "make clean    - Vymaže všetky vygenerované súbory"
-    
+	@echo "SoC Framework v3 — Makefile.common"
+	@echo "===================================="
+	@echo ""
+	@echo "socfw:"
+	@echo "  make validate   Skontroluje project.yaml"
+	@echo "  make gen        Vygeneruje RTL + HAL artefakty (socfw build)"
+	@echo "  make sw         Spustí build-fw (firmware pre SoC režim)"
+	@echo ""
+	@echo "Quartus (PROJECT=$(PROJECT)):"
+	@echo "  make syn        Analysis & Synthesis (quartus_map)"
+	@echo "  make fit        Fitter — Place & Route (quartus_fit)"
+	@echo "  make asm        Assembler — generuje .sof (quartus_asm)"
+	@echo "  make sta        Timing Analysis (quartus_sta)"
+	@echo "  make compile    Plný flow: syn → fit → asm → sta"
+	@echo "  make timing     Zobrazí Fmax z posledného sta reportu"
+	@echo "  make program    Naprogramuje FPGA cez USB-Blaster (JTAG)"
+	@echo ""
+	@echo "Kombinované:"
+	@echo "  make full       socfw gen + Quartus compile (end-to-end)"
+	@echo "  make clean      Vymaže všetky vygenerované súbory"

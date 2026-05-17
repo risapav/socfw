@@ -54,7 +54,7 @@ module xfcp_axil_bridge #(
   // Identifikačný string pre XFCP ID command
   parameter logic [127:0] ID_STR = "XFCP-AXIL-BRIDGE"
 
-)(
+) (
   // ------------------------------------------------------------
   // Clock / Reset
   // ------------------------------------------------------------
@@ -90,7 +90,7 @@ module xfcp_axil_bridge #(
   // Request header (Parser → Engine)
   //----------------------------------------------------------------
 
-  xfcp_pkg::xfcp_req_hdr_t req_hdr;
+  xfcp_req_hdr_t req_hdr;
 
   logic req_valid;
   logic req_ready;
@@ -116,7 +116,7 @@ module xfcp_axil_bridge #(
   //----------------------------------------------------------------
 
   logic resp_start;
-  xfcp_pkg::xfcp_op_e resp_type;
+  logic [7:0] resp_type;
 
   logic resp_done_engine;
 
@@ -309,4 +309,3 @@ module xfcp_axil_bridge #(
 endmodule : xfcp_axil_bridge
 
 `endif
-

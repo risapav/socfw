@@ -55,7 +55,7 @@ module xfcp_tx_packetizer #(
   parameter int           AXI_DATA_WIDTH = 32,
   parameter logic [15:0]  XFCP_ID_TYPE   = 16'h0001,
   parameter logic [127:0] XFCP_ID_STR    = "Hybrid AXIL"
-)(
+) (
   input  wire clk,
   input  wire rst_n,
 
@@ -67,7 +67,7 @@ module xfcp_tx_packetizer #(
 
   // Riadiace signály od arbitera
   input  wire           resp_start,    // 1-takt pulz: začni odosielať paket
-  input  wire xfcp_op_e resp_type,     // typ response (READ/WRITE)
+  input  wire [7:0] resp_type,         // typ response (xfcp_op_e: READ/WRITE)
 
   // Dátový kanál z engine read_buffer FIFO
   input  wire [AXI_DATA_WIDTH-1:0] read_data,

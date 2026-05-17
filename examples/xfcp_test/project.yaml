@@ -35,7 +35,7 @@ modules:
     type: xfcp_uart_mmio
     params:
       CLOCK_FREQ_HZ: 50000000
-      UART_DEFAULT_BAUD_DIV: 16'd434   # 50 MHz / 115200 ≈ 434
+      UART_DEFAULT_BAUD_DIV: 434        # 50 MHz / 115200 ≈ 434
     clocks:
       clk_i: sys_clk
     bind:

@@ -47,14 +47,15 @@ module xfcp_axi_engine #(
   parameter int  COUNT_WIDTH    = 16,
   parameter int  FIFO_DEPTH     = 32,
   parameter int  TIMEOUT_VAL    = 1000    // watchdog v taktoch
-)(
+) (
+
   input  wire                        clk,
   input  wire                        rst_n,
 
   axi4lite_if.master                 m_axil,
 
   // Request od parsera (cez fabric dispatch)
-  input  wire xfcp_pkg::xfcp_req_hdr_t req_hdr,
+  input  wire [55:0]                 req_hdr,
   input  wire                        req_valid,
   output logic                       req_ready,
 
@@ -70,7 +71,7 @@ module xfcp_axi_engine #(
 
   // Riadiace signály pre packetizer/arbiter
   output logic                       resp_start,       // 1-takt pulz pri štarte
-  output xfcp_pkg::xfcp_op_e         resp_type,        // typ odpovede
+  output logic [7:0]                  resp_type,        // typ odpovede (xfcp_op_e)
   output logic                       resp_done,        // 1-takt pulz po poslednom slove
   input  wire                        packetizer_idle_i, // od eng_pkt_idle v endpointe
 
@@ -78,6 +79,10 @@ module xfcp_axi_engine #(
 );
 
   localparam int ADDR_INC = AXI_DATA_WIDTH / 8;  // bajtový inkrement adresy (4 pre 32b)
+
+  // Cast: port req_hdr (logic[55:0]) -> struct for field access inside module body
+  xfcp_req_hdr_t req_hdr_s;
+  assign req_hdr_s = xfcp_req_hdr_t'(req_hdr);
 
   // ============================================================
   // ONE-HOT FSM
@@ -100,7 +105,7 @@ module xfcp_axi_engine #(
   // ============================================================
   logic [COUNT_WIDTH-1:0]    rem_q;   // zostatok bajtov na spracovanie
   logic [AXI_ADDR_WIDTH-1:0] addr_q;  // aktuálna AXI adresa
-  xfcp_pkg::xfcp_op_e        op_q;   // zachytená operácia
+  xfcp_op_e                  op_q;   // zachytená operácia
   logic [15:0]               watchdog_q;
 
   // ============================================================
@@ -157,7 +162,7 @@ module xfcp_axi_engine #(
       error_timeout <= 1'b0;
       addr_q        <= '0;
       rem_q         <= '0;
-      op_q          <= xfcp_pkg::XFCP_OP_ID;
+      op_q          <= XFCP_OP_ID;
     end else begin
       state_q <= state_n;
 
@@ -178,9 +183,9 @@ module xfcp_axi_engine #(
           watchdog_q    <= '0;
           error_timeout <= 1'b0;
           if (req_valid && req_ready) begin       // ← FIX 1
-            rem_q  <= req_hdr.count;
-            addr_q <= req_hdr.addr;
-            op_q   <= req_hdr.opcode;
+            rem_q  <= req_hdr_s.count;
+            addr_q <= req_hdr_s.addr;
+            op_q   <= req_hdr_s.opcode;
           end
         end
 
@@ -238,7 +243,7 @@ module xfcp_axi_engine #(
     // READ:  bez podmienky na FIFO (žiadny payload).
     // Spoločne: ST_IDLE && packetizer_idle_i (engine nesmie začať
     //           kým packetizer odosiela predchádzajúcu odpoveď).
-    if (req_hdr.opcode == xfcp_pkg::XFCP_OP_WRITE)
+    if (req_hdr_s.opcode == XFCP_OP_WRITE)
       req_ready = (state_q == ST_IDLE) && packetizer_idle_i && wfifo_valid;
     else
       req_ready = (state_q == ST_IDLE) && packetizer_idle_i;
@@ -257,7 +262,7 @@ module xfcp_axi_engine #(
         ST_IDLE: begin
           if (req_valid && req_ready) begin       // ← FIX 1
             resp_start = 1'b1;
-            if (req_hdr.opcode == xfcp_pkg::XFCP_OP_WRITE)
+            if (req_hdr_s.opcode == XFCP_OP_WRITE)
               state_n = ST_WR_ADDR;
             else
               state_n = ST_RD_ADDR;
@@ -336,7 +341,7 @@ module xfcp_axi_engine #(
             state_n = ST_DONE;
           end else begin
             // Ďalší word
-            if (op_q == xfcp_pkg::XFCP_OP_WRITE) begin
+            if (op_q == XFCP_OP_WRITE) begin
               state_n = ST_WR_ADDR;
             end else begin
               // READ pipeline: ak AR pre nasledujúci word prebehol
@@ -379,10 +384,10 @@ module xfcp_axi_engine #(
   // READ aj ID vracajú RESP_READ (payload s dátami).
   // WRITE vracia RESP_WRITE (len header, bez payloadu).
   // ============================================================
-  assign resp_type = (op_q == xfcp_pkg::XFCP_OP_READ ||
-                      op_q == xfcp_pkg::XFCP_OP_ID)
-                     ? xfcp_pkg::XFCP_OP_RESP_READ
-                     : xfcp_pkg::XFCP_OP_RESP_WRITE;
+  assign resp_type = (op_q == XFCP_OP_READ ||
+                      op_q == XFCP_OP_ID)
+                     ? XFCP_OP_RESP_READ
+                     : XFCP_OP_RESP_WRITE;
 
   // ============================================================
   // Simulačné správy
@@ -405,7 +410,7 @@ module xfcp_axi_engine #(
       // 3. Štart novej transakcie
       if (state_q == ST_IDLE && state_n != ST_IDLE)
         $display("[%0t] %m: START op=0x%02h addr=0x%08h pkt_idle=%0b wfifo=%0b",
-                $time, 8'(req_hdr.opcode), req_hdr.addr,
+                $time, 8'(req_hdr_s.opcode), req_hdr_s.addr,
                 packetizer_idle_i, wfifo_valid);
 
       // 4. AXI handshaky – len pri reálnom handshake (VALID && READY)

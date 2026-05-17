@@ -61,7 +61,7 @@ module xfcp_rx_parser #(
   parameter int COUNT_WIDTH    = 16,
   parameter int FIFO_DEPTH     = 16,
   parameter int MAX_PKT_BYTES  = 4112
-)(
+) (
   input  wire clk,
   input  wire rst_n,
 
@@ -70,7 +70,7 @@ module xfcp_rx_parser #(
   output logic      s_axis_tready,
   input  wire       s_axis_tlast,
 
-  output xfcp_pkg::xfcp_req_hdr_t req_hdr,
+  output logic [55:0]             req_hdr,
   output logic                    req_valid,
   input  wire                     req_ready,
 
@@ -160,9 +160,9 @@ module xfcp_rx_parser #(
   // ako OR reťazec komparátorov.
   function automatic logic opcode_valid(input logic [7:0] op);
     unique case (op)
-      8'(xfcp_pkg::XFCP_OP_ID)   : return 1'b1;
-      8'(xfcp_pkg::XFCP_OP_READ) : return 1'b1;
-      8'(xfcp_pkg::XFCP_OP_WRITE): return 1'b1;
+      8'(XFCP_OP_ID)   : return 1'b1;
+      8'(XFCP_OP_READ) : return 1'b1;
+      8'(XFCP_OP_WRITE): return 1'b1;
       default                    : return 1'b0;
     endcase
   endfunction
@@ -197,12 +197,12 @@ module xfcp_rx_parser #(
   // ============================================================
   logic                    hfifo_push;
   logic                    hfifo_w_ready;
-  xfcp_pkg::xfcp_req_hdr_t hfifo_in;
+  xfcp_req_hdr_t            hfifo_in;
   logic                    dfifo_w_ready;
   logic                    word_complete;
 
   xfcp_fifo #(
-    .DATA_WIDTH ($bits(xfcp_pkg::xfcp_req_hdr_t)),
+    .DATA_WIDTH ($bits(xfcp_req_hdr_t)),
     .DEPTH      (4)
   ) i_header_fifo (
     .clk     (clk),    .rst_n   (rst_n),
@@ -240,7 +240,7 @@ module xfcp_rx_parser #(
 
   // SOP recovery: SOP v nečakanom stave → resync
   wire sop_recovery = axis_fire                              &&
-                      s_axis_tdata == xfcp_pkg::XFCP_SOP_REQ &&
+                      s_axis_tdata == XFCP_SOP_REQ &&
                       state_q != S_IDLE                     &&
                       state_q != S_RPATH;
 
@@ -308,7 +308,7 @@ module xfcp_rx_parser #(
     // Toto detekujeme v S_DECODE (opcode je dekódovaný až tam).
     // WRITE s TLAST na poslednom header bajte = chýba payload
     if (state_q == S_DECODE && tlast_on_last_hdr_q &&
-        dec_opcode == 8'(xfcp_pkg::XFCP_OP_WRITE))
+        dec_opcode == 8'(XFCP_OP_WRITE))
       go_drop = 1'b1;
     // TLAST uprostred payload
     if (state_q == S_PAYLOAD && axis_fire &&
@@ -382,7 +382,7 @@ module xfcp_rx_parser #(
 
       // error_protocol: reset pri novom SOP, set pri chybe
       if (state_q == S_IDLE && axis_fire &&
-          s_axis_tdata == xfcp_pkg::XFCP_SOP_REQ)
+          s_axis_tdata == XFCP_SOP_REQ)
         error_protocol <= 1'b0;
       else if (go_drop)
         error_protocol <= 1'b1;
@@ -419,9 +419,9 @@ module xfcp_rx_parser #(
         // ── S_IDLE: čakanie na SOP ──────────────────────────────
         S_IDLE: begin
           if (axis_fire) begin
-            if (s_axis_tdata == xfcp_pkg::XFCP_SOP_REQ)
+            if (s_axis_tdata == XFCP_SOP_REQ)
               state_n = S_HDR;       // začni zbierať header
-            else if (s_axis_tdata == xfcp_pkg::XFCP_SOP_RPATH)
+            else if (s_axis_tdata == XFCP_SOP_RPATH)
               state_n = S_RPATH;
           end
         end
@@ -460,11 +460,11 @@ module xfcp_rx_parser #(
             byte_cnt_n   = '0;
             shift_n      = '0;
 
-            if (dec_opcode == 8'(xfcp_pkg::XFCP_OP_WRITE) &&
+            if (dec_opcode == 8'(XFCP_OP_WRITE) &&
                 dec_words != 0) begin
               // WRITE: pushni header PRED payload (header-first pipeline)
               hfifo_push      = hfifo_w_ready;  // push ak FIFO ready
-              hfifo_in.opcode = xfcp_pkg::xfcp_op_e'(dec_opcode);
+              hfifo_in.opcode = xfcp_op_e'(dec_opcode);
               hfifo_in.addr   = dec_addr;
               hfifo_in.count  = dec_count;
               if (hfifo_w_ready)
@@ -474,7 +474,7 @@ module xfcp_rx_parser #(
             end else begin
               // READ/ID: pushni header a choď do IDLE
               hfifo_push      = hfifo_w_ready;
-              hfifo_in.opcode = xfcp_pkg::xfcp_op_e'(dec_opcode);
+              hfifo_in.opcode = xfcp_op_e'(dec_opcode);
               hfifo_in.addr   = dec_addr;
               hfifo_in.count  = dec_count;
               if (hfifo_w_ready)
@@ -515,8 +515,8 @@ module xfcp_rx_parser #(
   // Simulačné správy
   // ============================================================
   // synthesis translate_off
-  xfcp_pkg::xfcp_op_e dbg_opcode;
-  assign dbg_opcode = xfcp_pkg::xfcp_op_e'(opcode_q);
+  xfcp_op_e dbg_opcode;
+  assign dbg_opcode = xfcp_op_e'(opcode_q);
 
   logic error_protocol_prev;
   always_ff @(posedge clk or negedge rst_n) begin
