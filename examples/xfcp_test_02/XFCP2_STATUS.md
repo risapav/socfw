@@ -177,10 +177,14 @@ RTL opravy:
 `tb_xfcp_uart_mmio_top.sv` aktualizovany a overeny (4/4 PASS).
 LITTLE_ENDIAN=0 nastaveny explicitne v `xfcp_uart_mmio_top.sv`.
 
-### Faza 5 — Quartus build + HW test
+### ~~Faza 5a — socfw YAML deskriptory~~ DONE
+
+`project.yaml`, `timing_config.yaml`, `ip/xfcp_uart_mmio.ip.yaml` vytvorene.
+IP descriptor: `xfcp_fabric_endpoint.sv` nahradzuje `xfcp_axil_bridge.sv` vo synthesis zozname.
+
+### Faza 5b — Quartus build + HW test
 
 ```bash
-# vytvorit soc_top.qpf, soc_top.qsf (pin assignments z xfcp_test)
 make syn && make fit && make asm && make sta && make program
 ```
 
@@ -211,3 +215,4 @@ bez gatingu na dec_valid). Treba overit a opravit ak T4 failuje.
 | 2026-05-18 | Inicializacia projektu, struktura vytvorena z xfcp_test |
 | 2026-05-18 | Opravene bugy v TB taskoch (do_write FIFO akumulacia, do_read resp_done timing, send_read_resp pre ST_PAYLOAD, 0xFE byte v datach, MEM_DEPTH pre velke adresy) |
 | 2026-05-18 | Pridany LITTLE_ENDIAN parameter do xfcp_fabric_endpoint (default=0), make regression PASS |
+| 2026-05-18 | Pridane socfw YAML deskriptory: project.yaml, timing_config.yaml, ip/xfcp_uart_mmio.ip.yaml |
