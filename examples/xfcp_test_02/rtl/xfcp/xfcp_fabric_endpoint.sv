@@ -115,8 +115,8 @@ module xfcp_fabric_endpoint #(
   logic                      eng_wdata_ready [NUM_SLAVES];
   logic [AXI_DATA_WIDTH-1:0] eng_rdata       [NUM_SLAVES];
   logic                      eng_rdata_valid [NUM_SLAVES];
-  xfcp_op_e                  eng_resp_type   [NUM_SLAVES];
   logic                      eng_resp_done   [NUM_SLAVES];
+  logic                      eng_pkt_idle    [NUM_SLAVES];
 
   // ── Order FIFO signály (deklarované skoro – používané v busy trackeri)
   order_entry_t ofifo_wdata;
@@ -351,43 +351,41 @@ module xfcp_fabric_endpoint #(
   //   Keďže arbiter riadi kedy ktorý engine komunikuje s packetizerom,
   //   engine vždy dostane packetizer_idle_i=1 okrem keď packetizer
   //   práve odosiela jeho response (arb_q==ARB_WAIT_PKT && arb_sel_q==i).
-  for (genvar i = 0; i < NUM_SLAVES; i++) begin : g_engine
-    logic eng_resp_start_unused;
-    logic eng_pkt_idle;
+  // eng_pkt_idle[i]: engine i vidi packetizer ako idle ak
+  // packetizer je naozaj idle ALEBO prave obsluhuje iny engine.
+  genvar gi;
+  generate
+    for (gi = 0; gi < NUM_SLAVES; gi++) begin : g_engine
+      assign eng_pkt_idle[gi] = packetizer_idle
+                                 || (arb_q != ARB_WAIT_PKT)
+                                 || (arb_sel_q != SEL_W'(gi));
 
-    // Engine[i] vidí packetizer ako idle ak:
-    // packetizer je naozaj idle ALEBO obsluhuje iný engine
-    assign eng_pkt_idle = packetizer_idle
-                          || (arb_q != ARB_WAIT_PKT)
-                          || (arb_sel_q != SEL_W'(i));
-
-    xfcp_axi_engine #(
-      .LITTLE_ENDIAN  (LITTLE_ENDIAN),
-      .AXI_ADDR_WIDTH (AXI_ADDR_WIDTH),
-      .AXI_DATA_WIDTH (AXI_DATA_WIDTH)
-    ) i_engine (
-      .clk   (clk), .rst_n (rst_n),
-      .m_axil (m_axil[i]),
-      .req_hdr   (req_hdr),
-      .req_valid (req_valid && dec_valid && !eng_busy[i]
-                  && dec_sel == SEL_W'(i) && ofifo_wready),
-      .req_ready (eng_req_ready[i]),
-      // wdata_valid maskovaný: len aktívny write engine
-      .write_data       (wdata),
-      .write_data_valid (wdata_valid && (wdata_sel == SEL_W'(i))),
-      .write_data_ready (eng_wdata_ready[i]),
-      // rdata: len pre engine v ARB_WAIT_PKT fáze
-      .read_data       (eng_rdata[i]),
-      .read_data_valid (eng_rdata_valid[i]),
-      .read_data_ready (rdata_ready && (arb_sel_q == SEL_W'(i))
-                        && (arb_q == ARB_WAIT_PKT)),
-      .resp_start        (eng_resp_start_unused),
-      .resp_type         (eng_resp_type[i]),
-      .resp_done         (eng_resp_done[i]),
-      .packetizer_idle_i (eng_pkt_idle),
-      .error_timeout     ()
-    );
-  end : g_engine
+      xfcp_axi_engine #(
+        .LITTLE_ENDIAN  (LITTLE_ENDIAN),
+        .AXI_ADDR_WIDTH (AXI_ADDR_WIDTH),
+        .AXI_DATA_WIDTH (AXI_DATA_WIDTH)
+      ) i_engine (
+        .clk   (clk), .rst_n (rst_n),
+        .m_axil (m_axil[gi]),
+        .req_hdr   (req_hdr),
+        .req_valid (req_valid && dec_valid && !eng_busy[gi]
+                    && dec_sel == SEL_W'(gi) && ofifo_wready),
+        .req_ready (eng_req_ready[gi]),
+        .write_data       (wdata),
+        .write_data_valid (wdata_valid && (wdata_sel == SEL_W'(gi))),
+        .write_data_ready (eng_wdata_ready[gi]),
+        .read_data       (eng_rdata[gi]),
+        .read_data_valid (eng_rdata_valid[gi]),
+        .read_data_ready (rdata_ready && (arb_sel_q == SEL_W'(gi))
+                          && (arb_q == ARB_WAIT_PKT)),
+        .resp_start        (),
+        .resp_type         (),
+        .resp_done         (eng_resp_done[gi]),
+        .packetizer_idle_i (eng_pkt_idle[gi]),
+        .error_timeout     ()
+      );
+    end : g_engine
+  endgenerate
 
   // ── TX Packetizer ────────────────────────────────────────────
   xfcp_tx_packetizer #(
