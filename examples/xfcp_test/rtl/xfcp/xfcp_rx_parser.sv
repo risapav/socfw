@@ -130,20 +130,20 @@ module xfcp_rx_parser #(
   // Po 7 posunoch (bajty 1-7, t.j. OPCODE až ADDR[7:0]) je header
   // kompletný.
   //
-  // Rozloženie hdr_shift_q po 7 bajtoch:
-  //   [63:56] = bajt 1 = OPCODE
-  //   [55:48] = bajt 2 = COUNT[15:8]
-  //   [47:40] = bajt 3 = COUNT[7:0]
-  //   [39:32] = bajt 4 = ADDR[31:24]
-  //   [31:24] = bajt 5 = ADDR[23:16]
-  //   [23:16] = bajt 6 = ADDR[15:8]
-  //   [15:8]  = bajt 7 = ADDR[7:0]
-  //   [7:0]   = nevyužité (bude prepísané ďalším bajtom)
+  // Rozlozenie hdr_shift_n_comb po 7 bajtoch (shift: {hdr_shift_q[55:0], bajt}):
+  //   [63:56] = 0 (nevyuzite — shift zahadzuje hornych 8 bitov)
+  //   [55:48] = bajt 1 = OPCODE
+  //   [47:40] = bajt 2 = COUNT[15:8]
+  //   [39:32] = bajt 3 = COUNT[7:0]
+  //   [31:24] = bajt 4 = ADDR[31:24]
+  //   [23:16] = bajt 5 = ADDR[23:16]
+  //   [15:8]  = bajt 6 = ADDR[15:8]
+  //   [7:0]   = bajt 7 = ADDR[7:0]
   //
-  // Čítanie polí (kombinačné, platné v S_DECODE):
-  //   opcode = hdr_shift_q[63:56]
-  //   count  = hdr_shift_q[55:40]
-  //   addr   = hdr_shift_q[39:8]   (4 bajty, BE)
+  // Citanie poli (kombinacne, platne v S_DECODE):
+  //   opcode = hdr_shift_n_comb[55:48]
+  //   count  = hdr_shift_n_comb[47:32]
+  //   addr   = hdr_shift_n_comb[31:0]
   // ============================================================
   logic [HDR_SHIFT_W-1:0] hdr_shift_q;
   logic [HDR_SHIFT_W-1:0] hdr_shift_n_comb; // kombinačná hodnota pre S_DECODE
@@ -309,6 +309,11 @@ module xfcp_rx_parser #(
     // WRITE s TLAST na poslednom header bajte = chýba payload
     if (state_q == S_DECODE && tlast_on_last_hdr_q &&
         dec_opcode == 8'(XFCP_OP_WRITE))
+      go_drop = 1'b1;
+    // FIX D: WRITE s COUNT=0 (dec_words==0) spôsobuje deadlock v engine
+    // (engine čaká na wfifo_valid ktorý nikdy nepríde). Zahodíme paket.
+    if (state_q == S_DECODE && dec_opcode == 8'(XFCP_OP_WRITE) &&
+        dec_words == 0)
       go_drop = 1'b1;
     // TLAST uprostred payload
     if (state_q == S_PAYLOAD && axis_fire &&

@@ -198,13 +198,13 @@ module xfcp_uart_mmio_top #(
   assign axil_led_02.AWVALID    = axil_m.AWVALID & (aw_slot_w == 3'h4);
   assign axil_seg.AWVALID    = axil_m.AWVALID & (aw_slot_w == 3'h5);
 
-  // W valid: follows AW slot (axil_xfcp_mod sends AW+W simultaneously)
-  assign axil_sysc.WVALID    = axil_m.WVALID & (aw_slot_w == 2'h0);
-  assign axil_uart_s.WVALID  = axil_m.WVALID & (aw_slot_w == 2'h1);
-  assign axil_led_00.WVALID     = axil_m.WVALID & (aw_slot_w == 2'h2);
-  assign axil_led_01.WVALID     = axil_m.WVALID & (aw_slot_w == 2'h3);
-  assign axil_led_02.WVALID     = axil_m.WVALID & (aw_slot_w == 3'h4);
-  assign axil_seg.WVALID     = axil_m.WVALID & (aw_slot_w == 3'h5);
+  // W valid: registered write slot (AW handshake precedes W in xfcp_axi_engine)
+  assign axil_sysc.WVALID    = axil_m.WVALID & (wr_slot_r == 3'h0);
+  assign axil_uart_s.WVALID  = axil_m.WVALID & (wr_slot_r == 3'h1);
+  assign axil_led_00.WVALID  = axil_m.WVALID & (wr_slot_r == 3'h2);
+  assign axil_led_01.WVALID  = axil_m.WVALID & (wr_slot_r == 3'h3);
+  assign axil_led_02.WVALID  = axil_m.WVALID & (wr_slot_r == 3'h4);
+  assign axil_seg.WVALID     = axil_m.WVALID & (wr_slot_r == 3'h5);
 
   // B ready: gated by registered write slot
   assign axil_sysc.BREADY    = axil_m.BREADY & (wr_slot_r == 2'h0);
@@ -242,9 +242,9 @@ module xfcp_uart_mmio_top #(
     endcase
   end
 
-  // W ready: mux from selected slave
+  // W ready: mux from registered write slot
   always_comb begin
-    case (aw_slot_w)
+    case (wr_slot_r)
       3'h0:    axil_m.WREADY = axil_sysc.WREADY;
       3'h1:    axil_m.WREADY = axil_uart_s.WREADY;
       3'h2:    axil_m.WREADY = axil_led_00.WREADY;

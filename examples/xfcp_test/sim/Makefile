@@ -32,23 +32,27 @@ AXIS_UART = \
 	$(RTL_AXIS)/axis_uart_rx.sv \
 	$(RTL_AXIS)/axis_uart_tx.sv
 
-# XFCP infrastructure (new protocol: SOP=0xFE, WRITE=0x11)
-# Use xfcp_axil_bridge_2.sv (v1.2.0); do NOT also include xfcp_axil_bridge.sv
-# — both declare module xfcp_axil_bridge with the same include guard.
+# XFCP infrastructure (protocol: SOP=0xFE, WRITE=0x11)
 XFCP_COMMON = \
 	$(RTL_XFCP)/xfcp_pkg.sv \
 	$(RTL_XFCP)/xfcp_fifo.sv \
 	$(RTL_XFCP)/xfcp_rx_parser.sv \
 	$(RTL_XFCP)/xfcp_tx_packetizer.sv \
 	$(RTL_XFCP)/xfcp_axi_engine.sv \
-	$(RTL_XFCP)/xfcp_axil_bridge_2.sv
+	$(RTL_XFCP)/xfcp_axil_bridge.sv
+
+# Parser-only subset (no engine/packetizer/bridge)
+XFCP_PARSER = \
+	$(RTL_XFCP)/xfcp_pkg.sv \
+	$(RTL_XFCP)/xfcp_fifo.sv \
+	$(RTL_XFCP)/xfcp_rx_parser.sv
 
 .PHONY: all regression report clean \
         axil_regfile axil_sys_ctrl axil_seven_seg_adapter axil_uart_adapter \
-        axil_regs uart_core_rx xfcp_uart_mmio_top
+        axil_regs uart_core_rx xfcp_rx_parser xfcp_axil_bridge xfcp_uart_mmio_top
 
 all: axil_regfile axil_sys_ctrl axil_seven_seg_adapter axil_uart_adapter \
-     axil_regs uart_core_rx xfcp_uart_mmio_top
+     axil_regs uart_core_rx xfcp_rx_parser xfcp_axil_bridge xfcp_uart_mmio_top
 
 $(LOGDIR):
 	mkdir -p $(LOGDIR)
@@ -110,6 +114,19 @@ uart_core_rx: $(LOGDIR)
 	        $(RTL_AXIS)/axis_uart_rx.sv \
 	        tb_uart_core_rx.sv
 	$(VSIM) tb_uart_core_rx | tee $(LOGDIR)/tb_uart_core_rx.log
+
+xfcp_rx_parser: $(LOGDIR)
+	$(VLOG) $(AXI_COMMON) \
+	        $(XFCP_PARSER) \
+	        tb_xfcp_rx_parser.sv
+	$(VSIM) tb_xfcp_rx_parser | tee $(LOGDIR)/tb_xfcp_rx_parser.log
+
+xfcp_axil_bridge: $(LOGDIR)
+	$(VLOG) $(AXI_COMMON) \
+	        $(XFCP_COMMON) \
+	        $(RTL_AXIL)/axil_slave_model.sv \
+	        tb_xfcp_axil_bridge.sv
+	$(VSIM) tb_xfcp_axil_bridge | tee $(LOGDIR)/tb_xfcp_axil_bridge.log
 
 xfcp_uart_mmio_top: $(LOGDIR)
 	$(VLOG) $(AXI_COMMON) \

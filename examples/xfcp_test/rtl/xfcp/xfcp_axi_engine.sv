@@ -23,7 +23,15 @@
  * ║  Zachované vylepšenia z predchádzajúcich verzií:             ║
  * ║    - Sekvenčný WRITE FSM (AW pred W, eliminácia AW/W bug)    ║
  * ║    - Odstránenie aw_done_q/w_done_q/ar_done_q registrov      ║
- * ║    - Pipelined READ (AR pre N+1 kým čakáme na R pre N)       ║
+ * ║                                                              ║
+ * ║  FIX 2 – READ pipeline odstránená (bola mŕtvy kód):          ║
+ * ║    ST_RD_WAIT nastavoval ARVALID kombinačne; ST_NEXT videl    ║
+ * ║    ARVALID=0 (reset na začiatku always_comb) → vždy ST_RD_ADDR║
+ * ║    READ je teraz čisto sekvenčný: ST_RD_ADDR→ST_RD_WAIT→ST_NEXT║
+ * ║                                                              ║
+ * ║  FIX 3 – RREADY viazaný na rfifo_w_ready_w:                  ║
+ * ║    Predtým RREADY=1 vždy → pri plnom rfifo boli RDATA stratené║
+ * ║    Oprava: RREADY=rfifo_w_ready_w (backpressure na AXI slave) ║
  * ╚══════════════════════════════════════════════════════════════╝
  *
  * FSM stavy:
@@ -93,7 +101,7 @@ module xfcp_axi_engine #(
     ST_WR_DATA  = 8'b00000100,  // WRITE: W channel handshake (po AW)
     ST_WR_B     = 8'b00001000,  // WRITE: čakanie na B response
     ST_RD_ADDR  = 8'b00010000,  // READ: AR channel handshake
-    ST_RD_WAIT  = 8'b00100000,  // READ: čakanie na R + pipeline next AR
+    ST_RD_WAIT  = 8'b00100000,  // READ: čakanie na R response
     ST_NEXT     = 8'b01000000,  // aktualizácia addr/rem, rozhodnutie ďalší word
     ST_DONE     = 8'b10000000   // čakanie na packetizer idle → IDLE
   } state_e;
@@ -131,6 +139,7 @@ module xfcp_axi_engine #(
   logic [AXI_DATA_WIDTH-1:0] rdata_swapped;
   logic                      wfifo_valid;
   logic                      wfifo_rd_en;
+  logic                      rfifo_w_ready_w;
 
   // Byte-swap: aplikovaný iba ak LITTLE_ENDIAN=1
   assign wfifo_swapped = LITTLE_ENDIAN ? byte_swap(wfifo_raw)    : wfifo_raw;
@@ -148,7 +157,7 @@ module xfcp_axi_engine #(
   // flush by mohol zmazať dáta pred ich prečítaním.
   xfcp_fifo #(.DATA_WIDTH(AXI_DATA_WIDTH), .DEPTH(FIFO_DEPTH)) i_read_buffer (
     .clk(clk), .rst_n(rst_n), .flush(1'b0),
-    .w_valid(m_axil.RVALID && m_axil.RREADY), .w_data(rdata_swapped), .w_ready(),
+    .w_valid(m_axil.RVALID && m_axil.RREADY), .w_data(rdata_swapped), .w_ready(rfifo_w_ready_w),
     .r_valid(read_data_valid), .r_data(read_data), .r_ready(read_data_ready)
   );
 
@@ -235,7 +244,7 @@ module xfcp_axi_engine #(
     m_axil.ARVALID = 1'b0;
     m_axil.ARADDR  = addr_q;
     m_axil.ARPROT  = 3'b000;
-    m_axil.RREADY  = 1'b1;
+    m_axil.RREADY  = rfifo_w_ready_w;
 
     // ── req_ready ─────────────────────────────────────────────
     // WRITE: vyžaduje wfifo_valid aby fabric nedispatchoval request
@@ -304,32 +313,11 @@ module xfcp_axi_engine #(
             state_n = ST_RD_WAIT;
         end
 
-        // ── ST_RD_WAIT: čakanie na R + pipeline next AR ───────────
-        //
-        // PIPELINING: Pri multi-word READ posielame AR pre slovo N+1
-        // kým čakáme na RDATA slova N. Tým sa prekryje AR latencia.
-        //
-        // Podmienky pre pipeline AR:
-        //   1. RVALID=1 (dostávame aktuálne RDATA)
-        //   2. rem_q > ADDR_INC (zostáva ďalší word)
-        //   3. ARREADY: overujeme v rovnakom cykle
-        //
-        // ARADDR = addr_q + ADDR_INC (next word).
-        // addr_q sa inkrementuje až v ST_NEXT, preto explicitne
-        // addujeme ADDR_INC tu.
-        //
-        // Ak ARREADY=1: ST_NEXT → ST_RD_WAIT (preskočí ST_RD_ADDR)
-        // Ak ARREADY=0: ST_NEXT → ST_RD_ADDR (AR sa zopakuje)
+        // ── ST_RD_WAIT: čakanie na R response ────────────────────
+        // FIX 2: Pipelining odstránený (bol mŕtvy kód).
+        // Sekvenčný tok: ST_RD_ADDR → ST_RD_WAIT → ST_NEXT → ST_RD_ADDR
         ST_RD_WAIT: begin
-          if (m_axil.RVALID) begin
-            state_n = ST_NEXT;
-
-            // Pipeline: AR pre nasledujúci word
-            if (rem_q > COUNT_WIDTH'(ADDR_INC)) begin
-              m_axil.ARVALID = 1'b1;
-              m_axil.ARADDR  = addr_q + AXI_ADDR_WIDTH'(ADDR_INC);
-            end
-          end
+          if (m_axil.RVALID) state_n = ST_NEXT;
         end
 
         // ── ST_NEXT: aktualizácia addr/rem + rozhodnutie ─────────
@@ -341,17 +329,10 @@ module xfcp_axi_engine #(
             state_n = ST_DONE;
           end else begin
             // Ďalší word
-            if (op_q == XFCP_OP_WRITE) begin
+            if (op_q == XFCP_OP_WRITE)
               state_n = ST_WR_ADDR;
-            end else begin
-              // READ pipeline: ak AR pre nasledujúci word prebehol
-              // (ARVALID && ARREADY v predchádzajúcom takte),
-              // preskočíme ST_RD_ADDR.
-              if (m_axil.ARVALID && m_axil.ARREADY)
-                state_n = ST_RD_WAIT;
-              else
-                state_n = ST_RD_ADDR;
-            end
+            else
+              state_n = ST_RD_ADDR;
           end
         end
 

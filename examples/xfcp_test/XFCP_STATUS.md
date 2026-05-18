@@ -1,9 +1,9 @@
 # XFCP projekt — aktuálny stav
 
-> Stav k: 2026-05-17
+> Stav k: 2026-05-18
 > Board: QMTech EP4CE55F23C8 @ 50 MHz
 > Protokol: XFCP cez UART 115200 baud (SOP=0xFE)
-> HW testy: nezacate — FPGA este nebolo flashnute
+> HW testy: **PASS** — DynamicScanner naskenoval 6 slotov, LED/SEG7 ovladane cez Python
 
 ---
 
@@ -98,11 +98,11 @@ Response: [FE][opcode][DEV_TYPE 2B][DEV_STR 16B][payload_words MSB-first][00]
 
 | Krok | Stav | Poznamka |
 |---|---|---|
-| `make syn` (quartus_map) | **PASS** | 0 errors, 44 warnings (baud-gen reg sharing) |
+| `make syn` (quartus_map) | **PASS** | 0 errors, 2555 LEs |
 | `make fit` (quartus_fit) | **PASS** | 0 errors, 9 warnings (LVTTL 3.3V piny) |
-| `make asm` (assembler) | caka | generuje .sof bitfile |
-| `make sta` (timing) | caka | Fmax analyza |
-| `make program` | caka | FPGA flash cez JTAG |
+| `make asm` (assembler) | **PASS** | 0 errors |
+| `make sta` (timing) | **PASS** | slack 9.2 ns, komfortna rezerva pre 50 MHz |
+| `make program` | **PASS** | FPGA flashnuta, HW overene |
 
 ### Vyuzitie zdrojov (po fit, EP4CE55F23C8)
 
@@ -219,79 +219,56 @@ Pred prvym HW testom je nutne porovnat offsety.
 | tb_axil_uart_adapter | 15 | PASS |
 | tb_axil_regs | 11 | PASS |
 
-### Chybajuce simulacie (PRIORITA pred HW testom)
+### Otestovane (XFCP stack)
+
+| Testbench | Testy | Vysledok | Popis |
+|---|---|---|---|
+| tb_xfcp_rx_parser | 7 | PASS | READ/WRITE header, error cases, back-to-back, backpressure |
+| tb_xfcp_axil_bridge | 5 | PASS | WRITE+READ integracny test bez UART |
+
+### Chybajuce simulacie
 
 | Testbench | Priorita | Poznamka |
 |---|---|---|
-| tb_xfcp_rx_parser | HIGH | parser priamo cez AXI-Stream bajty |
-| tb_xfcp_tx_packetizer | HIGH | overit 20B header + MSB-first payload |
-| tb_xfcp_axi_engine | HIGH | WRITE/READ + timeout |
-| tb_xfcp_axil_bridge | HIGH | integracny — bez UART, priamo cez axis |
-| tb_uart_core_rx | MEDIUM | overit bajty 0xFE, 0x10, 0x11 |
-| tb_uart_core_tx | MEDIUM | |
-| tb_xfcp_uart_mmio_top | LOW | az po prechode vyssich urovni |
+| tb_xfcp_tx_packetizer | MEDIUM | overit 20B header + MSB-first payload standalone |
+| tb_xfcp_axi_engine | MEDIUM | WRITE/READ + timeout standalone |
+| tb_uart_core_tx | LOW | |
 
 ---
 
-## Poradie dalsich krokov
+## Stav projektu — UZAVRETY (2026-05-18)
 
-### Krok 1 — dokoncit Quartus flow
+Vsetky ciele splnene:
+- RTL implementovany a prelozeny (syn + fit + asm + sta, 0 errors)
+- Regression 9/9 PASS (sim/Makefile regression)
+- HW bring-up PASS — DynamicScanner naskenoval vsetkych 6 slotov
+- Python tools funkcne (main.py: monitor, diagnostika, LED/SEG7 ovladanie)
 
-```
-make asm    # generuje output_files/soc_top.sof
-make sta    # Fmax, setup/hold analyza
-```
+### Opravene bugy (session 2026-05-18)
 
-### Krok 2 — flash FPGA
+| Bug | Modul | Symptom | Oprava |
+|-----|-------|---------|--------|
+| Fix A | xfcp_axi_engine.sv | Mrtvy pipeline kod v ST_RD_WAIT: ARVALID=1 nastavene kombinacne, ale ST_NEXT videl ARVALID=0 (reset defaults) → vzdy ST_RD_ADDR | Odstranenie pipeline kodu, cisto sekvencius READ: ST_RD_ADDR→ST_RD_WAIT→ST_NEXT |
+| Fix B | xfcp_axi_engine.sv | RREADY=1'b1 vzdy; rfifo w_ready nenapojene → pri plnom rfifo stratene RDATA | rfifo_w_ready_w napojene na FIFO, m_axil.RREADY=rfifo_w_ready_w |
+| Fix D | xfcp_rx_parser.sv | WRITE s COUNT=0 presiel COUNT alignment check (0%4==0), pushol header, engine caka na wfifo ktory nikdy nepride → deadlock | go_drop += WRITE&&dec_words==0 |
 
-```
-make program
-```
-
-### Krok 3 — minimalny HW bring-up (bez main.py)
-
-Napisat maly skript `tools/bringup.py`:
-
-```
-T1 otvor /dev/ttyUSB0 @115200
-T2 READ 0xFF000000 -> ocakavane 0x53595343 (SYSC)
-T3 READ 0xFF010000 -> ocakavane 0x55415254 (UART)
-T4 READ 0xFF020000 -> ocakavane 0x4F55545F (OUT_)
-T5 READ 0xFF050000 -> ocakavane 0x53454737 (SEG7)
-T6 WRITE 0xFF020004, 0x3F -> vsetky onboard LED svietia
-T7 WRITE 0xFF020004, 0x00 -> LED zhasnute
-T8 WRITE 0xFF050004, 0x00000C41 -> SEG7 zobrazuje "123"
-```
-
-### Krok 4 — spustit DynamicScanner
+### Simulacie (vsetky PASS)
 
 ```
-cd tools && python main.py
+make -C sim regression   →   9/9 PASS
 ```
 
-Ocakavany vystup scanu:
-
-```
-[Slot 0] OK - SYSC (SysCtrl)    @ 0xff000000
-[Slot 1] OK - UART (UARTDiag)   @ 0xff010000
-[Slot 2] OK - OUT_ (GPIOOut)    @ 0xff020000
-[Slot 3] OK - OUT_1 (GPIOOut)   @ 0xff030000
-[Slot 4] OK - OUT_2 (GPIOOut)   @ 0xff040000
-[Slot 5] OK - SEG7 (SevenSeg)   @ 0xff050000
-```
-
-### Krok 5 — simulacie XFCP stacku
-
-Poradie (zdola nahor):
-
-```
-1. tb_xfcp_rx_parser    -- priamy axis vstup, bez UART
-2. tb_xfcp_tx_packetizer
-3. tb_xfcp_axi_engine
-4. tb_xfcp_axil_bridge  -- integracny, priamy axis
-5. tb_uart_core_rx      -- overit bajty XFCP headera
-6. tb_xfcp_uart_mmio_top
-```
+| Testbench | Testy | Vysledok |
+|---|---|---|
+| tb_axil_regfile | 10 | PASS |
+| tb_axil_sys_ctrl | 9 | PASS |
+| tb_axil_seven_seg_adapter | 6 | PASS |
+| tb_axil_uart_adapter | 15 | PASS |
+| tb_axil_regs | 11 | PASS |
+| tb_uart_core_rx | 12 | PASS |
+| tb_xfcp_rx_parser | 7 | PASS |
+| tb_xfcp_axil_bridge | 5 | PASS |
+| tb_xfcp_uart_mmio_top | 4 | PASS |
 
 ---
 
@@ -302,3 +279,4 @@ Poradie (zdola nahor):
 | 2026-05-16 | c7aa616 | Inicialna verzia projektu |
 | 2026-05-17 | 4b6b8a8 | RTL top implementovany, Quartus flow PASS, Python tools opravene, Makefile rozsireny |
 | 2026-05-17 | 7f14861 | +2 PMOD LED sloty (J10/J11), opraveny decoder (addr[18:16], 3h4/3h5), scanner duplikat fix |
+| 2026-05-18 | HEAD | Bug fixes A+B+D (engine pipeline, RREADY, parser count=0); sim regression 9/9; HW PASS |

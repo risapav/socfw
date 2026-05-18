@@ -40,7 +40,9 @@ module tb_xfcp_uart_mmio_top;
   logic clk, rst_ni;
   logic uart_rx_i;
   logic uart_tx_o;
-  logic [5:0] led_o;
+  logic [5:0] led_00_o;
+  logic [7:0] led_01_o;
+  logic [7:0] led_02_o;
   logic [7:0] seg_o;
   logic [2:0] dig_o;
 
@@ -52,7 +54,9 @@ module tb_xfcp_uart_mmio_top;
     .rst_ni       (rst_ni),
     .uart_rx_i    (uart_rx_i),
     .uart_tx_o    (uart_tx_o),
-    .led_o        (led_o),
+    .led_00_o     (led_00_o),
+    .led_01_o     (led_01_o),
+    .led_02_o     (led_02_o),
     .onboard_seg_o(seg_o),
     .onboard_dig_o(dig_o)
   );
@@ -231,7 +235,7 @@ module tb_xfcp_uart_mmio_top;
     // ---- T1: WRITE 0x3F to LED register (slot2 offset 0x04) ----
     xfcp_write(32'hFF020004, 32'h0000_003F);
     xfcp_drain_write_resp();
-    chk32(32'(led_o), 32'h3F, "T1 led_o after write 0x3F");
+    chk32(32'(led_00_o), 32'h3F, "T1 led_00_o after write 0x3F");
 
     // ---- T2: READ LED register back ----
     xfcp_read(32'hFF020004);
@@ -246,7 +250,7 @@ module tb_xfcp_uart_mmio_top;
     // ---- T4: Write 0 to LED, confirm led_o clears ----
     xfcp_write(32'hFF020004, 32'h0);
     xfcp_drain_write_resp();
-    chk32(32'(led_o), 32'h0, "T4 led_o cleared");
+    chk32(32'(led_00_o), 32'h0, "T4 led_00_o cleared");
 
     $display("");
     $display("%s (%0d failure%s)",
