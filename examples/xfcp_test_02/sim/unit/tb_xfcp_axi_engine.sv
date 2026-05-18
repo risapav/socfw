@@ -200,10 +200,160 @@ module tb_xfcp_axi_engine;
     do_read(32'h00000008, rdata);
     chk32(rdata, 32'hCAFE_BABE, "T3 WRITE+READ back");
 
-    // T4-T9: TODO — multi-word, backpressure, timeout
+    // ── T4: Multi-word WRITE (count=8, two AXI transactions) ──────────
+    begin : T4
+      // Pre-load both words into wfifo before req handshake
+      @(negedge clk); write_data = 32'hAAAA_1111; write_data_valid = 1'b1;
+      @(posedge clk); @(negedge clk); write_data_valid = 1'b0;
+      @(negedge clk); write_data = 32'hBBBB_2222; write_data_valid = 1'b1;
+      @(posedge clk); @(negedge clk); write_data_valid = 1'b0;
+      req_hdr   = make_hdr(8'(XFCP_OP_WRITE), 32'h00000010, 16'h8);
+      req_valid = 1'b1;
+      @(posedge clk); while (!req_ready) @(posedge clk);
+      @(negedge clk); req_valid = 1'b0;
+      begin : t4_wait
+        int t; t = 0;
+        forever begin
+          @(posedge clk);
+          if (resp_done) break;
+          if (++t > 2000) $fatal(1, "T4: resp_done timeout");
+        end
+      end
+      $display("PASS T4 multi-word WRITE (2 words)");
+      repeat(2) @(posedge clk);
+    end
+
+    // ── T5: Multi-word READ (count=8) — read back T4 data ────────────
+    begin : T5
+      logic [31:0] t5_words[2];
+      int          t5_ptr, t5_t;
+      t5_ptr = 0; t5_t = 0;
+      @(negedge clk);
+      req_hdr         = make_hdr(8'(XFCP_OP_READ), 32'h00000010, 16'h8);
+      req_valid       = 1'b1;
+      read_data_ready = 1'b1;
+      @(posedge clk); while (!req_ready) @(posedge clk);
+      @(negedge clk); req_valid = 1'b0;
+      forever begin
+        @(posedge clk);
+        if (read_data_valid && t5_ptr < 2) begin
+          t5_words[t5_ptr] = read_data;
+          t5_ptr++;
+        end
+        if (resp_done) break;
+        if (++t5_t > 2000) $fatal(1, "T5: resp_done timeout");
+      end
+      @(negedge clk); read_data_ready = 1'b0;
+      chk32(t5_words[0], 32'hAAAA_1111, "T5 word0");
+      chk32(t5_words[1], 32'hBBBB_2222, "T5 word1");
+      repeat(2) @(posedge clk);
+    end
+
+    // ── T6: WRITE with AWREADY backpressure (10 cycles) ───────────────
+    begin : T6
+      // Force AWREADY low so engine stalls in ST_WR_ADDR
+      force axil.AWREADY = 1'b0;
+      @(negedge clk); write_data = 32'hC0FF_EE01; write_data_valid = 1'b1;
+      @(posedge clk); @(negedge clk); write_data_valid = 1'b0;
+      req_hdr   = make_hdr(8'(XFCP_OP_WRITE), 32'h00000020, 16'h4);
+      req_valid = 1'b1;
+      @(posedge clk); while (!req_ready) @(posedge clk);
+      @(negedge clk); req_valid = 1'b0;
+      repeat(10) @(posedge clk);
+      release axil.AWREADY;
+      begin : t6_wait
+        int t; t = 0;
+        forever begin
+          @(posedge clk);
+          if (resp_done) break;
+          if (++t > 1000) $fatal(1, "T6: resp_done timeout after AWREADY release");
+        end
+      end
+      $display("PASS T6 WRITE AWREADY backpressure");
+      repeat(2) @(posedge clk);
+    end
+
+    // ── T7: READ with ARREADY backpressure — verify T6 data ──────────
+    begin : T7
+      // Force ARREADY low so engine stalls in ST_RD_ADDR
+      force axil.ARREADY = 1'b0;
+      @(negedge clk);
+      req_hdr         = make_hdr(8'(XFCP_OP_READ), 32'h00000020, 16'h4);
+      req_valid       = 1'b1;
+      read_data_ready = 1'b1;
+      @(posedge clk); while (!req_ready) @(posedge clk);
+      @(negedge clk); req_valid = 1'b0;
+      repeat(10) @(posedge clk);
+      release axil.ARREADY;
+      begin : t7_wait
+        int t; t = 0;
+        forever begin
+          @(posedge clk);
+          if (read_data_valid) rdata = read_data;
+          if (resp_done) break;
+          if (++t > 1000) $fatal(1, "T7: resp_done timeout after ARREADY release");
+        end
+      end
+      @(negedge clk); read_data_ready = 1'b0;
+      chk32(rdata, 32'hC0FF_EE01, "T7 READ after ARREADY backpressure");
+      repeat(2) @(posedge clk);
+    end
+
+    // ── T8: WFIFO backpressure — delay second write word by 10 cycles ─
+    begin : T8
+      // Pre-load word0 only; word1 arrives after 10 cycles
+      @(negedge clk); write_data = 32'hDEAD_0001; write_data_valid = 1'b1;
+      @(posedge clk); @(negedge clk); write_data_valid = 1'b0;
+      req_hdr   = make_hdr(8'(XFCP_OP_WRITE), 32'h00000030, 16'h8);
+      req_valid = 1'b1;
+      @(posedge clk); while (!req_ready) @(posedge clk);
+      @(negedge clk); req_valid = 1'b0;
+      repeat(10) @(posedge clk);   // engine stalls in ST_WR_DATA awaiting word1
+      @(negedge clk); write_data = 32'hDEAD_0002; write_data_valid = 1'b1;
+      @(posedge clk); @(negedge clk); write_data_valid = 1'b0;
+      begin : t8_wait
+        int t; t = 0;
+        forever begin
+          @(posedge clk);
+          if (resp_done) break;
+          if (++t > 2000) $fatal(1, "T8: resp_done timeout");
+        end
+      end
+      $display("PASS T8 WFIFO backpressure (delayed word1)");
+      repeat(2) @(posedge clk);
+    end
+    do_read(32'h00000030, rdata); chk32(rdata, 32'hDEAD_0001, "T8 word0 verify");
+    do_read(32'h00000034, rdata); chk32(rdata, 32'hDEAD_0002, "T8 word1 verify");
+
+    // ── T9: Watchdog timeout (ARREADY stuck → error_timeout → recovery) ──
+    begin : T9
+      // Force ARREADY=0: engine stuck in ST_RD_ADDR, watchdog counts to TIMEOUT_VAL
+      force axil.ARREADY = 1'b0;
+      @(negedge clk);
+      req_hdr         = make_hdr(8'(XFCP_OP_READ), 32'h00000038, 16'h4);
+      req_valid       = 1'b1;
+      read_data_ready = 1'b0;
+      @(posedge clk); while (!req_ready) @(posedge clk);
+      @(negedge clk); req_valid = 1'b0;
+      begin : t9_tout
+        int t; t = 0;
+        while (!error_timeout) begin
+          @(posedge clk);
+          if (++t > 500) $fatal(1, "T9: error_timeout never fired (TIMEOUT_VAL=200)");
+        end
+      end
+      release axil.ARREADY;
+      repeat(5) @(posedge clk);    // ST_DONE -> ST_IDLE, error_timeout clears
+      do_read(32'h00000008, rdata);
+      chk32(rdata, 32'hCAFE_BABE, "T9 recovery READ after timeout");
+      if (error_timeout)
+        $display("FAIL T9: error_timeout still set after recovery");
+      else
+        $display("PASS T9 watchdog timeout + recovery");
+      repeat(2) @(posedge clk);
+    end
 
     $display("");
-    $display("NOTE: T4-T9 not yet implemented — stub testbench");
     $display("%s (%0d failure%s)",
       fails == 0 ? "ALL PASSED" : "FAILURES DETECTED",
       fails, fails == 1 ? "" : "s");

@@ -198,9 +198,136 @@ module tb_xfcp_tx_packetizer;
     chk8(base+24, 8'h00,   "T2 terminator");
     $display("PASS T2 READ response 25 bytes");
 
-    // T3-T6: TODO
+    // ── T3: READ response with m_axis_tready backpressure ────────────
+    // Hold tready=0 before resp_start; packetizer stalls in ST_HEADER.
+    // After 5 cycles release → header + payload drain normally.
+    begin : T3
+      int unsigned t3_base;
+      t3_base = cap_wptr;
+      m_axis_tready = 1'b0;
+      @(negedge clk);
+      resp_type       = 8'h12;
+      resp_start      = 1'b1;
+      read_data       = 32'hDEAD_1234;
+      read_data_valid = 1'b1;
+      @(posedge clk);
+      @(negedge clk);
+      resp_start  = 1'b0;
+      resp_done_i = 1'b1;   // latch done early (ST_HEADER still stalled)
+      @(posedge clk);
+      @(negedge clk);
+      resp_done_i = 1'b0;
+      repeat(5) @(posedge clk);
+      m_axis_tready = 1'b1;  // release: header + payload flow now
+      begin : t3_rdready
+        int t; t = 0;
+        while (!read_data_ready) begin
+          @(posedge clk);
+          if (++t > 5000) $fatal(1, "T3: read_data_ready timeout");
+        end
+      end
+      @(negedge clk); read_data_valid = 1'b0;
+      begin : t3_bytes
+        int t; t = 0;
+        while ((cap_wptr - t3_base) < 25) begin
+          @(posedge clk);
+          if (++t > 5000) $fatal(1, "T3: bytes timeout");
+        end
+      end
+      chk8(t3_base+0,  8'hFE,   "T3 SOP");
+      chk8(t3_base+1,  8'h12,   "T3 TYPE");
+      chk8(t3_base+20, 8'hDE,   "T3 data[31:24]");
+      chk8(t3_base+21, 8'hAD,   "T3 data[23:16]");
+      chk8(t3_base+22, 8'h12,   "T3 data[15:8]");
+      chk8(t3_base+23, 8'h34,   "T3 data[7:0]");
+      chk8(t3_base+24, 8'h00,   "T3 terminator");
+      $display("PASS T3 READ backpressure (tready=0 during header, 5 cycles)");
+      repeat(2) @(posedge clk);
+    end
+
+    // ── T4: Back-to-back WRITE responses ─────────────────────────────
+    begin : T4
+      int unsigned t4_base;
+      t4_base = cap_wptr;
+      send_write_resp();
+      send_write_resp();
+      chk8(t4_base+0,  8'hFE, "T4 pkt0 SOP");
+      chk8(t4_base+1,  8'h13, "T4 pkt0 TYPE");
+      chk8(t4_base+20, 8'h00, "T4 pkt0 term");
+      chk8(t4_base+21, 8'hFE, "T4 pkt1 SOP");
+      chk8(t4_base+22, 8'h13, "T4 pkt1 TYPE");
+      chk8(t4_base+41, 8'h00, "T4 pkt1 term");
+      $display("PASS T4 back-to-back WRITE responses");
+      repeat(2) @(posedge clk);
+    end
+
+    // ── T5: Late resp_done_i (during ST_PAYLOAD, not ST_HEADER) ──────
+    // resp_done_i fires 1 cycle after ST_PAYLOAD starts outputting,
+    // setting done_latch_q so ST_PAYLOAD exits cleanly at byte_cnt=3.
+    begin : T5
+      int unsigned t5_base;
+      t5_base = cap_wptr;
+      @(negedge clk);
+      resp_type       = 8'h12;
+      resp_start      = 1'b1;
+      read_data       = 32'h5A5A_5A5A;
+      read_data_valid = 1'b1;
+      @(posedge clk);
+      @(negedge clk);
+      resp_start = 1'b0;
+      // No resp_done_i here — wait for ST_PAYLOAD entry
+      begin : t5_rdready
+        int t; t = 0;
+        while (!read_data_ready) begin
+          @(posedge clk);
+          if (++t > 5000) $fatal(1, "T5: read_data_ready timeout");
+        end
+      end
+      @(negedge clk); read_data_valid = 1'b0;  // word consumed
+      // Fire resp_done_i 1 cycle into byte output (byte_cnt still <3)
+      @(posedge clk);
+      @(negedge clk); resp_done_i = 1'b1;
+      @(posedge clk);
+      @(negedge clk); resp_done_i = 1'b0;
+      begin : t5_bytes
+        int t; t = 0;
+        while ((cap_wptr - t5_base) < 25) begin
+          @(posedge clk);
+          if (++t > 5000) $fatal(1, "T5: bytes timeout");
+        end
+      end
+      chk8(t5_base+0,  8'hFE,   "T5 SOP");
+      chk8(t5_base+1,  8'h12,   "T5 TYPE");
+      chk8(t5_base+20, 8'h5A,   "T5 data[31:24]");
+      chk8(t5_base+21, 8'h5A,   "T5 data[23:16]");
+      chk8(t5_base+22, 8'h5A,   "T5 data[15:8]");
+      chk8(t5_base+23, 8'h5A,   "T5 data[7:0]");
+      chk8(t5_base+24, 8'h00,   "T5 terminator");
+      $display("PASS T5 late resp_done_i");
+      repeat(2) @(posedge clk);
+    end
+
+    // ── T6: Verify DEV_TYPE and DEV_STR bytes in header ──────────────
+    // DUT: XFCP_ID_TYPE=16'h0001, XFCP_ID_STR="TB-PACKETIZER  " (15 chars)
+    // DEV_STR[0] = null pad (128-bit param, 15-char string -> MSB zero)
+    // DEV_STR[1..14] = "TB-PACKETIZER " ASCII
+    begin : T6
+      int unsigned t6_base;
+      t6_base = cap_wptr;
+      send_write_resp();
+      chk8(t6_base+2,  8'h00, "T6 DEV_TYPE[15:8]");
+      chk8(t6_base+3,  8'h01, "T6 DEV_TYPE[7:0]");
+      chk8(t6_base+4,  8'h00, "T6 DEV_STR[0] null-pad");
+      chk8(t6_base+5,  8'h54, "T6 DEV_STR[1] 'T'");
+      chk8(t6_base+6,  8'h42, "T6 DEV_STR[2] 'B'");
+      chk8(t6_base+18, 8'h20, "T6 DEV_STR[14] ' '");
+      chk8(t6_base+19, 8'h20, "T6 DEV_STR[15] ' '");
+      chk8(t6_base+20, 8'h00, "T6 term after 16B DEV_STR");
+      $display("PASS T6 DEV_TYPE and DEV_STR 16-byte field");
+      repeat(2) @(posedge clk);
+    end
+
     $display("");
-    $display("NOTE: T3-T6 not yet implemented — stub testbench");
     $display("%s (%0d failure%s)",
       fails == 0 ? "ALL PASSED" : "FAILURES DETECTED",
       fails, fails == 1 ? "" : "s");

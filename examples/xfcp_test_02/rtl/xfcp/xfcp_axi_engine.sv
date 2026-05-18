@@ -257,30 +257,32 @@ module xfcp_axi_engine #(
     else
       req_ready = (state_q == ST_IDLE) && packetizer_idle_i;
 
-    if (error_timeout) begin
-      // Watchdog: ukončíme transakciu, engine sa resyncuje cez ST_DONE
+    // FIX G: ST_DONE and ST_IDLE always handle their own exit transitions.
+    // error_timeout must NOT override ST_DONE. If it did, error_timeout would
+    // keep the engine in ST_DONE forever (error_timeout only clears in ST_IDLE,
+    // which is unreachable → deadlock). Without ST_DONE→IDLE, resp_done never
+    // fires → order_fifo in xfcp_fabric_endpoint deadlocks too.
+    if (state_q == ST_DONE) begin
+      if (packetizer_idle_i) state_n = ST_IDLE;
+
+    end else if (state_q == ST_IDLE) begin
+      if (req_valid && req_ready) begin
+        resp_start = 1'b1;
+        if (req_hdr_s.opcode == XFCP_OP_WRITE)
+          state_n = ST_WR_ADDR;
+        else
+          state_n = ST_RD_ADDR;
+      end
+
+    end else if (error_timeout) begin
+      // Timeout in active AXI state: abort to ST_DONE.
+      // resp_done fires combinationally (assign below) to unblock order_fifo.
       state_n = ST_DONE;
 
     end else begin
       case (state_q)
 
-        // ── ST_IDLE ───────────────────────────────────────────────
-        // FIX 1 (kombinačná časť): prechod riadený req_valid&&req_ready.
-        // Pôvod: (req_valid && packetizer_idle_i) – bez wfifo_valid →
-        // state_n=ST_WR_ADDR aj keď req_ready=0. Opravené na req_ready.
-        ST_IDLE: begin
-          if (req_valid && req_ready) begin       // ← FIX 1
-            resp_start = 1'b1;
-            if (req_hdr_s.opcode == XFCP_OP_WRITE)
-              state_n = ST_WR_ADDR;
-            else
-              state_n = ST_RD_ADDR;
-          end
-        end
-
         // ── ST_WR_ADDR: AW channel ────────────────────────────────
-        // AXI4-Lite: AW MUSÍ predchádzať W. Slave nie je povinný
-        // akceptovať W pred AW. Sekvenčné stavy eliminujú AW/W bug.
         ST_WR_ADDR: begin
           m_axil.AWVALID = 1'b1;
           if (m_axil.AWREADY)
@@ -288,19 +290,15 @@ module xfcp_axi_engine #(
         end
 
         // ── ST_WR_DATA: W channel ─────────────────────────────────
-        // AW handshake zaručene prebehol (predchádzajúci stav).
-        // WVALID aktívny iba ak FIFO má dáta (wfifo_valid).
-        // Pop FIFO (wfifo_rd_en) viazaný na W handshake.
         ST_WR_DATA: begin
           m_axil.WVALID = wfifo_valid;
           if (m_axil.WVALID && m_axil.WREADY) begin
-            wfifo_rd_en = 1'b1;   // pop: dáta sú teraz na drôte
+            wfifo_rd_en = 1'b1;
             state_n     = ST_WR_B;
           end
         end
 
         // ── ST_WR_B: čakanie na write response ───────────────────
-        // BREADY = 1 (defaultné). Slave môže zdržať BVALID.
         ST_WR_B: begin
           if (m_axil.BVALID)
             state_n = ST_NEXT;
@@ -314,33 +312,20 @@ module xfcp_axi_engine #(
         end
 
         // ── ST_RD_WAIT: čakanie na R response ────────────────────
-        // FIX 2: Pipelining odstránený (bol mŕtvy kód).
-        // Sekvenčný tok: ST_RD_ADDR → ST_RD_WAIT → ST_NEXT → ST_RD_ADDR
         ST_RD_WAIT: begin
           if (m_axil.RVALID) state_n = ST_NEXT;
         end
 
         // ── ST_NEXT: aktualizácia addr/rem + rozhodnutie ─────────
-        // rem_q a addr_q sa aktualizujú v sekvenčnej logike.
-        // Tu rozhodujeme stav pre nasledujúci cyklus.
         ST_NEXT: begin
           if (rem_q <= COUNT_WIDTH'(ADDR_INC)) begin
-            // Posledný word – koniec transakcie
             state_n = ST_DONE;
           end else begin
-            // Ďalší word
             if (op_q == XFCP_OP_WRITE)
               state_n = ST_WR_ADDR;
             else
               state_n = ST_RD_ADDR;
           end
-        end
-
-        // ── ST_DONE: čakaj kým packetizer spracuje response ───────
-        // Engine zostáva tu kým arbiter neodošle celý paket.
-        // packetizer_idle_i = 1 keď packetizer je v ST_IDLE.
-        ST_DONE: begin
-          if (packetizer_idle_i) state_n = ST_IDLE;
         end
 
         default: state_n = ST_IDLE;
@@ -354,21 +339,28 @@ module xfcp_axi_engine #(
   // Generovaný kombinačne z ST_NEXT keď je posledný word
   // (rem_q <= ADDR_INC). Arbiter použije tento pulz na
   // inkrementovanie eng_done_cnt a spustenie packetizera.
+  //
+  // FIX G: aj pri timeout musí resp_done vystreliť, inak
+  // order_fifo v xfcp_fabric_endpoint deadlockuje navždy.
   // ============================================================
-  assign resp_done = (state_q == ST_NEXT) &&
-                     (rem_q <= COUNT_WIDTH'(ADDR_INC)) &&
-                     !error_timeout;
+  assign resp_done = ((state_q == ST_NEXT) && (rem_q <= COUNT_WIDTH'(ADDR_INC)) && !error_timeout)
+                   || (error_timeout && (state_q != ST_DONE) && (state_q != ST_IDLE));
 
   // ============================================================
   // resp_type: určuje typ response paketu
   //
   // READ aj ID vracajú RESP_READ (payload s dátami).
   // WRITE vracia RESP_WRITE (len header, bez payloadu).
+  //
+  // FIX G: timeout pri READ operácii musí vrátiť RESP_WRITE
+  // (bez payload dat), inak packetizer zasekne v ST_PAYLOAD
+  // a čaká na read_data_valid ktorý nikdy nepríde.
   // ============================================================
-  assign resp_type = (op_q == XFCP_OP_READ ||
-                      op_q == XFCP_OP_ID)
-                     ? XFCP_OP_RESP_READ
-                     : XFCP_OP_RESP_WRITE;
+  assign resp_type = (error_timeout && (state_q != ST_DONE) && (state_q != ST_IDLE))
+                     ? XFCP_OP_RESP_WRITE
+                     : ((op_q == XFCP_OP_READ || op_q == XFCP_OP_ID)
+                        ? XFCP_OP_RESP_READ
+                        : XFCP_OP_RESP_WRITE);
 
   // ============================================================
   // Simulačné správy

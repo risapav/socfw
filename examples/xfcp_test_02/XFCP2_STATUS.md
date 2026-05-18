@@ -1,6 +1,6 @@
 # XFCP Test 02 — stav projektu
 
-> Stav k: 2026-05-18 (faza 1+2 dokoncene)
+> Stav k: 2026-05-18 (faza 1+2+3 dokoncene)
 > Board: QMTech EP4CE55F23C8 @ 50 MHz
 > Protokol: XFCP cez UART 115200 baud (SOP=0xFE)
 > Predchadzajuci projekt: `examples/xfcp_test` (uzavrety, commit d89c918)
@@ -121,18 +121,18 @@ examples/xfcp_test_02/
 | tb_axil_regs | 11 | PASS | copy z xfcp_test, overene |
 | tb_uart_core_rx | 12 | PASS | copy z xfcp_test, overene |
 | tb_xfcp_rx_parser | 7 | PASS | copy z xfcp_test, overene |
-| tb_xfcp_tx_packetizer | 2/6 | STUB-PASS | T1-T2 PASS; T3-T6 TODO |
-| tb_xfcp_axi_engine | 3/9 | STUB-PASS | T1-T3 PASS; T4-T9 TODO |
+| tb_xfcp_tx_packetizer | 6/6 | PASS | T1-T6 PASS (T3 backpressure, T4 back-to-back, T5 late done, T6 DEV_STR) |
+| tb_xfcp_axi_engine | 9/9 | PASS | T1-T9 PASS (T4-T5 multi-word, T6-T7 backpressure, T8 WFIFO, T9 timeout+recovery) |
 
 ### Integracne testy
 
 | Testbench | Testy | Stav | Poznamka |
 |---|---|---|---|
 | tb_xfcp_axil_bridge | 5 | PASS | baseline, copy z xfcp_test, overene |
-| tb_xfcp_fabric_endpoint | 3/8 | STUB-PASS | T1-T3 PASS; T4-T8 TODO |
+| tb_xfcp_fabric_endpoint | 7+skip/8 | PASS | T1-T3 + T5-T8 PASS; T4 SKIP (Problem F) |
 | tb_xfcp_uart_mmio_top | 4 | PASS | aktualizovane pre fabric_endpoint, LITTLE_ENDIAN=0 |
 
-**Regression: make regression → XFCP_TEST_02 REGRESSION PASSED (2026-05-18)**
+**Regression: make regression → XFCP_TEST_02 REGRESSION PASSED (2026-05-18, Faza 3)**
 
 ### Opravene bugy v TB taskoch
 
@@ -149,6 +149,7 @@ examples/xfcp_test_02/
 | Modul | Bug | Oprava |
 |---|---|---|
 | xfcp_fabric_endpoint | LITTLE_ENDIAN neprechadzal na engine (default=1 → byte-swap) | Pridany LITTLE_ENDIAN parameter, default=0 (kompatibilny s xfcp_axil_bridge) |
+| xfcp_axi_engine | FIX G: error_timeout overridoval ST_DONE → engine deadlock, resp_done nikdy | Restrukturacia always_comb: ST_DONE/ST_IDLE mimo timeout vetvy; resp_done + resp_type fire na timeout |
 
 ---
 
@@ -158,19 +159,19 @@ examples/xfcp_test_02/
 
 ### ~~Faza 2 — opravit stub TB bugy~~ DONE (regression PASS)
 
-### Faza 3 — dokoncit stub testy + RTL opravy z navrhy_03.md
+### ~~Faza 3 — dokoncit stub testy + RTL opravy~~ DONE (2026-05-18)
 
-Stub testy (TODO):
-1. `tb_xfcp_axi_engine`: T4 multi-word, T6 backpressure, T9 timeout
-2. `tb_xfcp_tx_packetizer`: T3 backpressure, T4 back-to-back, T5 late resp_done
-3. `tb_xfcp_fabric_endpoint`: T4 invalid addr, T5-T6 back-to-back, T7-T8 multi-word
+Stub testy dokoncene:
+- `tb_xfcp_axi_engine`: T4-T5 multi-word, T6-T7 backpressure, T8 WFIFO, T9 watchdog+recovery — vsetky PASS
+- `tb_xfcp_tx_packetizer`: T3 tready backpressure, T4 back-to-back, T5 late resp_done_i, T6 DEV_STR — vsetky PASS
+- `tb_xfcp_fabric_endpoint`: T4 SKIP (Problem F), T5-T8 PASS (back-to-back, in-order, multi-word WRITE+verify)
 
 RTL opravy:
 
-| # | Modul | Problem | Popis |
+| # | Modul | Problem | Stav |
 |---|---|---|---|
-| E | xfcp_rx_parser.sv | Neuplna TLAST validacia | Posledny payload byte bez TLAST musi ist do go_drop |
-| G | xfcp_axi_engine.sv | Timeout neposle error response | timeout → ST_DONE bez resp_done → order_fifo deadlock |
+| E | xfcp_rx_parser.sv | Neuplna TLAST validacia | DEFERRED — UART ma TLAST=0 vzdy, strict check by dropoval vsetky pakety |
+| G | xfcp_axi_engine.sv | Timeout neposle error response | DONE — 3-cast oprava always_comb + resp_done + resp_type |
 
 ### ~~Faza 4 — integracny top test~~ DONE
 
@@ -216,3 +217,5 @@ bez gatingu na dec_valid). Treba overit a opravit ak T4 failuje.
 | 2026-05-18 | Opravene bugy v TB taskoch (do_write FIFO akumulacia, do_read resp_done timing, send_read_resp pre ST_PAYLOAD, 0xFE byte v datach, MEM_DEPTH pre velke adresy) |
 | 2026-05-18 | Pridany LITTLE_ENDIAN parameter do xfcp_fabric_endpoint (default=0), make regression PASS |
 | 2026-05-18 | Pridane socfw YAML deskriptory: project.yaml, timing_config.yaml, ip/xfcp_uart_mmio.ip.yaml |
+| 2026-05-18 | FIX G: xfcp_axi_engine timeout deadlock opraveny (3-cast: always_comb + resp_done + resp_type) |
+| 2026-05-18 | Faza 3 dokoncena: T4-T9 engine, T3-T6 packetizer, T5-T8 fabric — REGRESSION PASSED |
