@@ -49,9 +49,12 @@ module xfcp_uart_mmio_top #(
 
   // --------------------------------------------------------------------------
   // AXI-Stream: UART RX/TX <-> xfcp_fabric_endpoint
+  // uart_rx_raw_s: direct UART RX output (no buffering).
+  // xfcp_rx_s: parser input, fed through u_rx_fifo elastic buffer.
   // --------------------------------------------------------------------------
-  axi4s_if #(.DATA_WIDTH(8)) xfcp_rx_s (.TCLK(clk_i), .TRESETn(rst_ni));
-  axi4s_if #(.DATA_WIDTH(8)) xfcp_tx_s (.TCLK(clk_i), .TRESETn(rst_ni));
+  axi4s_if #(.DATA_WIDTH(8)) uart_rx_raw_s (.TCLK(clk_i), .TRESETn(rst_ni));
+  axi4s_if #(.DATA_WIDTH(8)) xfcp_rx_s     (.TCLK(clk_i), .TRESETn(rst_ni));
+  axi4s_if #(.DATA_WIDTH(8)) xfcp_tx_s     (.TCLK(clk_i), .TRESETn(rst_ni));
 
   // --------------------------------------------------------------------------
   // AXI-Lite: endpoint masters -> 6 slave periferias
@@ -110,19 +113,46 @@ module xfcp_uart_mmio_top #(
   );
 
   // --------------------------------------------------------------------------
-  // UART RX wrapper (serial -> AXIS -> xfcp_rx_s)
+  // UART RX wrapper (serial -> AXIS -> uart_rx_raw_s)
   // AXIS_TLAST=0: UART je byte stream, parser pouziva COUNT, nie TLAST.
   // --------------------------------------------------------------------------
   axis_uart_rx #(
     .AXIS_TLAST(1'b0)
   ) u_uart_rx (
-    .m_axis     (xfcp_rx_s.master),
+    .m_axis     (uart_rx_raw_s.master),
     .rxd_i      (uart_rx_i),
     .prescale_i (baud_div_w[15:0]),
     .cfg_i      (uart_cfg_w),
     .status_o   (rx_status_w),
     .err_clear_i(err_clr_w)
   );
+
+  // --------------------------------------------------------------------------
+  // RX elastic buffer: 8-byte FIFO between UART RX and parser.
+  // Prevents byte loss when parser has s_axis_tready=0 (S_DECODE or dfifo full).
+  // UART sends one byte every ~87 us; even a 1-entry FIFO would suffice, but
+  // 8 entries give margin for any future tready=0 windows.
+  // --------------------------------------------------------------------------
+  xfcp_fifo #(
+    .DATA_WIDTH(8),
+    .DEPTH     (8)
+  ) u_rx_fifo (
+    .clk    (clk_i),
+    .rst_n  (rst_ni),
+    .flush  (1'b0),
+    .w_data (uart_rx_raw_s.TDATA),
+    .w_valid(uart_rx_raw_s.TVALID),
+    .w_ready(uart_rx_raw_s.TREADY),
+    .r_data (xfcp_rx_s.TDATA),
+    .r_valid(xfcp_rx_s.TVALID),
+    .r_ready(xfcp_rx_s.TREADY)
+  );
+
+  assign xfcp_rx_s.TKEEP = '1;
+  assign xfcp_rx_s.TLAST = 1'b0;
+  assign xfcp_rx_s.TUSER = '0;
+  assign xfcp_rx_s.TID   = '0;
+  assign xfcp_rx_s.TDEST = '0;
 
   // --------------------------------------------------------------------------
   // UART TX wrapper (xfcp_tx_s -> AXIS -> serial)

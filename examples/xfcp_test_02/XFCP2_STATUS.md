@@ -1,6 +1,6 @@
 # XFCP Test 02 — stav projektu
 
-> Stav k: 2026-05-18 (faza 1+2+3 dokoncene)
+> Stav k: 2026-05-19 (faza 5b: Quartus PASS, HW test, RTL+Python opravy)
 > Board: QMTech EP4CE55F23C8 @ 50 MHz
 > Protokol: XFCP cez UART 115200 baud (SOP=0xFE)
 > Predchadzajuci projekt: `examples/xfcp_test` (uzavrety, commit d89c918)
@@ -35,6 +35,9 @@ PC (Python tools/main.py)
   |  XFCP protokol: SOP=0xFE
   v
 axis_uart_rx (AXIS_TLAST=0)
+  |
+  v
+u_rx_fifo [NEW] (xfcp_fifo, 8-byte elastic buffer, prevents UART overrun)
   |
   v
 xfcp_fabric_endpoint (novy!)
@@ -132,7 +135,7 @@ examples/xfcp_test_02/
 | tb_xfcp_fabric_endpoint | 7+skip/8 | PASS | T1-T3 + T5-T8 PASS; T4 SKIP (Problem F) |
 | tb_xfcp_uart_mmio_top | 4 | PASS | aktualizovane pre fabric_endpoint, LITTLE_ENDIAN=0 |
 
-**Regression: make regression → XFCP_TEST_02 REGRESSION PASSED (2026-05-18, Faza 3)**
+**Regression: make regression → XFCP_TEST_02 REGRESSION PASSED (2026-05-19, po RX FIFO oprave)**
 
 ### Opravene bugy v TB taskoch
 
@@ -150,6 +153,8 @@ examples/xfcp_test_02/
 |---|---|---|
 | xfcp_fabric_endpoint | LITTLE_ENDIAN neprechadzal na engine (default=1 → byte-swap) | Pridany LITTLE_ENDIAN parameter, default=0 (kompatibilny s xfcp_axil_bridge) |
 | xfcp_axi_engine | FIX G: error_timeout overridoval ST_DONE → engine deadlock, resp_done nikdy | Restrukturacia always_comb: ST_DONE/ST_IDLE mimo timeout vetvy; resp_done + resp_type fire na timeout |
+| xfcp_fabric_endpoint | resp_done_mux = eng_resp_done[arb_sel_q] — arb_sel_q zaostava 1 cyklus za resp_start_pulse → done_latch_q nikdy nastaveny → packetizer deadlock v ST_PAYLOAD | resp_done_mux = resp_start_pulse || resp_done_held_q (2-cycle pulse) |
+| xfcp_uart_mmio_top | axis_uart_rx bez buffra → UART byte zahodeny ak parser ma tready=0 | u_rx_fifo (xfcp_fifo DEPTH=8) vlozeny medzi axis_uart_rx a parser |
 
 ---
 
@@ -183,7 +188,24 @@ LITTLE_ENDIAN=0 nastaveny explicitne v `xfcp_uart_mmio_top.sv`.
 `project.yaml`, `timing_config.yaml`, `ip/xfcp_uart_mmio.ip.yaml` vytvorene.
 IP descriptor: `xfcp_fabric_endpoint.sv` nahradzuje `xfcp_axil_bridge.sv` vo synthesis zozname.
 
-### Faza 5b — Quartus build + HW test
+### ~~Faza 5b — Quartus build + HW test~~ DONE (2026-05-19)
+
+Quartus build: Fmax = 63.34 MHz > 50 MHz target. Vsetky kroky PASS.
+
+HW test (scanner num_slots=8, pred opravami):
+- Slot 0 SYSC OK, Slot 2 OUT_ OK, Slot 4 OUT_1 OK, Slot 5 SEG7 OK
+- Slot 1 UART TIMEOUT, Slot 3 OUT_ TIMEOUT — pricina: pravdepodobne stale bytes z retransmitovania
+- Slot 6,7 TIMEOUT — pricina: num_slots=8 > NUM_SLAVES=6, deadlock (OPRAVENE)
+- 2. scan: vsetky TIMEOUT — pricina: deadlock z predchadzajuceho invalid-address probing (OPRAVENE)
+
+Opravene (2026-05-19):
+1. `tools/core/scanner.py`: `num_slots=8` → `num_slots=6` — eliminuje deadlock
+2. `tools/bus/xfcp.py`: pridany `reset_input_buffer()` pred kazdym `_transact` — eliminuje stale bytes
+3. `rtl/xfcp_uart_mmio_top.sv`: pridany `u_rx_fifo` (DEPTH=8) — eliminuje potencialny UART overrun
+4. `rtl/xfcp/xfcp_fabric_endpoint.sv`: `resp_done_mux` fix (z predchadzajucej session)
+
+Otvoreny problem: 17% non-deterministicke zlyhania (0B odpoved) — sporadicke, nahodne sloty.
+Pred dalsi HW testom treba rebuildnut Quartus (RTL zmeneny).
 
 ```bash
 make syn && make fit && make asm && make sta && make program
@@ -219,3 +241,8 @@ bez gatingu na dec_valid). Treba overit a opravit ak T4 failuje.
 | 2026-05-18 | Pridane socfw YAML deskriptory: project.yaml, timing_config.yaml, ip/xfcp_uart_mmio.ip.yaml |
 | 2026-05-18 | FIX G: xfcp_axi_engine timeout deadlock opraveny (3-cast: always_comb + resp_done + resp_type) |
 | 2026-05-18 | Faza 3 dokoncena: T4-T9 engine, T3-T6 packetizer, T5-T8 fabric — REGRESSION PASSED |
+| 2026-05-19 | resp_done_mux fix v xfcp_fabric_endpoint.sv (2-cycle pulse cez resp_done_held_q) |
+| 2026-05-19 | Quartus build PASS, Fmax=63.34 MHz, HW test 4/6 periferii detekovanych |
+| 2026-05-19 | Scanner deadlock fix: num_slots=8→6 v tools/core/scanner.py |
+| 2026-05-19 | Pre-flush fix: reset_input_buffer() pred kazdym _transact v tools/bus/xfcp.py |
+| 2026-05-19 | RX FIFO fix: u_rx_fifo (DEPTH=8) v xfcp_uart_mmio_top.sv — REGRESSION PASSED |

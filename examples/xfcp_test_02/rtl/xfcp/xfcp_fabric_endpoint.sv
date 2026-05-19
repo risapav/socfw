@@ -227,11 +227,21 @@ module xfcp_fabric_endpoint #(
   logic                      rdata_valid;
   logic                      rdata_ready;
   logic                      resp_done_mux;
+  // resp_start_pulse fires same cycle as eng_resp_done; arb_sel_q lags 1 cycle.
+  // Hold resp_done for 2 cycles so packetizer's done_latch_q is always set.
+  logic                      resp_done_held_q;
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+      resp_done_held_q <= 1'b0;
+    else
+      resp_done_held_q <= resp_start_pulse;
+  end
 
   always_comb begin
     rdata         = eng_rdata      [arb_sel_q];
     rdata_valid   = eng_rdata_valid[arb_sel_q];
-    resp_done_mux = eng_resp_done  [arb_sel_q];
+    resp_done_mux = resp_start_pulse || resp_done_held_q;
     resp_type     = resp_type_q;   // stabilný registrovaný výstup
   end
 

@@ -20,7 +20,7 @@ class DynamicScanner:
     }
 
     def __init__(self, bus, base_io=0xFF000000, stride=0x10000,
-                 num_slots=8, blacklist=None, slot_retries=2):
+                 num_slots=6, blacklist=None, slot_retries=2):
         self.bus          = bus
         self.base_io      = base_io
         self.stride       = stride

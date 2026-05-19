@@ -51,12 +51,17 @@ class XFCPBus:
     def _transact(self, pkt, expected_len, retries=None):
         """
         Send pkt, read expected_len bytes back.
-        On partial read (timeout): flush stale bytes, then retry up to `retries` times.
+        Pre-flushes stale bytes from previous failed transactions before first write.
+        On partial read (timeout): flush, then retry up to `retries` times.
         Returns bytes on success, None on all attempts exhausted.
         Raises ConnectionError on serial port failure.
         """
         if retries is None:
             retries = self.retries
+        # Clear any bytes left in the OS buffer from a previous partial/failed read.
+        # Without this, a stale response from a prior retry could be mistaken for the
+        # current response, causing silent data corruption or wrong-type failures.
+        self.ser.reset_input_buffer()
         for attempt in range(retries + 1):
             try:
                 self.ser.write(pkt)
@@ -65,7 +70,7 @@ class XFCPBus:
                 raise ConnectionError(f"Sériová chyba: {e}") from e
             if len(resp) == expected_len:
                 return resp
-            # Partial read — flush stale bytes before retry
+            # Partial/zero read — flush before retry
             self.ser.reset_input_buffer()
         return None
 
