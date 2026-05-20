@@ -15,6 +15,7 @@
 //   T5: TLAST mid-header -> error_protocol asserted
 //   T6: Back-to-back READ packets -> two req_hdr entries queued in FIFO
 //   T7: WRITE with backpressure on write_data_ready -> data preserved in FIFO
+//   T8: 0xFF (RPATH SOP) in S_IDLE with pass_ready=0 -> ignored, next READ works
 //
 // Run with:
 //   vlog -sv -suppress 2892 $(AXI_COMMON) $(XFCP_PARSER) tb_xfcp_rx_parser.sv
@@ -232,6 +233,20 @@ module tb_xfcp_rx_parser;
     expect_req  (8'h11, 32'hFF050004, 16'h4, "T7 WRITE hdr");
     repeat(20) @(posedge clk);
     expect_wdata(32'hDEADBEEF, "T7 WRITE data backpressure");
+
+    // ── T8: 0xFF in S_IDLE with pass_ready=0 → ignored, next READ OK ─
+    // Bug: before fix, parser entered S_RPATH and deadlocked (TLAST=0,
+    // pass_ready=0 → no exit, no watchdog, no SOP recovery).
+    // Fix: only enter S_RPATH when pass_ready=1.
+    // Verify: send 0xFF in IDLE, then valid READ, expect correct req_hdr.
+    axis_byte(8'hFF);             // stray RPATH SOP — must be ignored
+    repeat(4) @(posedge clk);    // wait a few cycles
+    axis_byte(8'hFE); axis_byte(8'h10);
+    axis_byte(8'h00); axis_byte(8'h04);
+    axis_byte(8'hFF); axis_byte(8'h03);
+    axis_byte(8'h00); axis_byte(8'h08);
+    expect_req(8'h10, 32'hFF030008, 16'h4, "T8 READ after stray 0xFF");
+    repeat(2) @(posedge clk);
 
     $display("");
     $display("%s (%0d failure%s)",

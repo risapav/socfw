@@ -422,11 +422,14 @@ module xfcp_rx_parser #(
       case (state_q)
 
         // ── S_IDLE: čakanie na SOP ──────────────────────────────
+        // S_RPATH len keď pass_ready=1: inak by 0xFF (RPATH SOP)
+        // sposobil permanentny deadlock (TLAST=0 → exit nemozny,
+        // TREADY=0 → watchdog/sop_recovery nemoze strelat).
         S_IDLE: begin
           if (axis_fire) begin
             if (s_axis_tdata == XFCP_SOP_REQ)
-              state_n = S_HDR;       // začni zbierať header
-            else if (s_axis_tdata == XFCP_SOP_RPATH)
+              state_n = S_HDR;
+            else if (s_axis_tdata == XFCP_SOP_RPATH && pass_ready)
               state_n = S_RPATH;
           end
         end
