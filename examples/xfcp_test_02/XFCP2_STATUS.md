@@ -1,6 +1,6 @@
 # XFCP Test 02 — stav projektu
 
-> Stav k: 2026-05-19 (faza 5b: Quartus PASS, HW test, RTL+Python opravy)
+> Stav k: 2026-05-20 (UZAVRETY — HW bug neidentifikovany, pokracovanie v xfcp_test_03)
 > Board: QMTech EP4CE55F23C8 @ 50 MHz
 > Protokol: XFCP cez UART 115200 baud (SOP=0xFE)
 > Predchadzajuci projekt: `examples/xfcp_test` (uzavrety, commit d89c918)
@@ -132,10 +132,10 @@ examples/xfcp_test_02/
 | Testbench | Testy | Stav | Poznamka |
 |---|---|---|---|
 | tb_xfcp_axil_bridge | 5 | PASS | baseline, copy z xfcp_test, overene |
-| tb_xfcp_fabric_endpoint | 7+skip/8 | PASS | T1-T3 + T5-T8 PASS; T4 SKIP (Problem F) |
+| tb_xfcp_fabric_endpoint | 8/8 | PASS | T1-T8 PASS; T4 aktivovany (invalid-addr WRITE + liveness check) |
 | tb_xfcp_uart_mmio_top | 4 | PASS | aktualizovane pre fabric_endpoint, LITTLE_ENDIAN=0 |
 
-**Regression: make regression → XFCP_TEST_02 REGRESSION PASSED (2026-05-19, po RX FIFO oprave)**
+**Regression: make regression → XFCP_TEST_02 REGRESSION PASSED (2026-05-19, po RTL opravach navrhy_03)**
 
 ### Opravene bugy v TB taskoch
 
@@ -155,6 +155,9 @@ examples/xfcp_test_02/
 | xfcp_axi_engine | FIX G: error_timeout overridoval ST_DONE → engine deadlock, resp_done nikdy | Restrukturacia always_comb: ST_DONE/ST_IDLE mimo timeout vetvy; resp_done + resp_type fire na timeout |
 | xfcp_fabric_endpoint | resp_done_mux = eng_resp_done[arb_sel_q] — arb_sel_q zaostava 1 cyklus za resp_start_pulse → done_latch_q nikdy nastaveny → packetizer deadlock v ST_PAYLOAD | resp_done_mux = resp_start_pulse || resp_done_held_q (2-cycle pulse) |
 | xfcp_uart_mmio_top | axis_uart_rx bez buffra → UART byte zahodeny ak parser ma tready=0 | u_rx_fifo (xfcp_fifo DEPTH=8) vlozeny medzi axis_uart_rx a parser |
+| xfcp_tx_packetizer | resp_done_mux = resp_start_pulse → done_latch_q=1 od startu → multi-word READ ukonci po 1. slove | ST_PAYLOAD exit: pridana podmienka !slot1_valid_q |
+| xfcp_fabric_endpoint | FIX G strateny: eng_resp_type/(). resp_type_q z opcode → READ timeout stale posle RESP_READ | Pripojeny eng_resp_type[gi], resp_type_q <= xfcp_op_e'(eng_resp_type[ofifo_rdata.sel]) |
+| xfcp_fabric_endpoint | Problem F: invalid WRITE → req_ready=0 → hfifo full deadlock; payload tecie do engine 0 | invalid_req: req_ready=1, ofifo_wvalid gate, drop_wdata_q s citacom slov, !invalid_req pre eng_busy |
 
 ---
 
@@ -246,3 +249,48 @@ bez gatingu na dec_valid). Treba overit a opravit ak T4 failuje.
 | 2026-05-19 | Scanner deadlock fix: num_slots=8→6 v tools/core/scanner.py |
 | 2026-05-19 | Pre-flush fix: reset_input_buffer() pred kazdym _transact v tools/bus/xfcp.py |
 | 2026-05-19 | RX FIFO fix: u_rx_fifo (DEPTH=8) v xfcp_uart_mmio_top.sv — REGRESSION PASSED |
+| 2026-05-19 | navrhy_03 Fix 1: packetizer multi-word READ !slot1_valid_q guard v xfcp_tx_packetizer.sv |
+| 2026-05-19 | navrhy_03 Fix 2: invalid WRITE drain (invalid_req, drop_wdata_q, !invalid_req pre eng_busy) v xfcp_fabric_endpoint.sv |
+| 2026-05-19 | navrhy_03 Fix 3: eng_resp_type pripojeny, FIX G zachovany v multi-slave fabric — REGRESSION PASSED |
+| 2026-05-19 | tb_xfcp_fabric_endpoint T4 aktivovany (invalid-addr WRITE + liveness READ) — 8/8 PASS |
+| 2026-05-20 | S_RPATH deadlock fix: xfcp_rx_parser.sv (pass_ready guard), T8 pridany do TB — commit 75fdc5a |
+| 2026-05-20 | backpressure integracny test: tb_xfcp_backpressure.sv, 10/10 PASS — commit 6f26ae0 |
+| 2026-05-20 | Quartus rebuild po S_RPATH fixe: 0 errors, setup slack 4.044ns (Slow), 10.905ns (Fast) |
+| 2026-05-20 | HW retest (hw_diag.py): 2/12 uspesnych (17%), zvysok TIMEOUT — S_RPATH fix nestacil |
+| 2026-05-20 | PROJEKT UZAVRETY — pokracovanie v xfcp_test_03 |
+
+---
+
+## Uzavretie projektu (2026-05-20)
+
+### Co bolo urobene
+
+Vsetky RTL bugy z navrhy_03 opravene a overene simulaciou (regression 10/10 PASS).
+Quartus build stabilny (Fmax > 50 MHz, bez timing violacii).
+
+### Zostatok HW bug — popis
+
+Po vsetkych opravach HW stale ukazuje ~17% uspesnost (2/12 odpovedi spravnych).
+Zvysok = TIMEOUT (0 bajtov, cas 5000ms = Python timeout).
+
+**HW test log (hw_diag.py po rebuild 2026-05-20):**
+- Slot 0 SYSC @ 0xFF000000: TIMEOUT, TIMEOUT
+- Slot 1 UART @ 0xFF010000: TIMEOUT, TIMEOUT
+- Slot 2 LED0 @ 0xFF020000: TIMEOUT, TIMEOUT
+- Slot 3 LED1 @ 0xFF030000: TIMEOUT, **SUCCESS** (25B, DEV_STR='XFCP-UART-FAB  ', DATA='OUT_')
+- Slot 4 LED2 @ 0xFF040000: **SUCCESS** (25B, DEV_STR='XFCP-UART-FAB  ', DATA='OUT_'), TIMEOUT
+- Slot 5 SEG7 @ 0xFF050000: TIMEOUT, TIMEOUT
+
+Poznamka: uspesne odpovede maju TYPE=0x12 (nie 0x10), DEV_STR='XFCP-UART-FAB'. Toto
+indikuje ze sa vracia odpoved fabrickej vrstvy, nie konkretnej periferie. Moze ist o
+posun v adresovani alebo chybny response dispatch.
+
+### Identifikovane hypotezy pre xfcp_test_03
+
+1. **Response dispatch bug v xfcp_fabric_endpoint**: ofifo_rdata.sel nerovnaka
+   hodnote ako engine ktory dokoncil (race v arb_sel_q vs. ofifo rdata)
+2. **Fyzicka vrstva (UART noise/overrun)**: FPGA prijima bajty ale ich strata
+   sposobuje parser drop → TLAST timeout (watchdog > 100)
+3. **Packetizer stuck po prvom pakete**: done_latch_q / slot1_valid_q stav
+   neberie do uvahy multi-slave scenare spravne
+4. **SignalTap debugging**: jediny sposob ako vidiet interni stav FPGA za behu
