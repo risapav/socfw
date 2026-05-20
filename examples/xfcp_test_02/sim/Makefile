@@ -60,7 +60,8 @@ AXIL_COMMON = \
         axil_regfile axil_sys_ctrl axil_seven_seg_adapter axil_uart_adapter \
         axil_regs uart_core_rx \
         xfcp_rx_parser xfcp_tx_packetizer xfcp_axi_engine \
-        xfcp_axil_bridge xfcp_fabric_endpoint xfcp_uart_mmio_top
+        xfcp_axil_bridge xfcp_fabric_endpoint xfcp_uart_mmio_top \
+        xfcp_backpressure
 
 # ── Defaultny ciel: vsetky testy ─────────────────────────────────────
 
@@ -70,7 +71,7 @@ unit: axil_regfile axil_sys_ctrl axil_seven_seg_adapter axil_uart_adapter \
       axil_regs uart_core_rx \
       xfcp_rx_parser xfcp_tx_packetizer xfcp_axi_engine
 
-integration: xfcp_axil_bridge xfcp_fabric_endpoint xfcp_uart_mmio_top
+integration: xfcp_axil_bridge xfcp_fabric_endpoint xfcp_uart_mmio_top xfcp_backpressure
 
 $(LOGDIR):
 	mkdir -p $(LOGDIR)
@@ -195,6 +196,13 @@ xfcp_uart_mmio_top: $(LOGDIR)
 	        ../rtl/xfcp_uart_mmio_top.sv \
 	        integration/tb_xfcp_uart_mmio_top.sv
 	$(VSIM) tb_xfcp_uart_mmio_top | tee $(LOGDIR)/tb_xfcp_uart_mmio_top.log
+
+xfcp_backpressure: $(LOGDIR)
+	$(VLOG) $(AXI_COMMON) \
+	        $(XFCP_COMMON) \
+	        $(RTL_AXIL)/axil_slave_model.sv \
+	        integration/tb_xfcp_backpressure.sv
+	$(VSIM) tb_xfcp_backpressure | tee $(LOGDIR)/tb_xfcp_backpressure.log
 
 clean:
 	rm -rf work transcript *.log $(LOGDIR)
