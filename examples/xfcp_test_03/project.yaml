@@ -1,0 +1,61 @@
+version: 2
+kind: project
+
+project:
+  name: xfcp_test_03
+  mode: standalone
+  board: qmtech_ep4ce55
+  debug: true
+
+timing:
+  file: timing_config.yaml
+
+registries:
+  ip:
+    - ip
+  cpu: []
+
+features:
+  use:
+    - board:onboard.uart.rx
+    - board:onboard.uart.tx
+    - board:onboard.leds
+    - board:onboard.seg
+    - board:onboard.dig
+    - board:external.pmod.j10_led8
+    - board:external.pmod.j11_led8
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+    frequency_hz: 50000000
+  generated: []
+
+modules:
+  - instance: xfcp0
+    type: xfcp_uart_mmio
+    params:
+      CLOCK_FREQ_HZ: 50000000
+      UART_DEFAULT_BAUD_DIV: 434        # 50 MHz / 115200 ~= 434
+    clocks:
+      clk_i: sys_clk
+    bind:
+      ports:
+        uart_rx_i:
+          target: board:onboard.uart.rx
+        uart_tx_o:
+          target: board:onboard.uart.tx
+        led_00_o:
+          target: board:onboard.leds
+        led_01_o:
+          target: board:external.pmod.j10_led8
+        led_02_o:
+          target: board:external.pmod.j11_led8
+        onboard_seg_o:
+          target: board:onboard.seg
+        onboard_dig_o:
+          target: board:onboard.dig
+
+artifacts:
+  emit: [rtl, board, timing]

@@ -1,0 +1,125 @@
+version: 2
+kind: ip
+
+ip:
+  name: xfcp_uart_mmio
+  module: xfcp_uart_mmio_top
+  category: debug
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: []
+  outputs: []
+
+params:
+  CLOCK_FREQ_HZ:
+    type: int
+    default: 50000000
+  UART_DEFAULT_BAUD_DIV:
+    type: int
+    default: 434
+
+ports:
+  - name: uart_rx_i
+    direction: input
+    width: 1
+
+  - name: uart_tx_o
+    direction: output
+    width: 1
+
+  - name: led_00_o
+    direction: output
+    width: 6
+
+  - name: led_01_o
+    direction: output
+    width: 8
+
+  - name: led_02_o
+    direction: output
+    width: 8
+
+  - name: onboard_seg_o
+    direction: output
+    width: 8
+
+  - name: onboard_dig_o
+    direction: output
+    width: 3
+
+artifacts:
+  synthesis:
+    # AXI infrastructure (packages + interfaces)
+    - ../rtl/axi/axi_pkg.sv
+    - ../rtl/axi/axi_interfaces.sv
+    # UART core
+    - ../rtl/uart/uart_pkg.sv
+    - ../rtl/uart/uart_baud_gen.sv
+    - ../rtl/uart/uart_core_rx.sv
+    - ../rtl/uart/uart_core_tx.sv
+    - ../rtl/uart/uart.sv
+    # AXI-Stream UART wrappers
+    - ../rtl/axis/axis_uart_rx.sv
+    - ../rtl/axis/axis_uart_tx.sv
+    # AXI-Lite peripherals
+    - ../rtl/axil/axil_regfile.sv
+    - ../rtl/axil/axil_regs.sv
+    - ../rtl/axil/axil_sys_ctrl.sv
+    - ../rtl/axil/axil_uart_adapter.sv
+    - ../rtl/axil/axil_seven_seg_adapter.sv
+    # 7-segment display driver
+    - ../rtl/segment/seven_seg_mux.sv
+    - ../rtl/segment/seven_seg_mux_packed.sv
+    # XFCP protocol stack
+    - ../rtl/xfcp/xfcp_pkg.sv
+    - ../rtl/xfcp/xfcp_fifo.sv
+    - ../rtl/xfcp/xfcp_rx_parser.sv
+    - ../rtl/xfcp/xfcp_tx_packetizer.sv
+    - ../rtl/xfcp/xfcp_axi_engine.sv
+    - ../rtl/xfcp/xfcp_fabric_endpoint.sv
+    # Top-level
+    - ../rtl/xfcp_uart_mmio_top.sv
+
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - xfcp_uart_mmio_top
+    - xfcp_fabric_endpoint
+    - xfcp_rx_parser
+    - xfcp_tx_packetizer
+    - xfcp_axi_engine
+    - xfcp_fifo
+    - axis_uart_rx
+    - axis_uart_tx
+    - axil_uart_adapter
+    - axil_regs
+    - axil_regfile
+    - axil_sys_ctrl
+    - axil_seven_seg_adapter
+    - seven_seg_mux
+    - seven_seg_mux_packed
+    - uart_baud_gen
+    - uart_core_rx
+    - uart_core_tx
+    - uart
+  packages:
+    - axi_pkg
+    - uart_pkg
+    - xfcp_pkg
