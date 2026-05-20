@@ -62,7 +62,7 @@ module xfcp_fifo #(
   localparam int COUNT_W = $clog2(DEPTH + 1);  // potrebuje 1 bit navyše
 
   // ── Pamäť ─────────────────────────────────────────────────────
-  (* ramstyle = "no_rw_check" *)
+  (* ramstyle = "logic" *)
   logic [DATA_WIDTH-1:0] mem [0:DEPTH-1];
 
   // ── Interné registre ──────────────────────────────────────────

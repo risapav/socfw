@@ -202,9 +202,45 @@ NUM_SLAVES=6, SLAVE_BASE stride=0x10000, start=0xFF000000:
 
 ---
 
+## Fáza 1 — Nález HW bugu (2026-05-20)
+
+### ROOT CAUSE: xfcp_fifo.sv — ramstyle = "no_rw_check"
+
+**Symptóm:** 2/12 odpovedí (17 %), zvyšok TIMEOUT — 0 bajtov z UART TX.
+
+**Príčina:** `xfcp_fifo.sv` používal `(* ramstyle = "no_rw_check" *)`. Toto umožňuje
+Quartus Prime syntetizovať pamäť pomocou synchronnej RAM (MLAB alebo M9K). Avšak
+FIFO dizajn vyžaduje **kombinačný (fall-through) výstup** — `assign r_data = mem[rd_ptr_q]`.
+
+So synchronnou RAM:
+- `r_valid` je kombinačný → asserts ihneď
+- `r_data` je registrovaný → je STALE o 1 takt
+
+**Efekt na Order FIFO** (ORDER_FIFO_DEPTH=16, DATA_WIDTH=57 bitov obsahuje `sel` pole):
+```
+ARB_IDLE → ofifo_rvalid=1 → arb_sel_q <= ofifo_rdata.sel  (STALE data!)
+→ arbiter čaká na eng_done od NESPRÁVNEHO engine
+→ permanentný DEADLOCK
+→ packetizer nikdy nespustí
+→ UART TX posiela 0 bajtov
+```
+
+**Prečo 2/12 uspeli:** Keď `stale mem[rd_ptr_q].sel` náhodou zodpovedal správnemu
+engine (napr. rd_ptr_q=0 a mem[0] obsahoval správne sel z predchádzajúcej operácie),
+arbitrácia prebehla správne.
+
+**Oprava:** `(* ramstyle = "logic" *)` — nútí LUT-based registre s pravým kombinačným
+čítaním. Aplikovaná v `rtl/xfcp/xfcp_fifo.sv` linka 65.
+
+**Stav:** OPRAVENÉ — čaká na Quartus rekompiláciu a HW test.
+
+---
+
 ## Historický prehľad
 
 | Dátum | Čo sa zmenilo |
 |---|---|
 | 2026-05-20 | Inicializácia xfcp_test_03 z xfcp_test_02 stav 75fdc5a |
 | 2026-05-20 | Navrhy_04–08 z xfcp_test_02 skopírované ako navrhy_01–05 |
+| 2026-05-20 | ROOT CAUSE identifikovaný: xfcp_fifo ramstyle → sync RAM breaks fall-through |
+| 2026-05-20 | FIX aplikovaný: ramstyle "no_rw_check" → "logic" v xfcp_fifo.sv |
