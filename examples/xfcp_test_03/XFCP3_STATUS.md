@@ -232,7 +232,46 @@ arbitrácia prebehla správne.
 **Oprava:** `(* ramstyle = "logic" *)` — nútí LUT-based registre s pravým kombinačným
 čítaním. Aplikovaná v `rtl/xfcp/xfcp_fifo.sv` linka 65.
 
-**Stav:** OPRAVENÉ — čaká na Quartus rekompiláciu a HW test.
+**Stav:** OPRAVENÉ — SOF skompilovaný 2026-05-20 20:54 (po fixe). Čaká na HW test.
+
+---
+
+## Fáza 1 — RTL analýza (2026-05-21, relácia 2)
+
+### Hlboká RTL analýza — overenie po ramstyle fixe
+
+Prečítané a overené moduly: `axil_uart_adapter.sv`, `axil_regfile.sv`, `axis_uart_tx.sv`,
+`xfcp_rx_parser.sv`, `xfcp_tx_packetizer.sv`, `xfcp_axi_engine.sv`, `xfcp_fabric_endpoint.sv`.
+
+**Výsledok analýzy:**
+- Žiadny ďalší fundamentálny bug nenájdený po ramstyle fixe
+- `baud_div_o` = 434 okamžite po resete (axil_regfile RW register s RESET_VAL=434) ✓
+- `uart_baud_gen` TX a RX sú oddelené inštancie, navzájom neinterferujú ✓
+- `valid_o` v `uart_core_rx` je one-cycle pulse, ale u_rx_fifo DEPTH=8 dostatočná ✓
+- `xfcp_rx_parser` S_DROP — exituje iba cez `sop_recovery` (TLAST=0 hardwired → S_DROP trvalý!) ✓
+- `hdr_shift_n_comb` kombinácia správna pre S_DECODE ✓
+
+**Upozornenie — protokolová robustnosť:**
+`XFCP_SOP_RESP = XFCP_SOP_REQ = 0xFE` (rovnaký SOP pre request aj response).
+Ak by FPGA TX bajty dosahovali FPGA RX (TX→RX coupling na PCB/FTDI):
+- Parser vidí 0xFE → sop_recovery → S_HDR
+- Ďalší bajt TYPE=0x12 (RESP_READ) je neplatný request opcode → go_drop → S_DROP
+- Toto by vysvetlilo alternujúci FAIL-OK vzor
+
+V RTL **neexistuje** interný loopback. Ide o fyzický HW problém (coupling na kábli alebo FTDI).
+`hw_diag.py` teraz číta UART STATUS po teste — overrun_err=1 by potvrdil TX→RX coupling.
+
+### Simulations — 13/13 PASS (2026-05-21)
+
+```
+make (v sim/): 13/13 ALL PASSED — vrátane backpressure, multi-slave, parser edge cases
+```
+
+### hw_diag.py — vylepšenia
+
+- Pridaný WRITE capability (ERR_CLR na začiatku testu)
+- Pridaný POST-TEST UART STATUS check (0xFF010010)
+- Diagnostika overrun/frame/parity chýb
 
 ---
 
@@ -244,3 +283,5 @@ arbitrácia prebehla správne.
 | 2026-05-20 | Navrhy_04–08 z xfcp_test_02 skopírované ako navrhy_01–05 |
 | 2026-05-20 | ROOT CAUSE identifikovaný: xfcp_fifo ramstyle → sync RAM breaks fall-through |
 | 2026-05-20 | FIX aplikovaný: ramstyle "no_rw_check" → "logic" v xfcp_fifo.sv |
+| 2026-05-20 | SOF skompilovaný s fixom (output_files/soc_top.sof, 20:54) |
+| 2026-05-21 | RTL analýza dokončená — žiadny ďalší bug. hw_diag.py vylepšený (UART STATUS check) |
