@@ -56,7 +56,11 @@ module xfcp_fabric_endpoint #(
   axi4s_if.slave  xfcp_in,
   axi4s_if.master xfcp_out,
 
-  axi4lite_if.master m_axil [NUM_SLAVES]
+  axi4lite_if.master m_axil [NUM_SLAVES],
+
+  // High when a transaction is in-flight (engine or packetizer busy).
+  // Used externally to gate new request bytes into the parser (single-flight mode).
+  output logic endpoint_busy_o
 );
 
   // synthesis translate_off
@@ -357,6 +361,10 @@ module xfcp_fabric_endpoint #(
     else
       packetizer_idle_q <= packetizer_idle;
   end
+
+  // Endpoint is busy whenever arbiter is not idle (engine running or TX active).
+  // Exported so caller can gate new request bytes during single-flight mode.
+  assign endpoint_busy_o = (arb_q != ARB_IDLE);
 
   // ── RX Parser ────────────────────────────────────────────────
   xfcp_rx_parser #(

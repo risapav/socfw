@@ -16,7 +16,7 @@
 //   T6: Back-to-back READ packets -> two req_hdr entries queued in FIFO
 //   T7: WRITE with backpressure on write_data_ready -> data preserved in FIFO
 //   T8: 0xFF (RPATH SOP) in S_IDLE with pass_ready=0 -> ignored, next READ works
-//   T9: COUNT=260 (> MAX_COUNT_BYTES=256, multiple of 4) -> error_protocol asserted
+//   T9: COUNT=260 (> MAX_COUNT_BYTES=128, multiple of 4) -> error_protocol asserted
 //
 // Run with:
 //   vlog -sv -suppress 2892 $(AXI_COMMON) $(XFCP_PARSER) tb_xfcp_rx_parser.sv
@@ -249,7 +249,7 @@ module tb_xfcp_rx_parser;
     expect_req(8'h10, 32'hFF030008, 16'h4, "T8 READ after stray 0xFF");
     repeat(2) @(posedge clk);
 
-    // ── T9: COUNT=0x0104 (260 bytes, > MAX_COUNT_BYTES=256) -> drop ──
+    // ── T9: COUNT=0x0104 (260 bytes, > MAX_COUNT_BYTES=128) -> drop ──
     // Multiple of 4 so alignment is fine; only the bound check catches it.
     axis_byte(8'hFE); axis_byte(8'h10);
     axis_byte(8'h01); axis_byte(8'h04);   // count = 260

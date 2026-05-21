@@ -81,7 +81,11 @@ module xfcp_uart_mmio_top #(
 
   // --------------------------------------------------------------------------
   // XFCP Fabric Endpoint (NUM_SLAVES=6, interny adresovy dekoder)
+  // endpoint_busy_w: high when engine or packetizer has a transaction in-flight.
+  // Used to gate parser input bytes (single-flight mode – no pipelining from PC).
   // --------------------------------------------------------------------------
+  logic endpoint_busy_w;
+
   xfcp_fabric_endpoint #(
     .NUM_SLAVES     (NUM_SLAVES),
     .AXI_ADDR_WIDTH (32),
@@ -105,11 +109,12 @@ module xfcp_uart_mmio_top #(
       32'hFFFF_0000
     })
   ) u_endpoint (
-    .clk      (clk_i),
-    .rst_n    (rst_ni),
-    .xfcp_in  (xfcp_rx_s.slave),
-    .xfcp_out (xfcp_tx_s.master),
-    .m_axil   (axil_s)
+    .clk             (clk_i),
+    .rst_n           (rst_ni),
+    .xfcp_in         (xfcp_rx_s.slave),
+    .xfcp_out        (xfcp_tx_s.master),
+    .m_axil          (axil_s),
+    .endpoint_busy_o (endpoint_busy_w)
   );
 
   // --------------------------------------------------------------------------
@@ -130,9 +135,13 @@ module xfcp_uart_mmio_top #(
   // --------------------------------------------------------------------------
   // RX elastic buffer: 8-byte FIFO between UART RX and parser.
   // Prevents byte loss when parser has s_axis_tready=0 (S_DECODE or dfifo full).
-  // UART sends one byte every ~87 us; even a 1-entry FIFO would suffice, but
-  // 8 entries give margin for any future tready=0 windows.
+  // Single-flight gate: when endpoint_busy_w=1, FIFO output is invisible to the
+  // parser (TVALID=0, r_ready=0) so no new request bytes enter while a response
+  // is in-flight. Bytes wait in the FIFO until TX completes.
   // --------------------------------------------------------------------------
+  logic [7:0] rx_fifo_rdata_w;
+  logic       rx_fifo_rvalid_w;
+
   xfcp_fifo #(
     .DATA_WIDTH(8),
     .DEPTH     (8)
@@ -143,16 +152,18 @@ module xfcp_uart_mmio_top #(
     .w_data (uart_rx_raw_s.TDATA),
     .w_valid(uart_rx_raw_s.TVALID),
     .w_ready(uart_rx_raw_s.TREADY),
-    .r_data (xfcp_rx_s.TDATA),
-    .r_valid(xfcp_rx_s.TVALID),
-    .r_ready(xfcp_rx_s.TREADY)
+    .r_data (rx_fifo_rdata_w),
+    .r_valid(rx_fifo_rvalid_w),
+    .r_ready(xfcp_rx_s.TREADY && !endpoint_busy_w)
   );
 
-  assign xfcp_rx_s.TKEEP = '1;
-  assign xfcp_rx_s.TLAST = 1'b0;
-  assign xfcp_rx_s.TUSER = '0;
-  assign xfcp_rx_s.TID   = '0;
-  assign xfcp_rx_s.TDEST = '0;
+  assign xfcp_rx_s.TDATA  = rx_fifo_rdata_w;
+  assign xfcp_rx_s.TVALID = rx_fifo_rvalid_w && !endpoint_busy_w;
+  assign xfcp_rx_s.TKEEP  = '1;
+  assign xfcp_rx_s.TLAST  = 1'b0;
+  assign xfcp_rx_s.TUSER  = '0;
+  assign xfcp_rx_s.TID    = '0;
+  assign xfcp_rx_s.TDEST  = '0;
 
   // --------------------------------------------------------------------------
   // UART TX wrapper (xfcp_tx_s -> AXIS -> serial)

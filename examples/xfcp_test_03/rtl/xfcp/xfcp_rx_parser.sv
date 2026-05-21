@@ -96,10 +96,9 @@ module xfcp_rx_parser #(
   localparam int BYTE_W        = 8;   // šírka bajtu
   localparam int HDR_SHIFT_W   = 64;  // 8 bajtov × 8 bitov
   localparam int PKT_LEN_W     = $clog2(MAX_PKT_BYTES + 1);
-  // Hornaya hranica COUNT: zamedzuje spracovaniu paketu s obrovskym countom
-  // (coupling-indukovaný garbage packet s count=64KB by viazal UART TX na 5+ sekund).
-  // Vsetky legalne pouzitia pouzivaju count=4 az count=256 (max 64 slov).
-  localparam int MAX_COUNT_BYTES = 256;
+  // Hornaya hranica COUNT: zamedzuje spracovaniu paketu s obrovskym countom.
+  // Zhoduje sa s xfcp_axi_engine FIFO_DEPTH=32 slov = 128 bajtov.
+  localparam int MAX_COUNT_BYTES = 128;
 
   // ============================================================
   // ONE-HOT FSM – 5 stavov pre payload pipeline
