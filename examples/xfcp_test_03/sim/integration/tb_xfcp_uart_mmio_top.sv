@@ -11,8 +11,9 @@
 //   COUNT = 4 (one 32-bit word)
 //
 // Response format (xfcp_tx_packetizer):
-//   WRITE: [0xFE][0x13][DEV_TYPE 2B][DEV_STR 16B][0x00+TLAST] = 21 bytes
-//   READ:  [0xFE][0x12][DEV_TYPE 2B][DEV_STR 16B][data 4B MSB-first][0x00+TLAST] = 25 bytes
+//   WRITE: [0xFD][0x13][DEV_TYPE 2B][DEV_STR 16B][0x00+TLAST] = 21 bytes
+//   READ:  [0xFD][0x12][DEV_TYPE 2B][DEV_STR 16B][data 4B MSB-first][0x00+TLAST] = 25 bytes
+// Note: SOP_RESP=0xFD != SOP_REQ=0xFE to prevent TX->RX coupling issues.
 //
 // Tests:
 //   T1: WRITE 0x3F to LED register (0xFF020004) -> led_o = 6'h3F
@@ -177,7 +178,7 @@ module tb_xfcp_uart_mmio_top;
     uart_send(data[15:8]);  uart_send(data[7:0]);
   endtask
 
-  // Drain WRITE response: [0xFE][0x13][DEV_TYPE 2B][DEV_STR 16B][0x00] = 21 bytes
+  // Drain WRITE response: [0xFD][0x13][DEV_TYPE 2B][DEV_STR 16B][0x00] = 21 bytes
   task automatic xfcp_drain_write_resp();
     logic [7:0] b;
     for (int i = 0; i < 21; i++) uart_recv(b);
@@ -192,12 +193,17 @@ module tb_xfcp_uart_mmio_top;
     uart_send(addr[15:8]);  uart_send(addr[7:0]);
   endtask
 
-  // Receive READ response: [0xFE][0x12][DEV_TYPE 2B][DEV_STR 16B][data 4B MSB-first][0x00]
+  // Receive READ response: [0xFD][0x12][DEV_TYPE 2B][DEV_STR 16B][data 4B MSB-first][0x00]
   // = 25 bytes total; data reconstructed MSB-first (LITTLE_ENDIAN=0)
   task automatic xfcp_recv_read(output logic [31:0] rdata);
     logic [7:0] b;
-    // Header: SOP(1) + TYPE(1) + DEV_TYPE(2) + DEV_STR(16) = 20 bytes
-    for (int i = 0; i < 20; i++) uart_recv(b);
+    // Check SOP_RESP = 0xFD and TYPE = 0x12 (RESP_READ)
+    uart_recv(b);
+    if (b !== 8'hFD) $error("[%0t] xfcp_recv_read: bad SOP_RESP 0x%02h (exp 0xFD)", $time, b);
+    uart_recv(b);
+    if (b !== 8'h12) $error("[%0t] xfcp_recv_read: bad TYPE 0x%02h (exp 0x12)", $time, b);
+    // Remaining header: DEV_TYPE(2) + DEV_STR(16) = 18 bytes
+    for (int i = 0; i < 18; i++) uart_recv(b);
     // Data MSB-first
     uart_recv(b); rdata[31:24] = b;
     uart_recv(b); rdata[23:16] = b;

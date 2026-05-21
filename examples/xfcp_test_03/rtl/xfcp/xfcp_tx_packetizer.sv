@@ -5,7 +5,7 @@
  * Formát výstupného paketu:
  *   Bajt  | Pole
  *   ------|---------------------------
- *    0    | SOP = 0xFE
+ *    0    | SOP = XFCP_SOP_RESP (0xFD)
  *    1    | TYPE (0x12=RESP_READ, 0x13=RESP_WRITE)
  *    2    | DEV_TYPE[15:8]
  *    3    | DEV_TYPE[7:0]
@@ -133,7 +133,7 @@ module xfcp_tx_packetizer #(
   logic [HEADER_BYTES*8-1:0] hdr_vec;
 
   always_comb begin
-    hdr_vec[  0 +: 8] = 8'hFE;
+    hdr_vec[  0 +: 8] = XFCP_SOP_RESP;
     hdr_vec[  8 +: 8] = 8'(resp_type);
     hdr_vec[ 16 +: 8] = XFCP_ID_TYPE[15:8];
     hdr_vec[ 24 +: 8] = XFCP_ID_TYPE[7:0];

@@ -4,16 +4,19 @@ import struct
 
 class XFCPBus:
     """
-    Low-level driver for XFCP (SOP=0xFE) over UART.
+    Low-level driver for XFCP over UART.
 
-    Request format  : SOP(0xFE) | OPCODE | COUNT[15:8] | COUNT[7:0]
+    Request format  : SOP_REQ(0xFE) | OPCODE | COUNT[15:8] | COUNT[7:0]
                       | ADDR[31:24] | ADDR[23:16] | ADDR[15:8] | ADDR[7:0]
                       | [PAYLOAD bytes for WRITE, MSB-first]
 
-    Response format : SOP(0xFE) | TYPE | DEV_TYPE[15:8] | DEV_TYPE[7:0]
+    Response format : SOP_RESP(0xFD) | TYPE | DEV_TYPE[15:8] | DEV_TYPE[7:0]
                       | DEV_STR[16 bytes] | [PAYLOAD bytes for READ] | 0x00
       Header size = 20 bytes (1+1+2+16).
       LITTLE_ENDIAN=0 on FPGA side → data is MSB-first (big-endian) on wire.
+
+    SOP_REQ != SOP_RESP: prevents TX->RX coupling from triggering parser
+    sop_recovery (FPGA RX parser only reacts to 0xFE, ignores 0xFD).
     """
 
     RESP_HEADER  = 20   # SOP + TYPE + DEV_TYPE(2) + DEV_STR(16)
@@ -23,7 +26,8 @@ class XFCPBus:
     OP_WRITE = 0x11
     OP_RESP_READ  = 0x12
     OP_RESP_WRITE = 0x13
-    SOP = 0xFE
+    SOP      = 0xFE   # request SOP (sent by PC)
+    SOP_RESP = 0xFD   # response SOP (sent by FPGA)
 
     def __init__(self, port='/dev/ttyUSB0', baudrate=115200, timeout=1.0, retries=1):
         self.port     = port
@@ -98,7 +102,7 @@ class XFCPBus:
 
         if resp is None:
             return None
-        if resp[0] != self.SOP or resp[1] != self.OP_RESP_READ:
+        if resp[0] != self.SOP_RESP or resp[1] != self.OP_RESP_READ:
             self.ser.reset_input_buffer()
             return None
 
@@ -121,7 +125,7 @@ class XFCPBus:
 
         if resp is None:
             return False
-        if resp[0] != self.SOP or resp[1] != self.OP_RESP_WRITE:
+        if resp[0] != self.SOP_RESP or resp[1] != self.OP_RESP_WRITE:
             self.ser.reset_input_buffer()
             return False
         return True

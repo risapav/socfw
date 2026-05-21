@@ -179,7 +179,7 @@ module tb_xfcp_tx_packetizer;
     // T1: WRITE response
     base = cap_wptr;
     send_write_resp();
-    chk8(base+0,  8'hFE, "T1 SOP");
+    chk8(base+0,  8'hFD, "T1 SOP");
     chk8(base+1,  8'h13, "T1 TYPE");
     chk8(base+20, 8'h00, "T1 terminator");
     if (m_axis_tlast !== 1'b0)
@@ -189,7 +189,7 @@ module tb_xfcp_tx_packetizer;
     // T2: READ response
     base = cap_wptr;
     send_read_resp(32'hA5A5_A5A5);
-    chk8(base+0,  8'hFE,   "T2 SOP");
+    chk8(base+0,  8'hFD,   "T2 SOP");
     chk8(base+1,  8'h12,   "T2 TYPE");
     chk8(base+20, 8'hA5,   "T2 data[31:24]");
     chk8(base+21, 8'hA5,   "T2 data[23:16]");
@@ -234,7 +234,7 @@ module tb_xfcp_tx_packetizer;
           if (++t > 5000) $fatal(1, "T3: bytes timeout");
         end
       end
-      chk8(t3_base+0,  8'hFE,   "T3 SOP");
+      chk8(t3_base+0,  8'hFD,   "T3 SOP");
       chk8(t3_base+1,  8'h12,   "T3 TYPE");
       chk8(t3_base+20, 8'hDE,   "T3 data[31:24]");
       chk8(t3_base+21, 8'hAD,   "T3 data[23:16]");
@@ -251,10 +251,10 @@ module tb_xfcp_tx_packetizer;
       t4_base = cap_wptr;
       send_write_resp();
       send_write_resp();
-      chk8(t4_base+0,  8'hFE, "T4 pkt0 SOP");
+      chk8(t4_base+0,  8'hFD, "T4 pkt0 SOP");
       chk8(t4_base+1,  8'h13, "T4 pkt0 TYPE");
       chk8(t4_base+20, 8'h00, "T4 pkt0 term");
-      chk8(t4_base+21, 8'hFE, "T4 pkt1 SOP");
+      chk8(t4_base+21, 8'hFD, "T4 pkt1 SOP");
       chk8(t4_base+22, 8'h13, "T4 pkt1 TYPE");
       chk8(t4_base+41, 8'h00, "T4 pkt1 term");
       $display("PASS T4 back-to-back WRITE responses");
@@ -296,7 +296,7 @@ module tb_xfcp_tx_packetizer;
           if (++t > 5000) $fatal(1, "T5: bytes timeout");
         end
       end
-      chk8(t5_base+0,  8'hFE,   "T5 SOP");
+      chk8(t5_base+0,  8'hFD,   "T5 SOP");
       chk8(t5_base+1,  8'h12,   "T5 TYPE");
       chk8(t5_base+20, 8'h5A,   "T5 data[31:24]");
       chk8(t5_base+21, 8'h5A,   "T5 data[23:16]");

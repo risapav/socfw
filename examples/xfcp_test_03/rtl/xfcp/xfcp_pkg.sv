@@ -24,8 +24,9 @@ package xfcp_pkg;
   // SOP pre odpoveď (Response) alebo smerovanie cesty (Routing Path)
   localparam logic [7:0] XFCP_SOP_RPATH = 8'hFF;
 
-  // SOP pre odpoveď
-  localparam logic [7:0] XFCP_SOP_RESP = 8'hFE;
+  // SOP pre odpoveď — ODLISNY od XFCP_SOP_REQ (0xFE) aby TX->RX coupling
+  // nespustil sop_recovery v parseri (0xFD nie je XFCP_SOP_REQ ani XFCP_SOP_RPATH)
+  localparam logic [7:0] XFCP_SOP_RESP = 8'hFD;
 
   // ========================================================================
   // 3. Typy operácií (Opcodes)
