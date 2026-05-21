@@ -313,7 +313,7 @@ module xfcp_axi_engine #(
 
         // ── ST_RD_WAIT: čakanie na R response ────────────────────
         ST_RD_WAIT: begin
-          if (m_axil.RVALID) state_n = ST_NEXT;
+          if (m_axil.RVALID && m_axil.RREADY) state_n = ST_NEXT;
         end
 
         // ── ST_NEXT: aktualizácia addr/rem + rozhodnutie ─────────

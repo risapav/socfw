@@ -1,8 +1,8 @@
 # XFCP Test 03 — stav projektu
 
-> Stav k: 2026-05-20 (inicializacia z xfcp_test_02 stav 75fdc5a)
+> Stav k: 2026-05-21
 > Board: QMTech EP4CE55F23C8 @ 50 MHz
-> Protokol: XFCP cez UART 115200 baud (SOP=0xFE)
+> Protokol: XFCP cez UART 115200 baud (SOP_REQ=0xFE, SOP_RESP=0xFD)
 > Predchadzajuci projekt: `examples/xfcp_test_02` (uzavrety, commit 7a37c1f)
 
 ---
@@ -300,8 +300,61 @@ TX→RX coupling hypotézu:
 4. Nasledujúci request (SOP=0xFE) → sop_recovery → spracovaný správne → OK
 5. Cyklus sa opakuje
 
-**Definitívny fix**: `XFCP_SOP_RESP ≠ XFCP_SOP_REQ` — zmeniť response SOP z 0xFE na iný byte
-(plánované v Fáza 2 ako súčasť protokol robustnosti).
+**Definitívny fix**: `XFCP_SOP_RESP ≠ XFCP_SOP_REQ` — IMPLEMENTOVANÉ (viď Fáza 2A).
+
+---
+
+## Fáza 2A — SOP_RESP=0xFD + MAX_COUNT_BYTES (2026-05-21)
+
+### Implementované zmeny
+
+**RTL:**
+- `xfcp_pkg.sv`: `XFCP_SOP_RESP = 8'hFD` (oddelený od `XFCP_SOP_REQ = 8'hFE`)
+- `xfcp_rx_parser.sv`: `MAX_COUNT_BYTES = 256` localparam, COUNT bound check pridaný do `dec_count_ok`
+- `xfcp_axi_engine.sv`: ST_RD_WAIT — `RVALID && RREADY` (AXI spec fix; predtým iba RVALID)
+
+**Sim:**
+- `tb_xfcp_tx_packetizer.sv`: 6 SOP checks aktualizované z `0xFE` na `0xFD`
+- `tb_xfcp_rx_parser.sv`: T9 test pridaný — COUNT=260 (> 256, násobok 4) → error_protocol
+
+**Tools:**
+- `tools/bus/xfcp.py`: `SOP_RESP = 0xFD`, validácia SOP_RESP na každý paket
+- `tools/hw_diag.py`: `pre_delay=0.5` parameter v `transact_read()` pre timing diagnózu
+
+**Sim výsledok: 13/13 ALL PASSED**
+
+### Analýza TX→RX coupling po SOP_RESP=0xFD
+
+Coupling cez FTDI kábel trvá — fyzický problém.
+
+S SOP_RESP=0xFD coupling produkuje frame-errored bajty. Niektoré garbage bajty = 0xFE →
+parser S_HDR → bez MAX_COUNT_BYTES fix: až 65535 slov AXI → 5.7 s UART TX → Python timeout.
+
+S MAX_COUNT_BYTES=256: worst-case garbage = 256/4=64 slov AXI. 1 READ = 2.17ms.
+64 READs = ~139ms. Watchdog 20μs per READ. UART TX max ~24ms.
+
+### HW test výsledky po Fáze 2A
+
+**Výsledok pred pre_delay testom: 5/12 (42 %) — horšie ako 7/12 pred Fázou 2A**
+
+Root: SOP=0xFD + coupling = necontrolované garbage bajty (nie vždy S_DROP ako pri 0xFE→0x12→S_DROP).
+Pre_delay=0.5s bol pridaný do hw_diag.py — čaká na výsledok HW testu.
+
+**Poznámka k ST_RD_WAIT:** Oprava RVALID→RVALID&&RREADY je správna AXI spec compliance fix.
+Pre single-word READ (bežné použitie) RREADY=rfifo_w_ready_w ≈ 1 vždy → predtým sa neprejavilo.
+Pri burst READ > FIFO_DEPTH=32 slov by pôvodný kód stratil dáta a FSM by preskočil.
+Odporúčanie (navrhy_06): tools chunking na max 32 slov = 32*4=128 bajtov per XFCP transakcia.
+
+### Otvorené technické problémy (navrhy_06)
+
+| # | Problém | Priorita | Stav |
+|---|---|---|---|
+| 1 | ST_RD_WAIT: RVALID&&RREADY | KRITICKÉ | OPRAVENE (2026-05-21) |
+| 2 | READ burst > FIFO_DEPTH=32 slov | STREDNE | MAX_COUNT_BYTES=256→64 sl. — chunking v tools potrebný |
+| 3 | SOP_RESP=0xFD: HW stále 5/12 | STREDNE | Čaká na pre_delay HW test |
+| 4 | Sim $fatal = Questa "Errors: N" | NIZKE | Questa-specific; ALL PASSED funguje |
+| 5 | RESP_ERROR paket pre invalid req | NIZKE | Fáza 2B plán |
+| 6 | Tools: chunking, SEQ, CRC, recovery | NIZKE | Fáza 3 plán |
 
 ---
 
@@ -315,4 +368,7 @@ TX→RX coupling hypotézu:
 | 2026-05-20 | FIX aplikovaný: ramstyle "no_rw_check" → "logic" v xfcp_fifo.sv |
 | 2026-05-20 | SOF skompilovaný s fixom (output_files/soc_top.sof, 20:54) |
 | 2026-05-21 | RTL analýza dokončená — žiadny ďalší bug. hw_diag.py vylepšený (UART STATUS check) |
-| 2026-05-21 | HW test: 7/12 OK (58 %). Ramstyle fix potvrdený. Zostatok = TX→RX coupling (SOP=0xFE clash) |
+| 2026-05-21 | HW test: 7/12 OK (58 %). Ramstyle fix potvrdený. Zostatok = TX→RX coupling |
+| 2026-05-21 | Fáza 2A: SOP_RESP=0xFD, MAX_COUNT_BYTES=256 (parser), ST_RD_WAIT fix (engine) |
+| 2026-05-21 | Sim: 13/13 ALL PASSED po Fáze 2A. HW: 5/12 — čaká pre_delay test |
+| 2026-05-21 | navrhy_06 analyzovaný — burst limit, chunking, $fatal/Questa, aktualizácia statusu |

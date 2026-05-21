@@ -73,7 +73,9 @@ def decode_resp(raw):
     return "\n".join(lines)
 
 
-def transact_read(ser, addr, label):
+def transact_read(ser, addr, label, pre_delay=0.5):
+    if pre_delay > 0:
+        time.sleep(pre_delay)
     pkt = make_read_pkt(addr)
     print(f"  Odosielam: {pkt.hex(' ')}")
     ser.reset_input_buffer()
