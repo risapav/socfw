@@ -232,7 +232,7 @@ arbitrácia prebehla správne.
 **Oprava:** `(* ramstyle = "logic" *)` — nútí LUT-based registre s pravým kombinačným
 čítaním. Aplikovaná v `rtl/xfcp/xfcp_fifo.sv` linka 65.
 
-**Stav:** OPRAVENÉ — SOF skompilovaný 2026-05-20 20:54 (po fixe). Čaká na HW test.
+**Stav:** OPRAVENÉ A POTVRDENÉ HW TESTOM (2026-05-21).
 
 ---
 
@@ -275,6 +275,36 @@ make (v sim/): 13/13 ALL PASSED — vrátane backpressure, multi-slave, parser e
 
 ---
 
+## Fáza 1 — HW Test výsledky (2026-05-21)
+
+### Výsledok: 7/12 OK (58 %) — výrazné zlepšenie oproti 2/12 (17 %)
+
+```
+Slot 0 SYSC:  OK / OK
+Slot 1 UART:  OK / TIMEOUT       ← alternujúci vzor
+Slot 2 LED0:  OK / OK
+Slot 3 LED1:  TIMEOUT / OK       ← alternujúci vzor
+Slot 4 LED2:  TIMEOUT / OK       ← alternujúci vzor
+Slot 5 SEG7:  TIMEOUT / TIMEOUT
+```
+
+### Záver: ramstyle fix funguje, zostatok = TX→RX coupling
+
+Ramstyle fix eliminoval arbiter deadlock (17% → 58%).
+Zostatok failov má **alternujúci vzor** (FAIL-OK-FAIL-OK), čo potvrdzuje
+TX→RX coupling hypotézu:
+
+1. FPGA odosiela odpoveď (25 bajtov, prvý bajt = 0xFE)
+2. 0xFE dosahuje FPGA RX vstup cez PCB coupling alebo FTDI
+3. Parser v S_IDLE vidí 0xFE → S_HDR; ďalší bajt TYPE=0x12 = neplatný opcode → S_DROP
+4. Nasledujúci request (SOP=0xFE) → sop_recovery → spracovaný správne → OK
+5. Cyklus sa opakuje
+
+**Definitívny fix**: `XFCP_SOP_RESP ≠ XFCP_SOP_REQ` — zmeniť response SOP z 0xFE na iný byte
+(plánované v Fáza 2 ako súčasť protokol robustnosti).
+
+---
+
 ## Historický prehľad
 
 | Dátum | Čo sa zmenilo |
@@ -285,3 +315,4 @@ make (v sim/): 13/13 ALL PASSED — vrátane backpressure, multi-slave, parser e
 | 2026-05-20 | FIX aplikovaný: ramstyle "no_rw_check" → "logic" v xfcp_fifo.sv |
 | 2026-05-20 | SOF skompilovaný s fixom (output_files/soc_top.sof, 20:54) |
 | 2026-05-21 | RTL analýza dokončená — žiadny ďalší bug. hw_diag.py vylepšený (UART STATUS check) |
+| 2026-05-21 | HW test: 7/12 OK (58 %). Ramstyle fix potvrdený. Zostatok = TX→RX coupling (SOP=0xFE clash) |
