@@ -92,10 +92,14 @@ module xfcp_rx_parser #(
   // XFCP header: SOP(1) + OPCODE(1) + COUNT(2) + ADDR(4) = 8 bajtov
   // bajt 0 = SOP, nekódujeme do shift registra priamo (iba triggeruje)
   // bajty 1-7 idú do shift registra → po 7 posunoch sú všetky polia platné
-  localparam int HDR_BYTES     = 8;  // celková dĺžka hlavičky
-  localparam int BYTE_W       = 8;  // šírka bajtu
-  localparam int HDR_SHIFT_W   = 64; // 8 bajtov × 8 bitov
+  localparam int HDR_BYTES      = 8;   // celková dĺžka hlavičky
+  localparam int BYTE_W        = 8;   // šírka bajtu
+  localparam int HDR_SHIFT_W   = 64;  // 8 bajtov × 8 bitov
   localparam int PKT_LEN_W     = $clog2(MAX_PKT_BYTES + 1);
+  // Hornaya hranica COUNT: zamedzuje spracovaniu paketu s obrovskym countom
+  // (coupling-indukovaný garbage packet s count=64KB by viazal UART TX na 5+ sekund).
+  // Vsetky legalne pouzitia pouzivaju count=4 az count=256 (max 64 slov).
+  localparam int MAX_COUNT_BYTES = 256;
 
   // ============================================================
   // ONE-HOT FSM – 5 stavov pre payload pipeline
@@ -172,7 +176,9 @@ module xfcp_rx_parser #(
   // Validácia prebieha v rovnakom takte ako decode.
   // ============================================================
   wire dec_opcode_ok = opcode_valid(dec_opcode);
-  wire dec_count_ok  = (dec_count[1:0] == 2'b00);  // COUNT % 4 == 0
+  // COUNT % 4 == 0 AND within MAX_COUNT_BYTES bound (prevents huge garbage reads)
+  wire dec_count_ok  = (dec_count[1:0] == 2'b00)
+                    && (dec_count <= COUNT_WIDTH'(MAX_COUNT_BYTES));
   wire dec_valid     = dec_opcode_ok && dec_count_ok;
 
   // Vypočítané hodnoty z decode (kombinačné)
