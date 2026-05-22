@@ -122,9 +122,8 @@ module xfcp_uart_mmio_top #(
   // Diagnostic pulse signals for axil_diag_ctrl (slot 6)
   // --------------------------------------------------------------------------
   logic dbg_sop_w, dbg_hdr_w, dbg_drop_w, dbg_req_w, dbg_resp_w;
-  wire  rx_byte_pulse_w  = uart_rx_raw_s.TVALID && uart_rx_raw_s.TREADY;
+  wire  rx_byte_pulse_w  = uart_rx_raw_s.TVALID;
   wire  tx_byte_pulse_w  = xfcp_tx_s.TVALID && xfcp_tx_s.TREADY;
-  wire  tx_pkt_pulse_w   = !tx_busy_prev_r && tx_status_w.tx_busy;
 
   xfcp_fabric_endpoint #(
     .NUM_SLAVES     (NUM_SLAVES),
@@ -333,7 +332,7 @@ module xfcp_uart_mmio_top #(
     .fab_req_i  (dbg_req_w),
     .fab_resp_i (dbg_resp_w),
     .tx_byte_i  (tx_byte_pulse_w),
-    .tx_pkt_i   (tx_pkt_pulse_w)
+    .tx_pkt_i   (dbg_resp_w)
   );
 
 endmodule

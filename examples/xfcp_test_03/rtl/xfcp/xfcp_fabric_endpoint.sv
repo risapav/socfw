@@ -58,8 +58,8 @@ module xfcp_fabric_endpoint #(
 
   axi4lite_if.master m_axil [NUM_SLAVES],
 
-  // High when a transaction is in-flight (engine or packetizer busy).
-  // Used externally to gate new request bytes into the parser (single-flight mode).
+  // High only while response packet is being transmitted.
+  // Debug/optional post-TX flush helper; not a full transaction-busy signal.
   output logic endpoint_busy_o,
 
   // Debug pulses: 1-cycle, combinational — wire to axil_diag_ctrl
@@ -464,7 +464,7 @@ module xfcp_fabric_endpoint #(
     if (rst_n) begin
       if (req_fire) begin
         if (!dec_valid)
-          $error("[%0t] %m: Neplatná adresa 0x%08h!", $time, req_hdr.addr);
+          $warning("[%0t] %m: Neplatná adresa 0x%08h!", $time, req_hdr.addr);
         else
           $display("[%0t] %m: Request addr=0x%08h → slave[%0d]",
                    $time, req_hdr.addr, dec_sel);

@@ -558,8 +558,8 @@ module xfcp_rx_parser #(
         $display("[%0t] %m: PAYLOAD word=0x%08h words_rem=%0d",
                  $time, shift_n, words_q);
       if (error_protocol && !error_protocol_prev)
-        $error("[%0t] %m: PROTOCOL ERROR → S_DROP (stav=0x%02h op=0x%02h)",
-               $time, 6'(state_q), dec_opcode);
+        $warning("[%0t] %m: PROTOCOL ERROR → S_DROP (stav=0x%02h op=0x%02h)",
+                 $time, 6'(state_q), dec_opcode);
       if (watchdog_fire && state_q != S_DROP)
         $warning("[%0t] %m: WATCHDOG – paket > %0d bajtov, drop", $time, MAX_PKT_BYTES);
       if (sop_recovery)

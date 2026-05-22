@@ -5,7 +5,7 @@
  * @details
  *   Register map (byte offset, all 32-bit):
  *     0x00  RO    COMPONENT_ID   -- constant 0x44494147 ("DIAG")
- *     0x04  RO    RX_BYTE_COUNT  -- UART RX bytes into FIFO
+ *     0x04  RO    RX_BYTE_COUNT  -- UART RX bytes (TVALID, before FIFO gate)
  *     0x08  RO    RX_SOP_COUNT   -- good SOPs received by parser (S_IDLE->S_HDR)
  *     0x0C  RO    RX_HDR_COUNT   -- headers decoded (hfifo_push in parser)
  *     0x10  RO    RX_DROP_COUNT  -- parser drop events (go_drop, not S_DROP re-entry)

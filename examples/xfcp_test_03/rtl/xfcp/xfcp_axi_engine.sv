@@ -373,7 +373,7 @@ module xfcp_axi_engine #(
 
       // 1. Watchdog – loguj len pri nástupe (edge detect)
       if (error_timeout && !error_timeout_q)
-        $error("[%0t] %m: WATCHDOG TIMEOUT stav=0x%02h", $time, 8'(state_q));
+        $warning("[%0t] %m: WATCHDOG TIMEOUT stav=0x%02h", $time, 8'(state_q));
 
       // 2. Koniec transakcie
       if (state_q == ST_DONE && state_n == ST_IDLE)
