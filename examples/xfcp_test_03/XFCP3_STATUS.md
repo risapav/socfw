@@ -810,15 +810,75 @@ lsusb -v | grep -A5 "FTDI"
 # Ak flat → FTDI loopback → rekonfigurácia EEPROM / iný adaptér
 ```
 
-### SEQ ID (PRIORITA 2, po fyzickej oprave)
+### SEQ ID (PRIORITA 2)
 
-Pridanie 8-bit sekvenčného ID do requestu/response umožní tools zahodiť
-oneskorené odpovede zo starých transakcií a jednoznačne potvrdiť úspech:
+Spurious odpovede z coupling requestov interferujú s Python reception.
+SEQ ID umožní tools zahodiť spurious odpovede bez ohľadu na fyzické podmienky:
 
 ```
 Request:  SOP_REQ, OP, SEQ, COUNT, ADDR, PAYLOAD
 Response: SOP_RESP, RESP_OP, SEQ, DEV_TYPE, DEV_STR, PAYLOAD, 0x00
 ```
+
+---
+
+## Fáza 3C — navrhy_13: baud rate sweep (2026-05-22, commit dbf7151)
+
+### Implementované zmeny
+
+**Tools — hw_diag.py:**
+- `--baud {9600,19200,38400,57600,115200}` — runtime baud switch cez AXI WRITE na
+  0xFF010004 (UART_BAUD_DIV register), bez nutnosti rebuildovať RTL bitstream.
+- `--sweep` — automatický scan 115200/57600/38400/9600 s DIAG countermi a summary tabuľkou.
+- Argparse nahrádza pozícionne sys.argv, port/repeat zostávajú pozícionne.
+
+### HW sweep výsledky (2026-05-22)
+
+```
+Baud     OK  Total     %
+115200    4    30    13%  ← spurious couplings = 6 extra fab_resp
+57600     0    30     0%  ← baud switch ZLYHAL → baud mismatch
+38400     0    30     0%  ← baud switch ZLYHAL → baud mismatch
+9600      0    30     0%  ← baud switch ZLYHAL → baud mismatch
+```
+
+### Kľúčové nálezy sweep testu
+
+**1. Baud switch selhal (WRITE na BAUD_DIV podlieha rovnakému failure rate)**
+
+Každý baud switch vyžaduje 1 WRITE transakciu. Ak táto transakcia zlyhá
+(a v tomto behu bol failure rate ~87%), FPGA ostane na 115200 zatiaľčo PC
+prepne na nový baud → baud mismatch → 0/30. Výsledky 57600/38400/9600
+sú preto neinformatívne — netestujú nové baud raty.
+
+**2. fab_resp=36 > 30: coupling bajty formujú platné XFCP requesty**
+
+```
+rx_bytes=646  (očakávané: 30×8=240)
+fab_resp=36   (očakávané: 30)
+```
+
+Extra 406 bajtov = echo coupling. Z týchto 406 bajtov FPGA parser
+dekódoval 6 kompletných platných XFCP hlavičiek → 6 spurious odpovedí.
+Tieto spurious odpovede interferujú s Python reception:
+Python dostane spurious 0xFD response namiesto legitímnej → classify jako
+"OK" ale s nesprávnymi dátami alebo timeout na skutočnú odpoveď.
+
+**3. Interpretácia per navrhy_13: Prípad B — baud rate NEvyrieši problém**
+
+Coupling je fyzický problém nezávislý od baud rate. Zníženie baud rate
+by skôr predĺžilo dobu coupling okna (dlhší bit period = dlhší coupling chvost).
+
+### Záver: potrebný SEQ ID + fyzická diagnostika
+
+Coupling generuje spurious requesty → spurious odpovede → Python confusion.
+Dve cesty k riešeniu (navzájom nezávislé, obe užitočné):
+
+1. **SEQ ID** (RTL+tools): tools odmietnu spurious odpovede s nesprávnym SEQ.
+   Zlepší úspešnosť aj bez fyzickej opravy.
+
+2. **Fyzická oprava** (RC filter alebo iný adaptér): eliminuje coupling bajty.
+   Trvalé riešenie.
 
 ---
 
@@ -844,3 +904,4 @@ Response: SOP_RESP, RESP_OP, SEQ, DEV_TYPE, DEV_STR, PAYLOAD, 0x00
 | 2026-05-22 | Fáza 3A HW test: 18/30 = 60% — najlepší výsledok. FRAME ERROR potvrdený. tx_pkt bug identifikovaný |
 | 2026-05-22 | Fáza 3B: navrhy_12 implementácia — fix rx_byte_pulse_w (TVALID only), tx_pkt_i=dbg_resp_w, $error→$warning. Regression 16/16 PASS (Errors: 0 všade) |
 | 2026-05-22 | Fáza 3B HW test: 28/60 = 46%. DIAG: rx_hdr=29, rx_drop=0, tx_bytes=750. Diagnóza: fyzický UART RX coupling. RTL logika správna |
+| 2026-05-22 | Fáza 3C: navrhy_13 — hw_diag.py --baud/--sweep. Sweep HW: 115200=13%, ostatné baud switche zlyhali. fab_resp=36>30: spurious requesty z coupling |
