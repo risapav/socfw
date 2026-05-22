@@ -73,10 +73,21 @@ module axil_diag_ctrl (
   logic [31:0] tx_byte_cnt_r;
   logic [31:0] tx_pkt_cnt_r;
 
+  // diag_reset_w is a 1-cycle synchronous clear (from SW write to DIAG_RESET register).
+  // Must NOT be combined with the async rst_ni condition — Quartus would infer a latch.
   wire diag_reset_w = hw_we_w[9];
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (!rst_ni || diag_reset_w) begin
+    if (!rst_ni) begin
+      rx_byte_cnt_r  <= '0;
+      rx_sop_cnt_r   <= '0;
+      rx_hdr_cnt_r   <= '0;
+      rx_drop_cnt_r  <= '0;
+      fab_req_cnt_r  <= '0;
+      fab_resp_cnt_r <= '0;
+      tx_byte_cnt_r  <= '0;
+      tx_pkt_cnt_r   <= '0;
+    end else if (diag_reset_w) begin
       rx_byte_cnt_r  <= '0;
       rx_sop_cnt_r   <= '0;
       rx_hdr_cnt_r   <= '0;
