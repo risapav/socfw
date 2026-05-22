@@ -1011,6 +1011,123 @@ spôsobuje ~67% WRITE failure rate. Na riešenie existujú 2 nezávislé cesty:
 
 ---
 
+## Fáza 3E — navrhy_15: DIAG snapshot + safe baud switch (2026-05-22, commit 3104938)
+
+### Motivácia (expert feedback z EXPERT_BRIEF.md)
+
+1. **DIAG live counter artifact** — čítanie registrov počas testu menilo live countery
+   (read_all vysielal AXI transakcie, čo inkrementovalo rx_byte, tx_byte atď.).
+2. **BAUD_COMMIT "možno prebehol"** — predchádzajúci set_baudrate() abortoval keď
+   COMMIT WRITE zlyhal, ale FPGA mohol prepnúť aj napriek strate ACK.
+3. Chýbajúce diagnostické informácie: nie je vidno koľko bajtov FPGA prijalo vs
+   zahodilo, ani či nastala sop_recovery alebo bad_hdr.
+
+### Implementované zmeny
+
+**RTL — axil/axil_diag_ctrl.sv (kompletný rewrite, NUM_REGS 10→17):**
+
+Snapshot architektúra: 14 live counterov + 14 shadow registrov.
+`DIAG_SNAPSHOT (0x40 PULSE)` skopíruje live → shadow. Reads vždy vracajú shadow hodnoty.
+
+Nová register mapa:
+
+| Offset | Názov | Zdroj |
+|--------|-------|-------|
+| 0x00 | COMPONENT_ID "DIAG" | konštanta |
+| 0x04 | RX_SEEN | uart_rx_raw TVALID (všetky bajty) |
+| 0x08 | RX_ACCEPT | uart_rx_raw TVALID && TREADY (akceptované) |
+| 0x0C | RX_LOST | uart_rx_raw TVALID && !TREADY (stratené pri flush) |
+| 0x10 | RX_FRAME | rx_status frame_err pulse |
+| 0x14 | RX_OVERRUN | rx_status overrun_err pulse |
+| 0x18 | RX_SOP | parser S_IDLE→S_HDR (dbg_sop_o) |
+| 0x1C | RX_HDR | parser hfifo_push (dbg_hdr_o) |
+| 0x20 | RX_BAD_HDR | parser S_DECODE → go_drop (dbg_bad_hdr_o) |
+| 0x24 | RX_RECOVERY | parser sop_recovery (dbg_recovery_o) |
+| 0x28 | RX_DROP | parser go_drop && !S_DROP (dbg_drop_o) |
+| 0x2C | FAB_REQ | endpoint req_fire && !invalid_req |
+| 0x30 | FAB_RESP | endpoint resp_start_pulse |
+| 0x34 | TX_BYTE | xfcp_tx TVALID && TREADY |
+| 0x38 | TX_PKT | endpoint resp_start_pulse |
+| 0x3C | DIAG_RESET (PULSE) | vynuluj live countery |
+| 0x40 | DIAG_SNAPSHOT (PULSE) | zamorzi live → shadow |
+
+**RTL — axil/axil_uart_adapter.sv (NUM_REGS 9→10):**
+
+- `0x24 BAUD_STATUS (RO)` — `{29'h0, rx_busy, tx_busy, baud_switch_pending}`
+- Busy guard: baud switch teraz čaká na `!tx_busy_i && !rx_busy_i` pred
+  aplikáciou novej baud rýchlosti (predtým čakal iba na countdown=0).
+
+**RTL — xfcp/xfcp_rx_parser.sv:**
+
+- `dbg_bad_hdr_o` — pulse: S_DECODE decode error (go_drop v S_DECODE stave)
+- `dbg_recovery_o` — pulse: sop_recovery (SOP prijatý v neočakávanom stave)
+
+**RTL — xfcp/xfcp_fabric_endpoint.sv:**
+
+- Passthrough portov `dbg_bad_hdr_o` a `dbg_recovery_o` z parsera.
+
+**RTL — xfcp_uart_mmio_top.sv:**
+
+- `rx_seen_pulse_w = uart_rx_raw_s.TVALID`
+- `rx_accept_pulse_w = uart_rx_raw_s.TVALID && uart_rx_raw_s.TREADY`
+- `rx_lost_pulse_w = uart_rx_raw_s.TVALID && !uart_rx_raw_s.TREADY`
+- `rx_frame_pulse_w = rx_status_w.frame_err`
+- `rx_overrun_pulse_w = rx_status_w.overrun_err`
+
+**Tools — tools/xfcp/transport.py:**
+
+- `baudrate` property (getter) — umožňuje čítať aktuálny baud bez reopenu portu.
+
+**Tools — tools/xfcp/bus.py:**
+
+Nahradená `set_baudrate()` bezpečnou verziou:
+```python
+# 1. Retry BAUD_PENDING write 5x (každý s drain())
+# 2. Pošli BAUD_COMMIT — ignoruj ACK failure (FPGA mohol prepnúť)
+# 3. Čakaj 200 ms na countdown
+# 4. Prepni PC baud, skús ping()
+# 5. Ak ping zlyhá: fallback na starý baud, skús ping()
+# 6. Ak oba zlyhajú: raise XfcpRecoveryError
+```
+
+**Tools — tools/hw_diag.py:**
+
+- Nové DIAG konštanty (18 adries vrátane DIAG_SNAPSHOT=0x40).
+- `diag_snapshot()` — WRITE na 0x40 pred čítaním.
+- `diag_read_all()` — volá snapshot, potom číta 14 shadow registrov.
+- `print_diag()` — rozšírený výstup: rx_seen/accept/lost, frame/overrun, bad_hdr/recovery.
+- `set_baud()` — retry PENDING 5x, ignoruj COMMIT ACK, probe new+old baud, raise RuntimeError pri neurčitom stave.
+
+**EXPERT_BRIEF.md:**
+
+- CP2102 (nie FT232R) — opravená identifikácia USB-UART bridgu.
+- Coupling záver zmenený na hypotézu (nie definitívne potvrdenie).
+
+### Sim výsledky
+
+**16/16 ALL PASSED**, Errors: 0 vo všetkých testbenchoch.
+
+### HW test
+
+Nutný Quartus rebuild pre novú DIAG register mapu a BAUD_STATUS register.
+Test čaká.
+
+### Správne použitie DIAG workflow po Fáze 3E
+
+```python
+# 1. Spusti DIAG_RESET (vynuluj live countery)
+bus.write32(0xFF060038, 1)   # DIAG_RESET (0x3C offset od base)
+# 2. Vykonaj testy
+# 3. DIAG_SNAPSHOT (zamorzi live → shadow)
+bus.write32(0xFF06003C, 1)   # DIAG_SNAPSHOT (0x40 offset od base)
+# 4. Prečítaj shadow registre — neovplyvňujú live countery
+rx_seen   = bus.read32(0xFF060004)
+rx_accept = bus.read32(0xFF060008)
+# ... atď.
+```
+
+---
+
 ## Historický prehľad
 
 | Dátum | Čo sa zmenilo |
@@ -1035,3 +1152,4 @@ spôsobuje ~67% WRITE failure rate. Na riešenie existujú 2 nezávislé cesty:
 | 2026-05-22 | Fáza 3B HW test: 28/60 = 46%. DIAG: rx_hdr=29, rx_drop=0, tx_bytes=750. Diagnóza: fyzický UART RX coupling. RTL logika správna |
 | 2026-05-22 | Fáza 3C: navrhy_13 — hw_diag.py --baud/--sweep. Sweep HW: 115200=13%, ostatné baud switche zlyhali. fab_resp=36>30: spurious requesty z coupling |
 | 2026-05-22 | Fáza 3D: navrhy_14 — pending/commit baud switch v axil_uart_adapter (NUM_REGS 7→9), data_bits bug fix, SerialTransport.set_baudrate(), XfcpBus.set_baudrate(). Regression 16/16 PASS. Quartus OK. Sweep HW: 33%/36%/36%/30% — baud switch zlyhá (P≈11% pre 2×WRITE). RTL správny |
+| 2026-05-22 | Fáza 3E: navrhy_15 — DIAG snapshot (live+shadow), 7 nových counterov, BAUD_STATUS 0x24, busy guard, safe baud switch s retry+fallback, debug porty bad_hdr/recovery. Sim 16/16 PASS. HW test čaká (Quartus rebuild nutný) |
