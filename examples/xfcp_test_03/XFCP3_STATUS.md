@@ -882,6 +882,135 @@ Dve cesty k riešeniu (navzájom nezávislé, obe užitočné):
 
 ---
 
+## Fáza 3D — navrhy_14: pending/commit baud switch + opravy (2026-05-22, commit 6afe581)
+
+### Motivácia
+
+Fáza 3C sweep odhalil: runtime baud switch cez priamy zápis BAUD_DIV (0x04) nefunguje.
+Príčina: `assign baud_div_o = hw_wdata_w[1*32 +: 32]` aplikoval novú baud rýchlosť
+okamžite → FPGA odoslal ACK na WRITE novou baud rýchlosťou, kým PC ešte čakal na starej.
+
+Navyše bug v `uart_diag.py`: `data_bits=8` → `(8-5)&3=3` → 5-bit mode (invertovaný mapping).
+
+### Implementované zmeny
+
+**RTL — axil/axil_uart_adapter.sv:**
+
+NUM_REGS 7 → 9. Nové registre:
+- `0x1C  BAUD_COMMIT (PULSE)` — zápis spustí countdown `baud_active * 320` cyklov, potom switch
+- `0x20  BAUD_ACTIVE (RO)` — readback aktuálne aktívneho prescaleru
+
+`baud_div_o = baud_active_q` namiesto priameho `hw_wdata_w` assign.
+
+```
+baud_active_q     -- aktuálne používaný prescaler (resetuje sa na BAUD_DIV_DEFAULT)
+baud_pending_q    -- nová hodnota zapísaná do 0x04 (BAUD_PENDING), ešte neaplikovaná
+baud_we_r         -- 1-cycle delayed strobe pre správny timing hw_wdata_w (AXIL_RW FF latencia)
+baud_switch_cnt_q -- countdown = baud_active * 320 cyklov
+```
+
+Sekvenecia bezpečného switchu:
+```
+PC zapíše BAUD_PENDING (0x04) → ACK na starej baud  ✓
+PC zapíše BAUD_COMMIT  (0x1C) → ACK na starej baud  ✓
+FPGA odpočíta countdown (~2.8 ms pri 115200, ~33 ms pri 9600)
+FPGA prepne baud_active_q = baud_pending_q
+PC čaká 150 ms → prepne baudrate → ping
+```
+
+**tools/modules/uart_diag.py:**
+
+Bug fix v `configure()`:
+```python
+# Pred (CHYBA): data_bits=8 → 3 → 5-bit mode
+self.data_bits = (data_bits - 5) & 0x3
+# Po (SPRÁVNE):
+dbits_map = {8: 0b00, 7: 0b01, 6: 0b10, 5: 0b11}
+self.data_bits = dbits_map[data_bits]
+```
+
+**tools/xfcp/transport.py:**
+
+Pridaná `SerialTransport.set_baudrate(baudrate)` — runtime zmena PC-side baud bez
+zavretia a znovuotvorenia sériového portu.
+
+**tools/xfcp/bus.py:**
+
+Pridaná `XfcpBus.set_baudrate(new_baud, clk_hz=50_000_000)`:
+```
+write32(0xFF010004, new_div)  # BAUD_PENDING, ACK na starej baud
+write32(0xFF01001C, 1)        # BAUD_COMMIT, ACK na starej baud
+sleep(0.15)                   # čakaj na FPGA countdown
+transport.set_baudrate(new_baud)
+ping()                        # overenie
+```
+
+**tools/hw_diag.py:**
+
+`set_baud()` prepísaný na two-step protokol. Pridané:
+- `UART_BAUD_COMMIT = 0xFF01001C`
+- `UART_BAUD_ACTIVE = 0xFF010020`
+
+### Sim výsledky
+
+Regression: **16/16 ALL PASSED**, Errors: 0 všade.
+
+`tb_axil_uart_adapter.sv` aktualizovaný pre 9-register mapu:
+- T7: overí baud_div_o je stále na default PO zápise BAUD_PENDING (pending, nespustené)
+- T11: BAUD_COMMIT → čaká 140 000 cyklov → baud_div_o prepnutý
+- T12: BAUD_ACTIVE readback vracia novú hodnotu
+
+### HW test výsledky Fázy 3D (2026-05-22, commit 6afe581)
+
+**Quartus compile: SUCCESS** — 0 errors, 0 warnings. Bitfile: `output_files/soc_top.sof`.
+FPGA naprogramovaný úspešne (EP4CE55F23@1).
+
+**Sweep výsledky:**
+
+```
+SWEEP ZHRNUTIE:
+      Baud     OK  Total      %
+  --------  -----  -----  -----
+    115200     10     30    33%
+     57600     11     30    36%
+     38400     11     30    36%
+      9600      9     30    30%
+```
+
+Všetky baud switche: "VAROVANIE: baud switch na XXX — overenie zlyhalo, pokracujem".
+
+### Analýza výsledkov Fázy 3D
+
+**1. Baud switch stále nefunguje — príčina: 2 consecutive WRITEs nutné**
+
+`set_baud()` vyžaduje 2 WRITE transakcie (BAUD_PENDING + BAUD_COMMIT) pri starej baud rýchlosti.
+S ~33% individuálnym úspechom každého WRITE:
+```
+P(obe transakcie uspejú) ≈ 0.33 × 0.33 ≈ 11%
+```
+`set_baud()` vracia `False` pri prvom zlyhaní (ešte pred prepnutím PC baud) →
+FPGA ostane na 115200, PC timeout sa nastaví podľa nového baud → ďalší testy čiastočne fungujú
+ale FPGA baud sa neprepol.
+
+**2. Úspešné odpovede trvajú 5.4–5.7 ms bez ohľadu na deklarovaný baud**
+Potvrdzuje že FPGA ostalo na 115200 vo všetkých sekciách sweepovacieho testu.
+Výsledky 57600/38400/9600 (36%/36%/30%) odrážajú pôvodnú 115200 výkonnosť,
+nie skutočnú zmenu baud rýchlosti.
+
+**3. RTL pending/commit je funkčný (sim 16/16 PASS)**
+Problém nie je v RTL logike ale v tom, že triggering RTL mechanizmu vyžaduje
+2 po sebe úspešné WRITEs v prostredí s ~67% failure rate.
+
+### Záver Fázy 3D
+
+Pending/commit RTL mechanizmus je správny. Baud switch v HW zlyhá kým coupling
+spôsobuje ~67% WRITE failure rate. Na riešenie existujú 2 nezávislé cesty:
+
+1. **SEQ ID** (PRIORITA 1) — RTL+tools odmietnu spurious odpovede; zlepší WRITE success rate
+2. **Fyzická oprava** (RC filter alebo iný adaptér) — trvalé riešenie coupling problému
+
+---
+
 ## Historický prehľad
 
 | Dátum | Čo sa zmenilo |
@@ -905,3 +1034,4 @@ Dve cesty k riešeniu (navzájom nezávislé, obe užitočné):
 | 2026-05-22 | Fáza 3B: navrhy_12 implementácia — fix rx_byte_pulse_w (TVALID only), tx_pkt_i=dbg_resp_w, $error→$warning. Regression 16/16 PASS (Errors: 0 všade) |
 | 2026-05-22 | Fáza 3B HW test: 28/60 = 46%. DIAG: rx_hdr=29, rx_drop=0, tx_bytes=750. Diagnóza: fyzický UART RX coupling. RTL logika správna |
 | 2026-05-22 | Fáza 3C: navrhy_13 — hw_diag.py --baud/--sweep. Sweep HW: 115200=13%, ostatné baud switche zlyhali. fab_resp=36>30: spurious requesty z coupling |
+| 2026-05-22 | Fáza 3D: navrhy_14 — pending/commit baud switch v axil_uart_adapter (NUM_REGS 7→9), data_bits bug fix, SerialTransport.set_baudrate(), XfcpBus.set_baudrate(). Regression 16/16 PASS. Quartus OK. Sweep HW: 33%/36%/36%/30% — baud switch zlyhá (P≈11% pre 2×WRITE). RTL správny |
