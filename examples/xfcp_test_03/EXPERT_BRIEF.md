@@ -21,7 +21,7 @@
 
 ```
 PC
- ├─[USB]─► USB-UART bridge (FT232R?)
+ ├─[USB]─► USB-UART bridge (CP2102)
  │              │
  │         TXD ─────► FPGA UART_RX_i  (JP pin 7, LVTTL 3.3V)
  │         RXD ◄───── FPGA UART_TX_o  (JP pin 8, LVTTL 3.3V)
@@ -470,8 +470,9 @@ sú **výhradne HW-specific**.
 
 2. Ak je to FTDI loopback: ako ho vypnúť na Linuxe? (ftdi_eeprom konfigurácia?)
 
-3. Ak je to PCB: RC filter 1 kΩ + 10 nF na UART_RX vstup FPGA — je to realistická oprava?
-   Aká je maximálna RC konštanta pri 115200 baud (bit perioda = 8.68 µs)?
+3. Ak je to PCB: RC filter na UART_RX vstup FPGA — ake hodnoty su spravne?
+   POZOR: 1 kO + 10 nF (RC=10us) je NEPLATNE — RC > bit period (8.68 us) sposobi frame errors!
+   Spravne: 1 kO + 100–470 pF (RC=0.1–0.47 us). Zacni so sériovým odporom 100O–1kO bez kapacity.
 
 ### 9.2 Protokol robustnosť
 
@@ -567,6 +568,53 @@ python3 hw_diag.py /dev/ttyUSB0 --sweep
 cd examples/xfcp_test_03
 make -f Makefile.qpf program
 ```
+
+---
+
+## 11. Fyzické diagnostické testy (podľa navrhy_16)
+
+### Test A — USB-UART adaptér bez FPGA (izolačný)
+Odpoj kábel od FPGA. Otvor port v Pythone:
+```python
+import serial, time
+ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=0.1)
+ser.reset_input_buffer()
+ser.write(bytes([0x55, 0xAA, 0xFE, 0xFD]) * 100)
+time.sleep(0.2)
+data = ser.read(1000)
+print(len(data), data[:32])
+# Ocakavanie: 0 bajtov -> adapter sam neecho-uje
+# >0 bajtov -> adapter/driver/loopback problem
+```
+
+### Test B — FPGA TX-only s internym RX counterom
+Pouzij DIAG snapshot po teste kde FPGA iba TX-uje a PC nic neposiela.
+Ak RX_SEEN rastie kym FPGA iba vysiela -> TX->RX coupling potvrdeny.
+
+### Test C — RX-only zatazovaci test
+PC posiela 10000 bajtov, FPGA iba pocita (bez TX odpovedi).
+Pouzij bitstream s loopback-disabled, sleduj frame/overrun countery.
+Ak RX-only ide 100% -> problem vznika az ked FPGA zaroven vysiela.
+
+### Test D — Staticky baud sweep (oddelene bitstreamy)
+NAMIESTO runtime baud switch: skompiluj 4 bitstreamy s hardkodovanym BAUD_DIV:
+```
+115200: BAUD_DIV=434   (50 MHz / 115200)
+ 57600: BAUD_DIV=868
+ 38400: BAUD_DIV=1302
+  9600: BAUD_DIV=5208
+```
+Pouzitie: make compile-baud BAUD=57600
+
+Interpretacia:
+- Uspesnost vyrazne rastie pri nizsom baud -> fyzicky UART sampling problem
+- Uspesnost rovnaka pri vsetkych baud -> protokol/parser/recovery problem, nie bitrate
+
+### RC filter — správne hodnoty
+Pri 115200 baud NESMIE byt RC > bit period = 8.68 us.
+- NEPLATNE: 1 kO + 10 nF (RC=10us > bit period — samo sposobi frame errors!)
+- SPRAVNE:  1 kO + 470 pF (RC=0.47us) alebo 1 kO + 100 pF (RC=0.1us)
+- Zacni so seriovym odporom 100 O–1 kO bez kapacity, potom experimentuj s 100–470 pF
 
 ---
 

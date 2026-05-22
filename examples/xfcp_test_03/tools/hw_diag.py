@@ -340,7 +340,7 @@ def print_diag(label, counters, total_tx=None):
             print(f"  *** tx_pkt={tx_p} < {exp_pkt}: FPGA neodoslalo vsetky odpovede!")
 
 
-def run_test(ser, repeat, timeout):
+def run_test(ser, repeat, timeout, pause_ms=0):
     """Run full slot scan, return (pass_count, fail_count, zero_bytes, partial)."""
     pass_count = fail_count = zero_bytes = partial = 0
 
@@ -349,6 +349,8 @@ def run_test(ser, repeat, timeout):
             tag = f"Slot {slot} ({name}) @ 0x{addr:08X}  [#{i+1}]"
             print(f"\n{tag}")
             pkt = make_read_pkt(addr)
+            if pause_ms > 0:
+                time.sleep(pause_ms / 1000)
             raw = transact(ser, pkt, EXPECTED_READ, timeout=timeout)
 
             n = len(raw)
@@ -387,7 +389,8 @@ def main():
         epilog="""Priklady:
   hw_diag.py /dev/ttyUSB0 10
   hw_diag.py /dev/ttyUSB0 10 --baud 57600
-  hw_diag.py /dev/ttyUSB0 5 --sweep"""
+  hw_diag.py /dev/ttyUSB0 5 --sweep
+  hw_diag.py /dev/ttyUSB0 5 --pause 100"""
     )
     parser.add_argument('port',   nargs='?', default=PORT,
                         help='Serial port (default /dev/ttyUSB0)')
@@ -398,6 +401,8 @@ def main():
                         help='UART baud rate (default 115200)')
     parser.add_argument('--sweep', action='store_true',
                         help=f'Sweep baud rates: {SWEEP_BAUDS}')
+    parser.add_argument('--pause', type=int, default=0, metavar='MS',
+                        help='Pause before each transaction in milliseconds (default 0)')
     args = parser.parse_args()
 
     target_baud = args.baud
@@ -444,7 +449,7 @@ def main():
             diag_reset(ser, baud_timeout)
             time.sleep(0.1)
 
-            p, f, z, part = run_test(ser, args.repeat, baud_timeout)
+            p, f, z, part = run_test(ser, args.repeat, baud_timeout, pause_ms=args.pause)
 
             print("\n" + "=" * 65)
             status = uart_read_status(ser, baud_timeout)
@@ -495,7 +500,8 @@ def main():
         diag_reset(ser, timeout)
         time.sleep(0.1)
 
-        pass_count, fail_count, zero_bytes, partial = run_test(ser, args.repeat, timeout)
+        pass_count, fail_count, zero_bytes, partial = run_test(ser, args.repeat, timeout,
+                                                                pause_ms=args.pause)
 
         print("\n" + "=" * 65)
         print("[POST] UART STATUS register (0xFF010010):")

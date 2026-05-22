@@ -1,13 +1,15 @@
 /**
- * @version 1.0.0
- * @date    17.2.2026
+ * @version 1.1.0
+ * @date    22.5.2026
  * @author  Pavol Risa
  *
  * @file    axis_uart_rx.sv
- * @brief   AXI-Stream UART RX wrapper (Refactored for uart_pkg structures)
+ * @brief   AXI-Stream UART RX wrapper with output skid register
  * @details
- * Tento modul obaľuje nízkoúrovňové UART RX jadro a baud generátor do
- * AXI-Stream rozhrania. Využíva štruktúry z uart_pkg pre čistú konfiguráciu.
+ * Wraps low-level UART RX core and baud generator into AXI-Stream interface.
+ * Uses uart_pkg structures for clean configuration.
+ * Output skid register prevents byte loss when downstream TREADY=0 during
+ * the 1-cycle core_valid pulse (AXI-Stream spec compliance fix).
  */
 
 `ifndef AXIS_UART_RX_SV
@@ -52,6 +54,11 @@ module axis_uart_rx #(
   // Prepojenie statusu smerom von
   assign status_o = core_status;
 
+  // Skid register signals (declared here so they can be used in i_core instantiation below)
+  logic [DATA_WIDTH-1:0] out_data_q;
+  logic                  out_valid_q;
+  wire                   skid_ready_w = !out_valid_q || m_axis.TREADY;
+
   // ==========================================================================
   // 1. Baudrate Generátor pre RX
   // ==========================================================================
@@ -93,7 +100,7 @@ module axis_uart_rx #(
     // Dátové rozhranie
     .data_o           (core_data),
     .valid_o          (core_valid),
-    .ready_i          (m_axis.TREADY),
+    .ready_i          (skid_ready_w),
 
     // Status a Riadenie
     .status_o         (core_status),
@@ -102,12 +109,27 @@ module axis_uart_rx #(
   );
 
   // ==========================================================================
-  // 3. AXI-Stream Mapping
+  // 3. Output skid register -- holds byte until downstream TREADY=1
+  // Prevents byte loss if TREADY=0 during the 1-cycle core_valid pulse.
   // ==========================================================================
-  assign m_axis.TVALID = core_valid;
-  assign m_axis.TDATA  = core_data;
-  assign m_axis.TKEEP  = '1;          // Všetky bajty sú platné
-  assign m_axis.TLAST  = AXIS_TLAST;  // 1 = per-byte TLAST; 0 = streaming (XFCP over UART)
+  always_ff @(posedge m_axis.TCLK or negedge m_axis.TRESETn) begin
+    if (!m_axis.TRESETn) begin
+      out_valid_q <= 1'b0;
+      out_data_q  <= '0;
+    end else if (skid_ready_w) begin
+      out_valid_q <= core_valid;
+      if (core_valid)
+        out_data_q <= core_data;
+    end
+  end
+
+  // ==========================================================================
+  // 4. AXI-Stream Mapping
+  // ==========================================================================
+  assign m_axis.TVALID = out_valid_q;
+  assign m_axis.TDATA  = out_data_q;
+  assign m_axis.TKEEP  = '1;
+  assign m_axis.TLAST  = AXIS_TLAST;
   assign m_axis.TUSER  = '0;
   assign m_axis.TID    = '0;
   assign m_axis.TDEST  = '0;
