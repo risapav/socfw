@@ -87,14 +87,14 @@ module xfcp_uart_mmio_top #(
   //   echo bytes into the RX line. fifo_flush_w discards them continuously so
   //   the 8-slot FIFO never overflows. rx_gate_w keeps those bytes invisible to
   //   the parser simultaneously.
-  //   POST_TX_HOLD_CYCLES: extends gate+flush window after tx_busy falls to catch
-  //   delayed CP2102 echo bytes (empirical: echoes arrive up to ~40us after TX end).
-  //   Must be < 4340 cycles (one UART byte at 115200/50MHz) so SIM TB next request
-  //   is not flushed. 2000 cycles = 40us << 86us byte period.
+  //   POST_TX_HOLD_CYCLES = UART_DEFAULT_BAUD_DIV * 10 = 1 UART byte period:
+  //     HW (434): 4340 cycles = 86.8 us — covers capacitive coupling tail.
+  //     SIM (16):  160 cycles — TB waits 3000 cycles, so no conflict.
+  //   PC pre_delay=200 ms >> 86.8 us: next request never hits flush window.
   // --------------------------------------------------------------------------
   logic endpoint_busy_w;
 
-  localparam int POST_TX_HOLD_CYCLES = 2000;
+  localparam int POST_TX_HOLD_CYCLES = UART_DEFAULT_BAUD_DIV * 10;
   logic tx_busy_prev_r;
   logic [$clog2(POST_TX_HOLD_CYCLES+1)-1:0] post_tx_cnt_r;
 

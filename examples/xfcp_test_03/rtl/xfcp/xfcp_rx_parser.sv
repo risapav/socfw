@@ -278,11 +278,15 @@ module xfcp_rx_parser #(
 
   // ============================================================
   // Watchdog counter
+  // Also reset on sop_recovery to prevent deadlock: without the reset,
+  // sop_recovery(S_DROP -> S_HDR) leaves pkt_len_q saturated; the very
+  // next cycle in S_HDR sees watchdog_fire=1 -> go_drop=1 -> S_DROP
+  // again, trapping the parser permanently regardless of new SOPs.
   // ============================================================
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n)
       pkt_len_q <= '0;
-    else if (state_q == S_IDLE)
+    else if (state_q == S_IDLE || sop_recovery)
       pkt_len_q <= '0;
     else if (axis_fire)
       pkt_len_q <= (pkt_len_q < PKT_LEN_W'(MAX_PKT_BYTES))

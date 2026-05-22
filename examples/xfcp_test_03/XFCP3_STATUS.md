@@ -538,6 +538,105 @@ Príčina: fyzická PCB/kábel kapacitívna väzba, nie USB-UART loopback.
 
 ---
 
+## Fáza 2C — Watchdog fix + diagnostika (2026-05-22)
+
+### Implementované zmeny
+
+**RTL — xfcp/xfcp_rx_parser.sv:**
+
+Watchdog deadlock fix: `pkt_len_q` sa resetuje aj pri `sop_recovery`.
+
+Teoreticky možný scenár bez fixu:
+```
+1. Capture noise (4112+ bajtov bez S_IDLE) → pkt_len_q saturuje
+2. watchdog_fire=1 → go_drop=1 → S_DROP
+3. Novy SOP: sop_recovery → S_HDR (ale pkt_len_q ostava=4112)
+4. S_HDR: watchdog_fire=1 → go_drop=1 → S_DROP okamzite
+5. Permanentny deadlock — parser ignoruje vsetky SOP-y
+```
+
+Oprava:
+```sv
+// Pred:
+else if (state_q == S_IDLE)
+  pkt_len_q <= '0;
+// Po:
+else if (state_q == S_IDLE || sop_recovery)
+  pkt_len_q <= '0;
+```
+
+**RTL — xfcp_uart_mmio_top.sv:**
+
+`POST_TX_HOLD_CYCLES` zmeneny z hardcoded 2000 na `UART_DEFAULT_BAUD_DIV * 10`:
+- HW (434): 4340 cyklov = 86.8 us = 1 UART bajt perioda
+- SIM (16): 160 cyklov < 3000 cyklov (TB delay) → OK
+
+Dôvod: 2000 cyklov (40 us) pokrývalo iba kapacitívny chvost, nie celú bajtovú periódu.
+Ak coupling produkuje "half-bit" noise, môže generovať validný UART bajt v 86.8 us okne.
+
+**SIM — tb_xfcp_uart_mmio_top.sv:**
+
+Rozšírenie testov: T5–T16 (2 opakovania × 6 slotov) replikuje `hw_diag.py` sekvencný scan.
+Ciel: odhalit state-machine bugy neviditelne pri jednoducham 2-slot testovani.
+
+### Sim výsledky Fázy 2C
+
+```
+make (v sim/): ALL PASSED (0 failures) — 16/16 testov vrátane T5-T16 (vsetky sloty × 2)
+```
+
+### HW test výsledky Fázy 2C
+
+**Výsledok: 10/30 = 33 %** — horšie ako Fáza 2B (14/30 = 46 %)
+
+**UART STATUS po teste: overrun=False, frame=False, parity=False — ZIADNE coupling chyby!**
+
+### Kľúčové zistenie: coupling NIE JE príčinou 33 % failov
+
+UART STATUS ukazuje **žiadne** coupling chyby. To znamená:
+- Fyzický signal je čistý (žiadny TX→RX echo)
+- FPGA dostáva bajty správne (žiadny frame error)
+- 67 % failov NIE JE spôsobených fyzickým coupling-om
+
+### RTL analýza root cause (2026-05-22) — neúspešná
+
+Kompletná analýza RTL kódu (všetky moduly): `xfcp_rx_parser`, `xfcp_fabric_endpoint`,
+`xfcp_axi_engine`, `xfcp_tx_packetizer`, `axil_regfile`, `axil_seven_seg_adapter`.
+
+**Žiadny RTL bug nenájdený.** Všetky state machine prechody sú správne:
+- Arbiter ARB_IDLE/WAIT_ENG/WAIT_PKT: správna logika ✓
+- eng_done_cnt tracking: správny ✓
+- packetizer_idle_q dual-check: správny ✓
+- resp_done_mux: správny ✓
+- AXI regfile: AXI4-Lite compliant ✓
+
+**Štatistická interpretácia:**
+S uniformnou 33 % mierou úspechu a 5 opakovaní:
+- P(slot zlyhá 5/5) = 0.67^5 = 13.5 % → pre 6 slotov = 57 % šanca vidieť jeden slot 0/5
+- "Slot 5: 0/5" je pravdepodobná náhoda, nie deterministický bug
+
+### Hypotézy o HW príčine
+
+1. **USB-UART bridge latencia/buffering** — CP2102/FT232R môže mať non-deterministické
+   buffering správanie. Niektoré bajty môžu prísť s oneskorením alebo byť groupované.
+   → Parser stalls v S_HDR ak request bytes neprichádzaju súvisle.
+
+2. **Post_tx_hold regresia** — BAUD_DIV*10=4340 cyklov je dlhší než 2000. Ak coupling
+   má INAK chvost (viac noise bajtov), dlhší flush môže zahodiť viac legitímnych bajtov.
+   Empiricky: 2000 cyklov (Fáza 2B) = 14/30, 4340 cyklov = 10/30.
+
+3. **Watchdog fix interakcia** — v normálnej prevádzke sop_recovery nikdy nevznikne,
+   watchdog fix nemá efekt. Ale ak je fyzický signal inak než v SIM...
+
+### Odporúčania pre ďalší postup
+
+1. **Revert POST_TX_HOLD späť na 2000** — empiricky lepšie (14/30 vs 10/30)
+2. **Diagnostický výpis**: pridať do hw_diag.py typ každého zlyhania (0B / partial / bad_SOP)
+3. **Scope na fyzický RXD pin** počas FPGA TX — overit ci coupling existuje
+4. **Viac iterácii**: repeat=10 (60 testov) pre lepšiu štatistiku
+
+---
+
 ## Historický prehľad
 
 | Dátum | Čo sa zmenilo |
@@ -555,3 +654,4 @@ Príčina: fyzická PCB/kábel kapacitívna väzba, nie USB-UART loopback.
 | 2026-05-21 | Záver: coupling je fyzický problém. SW/RTL mitigations max ~6/12. Čaká fyzická diagnostika |
 | 2026-05-21 | Fáza 2B príprava: navrhy_07/08 single-flight gate (d1c64ae), 7/30 = 23 % HW |
 | 2026-05-22 | Fáza 2B: post_tx_hold flush + endpoint_busy_o sémantika. Sim 13/13 PASS, HW 14/30 = 46 % |
+| 2026-05-22 | Fáza 2C: watchdog deadlock fix + BAUD_DIV*10 hold + TB 6-slot scan. Sim 16/16 PASS, HW 10/30 = 33 % |

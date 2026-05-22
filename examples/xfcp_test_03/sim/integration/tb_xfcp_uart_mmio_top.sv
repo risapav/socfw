@@ -262,6 +262,41 @@ module tb_xfcp_uart_mmio_top;
     xfcp_drain_write_resp();
     chk32(32'(led_00_o), 32'h0, "T4 led_00_o cleared");
 
+    // ---- T5-T16: Read COMPONENT_ID from all 6 slots (x2 each)  ----
+    // Replicates hw_diag.py sequential slot scan to catch state-machine bugs
+    // not visible in simple 2-slot testing.
+    for (int rep = 0; rep < 2; rep++) begin : g_slot_scan
+      // Slot 0 SYSC = 0x53595343
+      xfcp_read(32'hFF000000);
+      xfcp_recv_read(rdata);
+      chk32(rdata, 32'h5359_5343, $sformatf("T5/T11 SYSC COMPONENT_ID rep%0d", rep));
+
+      // Slot 1 UART = 0x55415254
+      xfcp_read(32'hFF010000);
+      xfcp_recv_read(rdata);
+      chk32(rdata, 32'h5541_5254, $sformatf("T6/T12 UART COMPONENT_ID rep%0d", rep));
+
+      // Slot 2 LED0 = 0x4F55545F ("OUT_")
+      xfcp_read(32'hFF020000);
+      xfcp_recv_read(rdata);
+      chk32(rdata, 32'h4F55_545F, $sformatf("T7/T13 LED0 COMPONENT_ID rep%0d", rep));
+
+      // Slot 3 LED1 = 0x4F55545F
+      xfcp_read(32'hFF030000);
+      xfcp_recv_read(rdata);
+      chk32(rdata, 32'h4F55_545F, $sformatf("T8/T14 LED1 COMPONENT_ID rep%0d", rep));
+
+      // Slot 4 LED2 = 0x4F55545F
+      xfcp_read(32'hFF040000);
+      xfcp_recv_read(rdata);
+      chk32(rdata, 32'h4F55_545F, $sformatf("T9/T15 LED2 COMPONENT_ID rep%0d", rep));
+
+      // Slot 5 SEG7 = 0x53454737
+      xfcp_read(32'hFF050000);
+      xfcp_recv_read(rdata);
+      chk32(rdata, 32'h5345_4737, $sformatf("T10/T16 SEG7 COMPONENT_ID rep%0d", rep));
+    end
+
     $display("");
     $display("%s (%0d failure%s)",
       fails == 0 ? "ALL PASSED" : "FAILURES DETECTED",
