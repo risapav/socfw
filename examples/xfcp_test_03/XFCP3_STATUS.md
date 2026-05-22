@@ -699,6 +699,127 @@ Slot 5 @ 0xFF050000 : axil_seven_seg    (ID "SEG7")
 Slot 6 @ 0xFF060000 : axil_diag_ctrl   (ID "DIAG")
 ```
 
+### HW test výsledky Fázy 3A (ENABLE_POST_TX_FLUSH=0, commit 005cd58)
+
+**Výsledok: 18/30 = 60 %** — najlepší výsledok doteraz.
+
+```
+Slot 0 SYSC:  OK/OK/OK/OK/OK
+Slot 1 UART:  OK/FAIL/FAIL/FAIL/OK
+Slot 2 LED0:  OK/OK/OK/FAIL/FAIL
+Slot 3 LED1:  FAIL/FAIL/OK/FAIL/OK
+Slot 4 LED2:  OK/OK/FAIL/FAIL/OK
+Slot 5 SEG7:  OK/FAIL/OK/OK/OK
+```
+
+DIAG counters (Fáza 3A HW test):
+- `rx_sop=21` (< 30 expected) — 9 requestov stratených pred SOP
+- FRAME ERROR detected (`frame_err=True`) — TX→RX coupling generuje bajty so zlým stop bitom
+- `tx_pkt=571` → odhaleny bug: tx_pkt_pulse_w pocital UART TX byte starty, nie XFCP pakety
+
+---
+
+## Fáza 3B — navrhy_12 implementácia (2026-05-22, commit 4a50f42)
+
+### Implementované zmeny
+
+**RTL — xfcp_uart_mmio_top.sv:**
+- `rx_byte_pulse_w = uart_rx_raw_s.TVALID` (odstraněné `&& TREADY`):
+  RX_BYTE_COUNT teraz počíta VŠETKY bajty produkované UART RX core, nielen FIFO-prijaté.
+  Lepšia diagnostika coupling: ukazuje koľko bajtov FPGA RX skutočne vidí.
+- `tx_pkt_i = dbg_resp_w` (namiesto `tx_pkt_pulse_w`):
+  TX_PKT_COUNT teraz počíta XFCP response pakety (resp_start_pulse), nie UART TX byte starty.
+- Odstranené `wire tx_pkt_pulse_w` (nesprávne semanticky: počítalo UART byte busy rising edges).
+
+**RTL — xfcp/xfcp_fabric_endpoint.sv:**
+- Komentár `endpoint_busy_o` aktualizovaný na správnu sémantiku:
+  "High only while response packet is being transmitted."
+- `$error` → `$warning` pre neplatnú adresu (očakávaný negatívny test, nie fatal).
+
+**RTL — xfcp/xfcp_rx_parser.sv:**
+- `$error` → `$warning` pre PROTOCOL ERROR → S_DROP (očakávaný negatívny test).
+
+**RTL — xfcp/xfcp_axi_engine.sv:**
+- `$error` → `$warning` pre WATCHDOG TIMEOUT (očakávaný negatívny test).
+
+**RTL — axil/axil_diag_ctrl.sv:**
+- Komentár RX_BYTE_COUNT aktualizovaný: "TVALID, before FIFO gate".
+
+### Sim výsledky
+
+Regression: **16/16 ALL PASSED**, Errors: 0 vo VŠETKÝCH logoch (predtým Errors: 1 v tb_xfcp_axi_engine).
+
+### HW test výsledky Fázy 3B (navrhy_12, commit 4a50f42)
+
+**Výsledok: 28/60 = 46 %** — konzistentné s ~50% fyzickým coupling failom.
+
+```
+Slot 0 SYSC:  9/10  (1 fail)
+Slot 1 UART:  3/10  (7 fail)
+Slot 2 LED0:  5/10  (5 fail)
+Slot 3 LED1:  5/10  (5 fail)
+Slot 4 LED2:  2/10  (8 fail)
+Slot 5 SEG7:  4/10  (6 fail)
+```
+
+### DIAG analýza po Fáze 3B
+
+DIAG counters (post-test, Fáza 3B):
+```
+rx_bytes=None  rx_sop=None  rx_hdr=29  rx_drop=0
+fab_req=None   fab_resp=None  tx_bytes=750  tx_pkt=None
+Ocakavane: rx_bytes~480  tx_pkt=60  tx_bytes~1500
+```
+
+**Kľúčové zistenia:**
+
+1. `rx_hdr=29` — parser dekódoval iba 29 z 60 requestov. Zvyšných ~31 bolo stratených
+   PRED parserom (neúplné hlavičky → hdr_decode nikdy nenastalo).
+
+2. `rx_drop=0` — keď bajty dorazili kompletné, parser ich nezahodil. Žiadne chyby v parseri.
+
+3. `tx_bytes=750 ≈ 30 × 25B` — FPGA odoslalo ~30 kompletných odpovedí. Zodpovedá rx_hdr=29.
+
+4. Niektoré DIAG reads (`rx_bytes`, `rx_sop`, `fab_req`, `fab_resp`, `tx_pkt`) sami
+   zlyhali (~50% timeout) — konzistentné s celkovým 46% failom.
+
+**Záver DIAG diagnostiky:**
+Problém je jednoznačne v UART RX fyzickej vrstve — pred parserom. Coupling z FPGA TX
+generuje noise bajty (niektoré so FRAME ERROR) ktoré "ukradnú" miesto legitimných request
+bajtov. Výsledok: parser dostane neúplnú hlavičku a nikdy nedekóduje request.
+
+RTL logika (parser, fabrik, engine, packetizer) funguje správne:
+- **Keď request príde do parsera kompletný → vždy dostane odpoveď** (rx_drop=0, tx_bytes≈30×25).
+- Problém je fyzický (UART RX coupling), nie logický.
+
+---
+
+## Ďalší krok — fyzická diagnostika a protokol robustnosť
+
+### Fyzická diagnostika (PRIORITA 1)
+
+Coupling z FPGA TX zasahuje FPGA RX pri každej odpovedi. Bez fyzickej opravy
+zostávame na ~50% úspešnosti.
+
+```bash
+# Kontrola FTDI echo nastavenia (Linux):
+lsusb -v | grep -A5 "FTDI"
+
+# Scope/multimeter: RXD pin QMTech počas FPGA TX
+# Ak signal stúpa → kapacitívna väzba → RC filter 1kΩ + 10nF
+# Ak flat → FTDI loopback → rekonfigurácia EEPROM / iný adaptér
+```
+
+### SEQ ID (PRIORITA 2, po fyzickej oprave)
+
+Pridanie 8-bit sekvenčného ID do requestu/response umožní tools zahodiť
+oneskorené odpovede zo starých transakcií a jednoznačne potvrdiť úspech:
+
+```
+Request:  SOP_REQ, OP, SEQ, COUNT, ADDR, PAYLOAD
+Response: SOP_RESP, RESP_OP, SEQ, DEV_TYPE, DEV_STR, PAYLOAD, 0x00
+```
+
 ---
 
 ## Historický prehľad
@@ -720,3 +841,6 @@ Slot 6 @ 0xFF060000 : axil_diag_ctrl   (ID "DIAG")
 | 2026-05-22 | Fáza 2B: post_tx_hold flush + endpoint_busy_o sémantika. Sim 13/13 PASS, HW 14/30 = 46 % |
 | 2026-05-22 | Fáza 2C: watchdog deadlock fix + BAUD_DIV*10 hold + TB 6-slot scan. Sim 16/16 PASS, HW 10/30 = 33 % |
 | 2026-05-22 | Fáza 3A: navrhy_11 implementácia — ENABLE_POST_TX_FLUSH=0 (default OFF), RTL DIAG counters (slot 6 @ 0xFF060000), tools SOP resync (read_packet), hw_diag.py DIAG support. Regression 16/16 PASS |
+| 2026-05-22 | Fáza 3A HW test: 18/30 = 60% — najlepší výsledok. FRAME ERROR potvrdený. tx_pkt bug identifikovaný |
+| 2026-05-22 | Fáza 3B: navrhy_12 implementácia — fix rx_byte_pulse_w (TVALID only), tx_pkt_i=dbg_resp_w, $error→$warning. Regression 16/16 PASS (Errors: 0 všade) |
+| 2026-05-22 | Fáza 3B HW test: 28/60 = 46%. DIAG: rx_hdr=29, rx_drop=0, tx_bytes=750. Diagnóza: fyzický UART RX coupling. RTL logika správna |
