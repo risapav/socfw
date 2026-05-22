@@ -2,22 +2,25 @@
 """
 hw_diag.py — HW diagnosticky skript pre xfcp_test_03.
 
-Posiela READ na kazdy slot (0xFF000000-0xFF050000) a vypisuje:
+Posiela READ na kazdy slot (0xFF000000-0xFF060000) a vypisuje:
   - raw TX/RX bajty pre kazdu transakciu
   - kategorizaciu chyby (0B / partial / bad SOP / OK)
   - UART STATUS register po teste (overrun / frame / parity)
+  - DIAG countery z axil_diag_ctrl (slot 6 @ 0xFF060000)
 
-Navrhy_08 krok 3: raw TX/RX log pre diagnostiku 0B timeout.
+Podporuje --baud pre runtime zmenu baud rate bez rebuildovania RTL.
+Podporuje --sweep pre automaticky scan 115200/57600/38400/9600.
 """
 
+import argparse
 import serial
 import struct
 import time
 import sys
 
-PORT    = '/dev/ttyUSB0'
-BAUD    = 115200
-TIMEOUT = 2.0
+PORT         = '/dev/ttyUSB0'
+DEFAULT_BAUD = 115200
+CLOCK_HZ     = 50_000_000
 
 SOP_REQ  = 0xFE
 SOP_RESP = 0xFD
@@ -36,21 +39,37 @@ SLOTS = [
 EXPECTED_READ  = 25   # SOP(1)+TYPE(1)+DEV_TYPE(2)+DEV_STR(16)+DATA(4)+TERM(1)
 EXPECTED_WRITE = 21   # SOP(1)+TYPE(1)+DEV_TYPE(2)+DEV_STR(16)+TERM(1)
 
-UART_BASE    = 0xFF010000
-UART_ERR_CLR = UART_BASE + 0x0C
-UART_STATUS  = UART_BASE + 0x10
+UART_BASE     = 0xFF010000
+UART_BAUD_DIV = UART_BASE + 0x04
+UART_ERR_CLR  = UART_BASE + 0x0C
+UART_STATUS   = UART_BASE + 0x10
 
-DIAG_BASE       = 0xFF060000
-DIAG_COMP_ID    = DIAG_BASE + 0x00  # "DIAG" = 0x44494147
-DIAG_RX_BYTES   = DIAG_BASE + 0x04
-DIAG_RX_SOP     = DIAG_BASE + 0x08
-DIAG_RX_HDR     = DIAG_BASE + 0x0C
-DIAG_RX_DROP    = DIAG_BASE + 0x10
-DIAG_FAB_REQ    = DIAG_BASE + 0x14
-DIAG_FAB_RESP   = DIAG_BASE + 0x18
-DIAG_TX_BYTES   = DIAG_BASE + 0x1C
-DIAG_TX_PKT     = DIAG_BASE + 0x20
-DIAG_RESET      = DIAG_BASE + 0x24
+DIAG_BASE     = 0xFF060000
+DIAG_COMP_ID  = DIAG_BASE + 0x00
+DIAG_RX_BYTES = DIAG_BASE + 0x04
+DIAG_RX_SOP   = DIAG_BASE + 0x08
+DIAG_RX_HDR   = DIAG_BASE + 0x0C
+DIAG_RX_DROP  = DIAG_BASE + 0x10
+DIAG_FAB_REQ  = DIAG_BASE + 0x14
+DIAG_FAB_RESP = DIAG_BASE + 0x18
+DIAG_TX_BYTES = DIAG_BASE + 0x1C
+DIAG_TX_PKT   = DIAG_BASE + 0x20
+DIAG_RESET    = DIAG_BASE + 0x24
+
+# Timeouty pre jednotlive baud raty (sekundy)
+BAUD_TIMEOUTS = {
+    115200: 2.0,
+    57600:  2.0,
+    38400:  2.5,
+    19200:  3.0,
+    9600:   5.0,
+}
+
+SWEEP_BAUDS = [115200, 57600, 38400, 9600]
+
+
+def baud_to_div(baud):
+    return round(CLOCK_HZ / baud)
 
 
 def make_read_pkt(addr):
@@ -62,7 +81,6 @@ def make_write_pkt(addr, val):
 
 
 def classify_rx(raw, expected_len):
-    """Return short diagnostic string describing what came back."""
     n = len(raw)
     if n == 0:
         return "0B — FPGA neodpovedal (request strateny alebo TX stuck)"
@@ -76,7 +94,6 @@ def classify_rx(raw, expected_len):
 
 
 def decode_data(raw):
-    """Extract and format register data from a full READ response."""
     if len(raw) != EXPECTED_READ:
         return None
     data = struct.unpack(">I", raw[20:24])[0]
@@ -136,43 +153,76 @@ def transact(ser, pkt, expected_len, pre_delay=0.2, timeout=2.0):
     return raw
 
 
-def uart_clear_errors(ser):
+def set_baud(ser, new_baud):
+    """
+    Switch both FPGA and PC UART to new_baud without rebuilding RTL.
+
+    Sequence:
+      1. Write new baud_div to FPGA register (at current PC baud).
+      2. Flush TX buffer — all bytes leave at current baud.
+      3. Switch PC serial to new_baud.
+      4. Sleep to let FPGA finish sending its WRITE response at new_baud.
+      5. Clear RX buffer (discard the WRITE response).
+      6. Verify by reading DIAG_COMP_ID — expect 0x44494147.
+    """
+    div = baud_to_div(new_baud)
+    pkt = make_write_pkt(UART_BAUD_DIV, div)
+    ser.reset_input_buffer()
+    ser.write(pkt)
+    ser.flush()                  # ensure all bytes transmitted at old baud
+    ser.baudrate = new_baud      # PC switches to new baud
+    # FPGA sends 21B WRITE response at new baud; at 9600 that takes ~22ms.
+    # Sleep 150ms so response fully arrives and we can discard it cleanly.
+    time.sleep(0.15)
+    ser.reset_input_buffer()     # discard FPGA WRITE response
+
+    # Verification READ at new baud
+    vfy_timeout = max(BAUD_TIMEOUTS.get(new_baud, 5.0), 3.0)
+    vfy = make_read_pkt(DIAG_COMP_ID)
+    ser.write(vfy)
+    raw = recv_with_sop_resync(ser, EXPECTED_READ, time.time() + vfy_timeout)
+    if len(raw) == EXPECTED_READ:
+        val = struct.unpack(">I", raw[20:24])[0]
+        return val == 0x44494147  # "DIAG"
+    return False
+
+
+def uart_clear_errors(ser, timeout=2.0):
     pkt = make_write_pkt(UART_ERR_CLR, 0x00000001)
     ser.reset_input_buffer()
     ser.write(pkt)
-    raw = recv_with_sop_resync(ser, EXPECTED_WRITE, time.time() + TIMEOUT)
+    raw = recv_with_sop_resync(ser, EXPECTED_WRITE, time.time() + timeout)
     return len(raw) == EXPECTED_WRITE
 
 
-def uart_read_status(ser):
+def uart_read_status(ser, timeout=2.0):
     pkt = make_read_pkt(UART_STATUS)
     ser.reset_input_buffer()
     ser.write(pkt)
-    raw = recv_with_sop_resync(ser, EXPECTED_READ, time.time() + TIMEOUT)
+    raw = recv_with_sop_resync(ser, EXPECTED_READ, time.time() + timeout)
     if len(raw) == EXPECTED_READ:
         return struct.unpack(">I", raw[20:24])[0]
     return None
 
 
-def diag_reset(ser):
-    """Reset all diagnostic counters."""
+def diag_reset(ser, timeout=2.0):
     pkt = make_write_pkt(DIAG_RESET, 0x00000001)
     ser.reset_input_buffer()
     ser.write(pkt)
-    recv_with_sop_resync(ser, EXPECTED_WRITE, time.time() + TIMEOUT)
+    recv_with_sop_resync(ser, EXPECTED_WRITE, time.time() + timeout)
 
 
-def diag_read_all(ser):
-    """Read all 9 diagnostic counter registers. Returns dict or None on failure."""
+def diag_read_all(ser, timeout=2.0):
+    """Read all 8 diagnostic counter registers. Returns dict (None per failed read)."""
     addrs = [
-        ("rx_bytes",   DIAG_RX_BYTES),
-        ("rx_sop",     DIAG_RX_SOP),
-        ("rx_hdr",     DIAG_RX_HDR),
-        ("rx_drop",    DIAG_RX_DROP),
-        ("fab_req",    DIAG_FAB_REQ),
-        ("fab_resp",   DIAG_FAB_RESP),
-        ("tx_bytes",   DIAG_TX_BYTES),
-        ("tx_pkt",     DIAG_TX_PKT),
+        ("rx_bytes",  DIAG_RX_BYTES),
+        ("rx_sop",    DIAG_RX_SOP),
+        ("rx_hdr",    DIAG_RX_HDR),
+        ("rx_drop",   DIAG_RX_DROP),
+        ("fab_req",   DIAG_FAB_REQ),
+        ("fab_resp",  DIAG_FAB_RESP),
+        ("tx_bytes",  DIAG_TX_BYTES),
+        ("tx_pkt",    DIAG_TX_PKT),
     ]
     result = {}
     for name, addr in addrs:
@@ -180,7 +230,7 @@ def diag_read_all(ser):
         pkt = make_read_pkt(addr)
         ser.reset_input_buffer()
         ser.write(pkt)
-        raw = recv_with_sop_resync(ser, EXPECTED_READ, time.time() + TIMEOUT)
+        raw = recv_with_sop_resync(ser, EXPECTED_READ, time.time() + timeout)
         if len(raw) == EXPECTED_READ:
             result[name] = struct.unpack(">I", raw[20:24])[0]
         else:
@@ -188,48 +238,45 @@ def diag_read_all(ser):
     return result
 
 
-def print_diag(label, counters):
+def print_diag(label, counters, total_tx=None):
     print(f"\n[DIAG] {label}:")
     print(f"  rx_bytes={counters.get('rx_bytes')}  rx_sop={counters.get('rx_sop')}"
           f"  rx_hdr={counters.get('rx_hdr')}  rx_drop={counters.get('rx_drop')}")
     print(f"  fab_req={counters.get('fab_req')}  fab_resp={counters.get('fab_resp')}"
           f"  tx_bytes={counters.get('tx_bytes')}  tx_pkt={counters.get('tx_pkt')}")
+    if total_tx:
+        exp_rx  = total_tx * 8
+        exp_pkt = total_tx
+        exp_tx  = total_tx * 25
+        print(f"  Ocakavane: rx_bytes~{exp_rx}  tx_pkt={exp_pkt}  tx_bytes~{exp_tx}")
+        rx_b = counters.get('rx_bytes')
+        tx_p = counters.get('tx_pkt')
+        tx_b = counters.get('tx_bytes')
+        rx_h = counters.get('rx_hdr')
+        rx_d = counters.get('rx_drop')
+        if rx_b is not None and rx_b < exp_rx:
+            print(f"  *** rx_bytes={rx_b} < {exp_rx}: FPGA nedostal vsetky request bajty!")
+        if rx_h is not None and rx_h < total_tx:
+            pct_lost = 100 * (total_tx - rx_h) // total_tx
+            print(f"  *** rx_hdr={rx_h} < {total_tx}: {pct_lost}% requestov stratilo sa pred parserom!")
+        if tx_p is not None and tx_p < exp_pkt:
+            print(f"  *** tx_pkt={tx_p} < {exp_pkt}: FPGA neodoslalo vsetky odpovede!")
+        if tx_b is not None and tx_b < exp_tx:
+            print(f"  *** tx_bytes={tx_b} < {exp_tx}: Neuplne odpovede (partial TX)!")
+        if rx_d:
+            print(f"  *** rx_drop={rx_d}: Parser zahadzoval pakety!")
 
 
-def main():
-    port = sys.argv[1] if len(sys.argv) > 1 else PORT
-    repeat = int(sys.argv[2]) if len(sys.argv) > 2 else 2
-
-    print(f"Port: {port} @ {BAUD} baud  timeout={TIMEOUT}s  opakovat={repeat}x")
-    print("=" * 65)
-
-    try:
-        ser = serial.Serial(port, BAUD, timeout=TIMEOUT)
-    except Exception as e:
-        print(f"CHYBA: {e}")
-        sys.exit(1)
-
-    time.sleep(0.3)
-
-    print("\n[PRE] Cistim UART sticky errors...")
-    ok = uart_clear_errors(ser)
-    print(f"  ERR_CLR write: {'OK' if ok else 'TIMEOUT'}")
-
-    print("[PRE] Resetujem DIAG countery...")
-    diag_reset(ser)
-    time.sleep(0.1)
-
-    pass_count = 0
-    fail_count = 0
-    zero_bytes = 0
-    partial    = 0
+def run_test(ser, repeat, timeout):
+    """Run full slot scan, return (pass_count, fail_count, zero_bytes, partial)."""
+    pass_count = fail_count = zero_bytes = partial = 0
 
     for slot, addr, name in SLOTS:
         for i in range(repeat):
             tag = f"Slot {slot} ({name}) @ 0x{addr:08X}  [#{i+1}]"
             print(f"\n{tag}")
             pkt = make_read_pkt(addr)
-            raw = transact(ser, pkt, EXPECTED_READ)
+            raw = transact(ser, pkt, EXPECTED_READ, timeout=timeout)
 
             n = len(raw)
             if n == EXPECTED_READ and raw[0] == SOP_RESP:
@@ -241,63 +288,169 @@ def main():
                 elif n < EXPECTED_READ:
                     partial += 1
 
-    print("\n" + "=" * 65)
-    print("[POST] UART STATUS register (0xFF010010):")
-    status = uart_read_status(ser)
-    if status is None:
-        print("  TIMEOUT — FPGA neodpovedal ani na STATUS read")
-    else:
-        tx_busy = bool(status & 0x01)
-        rx_busy = bool(status & 0x02)
-        overrun = bool(status & 0x04)
-        frame   = bool(status & 0x08)
-        parity  = bool(status & 0x10)
-        print(f"  RAW=0x{status:08X}  tx_busy={tx_busy}  rx_busy={rx_busy}")
-        print(f"  overrun={overrun}  frame={frame}  parity={parity}")
-        if overrun:
-            print("  *** OVERRUN: RX prijimal bajty rychlejsie ako parser cital")
-        if frame:
-            print("  *** FRAME ERROR: nespravny stop bit — TX→RX coupling alebo baud")
-        if not (overrun or frame or parity):
-            print("  OK — ziadne chyby")
+    return pass_count, fail_count, zero_bytes, partial
 
-    print("\n[POST] DIAG counters (slot 6 @ 0xFF060000):")
-    diag = diag_read_all(ser)
-    print_diag("Po teste", diag)
-    total_tx = pass_count + fail_count
-    if total_tx > 0:
-        expected_rx_bytes = total_tx * 8   # 8B request per READ
-        expected_tx_pkts  = total_tx
-        expected_tx_bytes = total_tx * 25  # 25B response per READ
-        print(f"  Ocakavane: rx_bytes~{expected_rx_bytes}  tx_pkt={expected_tx_pkts}"
-              f"  tx_bytes~{expected_tx_bytes}")
-        rx_b = diag.get('rx_bytes')
-        tx_p = diag.get('tx_pkt')
-        tx_b = diag.get('tx_bytes')
-        if rx_b is not None and rx_b < expected_rx_bytes:
-            print(f"  *** rx_bytes={rx_b} < {expected_rx_bytes}: FPGA nedostal vsetky requesty!")
-        if tx_p is not None and tx_p < expected_tx_pkts:
-            print(f"  *** tx_pkt={tx_p} < {expected_tx_pkts}: FPGA neodoslal vsetky odpovede!")
-        if tx_b is not None and tx_b < expected_tx_bytes:
-            print(f"  *** tx_bytes={tx_b} < {expected_tx_bytes}: Neuplne odpovede (partial TX)!")
-        rx_drop = diag.get('rx_drop')
-        if rx_drop:
-            print(f"  *** rx_drop={rx_drop}: Parser zahadzoval pakety!")
 
-    ser.close()
-
+def print_result(pass_count, fail_count, zero_bytes, partial):
     total = pass_count + fail_count
     print("\n" + "=" * 65)
     print(f"Vysledok: {pass_count}/{total} OK  ({fail_count} failed)")
     if fail_count > 0:
-        print(f"  z toho: 0B={zero_bytes}  partial={partial}  bad_resp={fail_count - zero_bytes - partial}")
+        print(f"  z toho: 0B={zero_bytes}  partial={partial}"
+              f"  bad_resp={fail_count - zero_bytes - partial}")
     if fail_count == 0:
         print("KOMPLETNY USPECH")
     elif pass_count == 0:
         print("KOMPLETNY VYPADOK — FPGA neodpoveda")
     else:
         pct = pass_count * 100 // total
-        print(f"CIASTOCNY USPECH {pct}% — viz diagnostika vyssie")
+        print(f"CIASTOCNY USPECH {pct}%")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='XFCP HW diagnosticky skript pre xfcp_test_03',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Priklady:
+  hw_diag.py /dev/ttyUSB0 10
+  hw_diag.py /dev/ttyUSB0 10 --baud 57600
+  hw_diag.py /dev/ttyUSB0 5 --sweep"""
+    )
+    parser.add_argument('port',   nargs='?', default=PORT,
+                        help='Serial port (default /dev/ttyUSB0)')
+    parser.add_argument('repeat', nargs='?', type=int, default=2,
+                        help='Pocet opakovani na slot (default 2)')
+    parser.add_argument('--baud', type=int, default=DEFAULT_BAUD,
+                        choices=sorted(BAUD_TIMEOUTS.keys()),
+                        help='UART baud rate (default 115200)')
+    parser.add_argument('--sweep', action='store_true',
+                        help=f'Sweep baud rates: {SWEEP_BAUDS}')
+    args = parser.parse_args()
+
+    target_baud = args.baud
+    timeout = BAUD_TIMEOUTS.get(target_baud, 2.0)
+
+    print(f"Port: {args.port} @ {DEFAULT_BAUD} baud (startup)  opakovat={args.repeat}x")
+    print("=" * 65)
+
+    try:
+        ser = serial.Serial(args.port, DEFAULT_BAUD, timeout=max(timeout, 2.0))
+    except Exception as e:
+        print(f"CHYBA: {e}")
+        sys.exit(1)
+
+    time.sleep(0.3)
+
+    # If sweep mode, test all baud rates; otherwise single baud
+    if args.sweep:
+        sweep_results = {}
+
+        for baud in SWEEP_BAUDS:
+            baud_timeout = BAUD_TIMEOUTS.get(baud, 2.0)
+
+            # Switch to target baud (skip if already at default for first iteration)
+            if baud != DEFAULT_BAUD or (baud == DEFAULT_BAUD and baud != ser.baudrate):
+                if ser.baudrate != baud:
+                    print(f"\n{'='*65}")
+                    print(f"Prepínam na {baud} baud...")
+                    ok = set_baud(ser, baud)
+                    ser.timeout = max(baud_timeout, 2.0)
+                    if ok:
+                        print(f"  OK — FPGA a PC su na {baud} baud")
+                    else:
+                        print(f"  VAROVANIE: baud switch na {baud} — overenie zlyhalo, pokracujem")
+
+            print(f"\n{'='*65}")
+            print(f"=== BAUD {baud} ===")
+            print(f"{'='*65}")
+
+            print("\n[PRE] Cistim UART sticky errors...")
+            ok = uart_clear_errors(ser, baud_timeout)
+            print(f"  ERR_CLR write: {'OK' if ok else 'TIMEOUT'}")
+            print("[PRE] Resetujem DIAG countery...")
+            diag_reset(ser, baud_timeout)
+            time.sleep(0.1)
+
+            p, f, z, part = run_test(ser, args.repeat, baud_timeout)
+
+            print("\n" + "=" * 65)
+            status = uart_read_status(ser, baud_timeout)
+            if status is None:
+                print(f"[POST] UART STATUS: TIMEOUT")
+            else:
+                frame   = bool(status & 0x08)
+                overrun = bool(status & 0x04)
+                parity  = bool(status & 0x10)
+                print(f"[POST] UART STATUS: overrun={overrun}  frame={frame}  parity={parity}")
+
+            diag = diag_read_all(ser, baud_timeout)
+            print_diag(f"Po teste @ {baud}", diag, total_tx=(p + f))
+
+            print_result(p, f, z, part)
+            sweep_results[baud] = (p, f)
+
+        # Summary table
+        print(f"\n{'='*65}")
+        print("SWEEP ZHRNUTIE:")
+        print(f"  {'Baud':>8}  {'OK':>5}  {'Total':>5}  {'%':>5}")
+        print(f"  {'-'*8}  {'-'*5}  {'-'*5}  {'-'*5}")
+        for baud in SWEEP_BAUDS:
+            if baud in sweep_results:
+                p, f = sweep_results[baud]
+                total = p + f
+                pct = p * 100 // total if total else 0
+                print(f"  {baud:>8}  {p:>5}  {total:>5}  {pct:>4}%")
+
+    else:
+        # Single baud mode
+        if target_baud != DEFAULT_BAUD:
+            print(f"\nPrepínam na {target_baud} baud...")
+            ok = set_baud(ser, target_baud)
+            ser.timeout = max(timeout, 2.0)
+            if ok:
+                print(f"  OK — FPGA a PC su na {target_baud} baud")
+            else:
+                print(f"  VAROVANIE: baud switch — overenie zlyhalo, pokracujem")
+
+        print(f"\nBaud: {target_baud}  timeout={timeout}s  opakovat={args.repeat}x")
+
+        print("\n[PRE] Cistim UART sticky errors...")
+        ok = uart_clear_errors(ser, timeout)
+        print(f"  ERR_CLR write: {'OK' if ok else 'TIMEOUT'}")
+
+        print("[PRE] Resetujem DIAG countery...")
+        diag_reset(ser, timeout)
+        time.sleep(0.1)
+
+        pass_count, fail_count, zero_bytes, partial = run_test(ser, args.repeat, timeout)
+
+        print("\n" + "=" * 65)
+        print("[POST] UART STATUS register (0xFF010010):")
+        status = uart_read_status(ser, timeout)
+        if status is None:
+            print("  TIMEOUT — FPGA neodpovedal ani na STATUS read")
+        else:
+            tx_busy = bool(status & 0x01)
+            rx_busy = bool(status & 0x02)
+            overrun = bool(status & 0x04)
+            frame   = bool(status & 0x08)
+            parity  = bool(status & 0x10)
+            print(f"  RAW=0x{status:08X}  tx_busy={tx_busy}  rx_busy={rx_busy}")
+            print(f"  overrun={overrun}  frame={frame}  parity={parity}")
+            if overrun:
+                print("  *** OVERRUN: RX prijimal bajty rychlejsie ako parser cital")
+            if frame:
+                print("  *** FRAME ERROR: nespravny stop bit — TX→RX coupling alebo baud mismatch")
+            if not (overrun or frame or parity):
+                print("  OK — ziadne chyby")
+
+        print("\n[POST] DIAG counters (slot 6 @ 0xFF060000):")
+        diag = diag_read_all(ser, timeout)
+        print_diag("Po teste", diag, total_tx=(pass_count + fail_count))
+
+        print_result(pass_count, fail_count, zero_bytes, partial)
+
+    ser.close()
 
 
 if __name__ == "__main__":
