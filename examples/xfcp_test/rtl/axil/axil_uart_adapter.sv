@@ -13,6 +13,7 @@
  *     0x18  RO    RX_FIFO_CNT  -- rx_fifo_cnt_i pass-through
  *     0x1C  PULSE BAUD_COMMIT  -- any write triggers delayed apply of BAUD_PENDING
  *     0x20  RO    BAUD_ACTIVE  -- readback of currently active baud prescaler
+ *     0x24  RO    BAUD_STATUS  -- [0]=switch_pending, [1]=tx_busy, [2]=rx_busy
  *
  *   Safe runtime baud switch:
  *     1. Write new divisor to BAUD_PENDING (0x04) at current baud -- ACK at current baud.
@@ -52,17 +53,18 @@ module axil_uart_adapter #(
 
   import axi_pkg::*;
 
-  localparam int NUM_REGS        = 9;
+  localparam int NUM_REGS        = 10;
   localparam int BAUD_SWITCH_BYTES = 32; // > 21B WRITE response; ensures ACK out before switch
 
-  // reg0=RO, reg1=RW, reg2=RW, reg3=PULSE, reg4=RO, reg5=RO, reg6=RO, reg7=PULSE, reg8=RO
+  // reg0=RO, reg1=RW, reg2=RW, reg3=PULSE, reg4=RO, reg5=RO, reg6=RO,
+  // reg7=PULSE, reg8=RO, reg9=RO
   localparam [NUM_REGS*2-1:0] REG_TYPES =
-    {2'(AXIL_RO), 2'(AXIL_PULSE), 2'(AXIL_RO), 2'(AXIL_RO), 2'(AXIL_RO),
+    {2'(AXIL_RO), 2'(AXIL_RO), 2'(AXIL_PULSE), 2'(AXIL_RO), 2'(AXIL_RO), 2'(AXIL_RO),
      2'(AXIL_PULSE), 2'(AXIL_RW), 2'(AXIL_RW), 2'(AXIL_RO)};
 
   localparam logic [31:0]           BAUD_RESET = 32'(BAUD_DIV_DEFAULT);
   localparam [NUM_REGS*32-1:0] RESET_VALS =
-    {32'h0, 32'h0, 32'h0, 32'h0, 32'h0, 32'h0, 32'h0, BAUD_RESET, 32'h0};
+    {32'h0, 32'h0, 32'h0, 32'h0, 32'h0, 32'h0, 32'h0, 32'h0, BAUD_RESET, 32'h0};
 
   // --------------------------------------------------------------------------
   // Sticky error bits: set by pulses, cleared by ERR_CLR write
@@ -96,6 +98,7 @@ module axil_uart_adapter #(
   assign hw_rdata_w[223:192] = {24'h0, rx_fifo_cnt_i};
   assign hw_rdata_w[255:224] = 32'h0;          // BAUD_COMMIT: PULSE, ignored
   assign hw_rdata_w[287:256] = baud_active_q;  // BAUD_ACTIVE: RO readback
+  assign hw_rdata_w[319:288] = {29'h0, rx_busy_i, tx_busy_i, baud_switch_pending_q};
 
   axil_regfile #(
     .NUM_REGS  (NUM_REGS),
@@ -165,7 +168,7 @@ module axil_uart_adapter #(
       end else if (baud_switch_pending_q) begin
         if (baud_switch_cnt_q != 32'h0) begin
           baud_switch_cnt_q <= baud_switch_cnt_q - 32'd1;
-        end else begin
+        end else if (!tx_busy_i && !rx_busy_i) begin
           baud_active_q         <= baud_pending_q;
           baud_switch_pending_q <= 1'b0;
         end

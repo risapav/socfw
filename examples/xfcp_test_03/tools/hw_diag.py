@@ -46,17 +46,24 @@ UART_STATUS      = UART_BASE + 0x10
 UART_BAUD_COMMIT = UART_BASE + 0x1C   # triggers delayed baud switch
 UART_BAUD_ACTIVE = UART_BASE + 0x20   # RO readback of active prescaler
 
-DIAG_BASE     = 0xFF060000
-DIAG_COMP_ID  = DIAG_BASE + 0x00
-DIAG_RX_BYTES = DIAG_BASE + 0x04
-DIAG_RX_SOP   = DIAG_BASE + 0x08
-DIAG_RX_HDR   = DIAG_BASE + 0x0C
-DIAG_RX_DROP  = DIAG_BASE + 0x10
-DIAG_FAB_REQ  = DIAG_BASE + 0x14
-DIAG_FAB_RESP = DIAG_BASE + 0x18
-DIAG_TX_BYTES = DIAG_BASE + 0x1C
-DIAG_TX_PKT   = DIAG_BASE + 0x20
-DIAG_RESET    = DIAG_BASE + 0x24
+DIAG_BASE        = 0xFF060000
+DIAG_COMP_ID     = DIAG_BASE + 0x00
+DIAG_RX_SEEN     = DIAG_BASE + 0x04
+DIAG_RX_ACCEPT   = DIAG_BASE + 0x08
+DIAG_RX_LOST     = DIAG_BASE + 0x0C
+DIAG_RX_FRAME    = DIAG_BASE + 0x10
+DIAG_RX_OVERRUN  = DIAG_BASE + 0x14
+DIAG_RX_SOP      = DIAG_BASE + 0x18
+DIAG_RX_HDR      = DIAG_BASE + 0x1C
+DIAG_RX_BAD_HDR  = DIAG_BASE + 0x20
+DIAG_RX_RECOVERY = DIAG_BASE + 0x24
+DIAG_RX_DROP     = DIAG_BASE + 0x28
+DIAG_FAB_REQ     = DIAG_BASE + 0x2C
+DIAG_FAB_RESP    = DIAG_BASE + 0x30
+DIAG_TX_BYTES    = DIAG_BASE + 0x34
+DIAG_TX_PKT      = DIAG_BASE + 0x38
+DIAG_RESET       = DIAG_BASE + 0x3C
+DIAG_SNAPSHOT    = DIAG_BASE + 0x40
 
 # Timeouty pre jednotlive baud raty (sekundy)
 BAUD_TIMEOUTS = {
@@ -157,51 +164,67 @@ def transact(ser, pkt, expected_len, pre_delay=0.2, timeout=2.0):
 
 def set_baud(ser, new_baud):
     """
-    Switch both FPGA and PC UART to new_baud using pending/commit protocol.
+    Switch both FPGA and PC UART to new_baud using safe pending/commit protocol.
 
-    Sequence:
-      1. Write BAUD_PENDING (0x04) at current baud — ACK received at current baud.
-      2. Write BAUD_COMMIT (0x1C) at current baud — ACK received at current baud.
-      3. FPGA starts countdown; switches baud after >= baud_active*10*32 cycles.
-      4. Sleep 150ms (>= max countdown ~35ms at 9600), then switch PC baud.
-      5. Verify by reading DIAG_COMP_ID at new baud — expect 0x44494147.
+    BAUD_PENDING is retried up to 5 times. BAUD_COMMIT timeout does not abort --
+    commit may have happened even if ACK was lost. Both new and old baud are
+    verified after the switch window.
+    Returns True on success, False if FPGA is confirmed on old baud, raises on unknown state.
     """
     div = baud_to_div(new_baud)
-    old_timeout = ser.timeout
+    old_baud = ser.baudrate
 
-    # Step 1: write BAUD_PENDING, receive ACK at current (old) baud
-    pkt_pending = make_write_pkt(UART_BAUD_DIV, div)
-    ser.reset_input_buffer()
-    ser.write(pkt_pending)
-    ser.flush()
-    raw = recv_with_sop_resync(ser, EXPECTED_WRITE, time.time() + 2.0)
-    if len(raw) != EXPECTED_WRITE:
+    # 1. Write BAUD_PENDING with retries (coupling may drop some WRITEs)
+    pending_ok = False
+    for attempt in range(5):
+        pkt = make_write_pkt(UART_BAUD_DIV, div)
+        ser.reset_input_buffer()
+        ser.write(pkt)
+        raw = recv_with_sop_resync(ser, EXPECTED_WRITE, time.time() + 2.0)
+        if len(raw) == EXPECTED_WRITE:
+            pending_ok = True
+            break
+        time.sleep(0.05)
+
+    if not pending_ok:
         return False
 
-    # Step 2: write BAUD_COMMIT, receive ACK at current (old) baud
+    # 2. Write BAUD_COMMIT. ACK is useful but commit may have happened even on timeout.
     pkt_commit = make_write_pkt(UART_BAUD_COMMIT, 1)
     ser.reset_input_buffer()
     ser.write(pkt_commit)
-    ser.flush()
-    raw = recv_with_sop_resync(ser, EXPECTED_WRITE, time.time() + 2.0)
-    if len(raw) != EXPECTED_WRITE:
-        return False
+    recv_with_sop_resync(ser, EXPECTED_WRITE, time.time() + 2.0)
+    # Intentionally ignore result -- FPGA may have committed even without ACK
 
-    # Step 3: wait for FPGA countdown to finish, then switch PC baud
-    time.sleep(0.15)
+    # 3. Wait for FPGA countdown to finish
+    time.sleep(0.20)
+
+    # 4. Try new baud
     ser.baudrate = new_baud
     time.sleep(0.05)
     ser.reset_input_buffer()
-    ser.timeout = max(BAUD_TIMEOUTS.get(new_baud, 5.0), 3.0)
-
-    # Verification READ at new baud
     vfy = make_read_pkt(DIAG_COMP_ID)
     ser.write(vfy)
-    raw = recv_with_sop_resync(ser, EXPECTED_READ, time.time() + ser.timeout)
+    raw = recv_with_sop_resync(ser, EXPECTED_READ, time.time() + 3.0)
     if len(raw) == EXPECTED_READ:
         val = struct.unpack(">I", raw[20:24])[0]
-        return val == 0x44494147  # "DIAG"
-    return False
+        if val == 0x44494147:
+            return True
+
+    # 5. Fallback: commit may not have happened
+    ser.baudrate = old_baud
+    time.sleep(0.05)
+    ser.reset_input_buffer()
+    vfy = make_read_pkt(DIAG_COMP_ID)
+    ser.write(vfy)
+    raw = recv_with_sop_resync(ser, EXPECTED_READ, time.time() + 3.0)
+    if len(raw) == EXPECTED_READ:
+        val = struct.unpack(">I", raw[20:24])[0]
+        if val == 0x44494147:
+            return False
+
+    # 6. Unknown state
+    raise RuntimeError(f"Cannot determine UART baud after switch {old_baud}->{new_baud}")
 
 
 def uart_clear_errors(ser, timeout=2.0):
@@ -229,17 +252,33 @@ def diag_reset(ser, timeout=2.0):
     recv_with_sop_resync(ser, EXPECTED_WRITE, time.time() + timeout)
 
 
+def diag_snapshot(ser, timeout=2.0):
+    pkt = make_write_pkt(DIAG_SNAPSHOT, 0x00000001)
+    ser.reset_input_buffer()
+    ser.write(pkt)
+    recv_with_sop_resync(ser, EXPECTED_WRITE, time.time() + timeout)
+
+
 def diag_read_all(ser, timeout=2.0):
-    """Read all 8 diagnostic counter registers. Returns dict (None per failed read)."""
+    """Snapshot live counters then read all 14 diagnostic shadow registers.
+    Note: DIAG_SNAPSHOT write is itself 1 extra XFCP transaction included in snapshot.
+    Returns dict with None per failed read."""
+    diag_snapshot(ser, timeout)
     addrs = [
-        ("rx_bytes",  DIAG_RX_BYTES),
-        ("rx_sop",    DIAG_RX_SOP),
-        ("rx_hdr",    DIAG_RX_HDR),
-        ("rx_drop",   DIAG_RX_DROP),
-        ("fab_req",   DIAG_FAB_REQ),
-        ("fab_resp",  DIAG_FAB_RESP),
-        ("tx_bytes",  DIAG_TX_BYTES),
-        ("tx_pkt",    DIAG_TX_PKT),
+        ("rx_seen",     DIAG_RX_SEEN),
+        ("rx_accept",   DIAG_RX_ACCEPT),
+        ("rx_lost",     DIAG_RX_LOST),
+        ("rx_frame",    DIAG_RX_FRAME),
+        ("rx_overrun",  DIAG_RX_OVERRUN),
+        ("rx_sop",      DIAG_RX_SOP),
+        ("rx_hdr",      DIAG_RX_HDR),
+        ("rx_bad_hdr",  DIAG_RX_BAD_HDR),
+        ("rx_recovery", DIAG_RX_RECOVERY),
+        ("rx_drop",     DIAG_RX_DROP),
+        ("fab_req",     DIAG_FAB_REQ),
+        ("fab_resp",    DIAG_FAB_RESP),
+        ("tx_bytes",    DIAG_TX_BYTES),
+        ("tx_pkt",      DIAG_TX_PKT),
     ]
     result = {}
     for name, addr in addrs:
@@ -257,31 +296,48 @@ def diag_read_all(ser, timeout=2.0):
 
 def print_diag(label, counters, total_tx=None):
     print(f"\n[DIAG] {label}:")
-    print(f"  rx_bytes={counters.get('rx_bytes')}  rx_sop={counters.get('rx_sop')}"
-          f"  rx_hdr={counters.get('rx_hdr')}  rx_drop={counters.get('rx_drop')}")
-    print(f"  fab_req={counters.get('fab_req')}  fab_resp={counters.get('fab_resp')}"
-          f"  tx_bytes={counters.get('tx_bytes')}  tx_pkt={counters.get('tx_pkt')}")
-    if total_tx:
-        exp_rx  = total_tx * 8
-        exp_pkt = total_tx
-        exp_tx  = total_tx * 25
-        print(f"  Ocakavane: rx_bytes~{exp_rx}  tx_pkt={exp_pkt}  tx_bytes~{exp_tx}")
-        rx_b = counters.get('rx_bytes')
+    print(f"  rx_seen={counters.get('rx_seen')}  "
+          f"rx_accept={counters.get('rx_accept')}  "
+          f"rx_lost={counters.get('rx_lost')}")
+    print(f"  rx_frame={counters.get('rx_frame')}  "
+          f"rx_overrun={counters.get('rx_overrun')}  "
+          f"rx_sop={counters.get('rx_sop')}  "
+          f"rx_hdr={counters.get('rx_hdr')}")
+    print(f"  rx_bad_hdr={counters.get('rx_bad_hdr')}  "
+          f"rx_recovery={counters.get('rx_recovery')}  "
+          f"rx_drop={counters.get('rx_drop')}")
+    print(f"  fab_req={counters.get('fab_req')}  "
+          f"fab_resp={counters.get('fab_resp')}  "
+          f"tx_bytes={counters.get('tx_bytes')}  "
+          f"tx_pkt={counters.get('tx_pkt')}")
+    if total_tx is not None:
+        exp_rx_seen = total_tx * 8   # 8B per READ request
+        exp_pkt     = total_tx
+        exp_tx      = total_tx * 25  # 25B per READ response
+        print(f"  Ocakavane (READ): rx_seen~{exp_rx_seen}  "
+              f"rx_hdr~{total_tx}  tx_pkt={exp_pkt}  tx_bytes~{exp_tx}")
+        print(f"  (Pozn: DIAG_SNAPSHOT pridat 1 extra transakciu do snapshotu)")
+        rx_s = counters.get('rx_seen')
+        rx_h = counters.get('rx_hdr')
+        rx_l = counters.get('rx_lost')
+        rx_f = counters.get('rx_frame')
+        rx_r = counters.get('rx_recovery')
+        rx_b = counters.get('rx_bad_hdr')
         tx_p = counters.get('tx_pkt')
         tx_b = counters.get('tx_bytes')
-        rx_h = counters.get('rx_hdr')
-        rx_d = counters.get('rx_drop')
-        if rx_b is not None and rx_b < exp_rx:
-            print(f"  *** rx_bytes={rx_b} < {exp_rx}: FPGA nedostal vsetky request bajty!")
         if rx_h is not None and rx_h < total_tx:
             pct_lost = 100 * (total_tx - rx_h) // total_tx
-            print(f"  *** rx_hdr={rx_h} < {total_tx}: {pct_lost}% requestov stratilo sa pred parserom!")
+            print(f"  *** rx_hdr={rx_h} < {total_tx}: {pct_lost}% requestov stratilo sa!")
+        if rx_l and rx_l > 0:
+            print(f"  *** rx_lost={rx_l}: bajty zahadzovane na FIFO vstupe (flush aktualny?)")
+        if rx_f and rx_f > 0:
+            print(f"  *** rx_frame={rx_f}: frame errory -> TX->RX coupling alebo noise!")
+        if rx_r and rx_r > 0:
+            print(f"  *** rx_recovery={rx_r}: SOP recovery events (resyncs)")
+        if rx_b and rx_b > 0:
+            print(f"  *** rx_bad_hdr={rx_b}: bad opcode/count v S_DECODE")
         if tx_p is not None and tx_p < exp_pkt:
             print(f"  *** tx_pkt={tx_p} < {exp_pkt}: FPGA neodoslalo vsetky odpovede!")
-        if tx_b is not None and tx_b < exp_tx:
-            print(f"  *** tx_bytes={tx_b} < {exp_tx}: Neuplne odpovede (partial TX)!")
-        if rx_d:
-            print(f"  *** rx_drop={rx_d}: Parser zahadzoval pakety!")
 
 
 def run_test(ser, repeat, timeout):

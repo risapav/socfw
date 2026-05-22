@@ -63,11 +63,13 @@ module xfcp_fabric_endpoint #(
   output logic endpoint_busy_o,
 
   // Debug pulses: 1-cycle, combinational — wire to axil_diag_ctrl
-  output logic dbg_sop_o,    // good SOP received by parser
-  output logic dbg_hdr_o,    // header successfully decoded (hfifo_push)
-  output logic dbg_drop_o,   // parser drop event
-  output logic dbg_req_o,    // valid request dispatched to engine
-  output logic dbg_resp_o    // packetizer response started
+  output logic dbg_sop_o,       // good SOP received by parser
+  output logic dbg_hdr_o,       // header successfully decoded (hfifo_push)
+  output logic dbg_drop_o,      // parser drop event
+  output logic dbg_req_o,       // valid request dispatched to engine
+  output logic dbg_resp_o,      // packetizer response started
+  output logic dbg_bad_hdr_o,   // parser decode error
+  output logic dbg_recovery_o   // parser sop_recovery
 );
 
   // synthesis translate_off
@@ -387,9 +389,11 @@ module xfcp_fabric_endpoint #(
     .write_data_ready(wdata_ready),
     .pass_valid(), .pass_data(), .pass_last(), .pass_ready(1'b0),
     .error_protocol(),
-    .dbg_sop_o (dbg_sop_o),
-    .dbg_hdr_o (dbg_hdr_o),
-    .dbg_drop_o(dbg_drop_o)
+    .dbg_sop_o      (dbg_sop_o),
+    .dbg_hdr_o      (dbg_hdr_o),
+    .dbg_drop_o     (dbg_drop_o),
+    .dbg_bad_hdr_o  (dbg_bad_hdr_o),
+    .dbg_recovery_o (dbg_recovery_o)
   );
 
   assign dbg_req_o  = req_fire && !invalid_req;

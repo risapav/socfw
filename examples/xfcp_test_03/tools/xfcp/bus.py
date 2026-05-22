@@ -163,14 +163,38 @@ class XfcpBus:
         """
         Safely switch FPGA and PC UART to new_baud using pending/commit protocol.
 
-        Requires RTL support: BAUD_PENDING @ 0xFF010004, BAUD_COMMIT @ 0xFF01001C.
-        The COMMIT ACK is sent at the old baud rate; FPGA switches after a countdown.
+        BAUD_PENDING write retried up to 5 times (coupling may cause failures).
+        BAUD_COMMIT timeout does NOT abort -- commit may have happened even if
+        the ACK was lost. Falls back to old baud if new baud ping fails.
+        Raises XfcpRecoveryError if neither baud rate responds.
         """
+        old_baud = self._transport.baudrate
         new_div = round(clk_hz / new_baud)
-        if not self.write32(0xFF010004, new_div):   # BAUD_PENDING, still at old baud
+
+        pending_ok = False
+        for _ in range(5):
+            if self.write32(0xFF010004, new_div):
+                pending_ok = True
+                break
+            self._transport.drain()
+
+        if not pending_ok:
             return False
-        if not self.write32(0xFF01001C, 1):          # BAUD_COMMIT, ACK at old baud
-            return False
-        time.sleep(0.15)                             # wait for FPGA countdown (~35 ms max)
+
+        try:
+            self.write32(0xFF01001C, 1)
+        except Exception:
+            pass
+
+        time.sleep(0.20)
         self._transport.set_baudrate(new_baud)
-        return self.ping()
+        if self.ping():
+            return True
+
+        self._transport.set_baudrate(old_baud)
+        if self.ping():
+            return False
+
+        raise XfcpRecoveryError(
+            f"Cannot determine UART baud after switch {old_baud}->{new_baud}"
+        )

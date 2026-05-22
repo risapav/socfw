@@ -40,6 +40,10 @@ class SerialTransport:
     def is_open(self) -> bool:
         return self._ser is not None and self._ser.is_open
 
+    @property
+    def baudrate(self) -> int:
+        return self._baudrate
+
     def flush_rx(self) -> None:
         if self._ser:
             self._ser.reset_input_buffer()

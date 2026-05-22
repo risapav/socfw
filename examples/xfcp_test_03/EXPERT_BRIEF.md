@@ -12,7 +12,7 @@
 |---------|---------|
 | FPGA | QMTech EP4CE55F23C8 (Cyclone IV E, 55 000 LE) |
 | Hodinový signál | 50 MHz (onboard oscilátor) |
-| USB-UART bridge | Pravdepodobne FT232R (kábel nie je presne identifikovaný) |
+| USB-UART bridge | CP2102 |
 | UART parametre | 115200 baud, 8N1, bez hardvérového handshaking |
 | OS / nástroje | Linux, Python 3.11, `pyserial` |
 | Quartus | Prime 25.1 Lite |
@@ -227,9 +227,9 @@ STATUS @ 0xFF010010:
   parity_err = False
 ```
 
-`frame_err=True` potvrdzuje, že FPGA UART RX prijíma bajty so zlým stop bitom — charakteristický
-prejav **TX→RX coupling**: FPGA TX signál kuplovaný späť na RX vstup produkuje "skrátené" bajty
-(rýchly edge, sampling mimo bitovú periódu → chybný stop bit).
+`frame_err=True` ukazuje, že FPGA UART RX prijíma bajty so zlým stop bitom. Toto je
+konzistentné s TX→RX coupling hypotézou, ale presná fyzická príčina (PCB kapacitívna väzba,
+impedančná väzba, alebo PC-side buffering/stale bytes) nie je definitívne izolovaná.
 
 ### 4.4 Hypotéza o mechanizme
 
@@ -240,10 +240,10 @@ FPGA spracuje → XFCP odpoveď (25B) → UART_TX_o odošle
 Počas / tesne po TX:
   UART_TX_o (3.3V signal) →→→ coupling →→→ UART_RX_i
   
-  Možné cesty:
-    A) FTDI FT232R loopback: bridge vracia TX bajty späť na RX (EEPROM nastavenie)
-    B) PCB kapacitívna väzba: TX a RX vodiče v blízkosti na PCB / flex kábli
-    C) Impedančná väzba cez spoločný GND/Vcc cez kábel
+  Možné cesty (FTDI loopback hypotéza nie je relevantná — bridge je CP2102):
+    A) PCB kapacitívna väzba: TX a RX vodiče v blízkosti na doske / flex kábli
+    B) Impedančná väzba cez spoločný GND/Vcc cez kábel
+    C) USB-UART buffering / latencia PC-side (stale bytes z predchádzajúcej odpovede)
 
 Výsledok na FPGA RX strane:
   - coupling bajty = 0xFD (SOP_RESP) → parser v S_IDLE ignoruje (nie SOP_REQ)
@@ -453,6 +453,11 @@ sú **výhradne HW-specific**.
 3. **Prečo flush=0 je lepší ako flush=2000 cyklov?**
    Empiricky najlepší výsledok. Pravdepodobné vysvetlenie: flush zahodil
    niektoré legitímne PC bajty počas hold-off okna.
+
+> **Aktuálna hypotéza (po navrhy_15):** Problém je pred parserom v UART RX vrstve
+> alebo v transakčnej synchronizácii PC↔FPGA. DIAG ukazuje, že mnoho requestov sa
+> nedostane ako kompletný header do parsera, ale presná príčina ešte nie je definitívne
+> oddelená medzi fyzikou, baud mismatch stavmi, stale/spurious odpoveďami a tools recovery.
 
 ---
 

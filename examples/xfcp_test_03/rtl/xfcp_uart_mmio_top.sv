@@ -122,8 +122,13 @@ module xfcp_uart_mmio_top #(
   // Diagnostic pulse signals for axil_diag_ctrl (slot 6)
   // --------------------------------------------------------------------------
   logic dbg_sop_w, dbg_hdr_w, dbg_drop_w, dbg_req_w, dbg_resp_w;
-  wire  rx_byte_pulse_w  = uart_rx_raw_s.TVALID;
-  wire  tx_byte_pulse_w  = xfcp_tx_s.TVALID && xfcp_tx_s.TREADY;
+  logic dbg_bad_hdr_w, dbg_recovery_w;
+  wire  rx_seen_pulse_w   = uart_rx_raw_s.TVALID;
+  wire  rx_accept_pulse_w = uart_rx_raw_s.TVALID &&  uart_rx_raw_s.TREADY;
+  wire  rx_lost_pulse_w   = uart_rx_raw_s.TVALID && !uart_rx_raw_s.TREADY;
+  wire  rx_frame_pulse_w  = rx_status_w.frame_err;
+  wire  rx_overrun_pulse_w = rx_status_w.overrun_err;
+  wire  tx_byte_pulse_w   = xfcp_tx_s.TVALID && xfcp_tx_s.TREADY;
 
   xfcp_fabric_endpoint #(
     .NUM_SLAVES     (NUM_SLAVES),
@@ -160,7 +165,9 @@ module xfcp_uart_mmio_top #(
     .dbg_hdr_o       (dbg_hdr_w),
     .dbg_drop_o      (dbg_drop_w),
     .dbg_req_o       (dbg_req_w),
-    .dbg_resp_o      (dbg_resp_w)
+    .dbg_resp_o      (dbg_resp_w),
+    .dbg_bad_hdr_o   (dbg_bad_hdr_w),
+    .dbg_recovery_o  (dbg_recovery_w)
   );
 
   // --------------------------------------------------------------------------
@@ -322,17 +329,23 @@ module xfcp_uart_mmio_top #(
   // Slot 6: Diagnostic counter bank — axil_s[6] @ 0xFF060000
   // --------------------------------------------------------------------------
   axil_diag_ctrl u_diag_ctrl (
-    .clk_i      (clk_i),
-    .rst_ni     (rst_ni),
-    .s_axil     (axil_s[6].slave),
-    .rx_byte_i  (rx_byte_pulse_w),
-    .rx_sop_i   (dbg_sop_w),
-    .rx_hdr_i   (dbg_hdr_w),
-    .rx_drop_i  (dbg_drop_w),
-    .fab_req_i  (dbg_req_w),
-    .fab_resp_i (dbg_resp_w),
-    .tx_byte_i  (tx_byte_pulse_w),
-    .tx_pkt_i   (dbg_resp_w)
+    .clk_i        (clk_i),
+    .rst_ni       (rst_ni),
+    .s_axil       (axil_s[6].slave),
+    .rx_seen_i    (rx_seen_pulse_w),
+    .rx_accept_i  (rx_accept_pulse_w),
+    .rx_lost_i    (rx_lost_pulse_w),
+    .rx_frame_i   (rx_frame_pulse_w),
+    .rx_overrun_i (rx_overrun_pulse_w),
+    .rx_sop_i     (dbg_sop_w),
+    .rx_hdr_i     (dbg_hdr_w),
+    .rx_bad_hdr_i (dbg_bad_hdr_w),
+    .rx_recovery_i(dbg_recovery_w),
+    .rx_drop_i    (dbg_drop_w),
+    .fab_req_i    (dbg_req_w),
+    .fab_resp_i   (dbg_resp_w),
+    .tx_byte_i    (tx_byte_pulse_w),
+    .tx_pkt_i     (dbg_resp_w)
   );
 
 endmodule
