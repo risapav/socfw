@@ -1,6 +1,6 @@
 # XFCP Test 03 — stav projektu
 
-> Stav k: 2026-05-21
+> Stav k: 2026-05-22
 > Board: QMTech EP4CE55F23C8 @ 50 MHz
 > Protokol: XFCP cez UART 115200 baud (SOP_REQ=0xFE, SOP_RESP=0xFD)
 > Predchadzajuci projekt: `examples/xfcp_test_02` (uzavrety, commit 7a37c1f)
@@ -439,15 +439,101 @@ Po 12/12 overení:
 
 ---
 
+## Fáza 2B — post_tx_hold flush + invalid_req drop (2026-05-22)
+
+### Analýza predchádzajúceho single-flight gate (d1c64ae)
+
+Commit d1c64ae pridal `endpoint_busy_o` a gating `rx_gate = endpoint_busy_w`. Problem:
+- `rx_gate` ukrývalo FIFO výstup pred parserom, ale FIFO **stále prijímalo** echo bajty
+- Po skončení TX: rx_gate=0 → všetky echo bajty z FIFO naraz zaplaví parser
+- Výsledok: 7/30 = 23 % (horšie ako bez gating)
+
+### Implementované zmeny (Fáza 2B)
+
+**RTL — xfcp_uart_mmio_top.sv:**
+
+Nahradený single-flight gate post_tx_hold countérom s `fifo_flush_w`:
+```sv
+localparam int POST_TX_HOLD_CYCLES = 2000;  // 40 us @ 50 MHz
+// post_tx_hold_w = tx_busy || countdown after tx_busy falls
+wire fifo_flush_w = post_tx_hold_w;  // FIFO continuously resets — echo bytes lost
+wire rx_gate_w    = post_tx_hold_w;  // FIFO output hidden from parser
+```
+
+Rozdiel od starého prístupu:
+- `flush=1` → `w_ready=0` v xfcp_fifo → echo bajty sú ZAHODENÉ v okamihu príchodu
+- Po vypršaní post_tx_hold: FIFO je PRÁZDNE (žiadne echo bajty)
+- Parser nikdy nevidí echo bajty z predchádzajúcej odpovede
+
+**RTL — xfcp/xfcp_fabric_endpoint.sv:**
+
+Zmenená sémantika `endpoint_busy_o`:
+```sv
+// Pred: (arb_q != ARB_IDLE)  — busy aj počas AXI engine fázy
+// Po:   (arb_q == ARB_WAIT_PKT)  — busy IBA počas TX fázy
+assign endpoint_busy_o = (arb_q == ARB_WAIT_PKT);
+```
+Dôvod: endpoint_busy_w nie je viac použité na gating — je len dostupné pre debug.
+
+**SIM — tb_xfcp_uart_mmio_top.sv:**
+
+Pridané `repeat(3000) @(posedge clk)` v `xfcp_drain_write_resp()` a `xfcp_recv_read()`.
+Dôvod: v SIM BAUD_DIV=16 → 1 bajt = 160 cyklov. post_tx_hold=2000 > 160 →
+SOP prvého bajtu ďalšej požiadavky by bol zahodený. TB delay 3000 > 2000 → OK.
+
+### Sim výsledky Fázy 2B
+
+```
+make (v sim/): 13/13 ALL PASSED
+tb_xfcp_uart_mmio_top: Errors: 0 (predtým Errors: 1 so single-flight)
+```
+
+### HW test výsledky Fázy 2B
+
+| Konfigurácia | Výsledok |
+|---|---|
+| d1c64ae single-flight gate (rx_gate=endpoint_busy) | 7/30 = 23 % |
+| post_tx_hold=2000 + invalid_req (Fáza 2B) | 14/30 = 46 % |
+
+Zlepšenie o 100 % relatívne. Dôvod: flush namiesto gate zabezpečuje skutočné zahodenie
+echo bajtov pri príchode, nie ich akumuláciu vo FIFO.
+
+### Analýza navrhy_10 (architectural review)
+
+Navrhy_10 identifikoval AXI-Stream protokolový konflikt v `axis_uart_rx.sv`:
+- `valid_o` je 1-cyklový pulz, TVALID nie je udržiavaný kým TREADY=1
+- Odporúčanie: pridať Skid Buffer
+
+**Záver: Skid Buffer NIE JE vhodný pre náš use case.**
+Zámerný overrun (strata bajtu keď TREADY=0 počas flush) JE náš coupling mitigation
+mechanizmus. Skid Buffer by držal echo bajty namiesto ich zahodenia.
+
+Navrhy_10 tiež nesprávne uvádza `ramstyle="no_rw_check"` ako korektné — toto bol
+ROOT CAUSE HW bugu (opravený v Fáze 1: ramstyle="logic").
+
+### Zostatok coupling failov (54 %)
+
+Príčina: fyzická PCB/kábel kapacitívna väzba, nie USB-UART loopback.
+- Echo bajty prichádzajú POČAS TX → flush=1 → zahodené ✓
+- post_tx_hold=2000 cyklov = 40 μs pokryje "chvost" po skončení TX
+- Zvyšné zlyhania: echo bajty tvorené na hranách signálu tesne pred tx_busy
+
+Ďalší možný postup:
+1. **Fyzická diagnostika**: multimeter/scope na RXD pin počas FPGA TX
+2. **RC filter**: 1kΩ + 10nF na UART_RX vstup
+3. **Iný kábel/adaptér**: test s CP2102 vs FT232R vs CH340
+
+---
+
 ## Otvorené technické problémy
 
 | # | Problém | Priorita | Stav |
 |---|---|---|---|
-| 1 | TX→RX coupling (fyzická príčina) | KRITICKÉ | Čaká fyzická diagnostika |
-| 2 | ST_RD_WAIT: RVALID&&RREADY | KRITICKÉ | OPRAVENÉ (2026-05-21, commit 1dcfb01) |
-| 3 | READ burst > FIFO_DEPTH=32 slov | STREDNÉ | MAX_COUNT_BYTES=256→64 sl. — chunking v tools |
+| 1 | TX→RX coupling (fyzická príčina) | STREDNÉ | 46 % HW success; čaká fyzická diagnostika |
+| 2 | ST_RD_WAIT: RVALID&&RREADY | OPRAVENÉ | Commit 1dcfb01 |
+| 3 | READ burst > FIFO_DEPTH=32 slov | NÍZKE | MAX_COUNT_BYTES=256→64 sl. — chunking v tools |
 | 4 | Sim $fatal = Questa "Errors: N" | NÍZKE | Questa-specific; ALL PASSED funguje |
-| 5 | RESP_ERROR paket pre invalid req | NÍZKE | Fáza 2B plán |
+| 5 | RESP_ERROR paket pre invalid req | NÍZKE | Fáza 2C plán |
 | 6 | Tools: chunking, SEQ, CRC, recovery | NÍZKE | Fáza 3 plán |
 
 ---
@@ -467,3 +553,5 @@ Po 12/12 overení:
 | 2026-05-21 | navrhy_06 analyzovaný. Pridaný do repozitára (commit 39c6c82) |
 | 2026-05-21 | HW testy: frame_err filter (4/12), hold-off (2/12), pre_delay=2.0 (3/12) — všetky REVERTED |
 | 2026-05-21 | Záver: coupling je fyzický problém. SW/RTL mitigations max ~6/12. Čaká fyzická diagnostika |
+| 2026-05-21 | Fáza 2B príprava: navrhy_07/08 single-flight gate (d1c64ae), 7/30 = 23 % HW |
+| 2026-05-22 | Fáza 2B: post_tx_hold flush + endpoint_busy_o sémantika. Sim 13/13 PASS, HW 14/30 = 46 % |

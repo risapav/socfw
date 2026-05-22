@@ -76,7 +76,7 @@ def decode_data(raw):
     return data, s
 
 
-def transact(ser, pkt, expected_len, label, pre_delay=0.2):
+def transact(ser, pkt, expected_len, pre_delay=0.2):
     """Send pkt, read response, print raw TX/RX and diagnosis."""
     if pre_delay > 0:
         time.sleep(pre_delay)

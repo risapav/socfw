@@ -362,9 +362,10 @@ module xfcp_fabric_endpoint #(
       packetizer_idle_q <= packetizer_idle;
   end
 
-  // Endpoint is busy whenever arbiter is not idle (engine running or TX active).
-  // Exported so caller can gate new request bytes during single-flight mode.
-  assign endpoint_busy_o = (arb_q != ARB_IDLE);
+  // Busy only during TX phase (ARB_WAIT_PKT): response is being transmitted.
+  // Not raised during ARB_WAIT_ENG so write-data bytes can still reach the engine
+  // (write payload follows the header in the same UART byte stream).
+  assign endpoint_busy_o = (arb_q == ARB_WAIT_PKT);
 
   // ── RX Parser ────────────────────────────────────────────────
   xfcp_rx_parser #(

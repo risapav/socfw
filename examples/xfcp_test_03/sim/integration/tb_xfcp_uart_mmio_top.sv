@@ -179,9 +179,11 @@ module tb_xfcp_uart_mmio_top;
   endtask
 
   // Drain WRITE response: [0xFD][0x13][DEV_TYPE 2B][DEV_STR 16B][0x00] = 21 bytes
+  // Wait 3000 extra cycles after last byte so post_tx_hold expires before next send.
   task automatic xfcp_drain_write_resp();
     logic [7:0] b;
     for (int i = 0; i < 21; i++) uart_recv(b);
+    repeat(3000) @(posedge clk);
   endtask
 
   // READ request: [0xFE][0x10][count=4 BE][addr BE]
@@ -211,6 +213,8 @@ module tb_xfcp_uart_mmio_top;
     uart_recv(b); rdata[7:0]   = b;
     // Terminator 0x00
     uart_recv(b);
+    // Wait for post_tx_hold to expire before caller sends next request.
+    repeat(3000) @(posedge clk);
   endtask
 
   // ---- Check helper -----------------------------------------------------------

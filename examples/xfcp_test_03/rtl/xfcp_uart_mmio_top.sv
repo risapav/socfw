@@ -81,10 +81,39 @@ module xfcp_uart_mmio_top #(
 
   // --------------------------------------------------------------------------
   // XFCP Fabric Endpoint (NUM_SLAVES=6, interny adresovy dekoder)
-  // endpoint_busy_w: high when engine or packetizer has a transaction in-flight.
-  // Used to gate parser input bytes (single-flight mode – no pipelining from PC).
+  // endpoint_busy_w: fabric internal state (ARB_WAIT_PKT), available for debug.
+  // rx_gate_w / fifo_flush_w: TX->RX coupling mitigation.
+  //   During tx_busy the physical UART serializer is active; coupling injects
+  //   echo bytes into the RX line. fifo_flush_w discards them continuously so
+  //   the 8-slot FIFO never overflows. rx_gate_w keeps those bytes invisible to
+  //   the parser simultaneously.
+  //   POST_TX_HOLD_CYCLES: extends gate+flush window after tx_busy falls to catch
+  //   delayed CP2102 echo bytes (empirical: echoes arrive up to ~40us after TX end).
+  //   Must be < 4340 cycles (one UART byte at 115200/50MHz) so SIM TB next request
+  //   is not flushed. 2000 cycles = 40us << 86us byte period.
   // --------------------------------------------------------------------------
   logic endpoint_busy_w;
+
+  localparam int POST_TX_HOLD_CYCLES = 2000;
+  logic tx_busy_prev_r;
+  logic [$clog2(POST_TX_HOLD_CYCLES+1)-1:0] post_tx_cnt_r;
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      tx_busy_prev_r <= 1'b0;
+      post_tx_cnt_r  <= '0;
+    end else begin
+      tx_busy_prev_r <= tx_status_w.tx_busy;
+      if (tx_busy_prev_r && !tx_status_w.tx_busy)
+        post_tx_cnt_r <= POST_TX_HOLD_CYCLES[$clog2(POST_TX_HOLD_CYCLES+1)-1:0];
+      else if (post_tx_cnt_r > 0)
+        post_tx_cnt_r <= post_tx_cnt_r - 1;
+    end
+  end
+
+  wire post_tx_hold_w = tx_status_w.tx_busy || (post_tx_cnt_r > 0);
+  wire fifo_flush_w   = post_tx_hold_w;
+  wire rx_gate_w      = post_tx_hold_w;
 
   xfcp_fabric_endpoint #(
     .NUM_SLAVES     (NUM_SLAVES),
@@ -135,9 +164,9 @@ module xfcp_uart_mmio_top #(
   // --------------------------------------------------------------------------
   // RX elastic buffer: 8-byte FIFO between UART RX and parser.
   // Prevents byte loss when parser has s_axis_tready=0 (S_DECODE or dfifo full).
-  // Single-flight gate: when endpoint_busy_w=1, FIFO output is invisible to the
-  // parser (TVALID=0, r_ready=0) so no new request bytes enter while a response
-  // is in-flight. Bytes wait in the FIFO until TX completes.
+  // During tx_busy: flush=1 discards coupling bytes; gate=1 hides FIFO output.
+  // After tx_busy falls: flush=0, gate=0; any last coupling byte reaching the
+  // parser in S_IDLE is a non-SOP byte and silently discarded.
   // --------------------------------------------------------------------------
   logic [7:0] rx_fifo_rdata_w;
   logic       rx_fifo_rvalid_w;
@@ -148,17 +177,17 @@ module xfcp_uart_mmio_top #(
   ) u_rx_fifo (
     .clk    (clk_i),
     .rst_n  (rst_ni),
-    .flush  (1'b0),
+    .flush  (fifo_flush_w),
     .w_data (uart_rx_raw_s.TDATA),
     .w_valid(uart_rx_raw_s.TVALID),
     .w_ready(uart_rx_raw_s.TREADY),
     .r_data (rx_fifo_rdata_w),
     .r_valid(rx_fifo_rvalid_w),
-    .r_ready(xfcp_rx_s.TREADY && !endpoint_busy_w)
+    .r_ready(xfcp_rx_s.TREADY && !rx_gate_w)
   );
 
   assign xfcp_rx_s.TDATA  = rx_fifo_rdata_w;
-  assign xfcp_rx_s.TVALID = rx_fifo_rvalid_w && !endpoint_busy_w;
+  assign xfcp_rx_s.TVALID = rx_fifo_rvalid_w && !rx_gate_w;
   assign xfcp_rx_s.TKEEP  = '1;
   assign xfcp_rx_s.TLAST  = 1'b0;
   assign xfcp_rx_s.TUSER  = '0;
