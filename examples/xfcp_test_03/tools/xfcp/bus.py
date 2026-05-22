@@ -158,3 +158,19 @@ class XfcpBus:
         if not self.ping():
             raise XfcpRecoveryError("Link not recovered after drain")
         return True
+
+    def set_baudrate(self, new_baud: int, clk_hz: int = 50_000_000) -> bool:
+        """
+        Safely switch FPGA and PC UART to new_baud using pending/commit protocol.
+
+        Requires RTL support: BAUD_PENDING @ 0xFF010004, BAUD_COMMIT @ 0xFF01001C.
+        The COMMIT ACK is sent at the old baud rate; FPGA switches after a countdown.
+        """
+        new_div = round(clk_hz / new_baud)
+        if not self.write32(0xFF010004, new_div):   # BAUD_PENDING, still at old baud
+            return False
+        if not self.write32(0xFF01001C, 1):          # BAUD_COMMIT, ACK at old baud
+            return False
+        time.sleep(0.15)                             # wait for FPGA countdown (~35 ms max)
+        self._transport.set_baudrate(new_baud)
+        return self.ping()

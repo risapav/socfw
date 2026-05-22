@@ -38,8 +38,11 @@ class UARTDiag(BasePeripheral):
 
     def configure(self, prescaler, data_bits=8, parity=None, stop2=False):
         """Pomocná metóda na nastavenie UART parametrov naraz."""
+        dbits_map = {8: 0b00, 7: 0b01, 6: 0b10, 5: 0b11}
+        if data_bits not in dbits_map:
+            raise ValueError("data_bits must be one of: 8, 7, 6, 5")
         self.baud_pre = prescaler
-        self.data_bits = (data_bits - 5) & 0x3
+        self.data_bits = dbits_map[data_bits]
         self.parity_en = 1 if parity else 0
         if parity:
             self.parity_odd = 1 if parity == 'odd' else 0

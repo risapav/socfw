@@ -39,10 +39,12 @@ SLOTS = [
 EXPECTED_READ  = 25   # SOP(1)+TYPE(1)+DEV_TYPE(2)+DEV_STR(16)+DATA(4)+TERM(1)
 EXPECTED_WRITE = 21   # SOP(1)+TYPE(1)+DEV_TYPE(2)+DEV_STR(16)+TERM(1)
 
-UART_BASE     = 0xFF010000
-UART_BAUD_DIV = UART_BASE + 0x04
-UART_ERR_CLR  = UART_BASE + 0x0C
-UART_STATUS   = UART_BASE + 0x10
+UART_BASE        = 0xFF010000
+UART_BAUD_DIV    = UART_BASE + 0x04   # BAUD_PENDING
+UART_ERR_CLR     = UART_BASE + 0x0C
+UART_STATUS      = UART_BASE + 0x10
+UART_BAUD_COMMIT = UART_BASE + 0x1C   # triggers delayed baud switch
+UART_BAUD_ACTIVE = UART_BASE + 0x20   # RO readback of active prescaler
 
 DIAG_BASE     = 0xFF060000
 DIAG_COMP_ID  = DIAG_BASE + 0x00
@@ -155,32 +157,47 @@ def transact(ser, pkt, expected_len, pre_delay=0.2, timeout=2.0):
 
 def set_baud(ser, new_baud):
     """
-    Switch both FPGA and PC UART to new_baud without rebuilding RTL.
+    Switch both FPGA and PC UART to new_baud using pending/commit protocol.
 
     Sequence:
-      1. Write new baud_div to FPGA register (at current PC baud).
-      2. Flush TX buffer — all bytes leave at current baud.
-      3. Switch PC serial to new_baud.
-      4. Sleep to let FPGA finish sending its WRITE response at new_baud.
-      5. Clear RX buffer (discard the WRITE response).
-      6. Verify by reading DIAG_COMP_ID — expect 0x44494147.
+      1. Write BAUD_PENDING (0x04) at current baud — ACK received at current baud.
+      2. Write BAUD_COMMIT (0x1C) at current baud — ACK received at current baud.
+      3. FPGA starts countdown; switches baud after >= baud_active*10*32 cycles.
+      4. Sleep 150ms (>= max countdown ~35ms at 9600), then switch PC baud.
+      5. Verify by reading DIAG_COMP_ID at new baud — expect 0x44494147.
     """
     div = baud_to_div(new_baud)
-    pkt = make_write_pkt(UART_BAUD_DIV, div)
+    old_timeout = ser.timeout
+
+    # Step 1: write BAUD_PENDING, receive ACK at current (old) baud
+    pkt_pending = make_write_pkt(UART_BAUD_DIV, div)
     ser.reset_input_buffer()
-    ser.write(pkt)
-    ser.flush()                  # ensure all bytes transmitted at old baud
-    ser.baudrate = new_baud      # PC switches to new baud
-    # FPGA sends 21B WRITE response at new baud; at 9600 that takes ~22ms.
-    # Sleep 150ms so response fully arrives and we can discard it cleanly.
+    ser.write(pkt_pending)
+    ser.flush()
+    raw = recv_with_sop_resync(ser, EXPECTED_WRITE, time.time() + 2.0)
+    if len(raw) != EXPECTED_WRITE:
+        return False
+
+    # Step 2: write BAUD_COMMIT, receive ACK at current (old) baud
+    pkt_commit = make_write_pkt(UART_BAUD_COMMIT, 1)
+    ser.reset_input_buffer()
+    ser.write(pkt_commit)
+    ser.flush()
+    raw = recv_with_sop_resync(ser, EXPECTED_WRITE, time.time() + 2.0)
+    if len(raw) != EXPECTED_WRITE:
+        return False
+
+    # Step 3: wait for FPGA countdown to finish, then switch PC baud
     time.sleep(0.15)
-    ser.reset_input_buffer()     # discard FPGA WRITE response
+    ser.baudrate = new_baud
+    time.sleep(0.05)
+    ser.reset_input_buffer()
+    ser.timeout = max(BAUD_TIMEOUTS.get(new_baud, 5.0), 3.0)
 
     # Verification READ at new baud
-    vfy_timeout = max(BAUD_TIMEOUTS.get(new_baud, 5.0), 3.0)
     vfy = make_read_pkt(DIAG_COMP_ID)
     ser.write(vfy)
-    raw = recv_with_sop_resync(ser, EXPECTED_READ, time.time() + vfy_timeout)
+    raw = recv_with_sop_resync(ser, EXPECTED_READ, time.time() + ser.timeout)
     if len(raw) == EXPECTED_READ:
         val = struct.unpack(">I", raw[20:24])[0]
         return val == 0x44494147  # "DIAG"

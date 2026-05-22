@@ -1,16 +1,18 @@
 `timescale 1ns/1ps
 
-// Testbench for axil_uart_adapter -- validates all 7 registers, sticky error
-// bits, and one-cycle err_clr_o pulse.
+// Testbench for axil_uart_adapter -- validates all 9 registers, sticky error
+// bits, one-cycle err_clr_o pulse, and pending/commit baud switch.
 //
 // DUT: BAUD_DIV_DEFAULT=434
 //   reg0 0x00 RO    COMPONENT_ID -- 0x55415254 ("UART")
-//   reg1 0x04 RW    BAUD_DIV     -- prescaler (reset=434)
+//   reg1 0x04 RW    BAUD_PENDING -- prescaler pending (reset=434)
 //   reg2 0x08 RW    CONFIG       -- [4:0] UART config (reset=0x0 = 8N1)
 //   reg3 0x0C PULSE ERR_CLR      -- [0]=clear sticky errors + err_clr_o
 //   reg4 0x10 RO    STATUS       -- [4:0] busy+error bits (errors sticky)
 //   reg5 0x14 RO    TX_FIFO_CNT
 //   reg6 0x18 RO    RX_FIFO_CNT
+//   reg7 0x1C PULSE BAUD_COMMIT  -- triggers delayed baud switch
+//   reg8 0x20 RO    BAUD_ACTIVE  -- readback of active prescaler
 //
 // Run with:
 //   vlog -sv -suppress 2892 $(AXI_COMMON) ../rtl/axil/axil_regfile.sv \
@@ -191,11 +193,11 @@ module tb_axil_uart_adapter;
     axi_read(32'h10, rdata);
     chk32(rdata & 32'h1C, 32'h0, "T6 STATUS errors cleared");
 
-    // ---- T7: BAUD_DIV write/read ----
-    axi_write(32'h04, 32'd867); // 100 MHz / 115200
+    // ---- T7: BAUD_PENDING write/read; baud_div_o unchanged until COMMIT ----
+    axi_write(32'h04, 32'd867);
     axi_read(32'h04, rdata);
-    chk32(rdata, 32'd867, "T7 BAUD_DIV write/read");
-    chk32(baud_div, 32'd867, "T7 baud_div_o updated");
+    chk32(rdata, 32'd867, "T7 BAUD_PENDING write/read");
+    chk32(baud_div, 32'd434, "T7 baud_div_o still at default (not committed)");
 
     // ---- T8: CONFIG write/read ----
     // 7-bit data(01), parity even(en=1,odd=0), 2-stop: CONFIG=5'b1_0_1_01 = 5'h15
@@ -213,6 +215,16 @@ module tb_axil_uart_adapter;
     rx_fifo_cnt = 8'hCD;
     axi_read(32'h18, rdata);
     chk32(rdata & 32'hFF, 32'hCD, "T10 RX_FIFO_CNT");
+
+    // ---- T11: BAUD_COMMIT triggers countdown then baud_div_o switches ----
+    // Countdown = baud_active_q(434) * 10 * 32 = 138880 cycles; wait 140000.
+    axi_write(32'h1C, 32'h1); // BAUD_COMMIT pulse
+    repeat(140000) @(posedge clk);
+    chk32(baud_div, 32'd867, "T11 baud_div_o switched after countdown");
+
+    // ---- T12: BAUD_ACTIVE readback ----
+    axi_read(32'h20, rdata);
+    chk32(rdata, 32'd867, "T12 BAUD_ACTIVE readback");
 
     $display("");
     $display("%s (%0d failure%s)",

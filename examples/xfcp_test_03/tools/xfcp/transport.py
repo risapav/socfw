@@ -89,3 +89,10 @@ class SerialTransport:
         """Drain any stale bytes after a failed transaction."""
         time.sleep(self._timeouts.recovery_s)
         self.flush_rx()
+
+    def set_baudrate(self, baudrate: int) -> None:
+        self._baudrate = baudrate
+        if self._ser and self._ser.is_open:
+            self._ser.baudrate = baudrate
+            time.sleep(0.05)
+            self._ser.reset_input_buffer()
