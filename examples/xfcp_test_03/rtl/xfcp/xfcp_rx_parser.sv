@@ -83,7 +83,11 @@ module xfcp_rx_parser #(
   output logic      pass_last,
   input  wire       pass_ready,
 
-  output logic error_protocol
+  output logic error_protocol,
+
+  output logic dbg_sop_o,    // pulse: good SOP received in S_IDLE
+  output logic dbg_hdr_o,    // pulse: header FIFO push (successful decode)
+  output logic dbg_drop_o    // pulse: drop event (excluding re-entry into S_DROP)
 );
 
   // ============================================================
@@ -332,6 +336,11 @@ module xfcp_rx_parser #(
 
   // drop_with_tlast: go_drop spustený TLAST-om – paket skončil v tom istom takte
   assign drop_with_tlast = go_drop && axis_fire && s_axis_tlast;
+
+  // Debug pulses (1-cycle, combinational)
+  assign dbg_sop_o  = (state_q == S_IDLE) && axis_fire && (s_axis_tdata == XFCP_SOP_REQ);
+  assign dbg_hdr_o  = hfifo_push;
+  assign dbg_drop_o = go_drop && (state_q != S_DROP);
 
   // ============================================================
   // Header shift register – sekvenčná logika

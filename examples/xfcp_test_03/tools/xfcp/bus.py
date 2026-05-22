@@ -39,17 +39,19 @@ class XfcpBus:
 
     def _transact(self, pkt: bytes, expected: int, retries: int = None) -> bytes:
         """
-        Send pkt, read expected bytes.
-        Flushes before first attempt to drop stale bytes from prior failures.
+        Send pkt, read expected bytes using SOP_RESP resync.
+        Scans byte-by-byte for SOP_RESP (0xFD) before reading the rest of the
+        packet, discarding any stale bytes that precede it.
         On partial read: drain and retry up to `retries` more times.
         Raises XfcpTimeoutError when all attempts exhausted.
         """
         if retries is None:
             retries = self._retries
         self._transport.flush_rx()
+        resp = b""
         for attempt in range(retries + 1):
             self._transport.write(pkt)
-            resp = self._transport.read(expected)
+            resp = self._transport.read_packet(expected)
             if len(resp) == expected:
                 return resp
             self._transport.drain()

@@ -3,11 +3,12 @@
  * @brief Top-level: XFCP-over-UART s xfcp_fabric_endpoint a 6 AXI-Lite periferiami.
  * @param CLOCK_FREQ_HZ          Frekvencia systemu v Hz (default 50 MHz, QMTech EP4CE55).
  * @param UART_DEFAULT_BAUD_DIV  Predvolena hodnota baud prescalera (434 = 50 MHz/115200).
+ * @param ENABLE_POST_TX_FLUSH   1 = flush RX FIFO + gate parser during/after TX;
+ *                               0 = disabled (default; SOP_RESP=0xFD makes flush unnecessary).
+ * @param POST_TX_HOLD_CYCLES    Hold window after tx_busy falls (default BAUD_DIV*10).
  * @details
- *   xfcp_test_02 upgrade: xfcp_axil_bridge + manualne dekoder nahradeny
- *   xfcp_fabric_endpoint s NUM_SLAVES=6. Adresovy dekoder je interny
- *   (SLAVE_BASE + SLAVE_MASK parametre), eliminuje 200+ riadkov manualneho
- *   mux/demux kodu.
+ *   xfcp_test_03 upgrade: NUM_SLAVES=7, slot 6 = axil_diag_ctrl (diagnostic counters).
+ *   ENABLE_POST_TX_FLUSH=0: echo bytes 0xFD are ignored by parser (!=SOP_REQ 0xFE).
  *
  *   Address map (SLAVE_BASE / SLAVE_MASK, stride 0x10000):
  *     Slot 0 @ 0xFF000000 : axil_sys_ctrl    (ID "SYSC")
@@ -16,6 +17,7 @@
  *     Slot 3 @ 0xFF030000 : axil_regs / LED   (ID "OUT_")  8-bit J10
  *     Slot 4 @ 0xFF040000 : axil_regs / LED   (ID "OUT_")  8-bit J11
  *     Slot 5 @ 0xFF050000 : axil_seven_seg    (ID "SEG7")
+ *     Slot 6 @ 0xFF060000 : axil_diag_ctrl   (ID "DIAG") — diagnostic counters
  *
  *   XFCP protokol: SOP=0xFE, READ=0x10, WRITE=0x11.
  *   AXIS_TLAST=0 z axis_uart_rx: parser odvodzuje koniec paketu z COUNT.
@@ -31,8 +33,12 @@ import uart_pkg::*;
 import xfcp_pkg::*;
 
 module xfcp_uart_mmio_top #(
-  parameter int CLOCK_FREQ_HZ         = 50_000_000,
-  parameter int UART_DEFAULT_BAUD_DIV = 434
+  parameter int  CLOCK_FREQ_HZ         = 50_000_000,
+  parameter int  UART_DEFAULT_BAUD_DIV = 434,
+  // Flush RX FIFO and gate parser during and after TX.
+  // Set 0 (default) to disable; 1 to re-enable the hold window.
+  parameter bit  ENABLE_POST_TX_FLUSH  = 1'b0,
+  parameter int  POST_TX_HOLD_CYCLES   = UART_DEFAULT_BAUD_DIV * 10
 ) (
   input  logic       clk_i,
   input  logic       rst_ni,
@@ -45,7 +51,7 @@ module xfcp_uart_mmio_top #(
   output logic [2:0] onboard_dig_o
 );
 
-  localparam int NUM_SLAVES = 6;
+  localparam int NUM_SLAVES = 7;
 
   // --------------------------------------------------------------------------
   // AXI-Stream: UART RX/TX <-> xfcp_fabric_endpoint
@@ -57,7 +63,7 @@ module xfcp_uart_mmio_top #(
   axi4s_if #(.DATA_WIDTH(8)) xfcp_tx_s     (.TCLK(clk_i), .TRESETn(rst_ni));
 
   // --------------------------------------------------------------------------
-  // AXI-Lite: endpoint masters -> 6 slave periferias
+  // AXI-Lite: endpoint masters -> 7 slave periferias
   // --------------------------------------------------------------------------
   axi4lite_if #(.ADDR_WIDTH(32), .DATA_WIDTH(32))
       axil_s [NUM_SLAVES] (.ACLK(clk_i), .ARESETn(rst_ni));
@@ -80,23 +86,18 @@ module xfcp_uart_mmio_top #(
   end
 
   // --------------------------------------------------------------------------
-  // XFCP Fabric Endpoint (NUM_SLAVES=6, interny adresovy dekoder)
-  // endpoint_busy_w: fabric internal state (ARB_WAIT_PKT), available for debug.
-  // rx_gate_w / fifo_flush_w: TX->RX coupling mitigation.
-  //   During tx_busy the physical UART serializer is active; coupling injects
-  //   echo bytes into the RX line. fifo_flush_w discards them continuously so
-  //   the 8-slot FIFO never overflows. rx_gate_w keeps those bytes invisible to
-  //   the parser simultaneously.
-  //   POST_TX_HOLD_CYCLES = UART_DEFAULT_BAUD_DIV * 10 = 1 UART byte period:
-  //     HW (434): 4340 cycles = 86.8 us — covers capacitive coupling tail.
-  //     SIM (16):  160 cycles — TB waits 3000 cycles, so no conflict.
-  //   PC pre_delay=200 ms >> 86.8 us: next request never hits flush window.
+  // XFCP Fabric Endpoint (NUM_SLAVES=7, interny adresovy dekoder)
+  // ENABLE_POST_TX_FLUSH: when 1, flushes RX FIFO and gates parser during and
+  // after TX (POST_TX_HOLD_CYCLES) to suppress TX->RX coupling echoes.
+  // Defaulting to 0: echo bytes of SOP_RESP=0xFD are silently ignored by the
+  // parser (not equal to SOP_REQ=0xFE) so the flush window is not needed.
+  // endpoint_busy_w: fabric ARB_WAIT_PKT state — available for debug.
   // --------------------------------------------------------------------------
   logic endpoint_busy_w;
 
-  localparam int POST_TX_HOLD_CYCLES = UART_DEFAULT_BAUD_DIV * 10;
+  localparam int POST_TX_CNT_W = $clog2(POST_TX_HOLD_CYCLES + 1);
   logic tx_busy_prev_r;
-  logic [$clog2(POST_TX_HOLD_CYCLES+1)-1:0] post_tx_cnt_r;
+  logic [POST_TX_CNT_W-1:0] post_tx_cnt_r;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
@@ -105,15 +106,25 @@ module xfcp_uart_mmio_top #(
     end else begin
       tx_busy_prev_r <= tx_status_w.tx_busy;
       if (tx_busy_prev_r && !tx_status_w.tx_busy)
-        post_tx_cnt_r <= POST_TX_HOLD_CYCLES[$clog2(POST_TX_HOLD_CYCLES+1)-1:0];
+        post_tx_cnt_r <= POST_TX_CNT_W'(POST_TX_HOLD_CYCLES);
       else if (post_tx_cnt_r > 0)
         post_tx_cnt_r <= post_tx_cnt_r - 1;
     end
   end
 
-  wire post_tx_hold_w = tx_status_w.tx_busy || (post_tx_cnt_r > 0);
+  wire post_tx_hold_w = ENABLE_POST_TX_FLUSH
+                      ? (tx_status_w.tx_busy || (post_tx_cnt_r > 0))
+                      : 1'b0;
   wire fifo_flush_w   = post_tx_hold_w;
   wire rx_gate_w      = post_tx_hold_w;
+
+  // --------------------------------------------------------------------------
+  // Diagnostic pulse signals for axil_diag_ctrl (slot 6)
+  // --------------------------------------------------------------------------
+  logic dbg_sop_w, dbg_hdr_w, dbg_drop_w, dbg_req_w, dbg_resp_w;
+  wire  rx_byte_pulse_w  = uart_rx_raw_s.TVALID && uart_rx_raw_s.TREADY;
+  wire  tx_byte_pulse_w  = xfcp_tx_s.TVALID && xfcp_tx_s.TREADY;
+  wire  tx_pkt_pulse_w   = !tx_busy_prev_r && tx_status_w.tx_busy;
 
   xfcp_fabric_endpoint #(
     .NUM_SLAVES     (NUM_SLAVES),
@@ -127,9 +138,11 @@ module xfcp_uart_mmio_top #(
       32'hFF02_0000,   // Slot 2: LED0
       32'hFF03_0000,   // Slot 3: LED1
       32'hFF04_0000,   // Slot 4: LED2
-      32'hFF05_0000    // Slot 5: SEG7
+      32'hFF05_0000,   // Slot 5: SEG7
+      32'hFF06_0000    // Slot 6: DIAG
     }),
     .SLAVE_MASK     ('{
+      32'hFFFF_0000,
       32'hFFFF_0000,
       32'hFFFF_0000,
       32'hFFFF_0000,
@@ -143,7 +156,12 @@ module xfcp_uart_mmio_top #(
     .xfcp_in         (xfcp_rx_s.slave),
     .xfcp_out        (xfcp_tx_s.master),
     .m_axil          (axil_s),
-    .endpoint_busy_o (endpoint_busy_w)
+    .endpoint_busy_o (endpoint_busy_w),
+    .dbg_sop_o       (dbg_sop_w),
+    .dbg_hdr_o       (dbg_hdr_w),
+    .dbg_drop_o      (dbg_drop_w),
+    .dbg_req_o       (dbg_req_w),
+    .dbg_resp_o      (dbg_resp_w)
   );
 
   // --------------------------------------------------------------------------
@@ -299,6 +317,23 @@ module xfcp_uart_mmio_top #(
     .s_axil(axil_s[5].slave),
     .dig_o (onboard_dig_o),
     .seg_o (onboard_seg_o)
+  );
+
+  // --------------------------------------------------------------------------
+  // Slot 6: Diagnostic counter bank — axil_s[6] @ 0xFF060000
+  // --------------------------------------------------------------------------
+  axil_diag_ctrl u_diag_ctrl (
+    .clk_i      (clk_i),
+    .rst_ni     (rst_ni),
+    .s_axil     (axil_s[6].slave),
+    .rx_byte_i  (rx_byte_pulse_w),
+    .rx_sop_i   (dbg_sop_w),
+    .rx_hdr_i   (dbg_hdr_w),
+    .rx_drop_i  (dbg_drop_w),
+    .fab_req_i  (dbg_req_w),
+    .fab_resp_i (dbg_resp_w),
+    .tx_byte_i  (tx_byte_pulse_w),
+    .tx_pkt_i   (tx_pkt_pulse_w)
   );
 
 endmodule

@@ -637,6 +637,70 @@ S uniformnou 33 % mierou úspechu a 5 opakovaní:
 
 ---
 
+## Fáza 3A — navrhy_11 implementácia (2026-05-22)
+
+### Krok 1: ENABLE_POST_TX_FLUSH parametrizácia
+
+Nový parameter `ENABLE_POST_TX_FLUSH = 1'b0` (default OFF) v `xfcp_uart_mmio_top.sv`.
+
+**Hypotéza:** flush bol zbytočný (alebo škodlivý) pretože SOP_RESP=0xFD zaistil, že echo
+bajty z TX→RX couplingu sa nezhodujú s SOP_REQ=0xFE a parser ich v S_IDLE ignoruje.
+Empirické dáta: flush OFF=?, 2000=46%, 4340=33%. Cieľom HW testu je porovnať flush OFF.
+
+`POST_TX_HOLD_CYCLES` zostáva ako parameter pre prípad testovania s flush ON.
+
+### Krok 2: RTL Diagnostic Counters — Slot 6 @ 0xFF060000
+
+Nový modul `axil_diag_ctrl.sv` s 10 32-bit saturujúcimi čítačmi:
+
+| Offset | Názov | Zdroj |
+|--------|-------|-------|
+| 0x00 | COMPONENT_ID = "DIAG" | konštanta |
+| 0x04 | RX_BYTE_COUNT | uart_rx_raw_s.TVALID && TREADY |
+| 0x08 | RX_SOP_COUNT | parser: S_IDLE→S_HDR (dbg_sop_o) |
+| 0x0C | RX_HDR_COUNT | parser: hfifo_push (dbg_hdr_o) |
+| 0x10 | RX_DROP_COUNT | parser: go_drop && !S_DROP (dbg_drop_o) |
+| 0x14 | FAB_REQ_COUNT | endpoint: req_fire && !invalid_req (dbg_req_o) |
+| 0x18 | FAB_RESP_COUNT | endpoint: resp_start_pulse (dbg_resp_o) |
+| 0x1C | TX_BYTE_COUNT | xfcp_tx_s.TVALID && TREADY |
+| 0x20 | TX_PKT_COUNT | tx_busy rising edge |
+| 0x24 | DIAG_RESET (PULSE) | write any → clear all |
+
+Debug pulse porty pridané do `xfcp_rx_parser.sv` (dbg_sop/hdr/drop) a
+`xfcp_fabric_endpoint.sv` (dbg_req/resp + passthrough parser ports).
+
+### Krok 3: Tools SOP Resync
+
+`SerialTransport.read_packet(expected_len)` v `tools/xfcp/transport.py`:
+- Skenuje byte-by-byte pre SOP_RESP=0xFD
+- Zahadzuje stale bajty pred SOP
+- Číta zvyšok paketu po nájdení SOP
+
+`XfcpBus._transact()` aktualizovaný na používanie `read_packet()` namiesto slepého `read(n)`.
+
+`hw_diag.py` aktualizovaný:
+- `recv_with_sop_resync()` — inline SOP resync pre standalone script
+- `diag_reset()` + `diag_read_all()` + `print_diag()` — čítanie DIAG counterov
+- Post-test výpis: porovnáva očakávané vs. skutočné hodnoty counterov
+
+### SIM validácia
+
+Regression: **16/16 ALL PASSED** (Errors: 0, Warnings: 0).
+
+### Adresová mapa po Fáza 3A
+
+```
+Slot 0 @ 0xFF000000 : axil_sys_ctrl    (ID "SYSC")
+Slot 1 @ 0xFF010000 : axil_uart_adapter (ID "UART")
+Slot 2 @ 0xFF020000 : axil_regs / LED   (ID "OUT_")  6-bit onboard
+Slot 3 @ 0xFF030000 : axil_regs / LED   (ID "OUT_")  8-bit J10
+Slot 4 @ 0xFF040000 : axil_regs / LED   (ID "OUT_")  8-bit J11
+Slot 5 @ 0xFF050000 : axil_seven_seg    (ID "SEG7")
+Slot 6 @ 0xFF060000 : axil_diag_ctrl   (ID "DIAG")
+```
+
+---
+
 ## Historický prehľad
 
 | Dátum | Čo sa zmenilo |
@@ -655,3 +719,4 @@ S uniformnou 33 % mierou úspechu a 5 opakovaní:
 | 2026-05-21 | Fáza 2B príprava: navrhy_07/08 single-flight gate (d1c64ae), 7/30 = 23 % HW |
 | 2026-05-22 | Fáza 2B: post_tx_hold flush + endpoint_busy_o sémantika. Sim 13/13 PASS, HW 14/30 = 46 % |
 | 2026-05-22 | Fáza 2C: watchdog deadlock fix + BAUD_DIV*10 hold + TB 6-slot scan. Sim 16/16 PASS, HW 10/30 = 33 % |
+| 2026-05-22 | Fáza 3A: navrhy_11 implementácia — ENABLE_POST_TX_FLUSH=0 (default OFF), RTL DIAG counters (slot 6 @ 0xFF060000), tools SOP resync (read_packet), hw_diag.py DIAG support. Regression 16/16 PASS |

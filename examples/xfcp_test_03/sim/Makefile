@@ -190,6 +190,7 @@ xfcp_uart_mmio_top: $(LOGDIR)
 	        $(RTL_AXIL)/axil_uart_adapter.sv \
 	        $(RTL_AXIL)/axil_regs.sv \
 	        $(RTL_AXIL)/axil_seven_seg_adapter.sv \
+	        $(RTL_AXIL)/axil_diag_ctrl.sv \
 	        $(RTL_SEG)/seven_seg_mux.sv \
 	        $(RTL_SEG)/seven_seg_mux_packed.sv \
 	        $(XFCP_COMMON) \

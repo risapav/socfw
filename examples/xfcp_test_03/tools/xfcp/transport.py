@@ -56,6 +56,35 @@ class SerialTransport:
         except serial.SerialException as e:
             raise XfcpError(f"Serial read error: {e}") from e
 
+    def read_packet(self, expected_len: int) -> bytes:
+        """Read one XFCP response packet, scanning for SOP_RESP (0xFD) first.
+
+        Discards any stale bytes that arrive before the SOP_RESP byte, then
+        reads the remaining (expected_len - 1) bytes. Returns the complete
+        packet as bytes, or a partial buffer on timeout.
+        """
+        from . import protocol as proto
+        deadline = time.monotonic() + self._timeouts.response_s
+        try:
+            while time.monotonic() < deadline:
+                b = self._ser.read(1)
+                if not b:
+                    continue
+                if b[0] != proto.SOP_RESP:
+                    continue
+                buf = bytearray(b)
+                remaining = expected_len - 1
+                while remaining > 0 and time.monotonic() < deadline:
+                    chunk = self._ser.read(remaining)
+                    if not chunk:
+                        continue
+                    buf.extend(chunk)
+                    remaining -= len(chunk)
+                return bytes(buf)
+        except serial.SerialException as e:
+            raise XfcpError(f"Serial read error: {e}") from e
+        return b""
+
     def drain(self) -> None:
         """Drain any stale bytes after a failed transaction."""
         time.sleep(self._timeouts.recovery_s)

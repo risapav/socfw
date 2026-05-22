@@ -32,6 +32,12 @@ params:
   UART_DEFAULT_BAUD_DIV:
     type: int
     default: 434
+  ENABLE_POST_TX_FLUSH:
+    type: bit
+    default: 0
+  POST_TX_HOLD_CYCLES:
+    type: int
+    default: 4340
 
 ports:
   - name: uart_rx_i
@@ -82,6 +88,7 @@ artifacts:
     - ../rtl/axil/axil_sys_ctrl.sv
     - ../rtl/axil/axil_uart_adapter.sv
     - ../rtl/axil/axil_seven_seg_adapter.sv
+    - ../rtl/axil/axil_diag_ctrl.sv
     # 7-segment display driver
     - ../rtl/segment/seven_seg_mux.sv
     - ../rtl/segment/seven_seg_mux_packed.sv
@@ -113,6 +120,7 @@ provides:
     - axil_regfile
     - axil_sys_ctrl
     - axil_seven_seg_adapter
+    - axil_diag_ctrl
     - seven_seg_mux
     - seven_seg_mux_packed
     - uart_baud_gen

@@ -60,7 +60,14 @@ module xfcp_fabric_endpoint #(
 
   // High when a transaction is in-flight (engine or packetizer busy).
   // Used externally to gate new request bytes into the parser (single-flight mode).
-  output logic endpoint_busy_o
+  output logic endpoint_busy_o,
+
+  // Debug pulses: 1-cycle, combinational — wire to axil_diag_ctrl
+  output logic dbg_sop_o,    // good SOP received by parser
+  output logic dbg_hdr_o,    // header successfully decoded (hfifo_push)
+  output logic dbg_drop_o,   // parser drop event
+  output logic dbg_req_o,    // valid request dispatched to engine
+  output logic dbg_resp_o    // packetizer response started
 );
 
   // synthesis translate_off
@@ -379,8 +386,14 @@ module xfcp_fabric_endpoint #(
     .write_data(wdata), .write_data_valid(wdata_valid_raw),
     .write_data_ready(wdata_ready),
     .pass_valid(), .pass_data(), .pass_last(), .pass_ready(1'b0),
-    .error_protocol()
+    .error_protocol(),
+    .dbg_sop_o (dbg_sop_o),
+    .dbg_hdr_o (dbg_hdr_o),
+    .dbg_drop_o(dbg_drop_o)
   );
+
+  assign dbg_req_o  = req_fire && !invalid_req;
+  assign dbg_resp_o = resp_start_pulse;
 
   // ── AXI Engine inštancie ─────────────────────────────────────
   //
