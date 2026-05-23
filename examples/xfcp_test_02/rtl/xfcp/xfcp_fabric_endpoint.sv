@@ -81,6 +81,9 @@ module xfcp_fabric_endpoint #(
   logic                      wdata_valid_raw;  // priamo z parsera
   logic                      wdata_valid;      // gated: platné len s req_valid
   logic                      wdata_ready;
+  logic                      invalid_req;      // req_valid && !dec_valid
+  logic                      drop_wdata_q;     // draining invalid WRITE payload
+  logic [13:0]               drop_cnt_q;       // remaining words to drain
 
   // ── Address decoder ──────────────────────────────────────────
   logic [SEL_W-1:0] dec_sel;
@@ -116,6 +119,7 @@ module xfcp_fabric_endpoint #(
   logic [AXI_DATA_WIDTH-1:0] eng_rdata       [NUM_SLAVES];
   logic                      eng_rdata_valid [NUM_SLAVES];
   logic                      eng_resp_done   [NUM_SLAVES];
+  logic [7:0]                eng_resp_type   [NUM_SLAVES];
   logic                      eng_pkt_idle    [NUM_SLAVES];
 
   // ── Order FIFO signály (deklarované skoro – používané v busy trackeri)
@@ -139,8 +143,8 @@ module xfcp_fabric_endpoint #(
       end
     end else begin
       for (int i = 0; i < NUM_SLAVES; i++) begin
-        // Busy: nastav pri dispatch, čisti pri done
-        if (req_valid && req_ready && dec_sel == SEL_W'(i))
+        // Busy: nastav pri dispatch (len pre platne requesty), cisti pri done
+        if (req_valid && req_ready && !invalid_req && dec_sel == SEL_W'(i))
           eng_busy[i] <= 1'b1;
         else if (eng_resp_done[i])
           eng_busy[i] <= 1'b0;
@@ -189,22 +193,44 @@ module xfcp_fabric_endpoint #(
   // Kedže AXI-Lite je single-outstanding, engine busy = WRITE alebo
   // READ prebieha. Blokujeme ďalší dispatch kým engine neskončí.
   logic req_fire;
+  assign invalid_req  = req_valid && !dec_valid;
   assign req_fire     = req_valid && req_ready;
-  assign req_ready    = dec_valid
-                        && !eng_busy[dec_sel]
-                        && eng_req_ready[dec_sel]
-                        && ofifo_wready;
-  assign ofifo_wvalid = req_fire;
+  assign req_ready    = invalid_req ? 1'b1 :
+                        dec_valid && !eng_busy[dec_sel]
+                        && eng_req_ready[dec_sel] && ofifo_wready;
+  assign ofifo_wvalid = req_fire && !invalid_req;
   assign ofifo_wdata  = '{sel: dec_sel, op: req_hdr.opcode};
 
   // ── wdata routing ─────────────────────────────────────────────
-  // Po zmene parsera: header sa pushuje PRED payload pre WRITE.
-  // req_valid=1 je zaručene platné pred wdata_valid_raw=1.
-  // dec_sel je správny keď wdata_valid_raw príde.
+  // drain_wdata: 1 pocas odstranovania payloadu neplatneho WRITEu.
+  // wdata_valid maskovany pocas drain, wdata_ready=1 pre okamzite odcerpanie.
   logic [SEL_W-1:0] wdata_sel;
+  wire  drain_wdata  = drop_wdata_q ||
+                       (invalid_req && req_hdr.opcode == XFCP_OP_WRITE);
   assign wdata_sel   = req_valid ? dec_sel : slave_sel_q;
-  assign wdata_valid = wdata_valid_raw;  // bez gatingu – req_valid je vždy pred
-  assign wdata_ready = eng_wdata_ready[wdata_sel];
+  assign wdata_valid = wdata_valid_raw && !drain_wdata;
+  assign wdata_ready = drain_wdata ? 1'b1 : eng_wdata_ready[wdata_sel];
+
+  // ── Invalid WRITE payload drain ──────────────────────────────
+  // drop_wdata_q zostava 1 kym sa neodcerpa COUNT/4 slov z parsera.
+  // drain_wdata je kombinacny: platny aj v rovnakom takte ako req_fire.
+  wire [13:0] req_words = req_hdr.count[15:2];
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      drop_wdata_q <= 1'b0;
+      drop_cnt_q   <= '0;
+    end else if (invalid_req && req_fire &&
+                 req_hdr.opcode == XFCP_OP_WRITE) begin
+      // Zachyt pocet slov; odcitaj slovo ak sa v tomto takte odcerpava
+      drop_cnt_q   <= req_words - {13'b0, drain_wdata && wdata_valid_raw};
+      drop_wdata_q <= (req_words - {13'b0, drain_wdata && wdata_valid_raw}) != '0;
+    end else if (drop_wdata_q && wdata_valid_raw) begin
+      drop_cnt_q <= drop_cnt_q - 14'd1;
+      if (drop_cnt_q == 14'd1)
+        drop_wdata_q <= 1'b0;
+    end
+  end
 
   // ── Response Arbiter ─────────────────────────────────────────
   typedef enum logic [1:0] {
@@ -260,15 +286,10 @@ module xfcp_fabric_endpoint #(
       // Zachyť sel a op presne keď arbiter popne FIFO (resp_start_pulse)
       if (resp_start_pulse) begin
         arb_sel_q   <= ofifo_rdata.sel;
-        resp_type_q <= (ofifo_rdata.op == xfcp_pkg::XFCP_OP_READ)
-                       ? xfcp_pkg::XFCP_OP_RESP_READ
-                       : xfcp_pkg::XFCP_OP_RESP_WRITE;
+        resp_type_q <= xfcp_op_e'(eng_resp_type[ofifo_rdata.sel]);
       end else if (arb_q == ARB_IDLE && arb_n == ARB_WAIT_ENG) begin
-        // Zachyť aj pri prechode do WAIT_ENG (engine ešte nie je hotový)
+        // Zachyt sel pri prechode do WAIT_ENG; resp_type_q sa zachyti pri resp_start_pulse
         arb_sel_q   <= ofifo_rdata.sel;
-        resp_type_q <= (ofifo_rdata.op == xfcp_pkg::XFCP_OP_READ)
-                       ? xfcp_pkg::XFCP_OP_RESP_READ
-                       : xfcp_pkg::XFCP_OP_RESP_WRITE;
       end
     end
   end
@@ -389,7 +410,7 @@ module xfcp_fabric_endpoint #(
         .read_data_ready (rdata_ready && (arb_sel_q == SEL_W'(gi))
                           && (arb_q == ARB_WAIT_PKT)),
         .resp_start        (),
-        .resp_type         (),
+        .resp_type         (eng_resp_type[gi]),
         .resp_done         (eng_resp_done[gi]),
         .packetizer_idle_i (eng_pkt_idle[gi]),
         .error_timeout     ()

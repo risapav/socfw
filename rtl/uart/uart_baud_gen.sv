@@ -58,7 +58,7 @@ module uart_baud_gen #(
     // --------------------------------------------------------------------------
     always_ff @(posedge clk or negedge rstn) begin
         if (!rstn) begin
-            count_q      <= prescale_i - COUNT_WIDTH'(1); // prvý tick hneď
+            count_q      <= '0;
             start_tick_o <= 1'b1;
             half_tick_o  <= 1'b0;
             end_tick_o   <= 1'b0;

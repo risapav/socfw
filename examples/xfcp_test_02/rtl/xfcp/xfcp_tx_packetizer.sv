@@ -176,7 +176,13 @@ module xfcp_tx_packetizer #(
   //   a) Pred posledným byte3 hs → done_latch_q zachytí a drží.
   //   b) Presne pri poslednom byte3 hs (off-by-one) → done_flag
   //      kombináciou zachytí v rovnakom takte.
-  // Latch sa čistí po poslednom byte3 handshake.
+  //
+  // Latch sa čistí LEN keď je aj slot1 prázdny (multi-word guard).
+  // Invariant (garantovaný arbitrom): resp_start_pulse sa nevystreľuje
+  // kým engine nedokončí VŠETKY slová → v okamihu vstupu do ST_PAYLOAD
+  // sú všetky dátové slová v read_buffer FIFO. Pre N-slovný READ má
+  // slot1 word(N-1) keď sa odosiela word1 → exit condition ostáva
+  // FALSE až do posledného slova, kde slot1 je prázdny → exit TRUE.
   // ============================================================
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -184,7 +190,7 @@ module xfcp_tx_packetizer #(
     end else if (resp_done_i) begin
       done_latch_q <= 1'b1;
     end else if (state_q == ST_PAYLOAD &&
-                 hs && byte_cnt_q[1] && byte_cnt_q[0] && done_flag) begin
+                 hs && byte_cnt_q[1] && byte_cnt_q[0] && done_flag && !slot1_valid_q) begin
       done_latch_q <= 1'b0;
     end
   end
@@ -347,11 +353,19 @@ module xfcp_tx_packetizer #(
       // DATA = slot0_q[31:24] (aktuálny MSB, bez muxu).
       //
       // Prechod do ST_DONE: posledný bajt slova (byte_cnt==3)
-      // a done_flag=1 (engine signalizoval koniec).
+      // AND done_flag=1 AND slot1 prázdny (multi-word guard).
+      //
+      // Multi-word guard (!slot1_valid_q):
+      //   Arbiter spúšťa resp_start_pulse až keď engine dokončí VŠETKY
+      //   slová → všetky dáta sú v read_buffer FIFO pred vstupom do
+      //   ST_PAYLOAD. Pre N > 1 slov: slot1 obsahuje word(k+1) počas
+      //   odosielania word(k) → exit FALSE. Na poslednom slove je
+      //   slot1 prázdny → exit TRUE. Pre N=1: slot1 nikdy neplný → exit
+      //   po prvom slove, rovnako ako predtým.
       ST_PAYLOAD: begin
         m_axis_tvalid = slot0_valid_q;
         m_axis_tdata  = slot0_q[31:24];
-        if (hs && byte_cnt_q[1] && byte_cnt_q[0] && done_flag)
+        if (hs && byte_cnt_q[1] && byte_cnt_q[0] && done_flag && !slot1_valid_q)
           state_n = ST_DONE;
       end
 
