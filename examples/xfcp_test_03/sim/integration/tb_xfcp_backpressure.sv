@@ -151,9 +151,9 @@ module tb_xfcp_backpressure;
   endtask
 
   // xfcp_write_fast: WRITE bez UART RX casovani (pre rychly setup)
-  // TX backpressure je stale aktivne (WRITE response trva 21*BAUD_CYCLES)
+  // TX backpressure je stale aktivne (WRITE response trva 22*BAUD_CYCLES)
   task automatic xfcp_write_fast(input logic [31:0] addr, input logic [31:0] data);
-    axis_send(8'hFE); axis_send(8'h11);
+    axis_send(8'hFE); axis_send(8'h11); axis_send(8'h00);  // SOP OP SEQ
     axis_send(8'h00); axis_send(8'h04);
     axis_send(addr[31:24]); axis_send(addr[23:16]);
     axis_send(addr[15:8]);  axis_send(addr[7:0]);
@@ -163,7 +163,7 @@ module tb_xfcp_backpressure;
 
   // xfcp_read_uart: READ s UART RX casovanim
   task automatic xfcp_read_uart(input logic [31:0] addr);
-    uart_send(8'hFE); uart_send(8'h10);
+    uart_send(8'hFE); uart_send(8'h10); uart_send(8'h00);  // SOP OP SEQ
     uart_send(8'h00); uart_send(8'h04);
     uart_send(addr[31:24]); uart_send(addr[23:16]);
     uart_send(addr[15:8]);  uart_send(addr[7:0]);
@@ -171,25 +171,25 @@ module tb_xfcp_backpressure;
 
   // xfcp_read_fast: READ bez UART RX casovani (pre back-to-back testy)
   task automatic xfcp_read_fast(input logic [31:0] addr);
-    axis_send(8'hFE); axis_send(8'h10);
+    axis_send(8'hFE); axis_send(8'h10); axis_send(8'h00);  // SOP OP SEQ
     axis_send(8'h00); axis_send(8'h04);
     axis_send(addr[31:24]); axis_send(addr[23:16]);
     axis_send(addr[15:8]);  axis_send(addr[7:0]);
   endtask
 
-  // drain_write_resp: spotrebuje 21 bajtov WRITE response
-  // S UART TX backpressure: trva 21*BAUD_CYCLES = 91140 cyklov
+  // drain_write_resp: spotrebuje 22 bajtov WRITE response
+  // S UART TX backpressure: trva 22*BAUD_CYCLES = 95480 cyklov
   task automatic drain_write_resp();
-    resp_wait(21, 200_000);
-    resp_rptr += 21;
+    resp_wait(22, 200_000);
+    resp_rptr += 22;
   endtask
 
-  // recv_read: caka na 25 bajtov READ response a extrahuje data
-  // S UART TX backpressure: trva 25*BAUD_CYCLES = 108500 cyklov
+  // recv_read: caka na 26 bajtov READ response a extrahuje data
+  // S UART TX backpressure: trva 26*BAUD_CYCLES = 112840 cyklov
   task automatic recv_read(output logic [31:0] rdata, input string label);
     logic [7:0] b;
-    resp_wait(25, 200_000);
-    resp_rptr += 20;  // preskoc header (SOP+TYPE+DEV_TYPE+DEV_STR)
+    resp_wait(26, 200_000);
+    resp_rptr += 21;  // preskoc header (SOP+TYPE+SEQ+DEV_TYPE+DEV_STR)
     resp_get(b); rdata[31:24] = b;
     resp_get(b); rdata[23:16] = b;
     resp_get(b); rdata[15:8]  = b;

@@ -2,16 +2,16 @@
 
 // Testbench for xfcp_tx_packetizer (standalone, no UART, no engine).
 //
-// Inject resp_start + resp_type + read_data directly.
+// Inject resp_start + resp_type + resp_seq + read_data directly.
 // Capture AXI-Stream output bytes and verify packet format.
 //
 // Packet format:
-//   WRITE resp (type=0x13): [FE][13][TYPE 2B][STR 16B][0x00+TLAST] = 21 bytes
-//   READ  resp (type=0x12): [FE][12][TYPE 2B][STR 16B][data 4B MSB-first][0x00+TLAST] = 25 bytes
+//   WRITE resp (type=0x13): [FD][13][SEQ][TYPE 2B][STR 16B][0x00+TLAST] = 22 bytes
+//   READ  resp (type=0x12): [FD][12][SEQ][TYPE 2B][STR 16B][data 4B MSB-first][0x00+TLAST] = 26 bytes
 //
 // Tests:
-//   T1: WRITE response -> verify 21 bytes, FE 13 header, TLAST on last
-//   T2: READ response 1 word -> verify 25 bytes, FE 12 header, data MSB-first, TLAST
+//   T1: WRITE response -> verify 22 bytes, FD 13 SEQ header, TLAST on last
+//   T2: READ response 1 word -> verify 26 bytes, FD 12 SEQ header, data MSB-first, TLAST
 //   T3: READ response with backpressure on m_axis_tready
 //   T4: Two consecutive WRITE responses
 //   T5: READ response with late resp_done_i (off-by-one timing)
@@ -38,6 +38,7 @@ module tb_xfcp_tx_packetizer;
   logic        m_axis_tlast;
   logic        resp_start;
   logic [7:0]  resp_type;
+  logic [7:0]  resp_seq_tb;
   logic [31:0] read_data;
   logic        read_data_valid;
   logic        read_data_ready;
@@ -59,6 +60,7 @@ module tb_xfcp_tx_packetizer;
     .m_axis_tlast    (m_axis_tlast),
     .resp_start      (resp_start),
     .resp_type       (resp_type),
+    .resp_seq        (resp_seq_tb),
     .read_data       (read_data),
     .read_data_valid (read_data_valid),
     .read_data_ready (read_data_ready),
@@ -72,13 +74,14 @@ module tb_xfcp_tx_packetizer;
   int unsigned cap_wptr;
 
   initial begin
-    cap_wptr       = 0;
-    m_axis_tready  = 1'b1;
-    resp_start     = 1'b0;
-    resp_type      = 8'h13;
-    read_data      = '0;
+    cap_wptr        = 0;
+    m_axis_tready   = 1'b1;
+    resp_start      = 1'b0;
+    resp_type       = 8'h13;
+    resp_seq_tb     = 8'hAB;
+    read_data       = '0;
     read_data_valid = 1'b0;
-    resp_done_i    = 1'b0;
+    resp_done_i     = 1'b0;
   end
 
   always @(posedge clk) begin
@@ -109,7 +112,7 @@ module tb_xfcp_tx_packetizer;
     end
   endtask
 
-  // Send one WRITE response (21 bytes)
+  // Send one WRITE response (22 bytes)
   task automatic send_write_resp();
     @(negedge clk);
     resp_type  = 8'h13;
@@ -117,7 +120,7 @@ module tb_xfcp_tx_packetizer;
     @(posedge clk);
     @(negedge clk);
     resp_start = 1'b0;
-    wait_bytes(21);
+    wait_bytes(22);
   endtask
 
   // Send one READ response: 1 word.
@@ -152,13 +155,13 @@ module tb_xfcp_tx_packetizer;
     end
     @(negedge clk);
     read_data_valid = 1'b0;  // word consumed into slot0 at preceding posedge
-    // Wait for all 25 bytes from the start of this response
+    // Wait for all 26 bytes from the start of this response
     begin : wait_all
       int t;
       t = 0;
-      while ((cap_wptr - base) < 25) begin
+      while ((cap_wptr - base) < 26) begin
         @(posedge clk);
-        if (++t > 5000) $fatal(1, "send_read_resp: 25-byte timeout");
+        if (++t > 5000) $fatal(1, "send_read_resp: 26-byte timeout");
       end
     end
   endtask
@@ -179,24 +182,26 @@ module tb_xfcp_tx_packetizer;
     // T1: WRITE response
     base = cap_wptr;
     send_write_resp();
-    chk8(base+0,  8'hFD, "T1 SOP");
-    chk8(base+1,  8'h13, "T1 TYPE");
-    chk8(base+20, 8'h00, "T1 terminator");
+    chk8(base+0,  8'hFD,       "T1 SOP");
+    chk8(base+1,  8'h13,       "T1 TYPE");
+    chk8(base+2,  resp_seq_tb, "T1 SEQ");
+    chk8(base+21, 8'h00,       "T1 terminator");
     if (m_axis_tlast !== 1'b0)
       $display("NOTE T1: TLAST not captured in comb path — check DONE byte");
-    $display("PASS T1 WRITE response 21 bytes");
+    $display("PASS T1 WRITE response 22 bytes");
 
     // T2: READ response
     base = cap_wptr;
     send_read_resp(32'hA5A5_A5A5);
-    chk8(base+0,  8'hFD,   "T2 SOP");
-    chk8(base+1,  8'h12,   "T2 TYPE");
-    chk8(base+20, 8'hA5,   "T2 data[31:24]");
-    chk8(base+21, 8'hA5,   "T2 data[23:16]");
-    chk8(base+22, 8'hA5,   "T2 data[15:8]");
-    chk8(base+23, 8'hA5,   "T2 data[7:0]");
-    chk8(base+24, 8'h00,   "T2 terminator");
-    $display("PASS T2 READ response 25 bytes");
+    chk8(base+0,  8'hFD,       "T2 SOP");
+    chk8(base+1,  8'h12,       "T2 TYPE");
+    chk8(base+2,  resp_seq_tb, "T2 SEQ");
+    chk8(base+21, 8'hA5,       "T2 data[31:24]");
+    chk8(base+22, 8'hA5,       "T2 data[23:16]");
+    chk8(base+23, 8'hA5,       "T2 data[15:8]");
+    chk8(base+24, 8'hA5,       "T2 data[7:0]");
+    chk8(base+25, 8'h00,       "T2 terminator");
+    $display("PASS T2 READ response 26 bytes");
 
     // ── T3: READ response with m_axis_tready backpressure ────────────
     // Hold tready=0 before resp_start; packetizer stalls in ST_HEADER.
@@ -229,18 +234,18 @@ module tb_xfcp_tx_packetizer;
       @(negedge clk); read_data_valid = 1'b0;
       begin : t3_bytes
         int t; t = 0;
-        while ((cap_wptr - t3_base) < 25) begin
+        while ((cap_wptr - t3_base) < 26) begin
           @(posedge clk);
           if (++t > 5000) $fatal(1, "T3: bytes timeout");
         end
       end
       chk8(t3_base+0,  8'hFD,   "T3 SOP");
       chk8(t3_base+1,  8'h12,   "T3 TYPE");
-      chk8(t3_base+20, 8'hDE,   "T3 data[31:24]");
-      chk8(t3_base+21, 8'hAD,   "T3 data[23:16]");
-      chk8(t3_base+22, 8'h12,   "T3 data[15:8]");
-      chk8(t3_base+23, 8'h34,   "T3 data[7:0]");
-      chk8(t3_base+24, 8'h00,   "T3 terminator");
+      chk8(t3_base+21, 8'hDE,   "T3 data[31:24]");
+      chk8(t3_base+22, 8'hAD,   "T3 data[23:16]");
+      chk8(t3_base+23, 8'h12,   "T3 data[15:8]");
+      chk8(t3_base+24, 8'h34,   "T3 data[7:0]");
+      chk8(t3_base+25, 8'h00,   "T3 terminator");
       $display("PASS T3 READ backpressure (tready=0 during header, 5 cycles)");
       repeat(2) @(posedge clk);
     end
@@ -253,10 +258,10 @@ module tb_xfcp_tx_packetizer;
       send_write_resp();
       chk8(t4_base+0,  8'hFD, "T4 pkt0 SOP");
       chk8(t4_base+1,  8'h13, "T4 pkt0 TYPE");
-      chk8(t4_base+20, 8'h00, "T4 pkt0 term");
-      chk8(t4_base+21, 8'hFD, "T4 pkt1 SOP");
-      chk8(t4_base+22, 8'h13, "T4 pkt1 TYPE");
-      chk8(t4_base+41, 8'h00, "T4 pkt1 term");
+      chk8(t4_base+21, 8'h00, "T4 pkt0 term");
+      chk8(t4_base+22, 8'hFD, "T4 pkt1 SOP");
+      chk8(t4_base+23, 8'h13, "T4 pkt1 TYPE");
+      chk8(t4_base+43, 8'h00, "T4 pkt1 term");
       $display("PASS T4 back-to-back WRITE responses");
       repeat(2) @(posedge clk);
     end
@@ -291,18 +296,18 @@ module tb_xfcp_tx_packetizer;
       @(negedge clk); resp_done_i = 1'b0;
       begin : t5_bytes
         int t; t = 0;
-        while ((cap_wptr - t5_base) < 25) begin
+        while ((cap_wptr - t5_base) < 26) begin
           @(posedge clk);
           if (++t > 5000) $fatal(1, "T5: bytes timeout");
         end
       end
       chk8(t5_base+0,  8'hFD,   "T5 SOP");
       chk8(t5_base+1,  8'h12,   "T5 TYPE");
-      chk8(t5_base+20, 8'h5A,   "T5 data[31:24]");
-      chk8(t5_base+21, 8'h5A,   "T5 data[23:16]");
-      chk8(t5_base+22, 8'h5A,   "T5 data[15:8]");
-      chk8(t5_base+23, 8'h5A,   "T5 data[7:0]");
-      chk8(t5_base+24, 8'h00,   "T5 terminator");
+      chk8(t5_base+21, 8'h5A,   "T5 data[31:24]");
+      chk8(t5_base+22, 8'h5A,   "T5 data[23:16]");
+      chk8(t5_base+23, 8'h5A,   "T5 data[15:8]");
+      chk8(t5_base+24, 8'h5A,   "T5 data[7:0]");
+      chk8(t5_base+25, 8'h00,   "T5 terminator");
       $display("PASS T5 late resp_done_i");
       repeat(2) @(posedge clk);
     end
@@ -315,14 +320,15 @@ module tb_xfcp_tx_packetizer;
       int unsigned t6_base;
       t6_base = cap_wptr;
       send_write_resp();
-      chk8(t6_base+2,  8'h00, "T6 DEV_TYPE[15:8]");
-      chk8(t6_base+3,  8'h01, "T6 DEV_TYPE[7:0]");
-      chk8(t6_base+4,  8'h00, "T6 DEV_STR[0] null-pad");
-      chk8(t6_base+5,  8'h54, "T6 DEV_STR[1] 'T'");
-      chk8(t6_base+6,  8'h42, "T6 DEV_STR[2] 'B'");
-      chk8(t6_base+18, 8'h20, "T6 DEV_STR[14] ' '");
-      chk8(t6_base+19, 8'h20, "T6 DEV_STR[15] ' '");
-      chk8(t6_base+20, 8'h00, "T6 term after 16B DEV_STR");
+      chk8(t6_base+2,  resp_seq_tb, "T6 SEQ");
+      chk8(t6_base+3,  8'h00, "T6 DEV_TYPE[15:8]");
+      chk8(t6_base+4,  8'h01, "T6 DEV_TYPE[7:0]");
+      chk8(t6_base+5,  8'h00, "T6 DEV_STR[0] null-pad");
+      chk8(t6_base+6,  8'h54, "T6 DEV_STR[1] 'T'");
+      chk8(t6_base+7,  8'h42, "T6 DEV_STR[2] 'B'");
+      chk8(t6_base+19, 8'h20, "T6 DEV_STR[14] ' '");
+      chk8(t6_base+20, 8'h20, "T6 DEV_STR[15] ' '");
+      chk8(t6_base+21, 8'h00, "T6 term after 16B DEV_STR");
       $display("PASS T6 DEV_TYPE and DEV_STR 16-byte field");
       repeat(2) @(posedge clk);
     end

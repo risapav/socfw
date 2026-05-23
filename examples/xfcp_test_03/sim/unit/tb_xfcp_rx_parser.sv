@@ -4,12 +4,12 @@
 //
 // XFCP request bytes injected directly via AXI-Stream (no UART).
 // Protocol: SOP=0xFE, READ=0x10, WRITE=0x11.
-// Header: [SOP][OPCODE][COUNT_HI][COUNT_LO][ADDR 4B BE]
-// req_hdr (56-bit packed xfcp_req_hdr_t): [55:48]=opcode [47:16]=addr [15:0]=count
+// Header: [SOP][OPCODE][SEQ][COUNT_HI][COUNT_LO][ADDR 4B BE]
+// req_hdr (64-bit packed xfcp_req_hdr_t): [63:56]=opcode [55:48]=seq [47:32]=count [31:0]=addr
 //
 // Tests:
-//   T1: READ  FE 10 00 04 FF 02 00 04 -> opcode=0x10 addr=0xFF020004 count=4
-//   T2: WRITE FE 11 00 04 FF 02 00 04 00 00 00 3F -> req_hdr + wdata=0x0000003F
+//   T1: READ  FE 10 00 00 04 FF 02 00 04 -> opcode=0x10 seq=0 addr=0xFF020004 count=4
+//   T2: WRITE FE 11 00 00 04 FF 02 00 04 00 00 00 3F -> req_hdr + wdata=0x0000003F
 //   T3: Bad opcode 0x99 -> error_protocol asserted
 //   T4: COUNT=3 (not multiple of 4) -> error_protocol asserted
 //   T5: TLAST mid-header -> error_protocol asserted
@@ -38,7 +38,7 @@ module tb_xfcp_rx_parser;
   logic        s_tready;
   logic        s_tlast;
 
-  logic [55:0] req_hdr;
+  logic [$bits(xfcp_req_hdr_t)-1:0] req_hdr;
   logic        req_valid;
   logic        req_ready;
 
@@ -168,16 +168,16 @@ module tb_xfcp_rx_parser;
 
     do_reset();
 
-    // ── T1: READ FE 10 00 04 FF 02 00 04 ────────────────────────────
-    axis_byte(8'hFE); axis_byte(8'h10);
+    // ── T1: READ FE 10 SEQ 00 04 FF 02 00 04 ───────────────────────
+    axis_byte(8'hFE); axis_byte(8'h10); axis_byte(8'h00);  // SOP OPCODE SEQ
     axis_byte(8'h00); axis_byte(8'h04);
     axis_byte(8'hFF); axis_byte(8'h02);
     axis_byte(8'h00); axis_byte(8'h04);
     expect_req(8'h10, 32'hFF020004, 16'h4, "T1 READ");
     repeat(2) @(posedge clk);
 
-    // ── T2: WRITE FE 11 00 04 FF 02 00 04 | 00 00 00 3F ─────────────
-    axis_byte(8'hFE); axis_byte(8'h11);
+    // ── T2: WRITE FE 11 SEQ 00 04 FF 02 00 04 | 00 00 00 3F ────────
+    axis_byte(8'hFE); axis_byte(8'h11); axis_byte(8'h00);  // SOP OPCODE SEQ
     axis_byte(8'h00); axis_byte(8'h04);
     axis_byte(8'hFF); axis_byte(8'h02);
     axis_byte(8'h00); axis_byte(8'h04);
@@ -188,7 +188,7 @@ module tb_xfcp_rx_parser;
     repeat(2) @(posedge clk);
 
     // ── T3: Bad opcode 0x99 -> error_protocol ───────────────────────
-    axis_byte(8'hFE); axis_byte(8'h99);
+    axis_byte(8'hFE); axis_byte(8'h99); axis_byte(8'h00);  // SOP BAD_OP SEQ
     axis_byte(8'h00); axis_byte(8'h04);
     axis_byte(8'h00); axis_byte(8'h00);
     axis_byte(8'h00); axis_byte(8'h00, 1'b1);
@@ -196,7 +196,7 @@ module tb_xfcp_rx_parser;
     do_reset();
 
     // ── T4: COUNT=3 (not multiple of 4) -> error_protocol ───────────
-    axis_byte(8'hFE); axis_byte(8'h10);
+    axis_byte(8'hFE); axis_byte(8'h10); axis_byte(8'h00);  // SOP OPCODE SEQ
     axis_byte(8'h00); axis_byte(8'h03);
     axis_byte(8'h00); axis_byte(8'h00);
     axis_byte(8'h00); axis_byte(8'h00, 1'b1);
@@ -211,11 +211,11 @@ module tb_xfcp_rx_parser;
 
     // ── T6: Back-to-back READ packets ───────────────────────────────
     req_ready = 1'b0;
-    axis_byte(8'hFE); axis_byte(8'h10);
+    axis_byte(8'hFE); axis_byte(8'h10); axis_byte(8'h00);  // SOP OPCODE SEQ
     axis_byte(8'h00); axis_byte(8'h04);
     axis_byte(8'hFF); axis_byte(8'h00);
     axis_byte(8'h00); axis_byte(8'h00);
-    axis_byte(8'hFE); axis_byte(8'h10);
+    axis_byte(8'hFE); axis_byte(8'h10); axis_byte(8'h00);  // SOP OPCODE SEQ
     axis_byte(8'h00); axis_byte(8'h04);
     axis_byte(8'hFF); axis_byte(8'h01);
     axis_byte(8'h00); axis_byte(8'h00);
@@ -225,7 +225,7 @@ module tb_xfcp_rx_parser;
 
     // ── T7: WRITE with backpressure on write_data_ready ─────────────
     write_data_ready = 1'b0;
-    axis_byte(8'hFE); axis_byte(8'h11);
+    axis_byte(8'hFE); axis_byte(8'h11); axis_byte(8'h00);  // SOP OPCODE SEQ
     axis_byte(8'h00); axis_byte(8'h04);
     axis_byte(8'hFF); axis_byte(8'h05);
     axis_byte(8'h00); axis_byte(8'h04);
@@ -242,7 +242,7 @@ module tb_xfcp_rx_parser;
     // Verify: send 0xFF in IDLE, then valid READ, expect correct req_hdr.
     axis_byte(8'hFF);             // stray RPATH SOP — must be ignored
     repeat(4) @(posedge clk);    // wait a few cycles
-    axis_byte(8'hFE); axis_byte(8'h10);
+    axis_byte(8'hFE); axis_byte(8'h10); axis_byte(8'h00);  // SOP OPCODE SEQ
     axis_byte(8'h00); axis_byte(8'h04);
     axis_byte(8'hFF); axis_byte(8'h03);
     axis_byte(8'h00); axis_byte(8'h08);
@@ -251,7 +251,7 @@ module tb_xfcp_rx_parser;
 
     // ── T9: COUNT=0x0104 (260 bytes, > MAX_COUNT_BYTES=128) -> drop ──
     // Multiple of 4 so alignment is fine; only the bound check catches it.
-    axis_byte(8'hFE); axis_byte(8'h10);
+    axis_byte(8'hFE); axis_byte(8'h10); axis_byte(8'h00);  // SOP OPCODE SEQ
     axis_byte(8'h01); axis_byte(8'h04);   // count = 260
     axis_byte(8'hFF); axis_byte(8'h00);
     axis_byte(8'h00); axis_byte(8'h00, 1'b1);

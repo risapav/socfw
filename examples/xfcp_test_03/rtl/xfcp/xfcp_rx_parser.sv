@@ -7,26 +7,28 @@
  *   ------|---------------------
  *     0   | SOP (0xFE = request)
  *     1   | OPCODE
- *    2-3  | COUNT (Big-Endian, počet bajtov payloadu)
- *    4-7  | ADDR  (Big-Endian)
- *   8..N  | PAYLOAD (len pre WRITE)
+ *     2   | SEQ (echo-ovany v response)
+ *    3-4  | COUNT (Big-Endian, pocet bajtov payloadu)
+ *    5-8  | ADDR  (Big-Endian)
+ *   9..N  | PAYLOAD (len pre WRITE)
  *
  * ╔══════════════════════════════════════════════════════════════════╗
  * ║  HYBRIDNÁ ARCHITEKTÚRA: PARALLEL HEADER DECODE + PAYLOAD FSM    ║
  * ║                                                                  ║
- * ║  STAGE 1 – HEADER SHIFT REGISTER (bajty 0-7):                   ║
- * ║    64-bit posuvný register hdr_shift_q zachytáva bajty SOP-ADDR  ║
- * ║    bez akéhokoľvek FSM. Po 8. bajte je celý header dostupný      ║
- * ║    kombinačne v jednom takte.                                    ║
- * ║    Latency: 8 → 2 takty (zber + decode).                         ║
+ * ║  STAGE 1 – HEADER SHIFT REGISTER (bajty 0-8):                   ║
+ * ║    72-bit posuvny register hdr_shift_q zachytava bajty SOP-ADDR  ║
+ * ║    bez akehokolvek FSM. Po 9. bajte je cely header dostupny      ║
+ * ║    kombinacne v jednom takte.                                    ║
+ * ║    Latency: 9 → 2 takty (zber + decode).                         ║
  * ║                                                                  ║
- * ║  STAGE 2 – PARALLEL DECODE (kombinačný):                         ║
- * ║    opcode = hdr_shift_q[55:48]                                   ║
- * ║    count  = hdr_shift_q[47:32]                                   ║
- * ║    addr   = hdr_shift_q[31:0]                                    ║
- * ║    Validácia (alignment, opcode) prebieha v tom istom takte.     ║
+ * ║  STAGE 2 – PARALLEL DECODE (kombinacny):                         ║
+ * ║    opcode = hdr_shift_q[71:64]                                   ║
+ * ║    seq    = hdr_shift_q[63:56]                                   ║
+ * ║    count  = hdr_shift_q[55:40]                                   ║
+ * ║    addr   = hdr_shift_q[39:8]  -- wait, stored as [31:0] still  ║
+ * ║    Validacia (alignment, opcode) prebieha v tom istom takte.     ║
  * ║                                                                  ║
- * ║  STAGE 3 – PAYLOAD FSM (bajty 8-N):                              ║
+ * ║  STAGE 3 – PAYLOAD FSM (bajty 9-N):                              ║
  * ║    Klasický FSM pre akumuláciu 32-bit slov do payload FIFO.      ║
  * ║    Zahrňuje ST_DROP, watchdog, SOP recovery z predchádzajúcej    ║
  * ║    verzie.                                                       ║
@@ -70,7 +72,7 @@ module xfcp_rx_parser #(
   output logic      s_axis_tready,
   input  wire       s_axis_tlast,
 
-  output logic [55:0]             req_hdr,
+  output xfcp_req_hdr_t           req_hdr,
   output logic                    req_valid,
   input  wire                     req_ready,
 
@@ -95,12 +97,13 @@ module xfcp_rx_parser #(
   // ============================================================
   // Lokálne konštanty
   // ============================================================
-  // XFCP header: SOP(1) + OPCODE(1) + COUNT(2) + ADDR(4) = 8 bajtov
-  // bajt 0 = SOP, nekódujeme do shift registra priamo (iba triggeruje)
-  // bajty 1-7 idú do shift registra → po 7 posunoch sú všetky polia platné
-  localparam int HDR_BYTES      = 8;   // celková dĺžka hlavičky
-  localparam int BYTE_W        = 8;   // šírka bajtu
-  localparam int HDR_SHIFT_W   = 64;  // 8 bajtov × 8 bitov
+  // XFCP header: SOP(1) + OPCODE(1) + SEQ(1) + COUNT(2) + ADDR(4) = 9 bajtov
+  // bajt 0 = SOP, nekodujeme do shift registra priamo (iba triggeruje)
+  // bajty 1-8 idu do shift registra -> po 8 posunoch su vsetky polia platne
+  // Shift: {hdr_shift_q[55:0], new_byte} => 64-bit left-shift, najstarsi bajt na [63:56]
+  localparam int HDR_BYTES      = 9;   // celkova dlzka hlavicky
+  localparam int BYTE_W        = 8;   // sirka bajtu
+  localparam int HDR_SHIFT_W   = 64;  // 8 bajtov x 8 bitov (SOP sa neuklada)
   localparam int PKT_LEN_W     = $clog2(MAX_PKT_BYTES + 1);
   // Hornaya hranica COUNT: zamedzuje spracovaniu paketu s obrovskym countom.
   // Zhoduje sa s xfcp_axi_engine FIFO_DEPTH=32 slov = 128 bajtov.
@@ -135,32 +138,34 @@ module xfcp_rx_parser #(
   // ============================================================
   // STAGE 1 – HEADER SHIFT REGISTER
   //
-  // Každý prijatý bajt (axis_fire v S_HDR) sa posunie do registra.
-  // Po 7 posunoch (bajty 1-7, t.j. OPCODE až ADDR[7:0]) je header
-  // kompletný.
+  // Kazdy prijaty bajt (axis_fire v S_HDR) sa posunie do registra.
+  // Po 8 posunoch (bajty 1-8, t.j. OPCODE az ADDR[7:0]) je header
+  // kompletny.
   //
-  // Rozlozenie hdr_shift_n_comb po 7 bajtoch (shift: {hdr_shift_q[55:0], bajt}):
-  //   [63:56] = 0 (nevyuzite — shift zahadzuje hornych 8 bitov)
-  //   [55:48] = bajt 1 = OPCODE
-  //   [47:40] = bajt 2 = COUNT[15:8]
-  //   [39:32] = bajt 3 = COUNT[7:0]
-  //   [31:24] = bajt 4 = ADDR[31:24]
-  //   [23:16] = bajt 5 = ADDR[23:16]
-  //   [15:8]  = bajt 6 = ADDR[15:8]
-  //   [7:0]   = bajt 7 = ADDR[7:0]
+  // Rozlozenie hdr_shift_n_comb po 8 bajtoch (shift: {hdr_shift_q[55:0], bajt}):
+  //   [63:56] = bajt 1 = OPCODE
+  //   [55:48] = bajt 2 = SEQ
+  //   [47:40] = bajt 3 = COUNT[15:8]
+  //   [39:32] = bajt 4 = COUNT[7:0]
+  //   [31:24] = bajt 5 = ADDR[31:24]
+  //   [23:16] = bajt 6 = ADDR[23:16]
+  //   [15:8]  = bajt 7 = ADDR[15:8]
+  //   [7:0]   = bajt 8 = ADDR[7:0]
   //
   // Citanie poli (kombinacne, platne v S_DECODE):
-  //   opcode = hdr_shift_n_comb[55:48]
+  //   opcode = hdr_shift_n_comb[63:56]
+  //   seq    = hdr_shift_n_comb[55:48]
   //   count  = hdr_shift_n_comb[47:32]
   //   addr   = hdr_shift_n_comb[31:0]
   // ============================================================
   logic [HDR_SHIFT_W-1:0] hdr_shift_q;
-  logic [HDR_SHIFT_W-1:0] hdr_shift_n_comb; // kombinačná hodnota pre S_DECODE
-  logic [2:0]             hdr_byte_cnt_q;  // počíta bajty 1-7 (0-based: 0..6)
-  logic                   tlast_on_last_hdr_q; // TLAST prišiel s posledným header bajtom
+  logic [HDR_SHIFT_W-1:0] hdr_shift_n_comb; // kombinacna hodnota pre S_DECODE
+  logic [2:0]             hdr_byte_cnt_q;  // pocita bajty 1-8 (0-based: 0..7)
+  logic                   tlast_on_last_hdr_q; // TLAST prisel s poslednym header bajtom
 
-  // Kombinačné polia z shift registra (platné keď hdr_byte_cnt_q == 6)
-  wire [7:0]              dec_opcode = hdr_shift_n_comb[55:48];
+  // Kombinacne polia z shift registra (platne ked hdr_byte_cnt_q == 7)
+  wire [7:0]              dec_opcode = hdr_shift_n_comb[63:56];
+  wire [7:0]              dec_seq    = hdr_shift_n_comb[55:48];
   wire [COUNT_WIDTH-1:0]  dec_count  = hdr_shift_n_comb[47:32];
   wire [AXI_ADDR_WIDTH-1:0] dec_addr = hdr_shift_n_comb[31:0];
 
@@ -236,12 +241,12 @@ module xfcp_rx_parser #(
   // Pomocné signály
   // ============================================================
   wire axis_fire   = s_axis_tvalid && s_axis_tready;
-  wire last_hdr_byte = (hdr_byte_cnt_q == 3'd6) && axis_fire; // 7. bajt (index 6)
+  wire last_hdr_byte = (hdr_byte_cnt_q == 3'd7) && axis_fire; // 8. bajt (index 7)
 
-  // hdr_shift_n_comb: kombinačná hodnota shift registra vrátane aktuálneho bajtu.
-  // V takte last_hdr_byte, hdr_shift_q ešte neobsahuje posledný bajt (sekvenčný
-  // register sa aktualizuje až na konci taktu). S_DECODE musí čítať túto
-  // kombinačnú hodnotu aby videl všetkých 7 bajtov.
+  // hdr_shift_n_comb: kombinacna hodnota shift registra vratane aktualneho bajtu.
+  // V takte last_hdr_byte, hdr_shift_q este neobsahuje posledny bajt (sekvencny
+  // register sa aktualizuje az na konci taktu). S_DECODE musi citat tuto
+  // kombinacnu hodnotu aby videl vsetkych 8 bajtov.
   always_comb begin
     if (state_q == S_HDR && axis_fire)
       hdr_shift_n_comb = {hdr_shift_q[55:0], s_axis_tdata};
@@ -310,23 +315,23 @@ module xfcp_rx_parser #(
     go_drop = 1'b0;
     if (watchdog_fire && state_q != S_IDLE && state_q != S_DROP)
       go_drop = 1'b1;
-    // Decode chyba (neplatný opcode alebo COUNT misalignment)
+    // Decode chyba (neplatny opcode alebo COUNT misalignment)
     if (state_q == S_DECODE && !dec_valid)
       go_drop = 1'b1;
-    // Predčasný TLAST v S_HDR: chyba len ak príde PRED posledným
+    // Predcasny TLAST v S_HDR: chyba len ak pride PRED poslednym
     // header bajtom. Na poslednom bajte (last_hdr_byte) je TLAST
-    // legálne pre READ/ID pakety (žiadny payload). Validácia toho
-    // prípadu prebieha v S_DECODE kde vieme opcode.
+    // legalne pre READ/ID pakety (ziadny payload). Validacia toho
+    // pripadu prebieha v S_DECODE kde vieme opcode.
     if (state_q == S_HDR && axis_fire && s_axis_tlast && !last_hdr_byte)
       go_drop = 1'b1;
-    // TLAST na poslednom header bajte s WRITE opcode: chyba (chýba payload).
-    // Toto detekujeme v S_DECODE (opcode je dekódovaný až tam).
-    // WRITE s TLAST na poslednom header bajte = chýba payload
+    // TLAST na poslednom header bajte s WRITE opcode: chyba (chyba payload).
+    // Toto detekujeme v S_DECODE (opcode je dekodovany az tam).
+    // WRITE s TLAST na poslednom header bajte = chyba payload
     if (state_q == S_DECODE && tlast_on_last_hdr_q &&
         dec_opcode == 8'(XFCP_OP_WRITE))
       go_drop = 1'b1;
-    // FIX D: WRITE s COUNT=0 (dec_words==0) spôsobuje deadlock v engine
-    // (engine čaká na wfifo_valid ktorý nikdy nepríde). Zahodíme paket.
+    // FIX D: WRITE s COUNT=0 (dec_words==0) sposobuje deadlock v engine
+    // (engine caka na wfifo_valid ktory nikdy nepride). Zahodime paket.
     if (state_q == S_DECODE && dec_opcode == 8'(XFCP_OP_WRITE) &&
         dec_words == 0)
       go_drop = 1'b1;
@@ -347,7 +352,7 @@ module xfcp_rx_parser #(
   assign dbg_recovery_o = sop_recovery;
 
   // ============================================================
-  // Header shift register – sekvenčná logika
+  // Header shift register - sekvencna logika
   // ============================================================
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -355,10 +360,10 @@ module xfcp_rx_parser #(
       hdr_byte_cnt_q       <= '0;
       tlast_on_last_hdr_q  <= 1'b0;
     end else begin
-      // Reset shift registra pri IDLE alebo pri SOP recovery z iného stavu.
-      // SOP recovery: sop_recovery=1 → state_n=S_HDR → v nasledujúcom takte
-      // state_q=S_HDR, ale shift mohol obsahovať stale dáta. Reset tu (keď
-      // state_q!=S_HDR a sop_recovery=1) zaistí čistý shift pred S_HDR.
+      // Reset shift registra pri IDLE alebo pri SOP recovery z ineho stavu.
+      // SOP recovery: sop_recovery=1 -> state_n=S_HDR -> v nasledujucom takte
+      // state_q=S_HDR, ale shift mohol obsahovat stale data. Reset tu (ked
+      // state_q!=S_HDR a sop_recovery=1) zaisti cisty shift pred S_HDR.
       if (state_q == S_IDLE || sop_recovery) begin
         hdr_byte_cnt_q      <= '0;
         hdr_shift_q         <= '0;
@@ -368,19 +373,18 @@ module xfcp_rx_parser #(
       end else if (state_q == S_HDR && axis_fire) begin
         hdr_shift_q          <= {hdr_shift_q[55:0], s_axis_tdata};
         hdr_byte_cnt_q       <= hdr_byte_cnt_q + 1'b1;
-        tlast_on_last_hdr_q  <= s_axis_tlast && (hdr_byte_cnt_q == 3'd6);
+        tlast_on_last_hdr_q  <= s_axis_tlast && (hdr_byte_cnt_q == 3'd7);
         // synthesis translate_off
-        $display("[%0t] %m: S_HDR byte cnt=%0d data=0x%02h tlast=%0b last=%0b next_shift=0x%016h",
-                 $time, hdr_byte_cnt_q, s_axis_tdata, s_axis_tlast,
-                 (hdr_byte_cnt_q == 3'd6),
-                 {hdr_shift_q[55:0], s_axis_tdata});
+        $display("[%0t] %m: S_HDR byte cnt=%0d data=0x%02h seq=0x%02h tlast=%0b last=%0b",
+                 $time, hdr_byte_cnt_q, s_axis_tdata, dec_seq, s_axis_tlast,
+                 (hdr_byte_cnt_q == 3'd7));
         // synthesis translate_on
       end
     end
   end
 
   // ============================================================
-  // Sekvenčná logika – payload registre + error_protocol
+  // Sekvencna logika - payload registre + error_protocol
   // ============================================================
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -400,7 +404,7 @@ module xfcp_rx_parser #(
       words_q    <= words_n;
       bytes_left_q <= bytes_left_n;
 
-      // Latch decode výsledkov pri prechode S_DECODE → S_PAYLOAD/S_DROP
+      // Latch decode vysledkov pri prechode S_DECODE -> S_PAYLOAD/S_DROP
       if (state_q == S_DECODE) begin
         opcode_q <= dec_opcode;
         count_q  <= dec_count;
@@ -417,7 +421,7 @@ module xfcp_rx_parser #(
   end
 
   // ============================================================
-  // FSM – kombinačná logika
+  // FSM - kombinacna logika
   // ============================================================
   always_comb begin
     state_n      = state_q;
@@ -432,10 +436,10 @@ module xfcp_rx_parser #(
     pass_data  = s_axis_tdata;
     pass_last  = s_axis_tlast;
 
-    // ── Globálne pravidlá (priorita) ───────────────────────────
+    // Globalne pravidla (priorita)
     if (go_drop) begin
-      // Ak go_drop nastáva v takte TLAST, paket skončil – S_DROP nie je
-      // potrebný, ideme priamo do S_IDLE. Inak S_DROP žerie zvyšok paketu.
+      // Ak go_drop nastava v takte TLAST, paket skoncil - S_DROP nie je
+      // potrebny, ideme priamo do S_IDLE. Inak S_DROP zerie zvysok paketu.
       state_n = drop_with_tlast ? S_IDLE : S_DROP;
     end else if (sop_recovery) begin
       state_n = S_HDR;
@@ -443,10 +447,10 @@ module xfcp_rx_parser #(
 
       case (state_q)
 
-        // ── S_IDLE: čakanie na SOP ──────────────────────────────
-        // S_RPATH len keď pass_ready=1: inak by 0xFF (RPATH SOP)
-        // sposobil permanentny deadlock (TLAST=0 → exit nemozny,
-        // TREADY=0 → watchdog/sop_recovery nemoze strelat).
+        // S_IDLE: cakanie na SOP
+        // S_RPATH len ked pass_ready=1: inak by 0xFF (RPATH SOP)
+        // sposobil permanentny deadlock (TLAST=0 -> exit nemozny,
+        // TREADY=0 -> watchdog/sop_recovery nemoze strelat).
         S_IDLE: begin
           if (axis_fire) begin
             if (s_axis_tdata == XFCP_SOP_REQ)
@@ -456,35 +460,35 @@ module xfcp_rx_parser #(
           end
         end
 
-        // ── S_RPATH: passthrough ────────────────────────────────
+        // S_RPATH: passthrough
         S_RPATH: begin
           pass_valid = s_axis_tvalid;
           if (axis_fire && s_axis_tlast) state_n = S_IDLE;
         end
 
-        // ── S_HDR: zbieranie 7 header bajtov (bajty 1-7) ────────
-        // SOP (bajt 0) bol prijatý v S_IDLE, tu čakáme na zvyšok.
-        // Po 7 bajtoch (hdr_byte_cnt_q == 6 → last_hdr_byte) prejdeme
-        // do S_DECODE kde sa vykoná paralelný decode v 1 takte.
+        // S_HDR: zbieranie 8 header bajtov (bajty 1-8)
+        // SOP (bajt 0) bol prijaty v S_IDLE, tu cakame na zvysok.
+        // Po 8 bajtoch (hdr_byte_cnt_q == 7 -> last_hdr_byte) prejdeme
+        // do S_DECODE kde sa vykona paralelny decode v 1 takte.
         S_HDR: begin
           if (last_hdr_byte)
             state_n = S_DECODE;
-          // go_drop pre predčasný TLAST je pokrytý globálnym blokom
+          // go_drop pre predcasny TLAST je pokryty globalnym blokom
         end
 
-        // ── S_DECODE: 1-taktový paralelný decode ─────────────────
+        // S_DECODE: 1-taktovy paralelny decode
         // V tomto takte:
-        //   - dec_opcode / dec_count / dec_addr sú kombinačne platné
+        //   - dec_opcode / dec_seq / dec_count / dec_addr su kombinacne platne
         //   - dec_valid skontroluje opcode + COUNT alignment
-        //   - go_drop == 1 ak dec_valid == 0 → S_DROP (globálny blok)
-        //   - inak pushujeme header FIFO a rozhodujeme ďalší stav
+        //   - go_drop == 1 ak dec_valid == 0 -> S_DROP (globalny blok)
+        //   - inak pushujeme header FIFO a rozhodujeme dalsi stav
         //
-        // s_axis_tready = 0 v S_DECODE → upstream čaká 1 takt.
-        // Toto je nevyhnutné: payload bajt 8 nesmie prísť skôr ako
-        // decoder skončí a nastaví words_n / bytes_left_n.
+        // s_axis_tready = 0 v S_DECODE -> upstream caka 1 takt.
+        // Toto je nevyhnutne: payload bajt 9 nesmie prist skor ako
+        // decoder skoncil a nastavil words_n / bytes_left_n.
         S_DECODE: begin
           if (dec_valid) begin
-            // Inicializácia payload registrov z decode výsledkov
+            // Inicializacia payload registrov z decode vysledkov
             words_n      = dec_words;
             bytes_left_n = dec_bytes_left;
             byte_cnt_n   = '0;
@@ -495,27 +499,29 @@ module xfcp_rx_parser #(
               // WRITE: pushni header PRED payload (header-first pipeline)
               hfifo_push      = hfifo_w_ready;  // push ak FIFO ready
               hfifo_in.opcode = xfcp_op_e'(dec_opcode);
+              hfifo_in.seq    = dec_seq;
               hfifo_in.addr   = dec_addr;
               hfifo_in.count  = dec_count;
               if (hfifo_w_ready)
                 state_n = S_PAYLOAD;
-              // ak FIFO nie je ready, zostávame v S_DECODE
-              // (s_axis_tready=0 → upstream stojí)
+              // ak FIFO nie je ready, zostavame v S_DECODE
+              // (s_axis_tready=0 -> upstream stoji)
             end else begin
-              // READ/ID: pushni header a choď do IDLE
+              // READ/ID: pushni header a chod do IDLE
               hfifo_push      = hfifo_w_ready;
               hfifo_in.opcode = xfcp_op_e'(dec_opcode);
+              hfifo_in.seq    = dec_seq;
               hfifo_in.addr   = dec_addr;
               hfifo_in.count  = dec_count;
               if (hfifo_w_ready)
                 state_n = S_IDLE;
             end
           end
-          // dec_valid == 0 → go_drop == 1 → S_DROP (globálny blok)
-          // WRITE + TLAST: pokryté v go_drop always_comb cez tlast_on_last_hdr_q
+          // dec_valid == 0 -> go_drop == 1 -> S_DROP (globalny blok)
+          // WRITE + TLAST: pokryte v go_drop always_comb cez tlast_on_last_hdr_q
         end
 
-        // ── S_PAYLOAD: akumulácia bajtov do 32-bit slov ──────────
+        // S_PAYLOAD: akumulacia bajtov do 32-bit slov
         S_PAYLOAD: begin
           if (axis_fire) begin
             shift_n      = {shift_q[AXI_DATA_WIDTH-BYTE_W-1:0], s_axis_tdata};
@@ -531,7 +537,7 @@ module xfcp_rx_parser #(
           end
         end
 
-        // ── S_DROP: žerieme paket po TLAST ──────────────────────
+        // S_DROP: zerieme paket po TLAST
         S_DROP: begin
           if (axis_fire && s_axis_tlast) state_n = S_IDLE;
         end
@@ -542,7 +548,7 @@ module xfcp_rx_parser #(
   end
 
   // ============================================================
-  // Simulačné správy
+  // Simulacne spravy
   // ============================================================
   // synthesis translate_off
   xfcp_op_e dbg_opcode;
@@ -555,54 +561,54 @@ module xfcp_rx_parser #(
     end else begin
       error_protocol_prev <= error_protocol;
       if (hfifo_push)
-        $display("[%0t] %m: HDR push | op=0x%02h addr=0x%08h count=%0d | dec: op=0x%02h addr=0x%08h cnt=0x%04h shift=0x%016h",
-                 $time, 8'(dbg_opcode), addr_q, count_q,
-                 dec_opcode, dec_addr, dec_count, hdr_shift_n_comb);
+        $display("[%0t] %m: HDR push | op=0x%02h seq=0x%02h addr=0x%08h count=%0d | dec: op=0x%02h seq=0x%02h addr=0x%08h cnt=0x%04h",
+                 $time, 8'(dbg_opcode), dec_seq, addr_q, count_q,
+                 dec_opcode, dec_seq, dec_addr, dec_count);
       if (word_complete)
         $display("[%0t] %m: PAYLOAD word=0x%08h words_rem=%0d",
                  $time, shift_n, words_q);
       if (error_protocol && !error_protocol_prev)
-        $warning("[%0t] %m: PROTOCOL ERROR → S_DROP (stav=0x%02h op=0x%02h)",
+        $warning("[%0t] %m: PROTOCOL ERROR -> S_DROP (stav=0x%02h op=0x%02h)",
                  $time, 6'(state_q), dec_opcode);
       if (watchdog_fire && state_q != S_DROP)
-        $warning("[%0t] %m: WATCHDOG – paket > %0d bajtov, drop", $time, MAX_PKT_BYTES);
+        $warning("[%0t] %m: WATCHDOG - paket > %0d bajtov, drop", $time, MAX_PKT_BYTES);
       if (sop_recovery)
-        $warning("[%0t] %m: SOP RECOVERY v stave 0x%02h – resync", $time, 6'(state_q));
+        $warning("[%0t] %m: SOP RECOVERY v stave 0x%02h - resync", $time, 6'(state_q));
       if (state_q == S_DECODE && !dec_count_ok)
-        $warning("[%0t] %m: COUNT=0x%04h nie je násobok 4 – drop", $time, dec_count);
+        $warning("[%0t] %m: COUNT=0x%04h nie je nasobok 4 - drop", $time, dec_count);
     end
   end
 
-  // ── Invariant: bytes_left nesmie podtiecť ─────────────────────
+  // Invariant: bytes_left nesmie podtiec
   always_ff @(posedge clk) begin
     if (rst_n && state_q == S_PAYLOAD && axis_fire)
       assert (bytes_left_q > 0)
-        else $fatal(1, "[%0t] %m: bytes_left podtečenie!", $time);
+        else $fatal(1, "[%0t] %m: bytes_left podtecie!", $time);
   end
 
-  // ── SVA: payload FIFO overflow nemožný ────────────────────────
+  // SVA: payload FIFO overflow nemozny
   no_payload_fifo_overflow: assert property (
     @(posedge clk) disable iff (!rst_n)
     word_complete |-> dfifo_w_ready
-  ) else $fatal(1, "[%0t] %m: SVA FAIL – word_complete pri plnej payload FIFO!", $time);
+  ) else $fatal(1, "[%0t] %m: SVA FAIL - word_complete pri plnej payload FIFO!", $time);
 
-  // ── SVA: header push len keď FIFO ready ───────────────────────
+  // SVA: header push len ked FIFO ready
   no_header_fifo_overflow: assert property (
     @(posedge clk) disable iff (!rst_n)
     hfifo_push |-> hfifo_w_ready
-  ) else $fatal(1, "[%0t] %m: SVA FAIL – hfifo_push pri plnej header FIFO!", $time);
+  ) else $fatal(1, "[%0t] %m: SVA FAIL - hfifo_push pri plnej header FIFO!", $time);
 
-  // ── SVA: S_DROP musí skončiť ──────────────────────────────────
+  // SVA: S_DROP musi skoncit
   drop_state_must_end: assert property (
     @(posedge clk) disable iff (!rst_n)
     $rose(state_q == S_DROP) |-> ##[1:MAX_PKT_BYTES] (state_q == S_IDLE)
-  ) else $error("[%0t] %m: SVA WARN – S_DROP trvá > %0d taktov", $time, MAX_PKT_BYTES);
+  ) else $error("[%0t] %m: SVA WARN - S_DROP trva > %0d taktov", $time, MAX_PKT_BYTES);
 
-  // ── SVA: S_DECODE trvá max 1-2 takty (FIFO ready guard) ───────
+  // SVA: S_DECODE trva max 1-2 takty (FIFO ready guard)
   decode_completes: assert property (
     @(posedge clk) disable iff (!rst_n)
     $rose(state_q == S_DECODE) |-> ##[1:4] (state_q != S_DECODE)
-  ) else $error("[%0t] %m: SVA WARN – S_DECODE trvá > 4 takty (header FIFO backpressure?)",
+  ) else $error("[%0t] %m: SVA WARN - S_DECODE trva > 4 takty (header FIFO backpressure?)",
                $time);
 
   // synthesis translate_on

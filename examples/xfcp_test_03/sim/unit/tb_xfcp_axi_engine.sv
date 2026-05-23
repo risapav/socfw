@@ -37,7 +37,7 @@ module tb_xfcp_axi_engine;
   axi4lite_if #(.ADDR_WIDTH(32), .DATA_WIDTH(32)) axil (.ACLK(clk), .ARESETn(rst_n));
 
   // ── DUT signals ──────────────────────────────────────────────────
-  logic [55:0]  req_hdr;
+  logic [$bits(xfcp_req_hdr_t)-1:0] req_hdr;
   logic         req_valid;
   logic         req_ready;
   logic [31:0]  write_data;
@@ -99,13 +99,13 @@ module tb_xfcp_axi_engine;
     repeat(2) @(posedge clk);
   endtask
 
-  // Build req_hdr from opcode/addr/count (56-bit packed: [55:48]=op [47:16]=addr [15:0]=count)
-  function automatic logic [55:0] make_hdr(
+  // Build req_hdr from opcode/addr/count (64-bit: [63:56]=op [55:48]=seq [47:16]=addr [15:0]=count)
+  function automatic logic [$bits(xfcp_req_hdr_t)-1:0] make_hdr(
     input logic [7:0]  op,
     input logic [31:0] addr,
     input logic [15:0] count
   );
-    return {op, addr, count};
+    return {op, 8'h00, addr, count};  // seq=0 for testbench
   endfunction
 
   // Submit a single-word WRITE request and wait for resp_done.

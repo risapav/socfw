@@ -49,6 +49,7 @@ package xfcp_pkg;
    */
   typedef struct packed {
     xfcp_op_e                    opcode;
+    logic [7:0]                  seq;
     logic [XFCP_ADDR_WIDTH-1:0]  addr;
     logic [XFCP_COUNT_WIDTH-1:0] count;
   } xfcp_req_hdr_t;

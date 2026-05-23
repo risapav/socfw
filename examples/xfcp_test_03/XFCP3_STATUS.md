@@ -1197,6 +1197,61 @@ Build spusteny po commite de2da76, dokonceny 2026-05-22 21:20.
 
 ---
 
+## Fáza 3G — navrhy_17: kompletná implementácia SEQ ID (2026-05-23)
+
+### Problém identifikovaný expertom (navrhy_17)
+
+HW test (Fáza 3F) skončil **0/30** (100% FAIL). Expert v navrhy_17 identifikoval 7 kritických
+nekonzistencií medzi RTL, tools a testbenchmi z nedokončenej SEQ ID implementácie:
+
+1. **xfcp_rx_parser.sv**: `HDR_SHIFT_W=72` ale shift `{hdr_shift_q[63:0], data}` — posúva iba
+   64 bitov → `hdr_shift_q[71:64]` vždy 0 → `dec_opcode=0` → všetky pakety zahadzované.
+2. **xfcp_axi_engine.sv**: port `[55:0]` s 64-bit struct → opcode sa stratí truncáciou.
+3. **xfcp_fabric_endpoint.sv**: `order_entry_t` neobsahuje `seq` → SEQ sa nedostane do packetizéra.
+4. **xfcp_tx_packetizer.sv**: `HEADER_BYTES=20`, chýba `resp_seq` vstupný port.
+5. **hw_diag.py**: starý formát bez SEQ bajtu → parser čaká na 8. bajt, ktorý nikdy nepríde.
+6. **xfcp/protocol.py + bus.py**: `RESP_HEADER=20`, encode bez SEQ.
+7. **testbenchy**: 7-bajtové hlavičky (bez SEQ), 21/25-bajtové response čítanie.
+
+### Implementované zmeny (Option B — kompletná SEQ implementácia)
+
+**RTL (`rtl/xfcp/`):**
+- `xfcp_rx_parser.sv`: `HDR_SHIFT_W: 72→64`, shift `{hdr_shift_q[55:0], data}`, decode
+  `dec_opcode=[63:56]`, `dec_seq=[55:48]`, `dec_count=[47:32]`, `dec_addr=[31:0]`. Field
+  assignment cez `hfifo_in.seq = dec_seq`.
+- `xfcp_axi_engine.sv`: port `[55:0]→[$bits(xfcp_req_hdr_t)-1:0]` (64-bit, bez truncácie).
+- `xfcp_fabric_endpoint.sv`: `order_entry_t` + `seq` field; `resp_seq_q` register; `.resp_seq(resp_seq_q)` pre packetizér.
+- `xfcp_tx_packetizer.sv`: `HEADER_BYTES: 20→21`; nový `resp_seq` input port;
+  `hdr_vec[16+:8] = resp_seq` (SEQ na pozícii 2 za SOP+TYPE).
+
+**Tools (`tools/`):**
+- `hw_diag.py`: `_next_seq()`, SEQ v `make_read_pkt`/`make_write_pkt`, `EXPECTED_READ: 25→26`.
+- `xfcp/protocol.py`: `RESP_HEADER: 20→21`, SEQ v `encode_read`/`encode_write`, SEQ check
+  v `decode_read_response`/`decode_write_response`.
+- `xfcp/bus.py`: `self._seq`, `_next_seq()`, SEQ v `write32`/`read_block`/`write_block`.
+
+**Testbenchy:**
+- Všetky 7 testbenchov aktualizované: SEQ bajt v requestoch, 22/26 bajtov v response parsing.
+  `tb_xfcp_axi_engine.sv`: `make_hdr` → 64-bit `{op, 8'h00, addr, count}`.
+  `tb_xfcp_tx_packetizer.sv`: nový `resp_seq_tb=8'hAB`, SEQ check pri pozícii [2].
+
+### Sim výsledky Fázy 3G
+
+**13/13 ALL PASSED**, Errors: 0. (Všetky testy vrátane nových SEQ pozícií).
+
+### Quartus build
+
+**NUTNÝ REBUILD** — RTL zmenené (parser, engine, endpoint, packetizer).
+Spusti: `cd examples/xfcp_test_03 && make gen && make compile` (alebo `make compile` v Quartus dir).
+
+### Odporúčané nasledujúce kroky
+
+1. **Quartus rebuild** — `make gen && make compile` v xfcp_test_03/
+2. **HW test** — po programovaní: `python3 tools/hw_diag.py /dev/ttyUSB0 30`
+3. **Fyzická diagnostika** (ak stále <50%) — Test A/D z EXPERT_BRIEF.md
+
+---
+
 ## Historický prehľad
 
 | Dátum | Čo sa zmenilo |
@@ -1223,3 +1278,5 @@ Build spusteny po commite de2da76, dokonceny 2026-05-22 21:20.
 | 2026-05-22 | Fáza 3D: navrhy_14 — pending/commit baud switch v axil_uart_adapter (NUM_REGS 7→9), data_bits bug fix, SerialTransport.set_baudrate(), XfcpBus.set_baudrate(). Regression 16/16 PASS. Quartus OK. Sweep HW: 33%/36%/36%/30% — baud switch zlyhá (P≈11% pre 2×WRITE). RTL správny |
 | 2026-05-22 | Fáza 3E: navrhy_15 — DIAG snapshot (live+shadow), 7 nových counterov, BAUD_STATUS 0x24, busy guard, safe baud switch s retry+fallback, debug porty bad_hdr/recovery. Sim 16/16 PASS. HW test čaká (Quartus rebuild nutný) |
 | 2026-05-22 | Fáza 3F: navrhy_16 — axis_uart_rx skid buffer (AXI-Stream fix), hw_diag.py --pause, Makefile compile-baud/compile-all-bauds, EXPERT_BRIEF.md RC filter + CP2102 oprava. Sim 16/16 PASS. Quartus rebuilt: output_files/soc_top.sof (21:20). Pripravené na HW test |
+| 2026-05-22 | Fáza 3F HW test: 0/30 (100% FAIL). Expert (navrhy_17) identifikoval koreňovú príčinu: neúplná SEQ ID implementácia — HDR_SHIFT_W=72 bug → dec_opcode=0 → všetky pakety zahadzované |
+| 2026-05-23 | Fáza 3G: kompletná SEQ ID implementácia (navrhy_17 Option B). RTL+tools+testbenche. Sim 13/13 PASS. Quartus rebuild nutný |

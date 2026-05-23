@@ -27,6 +27,16 @@ SOP_RESP = 0xFD
 OP_READ  = 0x10
 OP_WRITE = 0x11
 
+_seq_counter = 0
+
+
+def _next_seq():
+    global _seq_counter
+    s = _seq_counter & 0xFF
+    _seq_counter = (_seq_counter + 1) & 0xFF
+    return s
+
+
 SLOTS = [
     (0, 0xFF000000, "SYSC"),
     (1, 0xFF010000, "UART"),
@@ -36,8 +46,8 @@ SLOTS = [
     (5, 0xFF050000, "SEG7"),
 ]
 
-EXPECTED_READ  = 25   # SOP(1)+TYPE(1)+DEV_TYPE(2)+DEV_STR(16)+DATA(4)+TERM(1)
-EXPECTED_WRITE = 21   # SOP(1)+TYPE(1)+DEV_TYPE(2)+DEV_STR(16)+TERM(1)
+EXPECTED_READ  = 26   # SOP(1)+TYPE(1)+SEQ(1)+DEV_TYPE(2)+DEV_STR(16)+DATA(4)+TERM(1)
+EXPECTED_WRITE = 22   # SOP(1)+TYPE(1)+SEQ(1)+DEV_TYPE(2)+DEV_STR(16)+TERM(1)
 
 UART_BASE        = 0xFF010000
 UART_BAUD_DIV    = UART_BASE + 0x04   # BAUD_PENDING
@@ -82,11 +92,11 @@ def baud_to_div(baud):
 
 
 def make_read_pkt(addr):
-    return bytes([SOP_REQ, OP_READ, 0x00, 0x04]) + struct.pack(">I", addr)
+    return bytes([SOP_REQ, OP_READ, _next_seq(), 0x00, 0x04]) + struct.pack(">I", addr)
 
 
 def make_write_pkt(addr, val):
-    return bytes([SOP_REQ, OP_WRITE, 0x00, 0x04]) + struct.pack(">I", addr) + struct.pack(">I", val)
+    return bytes([SOP_REQ, OP_WRITE, _next_seq(), 0x00, 0x04]) + struct.pack(">I", addr) + struct.pack(">I", val)
 
 
 def classify_rx(raw, expected_len):
@@ -105,8 +115,8 @@ def classify_rx(raw, expected_len):
 def decode_data(raw):
     if len(raw) != EXPECTED_READ:
         return None
-    data = struct.unpack(">I", raw[20:24])[0]
-    dev_str = raw[4:20]
+    data = struct.unpack(">I", raw[21:25])[0]
+    dev_str = raw[5:21]
     try:
         s = dev_str.decode('ascii').rstrip('\x00')
     except Exception:

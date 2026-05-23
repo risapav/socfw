@@ -84,6 +84,7 @@ module xfcp_fabric_endpoint #(
   typedef struct packed {
     logic [SEL_W-1:0] sel;
     xfcp_op_e         op;
+    logic [7:0]       seq;
   } order_entry_t;
 
   // ── Parser výstupy ───────────────────────────────────────────
@@ -212,7 +213,7 @@ module xfcp_fabric_endpoint #(
                         dec_valid && !eng_busy[dec_sel]
                         && eng_req_ready[dec_sel] && ofifo_wready;
   assign ofifo_wvalid = req_fire && !invalid_req;
-  assign ofifo_wdata  = '{sel: dec_sel, op: req_hdr.opcode};
+  assign ofifo_wdata  = '{sel: dec_sel, op: req_hdr.opcode, seq: req_hdr.seq};
 
   // ── wdata routing ─────────────────────────────────────────────
   // drain_wdata: 1 pocas odstranovania payloadu neplatneho WRITEu.
@@ -262,6 +263,7 @@ module xfcp_fabric_endpoint #(
   // (engine op_q môže byť prepísaný novým requestom)
   xfcp_op_e                  resp_type_q;  // registrovaný, stabíl počas paketu
   xfcp_op_e                  resp_type;
+  logic [7:0]                resp_seq_q;   // SEQ z order_fifo, stable počas paketu
   logic [AXI_DATA_WIDTH-1:0] rdata;
   logic                      rdata_valid;
   logic                      rdata_ready;
@@ -294,12 +296,14 @@ module xfcp_fabric_endpoint #(
       arb_q       <= ARB_IDLE;
       arb_sel_q   <= '0;
       resp_type_q <= xfcp_pkg::XFCP_OP_RESP_WRITE;
+      resp_seq_q  <= '0;
     end else begin
       arb_q <= arb_n;
-      // Zachyť sel a op presne keď arbiter popne FIFO (resp_start_pulse)
+      // Zachyť sel, op a seq presne keď arbiter popne FIFO (resp_start_pulse)
       if (resp_start_pulse) begin
         arb_sel_q   <= ofifo_rdata.sel;
         resp_type_q <= xfcp_op_e'(eng_resp_type[ofifo_rdata.sel]);
+        resp_seq_q  <= ofifo_rdata.seq;
       end else if (arb_q == ARB_IDLE && arb_n == ARB_WAIT_ENG) begin
         // Zachyt sel pri prechode do WAIT_ENG; resp_type_q sa zachyti pri resp_start_pulse
         arb_sel_q   <= ofifo_rdata.sel;
@@ -454,6 +458,7 @@ module xfcp_fabric_endpoint #(
     .m_axis_tready(xfcp_out.TREADY), .m_axis_tlast(xfcp_out.TLAST),
     .resp_start      (resp_start_q),
     .resp_type       (resp_type),
+    .resp_seq        (resp_seq_q),
     .read_data       (rdata),
     .read_data_valid (rdata_valid),
     .read_data_ready (rdata_ready),

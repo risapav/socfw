@@ -15,6 +15,9 @@
 // (e.g. 0x00010000) idx = 16384 exceeds MEM_DEPTH=64 → reads 0xBAADF00D.
 // The compact stride keeps all indices in [0,63].
 //
+// Request format: [FE][OP][SEQ][00][COUNT][addr 4B BE][data BE]
+// Response format: [FD][OP_RESP][SEQ][type 2B][str 16B][data 4B][0x00]
+//   WRITE: 22 bytes, READ: 26 bytes.
 // Data: avoid 0xFE bytes — parser interprets 0xFE as SOP and restarts.
 //
 // Tests:
@@ -125,7 +128,7 @@ module tb_xfcp_fabric_endpoint;
   endtask
 
   task automatic xfcp_write(input logic [31:0] addr, input logic [31:0] data);
-    axis_send(8'hFE); axis_send(8'h11);
+    axis_send(8'hFE); axis_send(8'h11); axis_send(8'h00);  // SOP OP SEQ
     axis_send(8'h00); axis_send(8'h04);
     axis_send(addr[31:24]); axis_send(addr[23:16]);
     axis_send(addr[15:8]);  axis_send(addr[7:0]);
@@ -134,7 +137,7 @@ module tb_xfcp_fabric_endpoint;
   endtask
 
   task automatic xfcp_read(input logic [31:0] addr);
-    axis_send(8'hFE); axis_send(8'h10);
+    axis_send(8'hFE); axis_send(8'h10); axis_send(8'h00);  // SOP OP SEQ
     axis_send(8'h00); axis_send(8'h04);
     axis_send(addr[31:24]); axis_send(addr[23:16]);
     axis_send(addr[15:8]);  axis_send(addr[7:0]);
@@ -146,7 +149,7 @@ module tb_xfcp_fabric_endpoint;
     input logic [31:0] data0,
     input logic [31:0] data1
   );
-    axis_send(8'hFE); axis_send(8'h11);
+    axis_send(8'hFE); axis_send(8'h11); axis_send(8'h00);  // SOP OP SEQ
     axis_send(8'h00); axis_send(8'h08);  // count=8
     axis_send(addr[31:24]); axis_send(addr[23:16]);
     axis_send(addr[15:8]);  axis_send(addr[7:0]);
@@ -157,14 +160,14 @@ module tb_xfcp_fabric_endpoint;
   endtask
 
   task automatic drain_write_resp();
-    resp_wait(21);
-    resp_rptr += 21;
+    resp_wait(22);
+    resp_rptr += 22;
   endtask
 
   task automatic recv_read(output logic [31:0] rdata);
     logic [7:0] b;
-    resp_wait(25);
-    resp_rptr += 20;  // skip header
+    resp_wait(26);
+    resp_rptr += 21;  // skip header (SOP+TYPE+SEQ+DEV_TYPE+DEV_STR)
     resp_get(b); rdata[31:24] = b;
     resp_get(b); rdata[23:16] = b;
     resp_get(b); rdata[15:8]  = b;

@@ -6,13 +6,13 @@
 // Byte order: addr big-endian, data MSB-first (LITTLE_ENDIAN=0, no swap).
 //
 // Request format:
-//   WRITE: [0xFE][0x11][COUNT_HI][COUNT_LO][addr BE 4B][data MSB-first 4B]
-//   READ:  [0xFE][0x10][COUNT_HI][COUNT_LO][addr BE 4B]
+//   WRITE: [0xFE][0x11][SEQ][COUNT_HI][COUNT_LO][addr BE 4B][data MSB-first 4B]
+//   READ:  [0xFE][0x10][SEQ][COUNT_HI][COUNT_LO][addr BE 4B]
 //   COUNT = 4 (one 32-bit word)
 //
 // Response format (xfcp_tx_packetizer):
-//   WRITE: [0xFD][0x13][DEV_TYPE 2B][DEV_STR 16B][0x00+TLAST] = 21 bytes
-//   READ:  [0xFD][0x12][DEV_TYPE 2B][DEV_STR 16B][data 4B MSB-first][0x00+TLAST] = 25 bytes
+//   WRITE: [0xFD][0x13][SEQ][DEV_TYPE 2B][DEV_STR 16B][0x00+TLAST] = 22 bytes
+//   READ:  [0xFD][0x12][SEQ][DEV_TYPE 2B][DEV_STR 16B][data 4B MSB-first][0x00+TLAST] = 26 bytes
 // Note: SOP_RESP=0xFD != SOP_REQ=0xFE to prevent TX->RX coupling issues.
 //
 // Tests:
@@ -164,13 +164,16 @@ module tb_xfcp_uart_mmio_top;
 
   // ---- XFCP helpers -----------------------------------------------------------
 
-  // WRITE request: [0xFE][0x11][count=4 BE][addr BE][data MSB-first]
+  // WRITE request: [0xFE][0x11][SEQ][count=4 BE][addr BE][data MSB-first]
+  // seq_val is passed by caller so TB can track and check echo in response.
   task automatic xfcp_write(
     input logic [31:0] addr,
-    input logic [31:0] data
+    input logic [31:0] data,
+    input logic [7:0]  seq_val = 8'h00
   );
     uart_send(8'hFE);                           // SOP
     uart_send(8'h11);                           // XFCP_OP_WRITE
+    uart_send(seq_val);                         // SEQ
     uart_send(8'h00); uart_send(8'h04);         // COUNT = 4 (big-endian)
     uart_send(addr[31:24]); uart_send(addr[23:16]);  // addr big-endian
     uart_send(addr[15:8]);  uart_send(addr[7:0]);
@@ -178,25 +181,29 @@ module tb_xfcp_uart_mmio_top;
     uart_send(data[15:8]);  uart_send(data[7:0]);
   endtask
 
-  // Drain WRITE response: [0xFD][0x13][DEV_TYPE 2B][DEV_STR 16B][0x00] = 21 bytes
+  // Drain WRITE response: [0xFD][0x13][SEQ][DEV_TYPE 2B][DEV_STR 16B][0x00] = 22 bytes
   // Wait 3000 extra cycles after last byte so post_tx_hold expires before next send.
   task automatic xfcp_drain_write_resp();
     logic [7:0] b;
-    for (int i = 0; i < 21; i++) uart_recv(b);
+    for (int i = 0; i < 22; i++) uart_recv(b);
     repeat(3000) @(posedge clk);
   endtask
 
-  // READ request: [0xFE][0x10][count=4 BE][addr BE]
-  task automatic xfcp_read(input logic [31:0] addr);
+  // READ request: [0xFE][0x10][SEQ][count=4 BE][addr BE]
+  task automatic xfcp_read(
+    input logic [31:0] addr,
+    input logic [7:0]  seq_val = 8'h00
+  );
     uart_send(8'hFE);                           // SOP
     uart_send(8'h10);                           // XFCP_OP_READ
+    uart_send(seq_val);                         // SEQ
     uart_send(8'h00); uart_send(8'h04);         // COUNT = 4
     uart_send(addr[31:24]); uart_send(addr[23:16]);
     uart_send(addr[15:8]);  uart_send(addr[7:0]);
   endtask
 
-  // Receive READ response: [0xFD][0x12][DEV_TYPE 2B][DEV_STR 16B][data 4B MSB-first][0x00]
-  // = 25 bytes total; data reconstructed MSB-first (LITTLE_ENDIAN=0)
+  // Receive READ response: [0xFD][0x12][SEQ][DEV_TYPE 2B][DEV_STR 16B][data 4B MSB-first][0x00]
+  // = 26 bytes total; data reconstructed MSB-first (LITTLE_ENDIAN=0)
   task automatic xfcp_recv_read(output logic [31:0] rdata);
     logic [7:0] b;
     // Check SOP_RESP = 0xFD and TYPE = 0x12 (RESP_READ)
@@ -204,6 +211,7 @@ module tb_xfcp_uart_mmio_top;
     if (b !== 8'hFD) $error("[%0t] xfcp_recv_read: bad SOP_RESP 0x%02h (exp 0xFD)", $time, b);
     uart_recv(b);
     if (b !== 8'h12) $error("[%0t] xfcp_recv_read: bad TYPE 0x%02h (exp 0x12)", $time, b);
+    uart_recv(b); // SEQ echo (accept any value in TB for simplicity)
     // Remaining header: DEV_TYPE(2) + DEV_STR(16) = 18 bytes
     for (int i = 0; i < 18; i++) uart_recv(b);
     // Data MSB-first

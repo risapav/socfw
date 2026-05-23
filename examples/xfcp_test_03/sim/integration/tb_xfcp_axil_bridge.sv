@@ -7,12 +7,12 @@
 // Configuration: LITTLE_ENDIAN=0 (data MSB-first on wire, no byte-swap).
 //
 // Request format (TLAST=0 throughout; parser uses COUNT field):
-//   WRITE: [FE][11][00][04][addr 4B BE][data 4B MSB-first]
-//   READ:  [FE][10][00][04][addr 4B BE]
+//   WRITE: [FE][11][SEQ][00][04][addr 4B BE][data 4B MSB-first]
+//   READ:  [FE][10][SEQ][00][04][addr 4B BE]
 //
 // Response format:
-//   WRITE: [FE][13][type 2B][str 16B][0x00+TLAST]         = 21 bytes
-//   READ:  [FE][12][type 2B][str 16B][data 4B MSB-first][0x00+TLAST] = 25 bytes
+//   WRITE: [FD][13][SEQ][type 2B][str 16B][0x00+TLAST]         = 22 bytes
+//   READ:  [FD][12][SEQ][type 2B][str 16B][data 4B MSB-first][0x00+TLAST] = 26 bytes
 //
 // Tests:
 //   T1: WRITE 0xA5A5_A5A5 -> addr 0x00000004; drain response
@@ -115,9 +115,9 @@ module tb_xfcp_axil_bridge;
     resp_rptr++;
   endtask
 
-  // XFCP WRITE: [FE][11][00][04][addr BE][data MSB-first]
+  // XFCP WRITE: [FE][11][SEQ][00][04][addr BE][data MSB-first]
   task automatic xfcp_write(input logic [31:0] addr, input logic [31:0] data);
-    axis_send(8'hFE); axis_send(8'h11);
+    axis_send(8'hFE); axis_send(8'h11); axis_send(8'h00);  // SOP OP SEQ
     axis_send(8'h00); axis_send(8'h04);
     axis_send(addr[31:24]); axis_send(addr[23:16]);
     axis_send(addr[15:8]);  axis_send(addr[7:0]);
@@ -125,25 +125,25 @@ module tb_xfcp_axil_bridge;
     axis_send(data[15:8]);  axis_send(data[7:0]);
   endtask
 
-  // Drain WRITE response (21 bytes: FE 13 + type 2B + str 16B + 0x00)
+  // Drain WRITE response (22 bytes: FD 13 SEQ + type 2B + str 16B + 0x00)
   task automatic drain_write_resp();
-    resp_wait(21);
-    resp_drain(21);
+    resp_wait(22);
+    resp_drain(22);
   endtask
 
-  // XFCP READ: [FE][10][00][04][addr BE]
+  // XFCP READ: [FE][10][SEQ][00][04][addr BE]
   task automatic xfcp_read(input logic [31:0] addr);
-    axis_send(8'hFE); axis_send(8'h10);
+    axis_send(8'hFE); axis_send(8'h10); axis_send(8'h00);  // SOP OP SEQ
     axis_send(8'h00); axis_send(8'h04);
     axis_send(addr[31:24]); axis_send(addr[23:16]);
     axis_send(addr[15:8]);  axis_send(addr[7:0]);
   endtask
 
-  // Receive READ response (25 bytes): skip 20B header, read 4B data, drain terminator
+  // Receive READ response (26 bytes): skip 21B header, read 4B data, drain terminator
   task automatic recv_read(output logic [31:0] rdata);
     logic [7:0] b;
-    resp_wait(25);
-    resp_drain(20);
+    resp_wait(26);
+    resp_drain(21);
     resp_get(b); rdata[31:24] = b;
     resp_get(b); rdata[23:16] = b;
     resp_get(b); rdata[15:8]  = b;

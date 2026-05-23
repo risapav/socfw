@@ -21,6 +21,12 @@ class XfcpBus:
         self._timeouts = timeouts or XfcpTimeouts()
         self._retries  = retries
         self._transport = SerialTransport(port, baudrate, self._timeouts)
+        self._seq = 0  # 8-bit rolling SEQ counter
+
+    def _next_seq(self) -> int:
+        s = self._seq
+        self._seq = (self._seq + 1) & 0xFF
+        return s
 
     # ------------------------------------------------------------------
     # Context manager
@@ -82,10 +88,11 @@ class XfcpBus:
         Returns True on ACK, False on timeout/protocol error.
         Never retries — re-sending a pulse register would trigger it twice.
         """
-        pkt = proto.encode_write(addr, [val])
+        seq = self._next_seq()
+        pkt = proto.encode_write(addr, [val], seq=seq)
         try:
             raw = self._transact(pkt, proto.resp_len(0, is_write=True), retries=0)
-            proto.decode_write_response(raw)
+            proto.decode_write_response(raw, expected_seq=seq)
             return True
         except (XfcpTimeoutError, XfcpProtocolError):
             return False
@@ -101,10 +108,11 @@ class XfcpBus:
         remaining = num_words
         while remaining > 0:
             chunk = min(remaining, proto.MAX_BURST_WORDS)
-            pkt   = proto.encode_read(addr + offset * 4, chunk)
+            seq   = self._next_seq()
+            pkt   = proto.encode_read(addr + offset * 4, chunk, seq=seq)
             try:
                 raw   = self._transact(pkt, proto.resp_len(chunk))
-                words = proto.decode_read_response(raw, chunk)
+                words = proto.decode_read_response(raw, chunk, expected_seq=seq)
             except (XfcpTimeoutError, XfcpProtocolError):
                 return None
             results.extend(words)
@@ -122,10 +130,11 @@ class XfcpBus:
         offset = 0
         while offset < len(values):
             chunk  = values[offset: offset + proto.MAX_BURST_WORDS]
-            pkt    = proto.encode_write(addr + offset * 4, chunk)
+            seq    = self._next_seq()
+            pkt    = proto.encode_write(addr + offset * 4, chunk, seq=seq)
             try:
                 raw = self._transact(pkt, proto.resp_len(0, is_write=True), retries=0)
-                proto.decode_write_response(raw)
+                proto.decode_write_response(raw, expected_seq=seq)
             except (XfcpTimeoutError, XfcpProtocolError):
                 return False
             offset += len(chunk)

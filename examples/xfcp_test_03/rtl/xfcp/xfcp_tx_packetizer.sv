@@ -67,7 +67,8 @@ module xfcp_tx_packetizer #(
 
   // Riadiace signály od arbitera
   input  wire           resp_start,    // 1-takt pulz: začni odosielať paket
-  input  wire [7:0] resp_type,         // typ response (xfcp_op_e: READ/WRITE)
+  input  wire [7:0]     resp_type,     // typ response (xfcp_op_e: READ/WRITE)
+  input  wire [7:0]     resp_seq,      // SEQ z requestu (vrátiť v response)
 
   // Dátový kanál z engine read_buffer FIFO
   input  wire [AXI_DATA_WIDTH-1:0] read_data,
@@ -83,15 +84,15 @@ module xfcp_tx_packetizer #(
   // ============================================================
   // Lokálne konštanty
   // ============================================================
-  // SOP(1) + TYPE(1) + DEV_TYPE(2) + DEV_STR(16) = 20 bajtov
-  localparam int HEADER_BYTES = 20;
+  // SOP(1) + TYPE(1) + SEQ(1) + DEV_TYPE(2) + DEV_STR(16) = 21 bajtov
+  localparam int HEADER_BYTES = 21;
 
   // ============================================================
   // ONE-HOT FSM
   // ============================================================
   typedef enum logic [3:0] {
     ST_IDLE    = 4'b0001,  // čakanie na resp_start
-    ST_HEADER  = 4'b0010,  // odosielanie 20-bajtového headeru
+    ST_HEADER  = 4'b0010,  // odosielanie 21-bajtového headeru
     ST_PAYLOAD = 4'b0100,  // odosielanie 32-bit slov (len RESP_READ)
     ST_DONE    = 4'b1000   // odoslanie 0x00+TLAST → IDLE
   } state_e;
@@ -101,7 +102,7 @@ module xfcp_tx_packetizer #(
   // ============================================================
   // Registre
   // ============================================================
-  logic [4:0] header_ptr_q;  // index aktuálne odosielaného bajtu (0–19)
+  logic [4:0] header_ptr_q;  // index aktuálne odosielaného bajtu (0–20)
 
   // ── Dual-slot buffer ──────────────────────────────────────────
   // slot0 = active: serializer odtiaľto číta (MSB-first shift)
@@ -124,21 +125,23 @@ module xfcp_tx_packetizer #(
   // Header ROM – packed vektor
   //
   // hdr_vec[ptr*8 +: 8] = bajt na pozícii ptr
-  //   ptr=0:  SOP  (0xFE)
-  //   ptr=1:  TYPE (kombinačný z resp_type – stabilný od resp_start)
-  //   ptr=2:  DEV_TYPE[15:8]
-  //   ptr=3:  DEV_TYPE[7:0]
-  //   ptr=4–19: DEV_STR (Big-Endian, 16 bajtov)
+  //   ptr=0:  SOP      (0xFD)
+  //   ptr=1:  TYPE     (kombinačný z resp_type – stabilný od resp_start)
+  //   ptr=2:  SEQ      (echo SEQ z requestu)
+  //   ptr=3:  DEV_TYPE[15:8]
+  //   ptr=4:  DEV_TYPE[7:0]
+  //   ptr=5–20: DEV_STR (Big-Endian, 16 bajtov)
   // ============================================================
   logic [HEADER_BYTES*8-1:0] hdr_vec;
 
   always_comb begin
     hdr_vec[  0 +: 8] = XFCP_SOP_RESP;
     hdr_vec[  8 +: 8] = 8'(resp_type);
-    hdr_vec[ 16 +: 8] = XFCP_ID_TYPE[15:8];
-    hdr_vec[ 24 +: 8] = XFCP_ID_TYPE[7:0];
+    hdr_vec[ 16 +: 8] = resp_seq;
+    hdr_vec[ 24 +: 8] = XFCP_ID_TYPE[15:8];
+    hdr_vec[ 32 +: 8] = XFCP_ID_TYPE[7:0];
     for (int i = 0; i < 16; i++)
-      hdr_vec[(32 + i*8) +: 8] = XFCP_ID_STR[127 - i*8 -: 8];
+      hdr_vec[(40 + i*8) +: 8] = XFCP_ID_STR[127 - i*8 -: 8];
   end
 
   // ============================================================
@@ -329,9 +332,9 @@ module xfcp_tx_packetizer #(
         if (resp_start) state_n = ST_HEADER;
       end
 
-      // ── ST_HEADER: odošli 20 header bajtov ───────────────────
+      // ── ST_HEADER: odošli 21 header bajtov ───────────────────
       // TVALID vždy 1 (header je vždy pripravený z ROM).
-      // Po poslednom bajte (ptr==19): prechod podľa resp_type.
+      // Po poslednom bajte (ptr==20): prechod podľa resp_type.
       ST_HEADER: begin
         m_axis_tvalid = 1'b1;
         m_axis_tdata  = hdr_vec[{header_ptr_q, 3'b000} +: 8];

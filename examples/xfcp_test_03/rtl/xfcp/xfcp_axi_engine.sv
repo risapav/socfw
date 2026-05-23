@@ -63,7 +63,7 @@ module xfcp_axi_engine #(
   axi4lite_if.master                 m_axil,
 
   // Request od parsera (cez fabric dispatch)
-  input  wire [55:0]                 req_hdr,
+  input  wire [$bits(xfcp_req_hdr_t)-1:0] req_hdr,
   input  wire                        req_valid,
   output logic                       req_ready,
 
@@ -88,7 +88,6 @@ module xfcp_axi_engine #(
 
   localparam int ADDR_INC = AXI_DATA_WIDTH / 8;  // bajtový inkrement adresy (4 pre 32b)
 
-  // Cast: port req_hdr (logic[55:0]) -> struct for field access inside module body
   xfcp_req_hdr_t req_hdr_s;
   assign req_hdr_s = xfcp_req_hdr_t'(req_hdr);
 
