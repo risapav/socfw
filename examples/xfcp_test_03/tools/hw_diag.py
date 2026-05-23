@@ -217,7 +217,7 @@ def set_baud(ser, new_baud):
     ser.write(vfy)
     raw = recv_with_sop_resync(ser, EXPECTED_READ, time.time() + 3.0)
     if len(raw) == EXPECTED_READ:
-        val = struct.unpack(">I", raw[20:24])[0]
+        val = struct.unpack(">I", raw[21:25])[0]
         if val == 0x44494147:
             return True
 
@@ -229,7 +229,7 @@ def set_baud(ser, new_baud):
     ser.write(vfy)
     raw = recv_with_sop_resync(ser, EXPECTED_READ, time.time() + 3.0)
     if len(raw) == EXPECTED_READ:
-        val = struct.unpack(">I", raw[20:24])[0]
+        val = struct.unpack(">I", raw[21:25])[0]
         if val == 0x44494147:
             return False
 
@@ -251,7 +251,7 @@ def uart_read_status(ser, timeout=2.0):
     ser.write(pkt)
     raw = recv_with_sop_resync(ser, EXPECTED_READ, time.time() + timeout)
     if len(raw) == EXPECTED_READ:
-        return struct.unpack(">I", raw[20:24])[0]
+        return struct.unpack(">I", raw[21:25])[0]
     return None
 
 
@@ -298,7 +298,7 @@ def diag_read_all(ser, timeout=2.0):
         ser.write(pkt)
         raw = recv_with_sop_resync(ser, EXPECTED_READ, time.time() + timeout)
         if len(raw) == EXPECTED_READ:
-            result[name] = struct.unpack(">I", raw[20:24])[0]
+            result[name] = struct.unpack(">I", raw[21:25])[0]
         else:
             result[name] = None
     return result

@@ -7,10 +7,11 @@
  *   ------|---------------------------
  *    0    | SOP = XFCP_SOP_RESP (0xFD)
  *    1    | TYPE (0x12=RESP_READ, 0x13=RESP_WRITE)
- *    2    | DEV_TYPE[15:8]
- *    3    | DEV_TYPE[7:0]
- *   4-19  | DEV_STR (16 bajtov, Big-Endian)
- *  20..N  | PAYLOAD (32-bit slová, MSB-first) – len pre RESP_READ
+ *    2    | SEQ (echo z requestu)
+ *    3    | DEV_TYPE[15:8]
+ *    4    | DEV_TYPE[7:0]
+ *   5-20  | DEV_STR (16 bajtov, Big-Endian)
+ *  21..N  | PAYLOAD (32-bit slová, MSB-first) – len pre RESP_READ
  *   end   | 0x00 + TLAST
  *
  * ╔══════════════════════════════════════════════════════════════╗
