@@ -1128,6 +1128,75 @@ rx_accept = bus.read32(0xFF060008)
 
 ---
 
+## Fáza 3F — navrhy_16: skid buffer + fyzická diagnostika (2026-05-22, commit de2da76)
+
+### Implementované zmeny
+
+**RTL — axis/axis_uart_rx.sv:**
+
+Pridaný output skid register (AXI-Stream disciplína fix):
+```sv
+// Pred: out_valid_o = 1-cycle pulse, out_data_o nestabilne po 1 takte
+// Po:   out_valid_q drzi bajt kym TREADY=1
+//       ready_i = !out_valid_q || out_ready_i
+```
+Efekt: FPGA RX core nezdvihne `TVALID` kým predchádzajúci bajt nebol prevzatý.
+Zabraňuje strate bajtov keď FIFO downstream nie je immediately ready.
+
+Poznamka: ENABLE_POST_TX_FLUSH=0 (default OFF) znamená ze TREADY je takmer vzdy=1,
+takze skid buffer je prevazne "quality-of-protocol" fix, nie silny change v HW spravani.
+
+**Tools — hw_diag.py:**
+
+- `--pause MS` argument — pauza medzi requestmi (default 0). Test 2 podla navrhy_16:
+  ak 100ms pauza zlepsi vysledok → stale response / post-response recovery problem.
+- `--pause 100` pre izolaciu stale response (odporucany test pred SEQ ID)
+
+**Makefile:**
+
+- `compile-baud BAUD=N` — staticke baud bitstreamy bez runtime switchu.
+  Patches `build/rtl/soc_top.sv` (`UART_DEFAULT_BAUD_DIV`), kompiluje, kopiruje do
+  `output_files/soc_top_NNNNNbaud.sof`, obnoví default 115200.
+- `compile-all-bauds` — 115200 / 57600 / 38400 / 9600 sekvenencne.
+  Pouzitie: `make compile-baud BAUD=57600` (vyzaduje predchadzajuci `make gen`)
+
+**EXPERT_BRIEF.md:**
+
+- CP2102 v ASCII diagrame (nie FT232R)
+- RC filter oprava: 10 nF NESPRAVNE (RC=10us > bit period=8.68us pri 115200 baud)
+  Spravne hodnoty: 100–470 pF. Orientacne: 1kOhm + 470pF → RC=0.47us << 8.68us
+- Sekcia "Fyzicke diagnosticke testy A–D" podla navrhy_16 expert analyzy
+
+### Sim vysledky Fazy 3F
+
+**16/16 ALL PASSED**, Errors: 0.
+
+### Quartus build (Faza 3E+3F kumulativny rebuild)
+
+Build spusteny po commite de2da76, dokonceny 2026-05-22 21:20.
+**Bitfile: `output_files/soc_top.sof`** — obsahuje vsetky zmeny Fazy 3E a 3F:
+- DIAG snapshot architektura (NUM_REGS=17, shadow countery)
+- BAUD_STATUS register (0xFF010024)
+- axis_uart_rx skid buffer
+- ENABLE_POST_TX_FLUSH=0 (default)
+
+**HW test: CAKA.** Odporucany postup:
+1. `make program` — naprogramuj FPGA
+2. `python3 tools/hw_diag.py /dev/ttyUSB0 30` — základny test 30 iteracii
+3. `python3 tools/hw_diag.py /dev/ttyUSB0 30 --pause 100` — test s 100ms pauzou (Test 2)
+4. Porovnaj DIAG countery: rx_seen vs rx_accept vs rx_hdr vs fab_resp
+
+### Odporucane nasledujuce kroky (prioritny poradie)
+
+1. **HW test** — novy bitfile s DIAG snapshot workflow + skid buffer
+2. **Fyzicka diagnostika** (ak test potvrdi coupling):
+   - Test A: CP2102 bez FPGA — overi adaptér echo
+   - Test D: sniffer adaptér na FPGA TX linka
+3. **SEQ ID** (B-faza) — odmietnutie spurious odpovedi bez ohla na fyziku
+4. **Staticky baud sweep** (`make compile-baud`) — ak SEQ ID nezlepsi, izolatuj baud
+
+---
+
 ## Historický prehľad
 
 | Dátum | Čo sa zmenilo |
@@ -1153,3 +1222,4 @@ rx_accept = bus.read32(0xFF060008)
 | 2026-05-22 | Fáza 3C: navrhy_13 — hw_diag.py --baud/--sweep. Sweep HW: 115200=13%, ostatné baud switche zlyhali. fab_resp=36>30: spurious requesty z coupling |
 | 2026-05-22 | Fáza 3D: navrhy_14 — pending/commit baud switch v axil_uart_adapter (NUM_REGS 7→9), data_bits bug fix, SerialTransport.set_baudrate(), XfcpBus.set_baudrate(). Regression 16/16 PASS. Quartus OK. Sweep HW: 33%/36%/36%/30% — baud switch zlyhá (P≈11% pre 2×WRITE). RTL správny |
 | 2026-05-22 | Fáza 3E: navrhy_15 — DIAG snapshot (live+shadow), 7 nových counterov, BAUD_STATUS 0x24, busy guard, safe baud switch s retry+fallback, debug porty bad_hdr/recovery. Sim 16/16 PASS. HW test čaká (Quartus rebuild nutný) |
+| 2026-05-22 | Fáza 3F: navrhy_16 — axis_uart_rx skid buffer (AXI-Stream fix), hw_diag.py --pause, Makefile compile-baud/compile-all-bauds, EXPERT_BRIEF.md RC filter + CP2102 oprava. Sim 16/16 PASS. Quartus rebuilt: output_files/soc_top.sof (21:20). Pripravené na HW test |
