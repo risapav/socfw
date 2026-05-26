@@ -74,6 +74,7 @@ resources:
       io_standard: "3.3-V LVTTL"
       pins: [E4, A8, B8, A7, B7, A6]
 
+# 2352B
     seg:
       top_name: ONB_SEG
       direction: output
@@ -95,6 +96,7 @@ resources:
       io_standard: "3.3-V LVTTL"
       pins: [U13, V13, U14, V14]
 
+# CP2102N
     uart:
       io_standard: "3.3-V LVTTL"
       signals:
@@ -109,6 +111,7 @@ resources:
           pin: J1
           io_standard: "3.3-V LVTTL"
 
+# W9825G6KH-6
     sdram:
       io_standard: "3.3-V SSTL-2 Class I"
       groups:
@@ -157,6 +160,89 @@ resources:
           top_name: SDRAM_CLK
           direction: output
           pin: V4
+
+# RTL8211EG
+    eth:
+      io_standard: "3.3-V LVTTL"
+      signals:
+        mdc:
+          direction: output
+          top_name: ETH_MDC
+          pin: AB17
+          io_standard: "3.3-V LVTTL"
+          current_strength: "8MA"
+        mdio:
+          direction: inout
+          top_name: ETH_MDIO
+          pin: AA17
+          io_standard: "3.3-V LVTTL"
+        rx_clk:
+          direction: input
+          top_name: ETH_RX_CLK
+          pin: R19
+          io_standard: "3.3-V LVTTL"
+        rx_clk_0:
+          direction: input
+          top_name: ETH_RX_CLK_0
+          pin: M22
+          io_standard: "3.3-V LVTTL"
+        rx_dv:
+          direction: input
+          top_name: ETH_RX_DV
+          pin: K21
+          io_standard: "3.3-V LVTTL"
+        rx_er:
+          direction: input
+          top_name: ETH_RX_ER
+          pin: R21
+          io_standard: "3.3-V LVTTL"
+        tx_clk:
+          direction: input
+          top_name: ETH_TX_CLK
+          pin: AB20
+          io_standard: "3.3-V LVTTL"
+        tx_en:
+          direction: output
+          top_name: ETH_TX_EN
+          pin: V21
+          io_standard: "3.3-V LVTTL"
+          current_strength: "8MA"
+          slew_rate: 1
+        tx_er:
+          direction: output
+          top_name: ETH_TX_ER
+          pin: AA18
+          io_standard: "3.3-V LVTTL"
+          current_strength: "8MA"
+          slew_rate: 1
+        gtx_clk:
+          direction: output
+          top_name: ETH_GTX_CLK
+          pin: U22
+          io_standard: "3.3-V LVTTL"
+          current_strength: "8MA"
+          slew_rate: 1
+        reset:
+          direction: output
+          top_name: ETH_RESET
+          pin: W21
+          io_standard: "3.3-V LVTTL"
+          current_strength: "8MA"
+      groups:
+        rxd:
+          top_name: ETH_RXD
+          direction: input
+          width: 8
+          pins: [K22, L21, L22, M21, N21, N22, P21, P22]
+          io_standard: "3.3-V LVTTL"
+        txd:
+          top_name: ETH_TXD
+          direction: output
+          width: 8
+          pins: [V22, W22, Y21, Y22, AA20, AB19, AA19, AB18]
+          io_standard: "3.3-V LVTTL"
+          current_strength: "8MA"
+          slew_rate: 1
 
   external:
     sdram:
@@ -214,6 +300,8 @@ resources:
         io_standard: "3.3-V LVTTL"
         connector: connectors.pmod.J10
         pins: [H1, F1, E1, C1, H2, F2]
+
+# PMOD LEDx8 Sipeed
       j10_led8:
         kind: vector
         top_name: PMOD_J10_LED8
@@ -230,6 +318,8 @@ resources:
         io_standard: "3.3-V LVTTL"
         connector: connectors.pmod.J11
         pins: [R1, P1, N1, M1, R2, P2]
+
+# PMOD LEDx8 Sipeed
       j11_led8:
         kind: vector
         top_name: PMOD_J11_LED8
@@ -238,6 +328,8 @@ resources:
         io_standard: "3.3-V LVTTL"
         connector: connectors.pmod.J11
         pins: [R1, P1, N1, M1, R2, P2, N2, M2]
+
+# PMOD BTN4+4 Sipeed
       j10_buttons8:
         kind: vector
         top_name: PMOD_J10_BTN
@@ -246,6 +338,8 @@ resources:
         io_standard: "3.3-V LVTTL"
         connector: connectors.pmod.J10
         pins: [H1, F1, E1, C1, H2, F2, D2, C2]
+
+# PMOD BTN4+4 Sipeed
       j11_buttons8:
         kind: vector
         top_name: PMOD_J11_BTN
@@ -255,6 +349,24 @@ resources:
         connector: connectors.pmod.J11
         pins: [R1, P1, N1, M1, R2, P2, N2, M2]
 
+# PMOD DT*2 Sipeed
+
+
+# PMOD-DVP Sipeed J10+J11
+
+
+# PMOD TF CARDv2 Sipeed
+      j10_sdcard:
+        kind: vector
+        top_name: PMOD_J10_SDCARD
+        direction: inout
+        width: 4
+        io_standard: "3.3-V LVTTL"
+        connector: connectors.pmod.J10
+        pins: [H1, F1, E1, C1]
+
+
+# PMOD DVI Sipeed
       j11_hdmi_in:
         kind: vector
         top_name: PMOD_J11_HDMI_IN
@@ -264,6 +376,7 @@ resources:
         io_standard: "LVDS"
         pins: [N2, P2, R2, M2]
 
+# PMOD DVI Sipeed
       j11_hdmi_out:
         kind: vector
         io_standard: "LVDS"

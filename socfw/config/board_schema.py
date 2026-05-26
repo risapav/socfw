@@ -11,6 +11,8 @@ class BoardScalarSignalSchema(BaseModel):
     pin: str
     io_standard: str | None = None
     weak_pull_up: bool = False
+    current_strength: str | None = None
+    slew_rate: int | None = None
 
 
 class BoardVectorSignalSchema(BaseModel):
@@ -20,6 +22,8 @@ class BoardVectorSignalSchema(BaseModel):
     pins: dict[int, str] | list[str]
     io_standard: str | None = None
     weak_pull_up: bool = False
+    current_strength: str | None = None
+    slew_rate: int | None = None
 
     @model_validator(mode="after")
     def _validate_shape(self) -> "BoardVectorSignalSchema":

@@ -148,10 +148,32 @@ class SdcEmitter:
         if input_max is None and output_max is None:
             return
 
+        # Collect override ports to exclude from default constraints (avoids replace warnings)
+        ov_inputs: list[str] = []
+        ov_outputs: list[str] = []
+        for ov in (timing.io_overrides or []):
+            if ov.direction == "input":
+                ov_inputs.append(ov.port)
+            else:
+                ov_outputs.append(ov.port)
+
         clk_name = system.board.sys_clock.top_name
         rst_name = system.board.sys_reset.top_name if system.board.sys_reset else None
-        exclude = f"{{{clk_name}}}" if rst_name is None else f"{{{clk_name} {rst_name}}}"
-        data_inputs = f"[remove_from_collection [all_inputs] [get_ports {exclude}]]"
+
+        # Build input exclusion: system ports + all input override ports
+        excl_parts = [clk_name]
+        if rst_name:
+            excl_parts.append(rst_name)
+        excl_parts.extend(ov_inputs)
+        data_inputs = f"[remove_from_collection [all_inputs] [get_ports {{{' '.join(excl_parts)}}}]]"
+
+        # Build output expression: exclude output override ports
+        if ov_outputs:
+            data_outputs = (
+                f"[remove_from_collection [all_outputs] [get_ports {{{' '.join(ov_outputs)}}}]]"
+            )
+        else:
+            data_outputs = "[all_outputs]"
 
         lines.append("# Default IO delays")
 
@@ -168,11 +190,11 @@ class SdcEmitter:
         if output_max is not None:
             lines.append(
                 f"set_output_delay -clock {clock} "
-                f"-max {float(output_max):.3f} [all_outputs]"
+                f"-max {float(output_max):.3f} {data_outputs}"
             )
             lines.append(
                 f"set_output_delay -clock {clock} "
-                f"-min {float(output_min):.3f} [all_outputs]"
+                f"-min {float(output_min):.3f} {data_outputs}"
             )
 
         lines.append("")

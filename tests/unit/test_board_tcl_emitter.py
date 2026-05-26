@@ -1,14 +1,17 @@
 from pathlib import Path
 
 from socfw.emit.board_tcl_emitter import BoardTclEmitter
-from socfw.model.board import BoardClockDef, BoardResetDef, BoardModel, BoardResource, BoardVectorSignal
+from socfw.model.board import (
+    BoardClockDef, BoardResetDef, BoardModel, BoardResource,
+    BoardScalarSignal, BoardVectorSignal,
+)
 from socfw.model.enums import PortDir
 from socfw.model.ip import IpDescriptor, IpOrigin, IpResetSemantics, IpClocking, IpArtifactBundle
-from socfw.model.project import ModuleInstance, ProjectModel
+from socfw.model.project import ModuleInstance, PortBinding, ProjectModel
 from socfw.model.system import SystemModel
 
 
-def _make_board():
+def _make_board(with_io_std: bool = False):
     return BoardModel(
         board_id="demo",
         vendor=None,
@@ -38,9 +41,33 @@ def _make_board():
                         direction=PortDir.OUTPUT,
                         width=2,
                         pins={0: "PIN_C1", 1: "PIN_C2"},
+                        io_standard="3.3-V LVTTL" if with_io_std else None,
                     )
                 },
-            )
+            ),
+            "eth": BoardResource(
+                key="eth",
+                kind="generic",
+                scalars={
+                    "rx_clk": BoardScalarSignal(
+                        key="rx_clk",
+                        top_name="ETH_RX_CLK",
+                        direction=PortDir.INPUT,
+                        pin="PIN_D1",
+                        io_standard="3.3-V LVTTL",
+                    ),
+                },
+                vectors={
+                    "rxd": BoardVectorSignal(
+                        key="rxd",
+                        top_name="ETH_RXD",
+                        direction=PortDir.INPUT,
+                        width=2,
+                        pins={0: "PIN_E1", 1: "PIN_E2"},
+                        io_standard="3.3-V LVTTL",
+                    ),
+                },
+            ),
         },
     )
 
@@ -80,6 +107,29 @@ def _make_system_no_reset() -> SystemModel:
     return SystemModel(board=board, project=project, timing=None, ip_catalog={})
 
 
+def _make_system_eth_with_bind_overlap() -> SystemModel:
+    """Feature selects onboard.eth (whole group) AND bind targets include onboard.eth.rxd."""
+    board = _make_board(with_io_std=True)
+    project = ProjectModel(
+        name="demo",
+        mode="standalone",
+        board_ref="demo",
+        feature_refs=["board:onboard.eth"],
+        modules=[
+            ModuleInstance(
+                instance="eth",
+                type_name="eth_ip",
+                clocks=[],
+                port_bindings=[
+                    PortBinding(port_name="rx_clk_i", target="board:onboard.eth.rx_clk"),
+                    PortBinding(port_name="rxd_i",    target="board:onboard.eth.rxd"),
+                ],
+            )
+        ],
+    )
+    return SystemModel(board=board, project=project, timing=None, ip_catalog={})
+
+
 def test_board_tcl_emitter_writes_clock_reset_and_leds(tmp_path):
     system = _make_system_with_reset()
     out = BoardTclEmitter().emit(out_dir=str(tmp_path), system=system)
@@ -99,3 +149,25 @@ def test_board_tcl_emitter_omits_reset_when_unused(tmp_path):
 
     assert "set_location_assignment PIN_A1 -to SYS_CLK" in text
     assert "set_location_assignment PIN_B1 -to RESET_N" not in text
+
+
+def test_vector_io_standard_uses_wildcard(tmp_path):
+    """IO_STANDARD for a bus signal must use [*] wildcard, not the bare name."""
+    system = _make_system_eth_with_bind_overlap()
+    out = BoardTclEmitter().emit(out_dir=str(tmp_path), system=system)
+    text = Path(out).read_text(encoding="utf-8")
+
+    assert 'set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ETH_RXD[*]' in text
+    assert 'set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ETH_RXD"' not in text
+
+
+def test_no_duplicate_pin_assignments_when_feature_and_bind_overlap(tmp_path):
+    """When feature selects onboard.eth and bind targets also name onboard.eth.rxd,
+    each ETH_RXD[n] pin must appear exactly once in the output."""
+    system = _make_system_eth_with_bind_overlap()
+    out = BoardTclEmitter().emit(out_dir=str(tmp_path), system=system)
+    text = Path(out).read_text(encoding="utf-8")
+
+    for bit in range(2):
+        count = text.count(f"-to ETH_RXD[{bit}]")
+        assert count == 1, f"ETH_RXD[{bit}] appears {count} times, expected 1"

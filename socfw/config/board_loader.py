@@ -144,6 +144,8 @@ class BoardLoader:
                         pin=sig.pin,
                         io_standard=sig.io_standard,
                         weak_pull_up=sig.weak_pull_up,
+                        current_strength=sig.current_strength,
+                        slew_rate=sig.slew_rate,
                     )
                     for sig_key, sig in res.signals.items()
                 }
@@ -156,6 +158,8 @@ class BoardLoader:
                         pins=_normalize_pins(grp.pins),
                         io_standard=grp.io_standard,
                         weak_pull_up=grp.weak_pull_up,
+                        current_strength=grp.current_strength,
+                        slew_rate=grp.slew_rate,
                     )
                     for grp_key, grp in res.groups.items()
                 }

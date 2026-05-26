@@ -13,6 +13,8 @@ class BoardScalarSignal:
     pin: str
     io_standard: str | None = None
     weak_pull_up: bool = False
+    current_strength: str | None = None
+    slew_rate: int | None = None
     meta: dict[str, Any] = field(default_factory=dict)
 
 
@@ -25,6 +27,8 @@ class BoardVectorSignal:
     pins: dict[int, str]
     io_standard: str | None = None
     weak_pull_up: bool = False
+    current_strength: str | None = None
+    slew_rate: int | None = None
     meta: dict[str, Any] = field(default_factory=dict)
 
     def validate_shape(self) -> list[str]:

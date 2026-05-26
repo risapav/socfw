@@ -16,4 +16,4 @@ set_location_assignment PIN_B8 -to ONB_LEDS[2]
 set_location_assignment PIN_A7 -to ONB_LEDS[3]
 set_location_assignment PIN_B7 -to ONB_LEDS[4]
 set_location_assignment PIN_A6 -to ONB_LEDS[5]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ONB_LEDS
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ONB_LEDS[*]

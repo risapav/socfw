@@ -1,0 +1,100 @@
+version: 2
+kind: ip
+
+ip:
+  name: ethernet_test
+  module: ethernet_test
+  category: debug
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: eth_rx_clk_i
+  additional_input_ports: []
+  outputs:
+    - port: eth_gtx_clk_o
+      kind: generated_clock
+      domain: eth_gtx_clk
+
+ports:
+  - name: eth_rst_no
+    direction: output
+    width: 1
+
+  - name: eth_mdc_o
+    direction: output
+    width: 1
+
+  - name: eth_mdio_io
+    direction: inout
+    width: 1
+
+  - name: eth_rx_clk_i
+    direction: input
+    width: 1
+
+  - name: eth_rx_clk_0_i
+    direction: input
+    width: 1
+
+  - name: eth_rx_dv_i
+    direction: input
+    width: 1
+
+  - name: eth_rx_er_i
+    direction: input
+    width: 1
+
+  - name: eth_rx_data_i
+    direction: input
+    width: 8
+
+  - name: eth_tx_clk_i
+    direction: input
+    width: 1
+
+  - name: eth_gtx_clk_o
+    direction: output
+    width: 1
+
+  - name: eth_tx_en_o
+    direction: output
+    width: 1
+
+  - name: eth_tx_er_o
+    direction: output
+    width: 1
+
+  - name: eth_tx_data_o
+    direction: output
+    width: 8
+
+artifacts:
+  synthesis:
+    # ETH infrastructure
+    - ../rtl/udp.sv
+    - ../rtl/ram.sv
+    - ../rtl/crc.sv
+    - ../rtl/ipsend.sv
+    - ../rtl/ipreceive.sv
+    # Top-level
+    - ../rtl/ethernet_test.sv
+
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - ethernet_test

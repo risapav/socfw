@@ -18,7 +18,7 @@ set_location_assignment PIN_B8 -to ONB_LEDS[2]
 set_location_assignment PIN_A7 -to ONB_LEDS[3]
 set_location_assignment PIN_B7 -to ONB_LEDS[4]
 set_location_assignment PIN_A6 -to ONB_LEDS[5]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ONB_LEDS
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ONB_LEDS[*]
 
 # External resources
 set_location_assignment PIN_H1 -to PMOD_J10_LED8[0]
@@ -29,11 +29,11 @@ set_location_assignment PIN_H2 -to PMOD_J10_LED8[4]
 set_location_assignment PIN_F2 -to PMOD_J10_LED8[5]
 set_location_assignment PIN_D2 -to PMOD_J10_LED8[6]
 set_location_assignment PIN_C2 -to PMOD_J10_LED8[7]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PMOD_J10_LED8
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PMOD_J10_LED8[*]
 set_location_assignment PIN_R1 -to PMOD_J11_LED[0]
 set_location_assignment PIN_P1 -to PMOD_J11_LED[1]
 set_location_assignment PIN_N1 -to PMOD_J11_LED[2]
 set_location_assignment PIN_M1 -to PMOD_J11_LED[3]
 set_location_assignment PIN_R2 -to PMOD_J11_LED[4]
 set_location_assignment PIN_P2 -to PMOD_J11_LED[5]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PMOD_J11_LED
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PMOD_J11_LED[*]

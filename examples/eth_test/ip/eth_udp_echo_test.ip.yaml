@@ -1,0 +1,139 @@
+version: 2
+kind: ip
+
+ip:
+  name: eth_udp_echo_test
+  module: eth_udp_echo_test
+  category: debug
+  description: >
+    UDP echo test peripheral with AXI-Lite status/control registers.
+    Receives UDP payload from a UDP/IP stack and echoes it back to the sender.
+    Provides counters (RX/TX frames, bytes, drops, errors) and configuration
+    registers (LOCAL_IP, UDP_PORT) via AXI-Lite.
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: true
+  generate_registers: false
+  instantiate_directly: false
+  dependency_only: false
+
+bus:
+  type: axil
+  data_width: 32
+  addr_width: 32
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: []
+  outputs: []
+
+params:
+  DEFAULT_IP:
+    type: logic
+    width: 32
+    default: "32'hC0A80132"
+    description: "Default local IPv4 address (192.168.1.50)"
+  DEFAULT_UDP_PORT:
+    type: logic
+    width: 16
+    default: "16'd50000"
+    description: "Default UDP echo port"
+  MAX_PAYLOAD_BYTES:
+    type: int
+    default: 512
+    description: "Echo buffer depth in bytes (must be power of 2)"
+
+ports:
+  - name: udp_rx_meta_valid_i
+    direction: input
+    width: 1
+  - name: udp_rx_meta_ready_o
+    direction: output
+    width: 1
+  - name: udp_rx_src_ip_i
+    direction: input
+    width: 32
+  - name: udp_rx_dst_ip_i
+    direction: input
+    width: 32
+  - name: udp_rx_src_port_i
+    direction: input
+    width: 16
+  - name: udp_rx_dst_port_i
+    direction: input
+    width: 16
+  - name: udp_rx_length_i
+    direction: input
+    width: 16
+  - name: udp_rx_valid_i
+    direction: input
+    width: 1
+  - name: udp_rx_ready_o
+    direction: output
+    width: 1
+  - name: udp_rx_data_i
+    direction: input
+    width: 8
+  - name: udp_rx_last_i
+    direction: input
+    width: 1
+  - name: udp_tx_meta_valid_o
+    direction: output
+    width: 1
+  - name: udp_tx_meta_ready_i
+    direction: input
+    width: 1
+  - name: udp_tx_dst_ip_o
+    direction: output
+    width: 32
+  - name: udp_tx_dst_port_o
+    direction: output
+    width: 16
+  - name: udp_tx_src_port_o
+    direction: output
+    width: 16
+  - name: udp_tx_length_o
+    direction: output
+    width: 16
+  - name: udp_tx_valid_o
+    direction: output
+    width: 1
+  - name: udp_tx_ready_i
+    direction: input
+    width: 1
+  - name: udp_tx_data_o
+    direction: output
+    width: 8
+  - name: udp_tx_last_o
+    direction: output
+    width: 1
+  - name: link_up_i
+    direction: input
+    width: 1
+  - name: irq_o
+    direction: output
+    width: 1
+
+artifacts:
+  synthesis:
+    # AXI infrastructure
+    - ../../../../rtl/axi/axi_pkg.sv
+    - ../../../../rtl/axi/axi_interfaces.sv
+    - ../../../../rtl/axil/axil_regfile.sv
+    # Module
+    - ../rtl/eth_udp_echo_test.sv
+
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - eth_udp_echo_test

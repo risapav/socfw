@@ -1,0 +1,68 @@
+version: 2
+kind: timing
+
+timing:
+  derive_uncertainty: true
+
+  clocks:
+    - name: ETH_RX_CLK
+      source: ETH_RX_CLK
+      period_ns: 8.0
+      reset:
+        source: RESET_N
+        active_low: true
+        sync_stages: 2
+    - name: SYS_CLK
+      source: SYS_CLK
+      period_ns: 20.0
+      reset:
+        source: RESET_N
+        active_low: true
+        sync_stages: 2
+
+  false_paths:
+    - from_port: RESET_N
+      comment: "Async reset path"
+
+  io_delays:
+    auto: true
+    default_clock: SYS_CLK
+    default_input_max_ns: 3.0
+    default_input_min_ns: 0.0
+    default_output_max_ns: 3.0
+    default_output_min_ns: 0.0
+    overrides:
+      - port: "ETH_RXD[*]"
+        direction: input
+        clock: ETH_RX_CLK
+        max_ns: 6.0
+        min_ns: 6.0
+        comment: "Ethernet RX data bus"
+
+      - port: ETH_RX_DV
+        direction: input
+        clock: ETH_RX_CLK
+        max_ns: 6.0
+        min_ns: 6.0
+        comment: "Ethernet RX data valid"
+
+      - port: "ETH_TXD[*]"
+        direction: output
+        clock: ETH_RX_CLK
+        max_ns: 2.0
+        min_ns: 0.0
+        comment: "Ethernet TX data bus"
+
+      - port: ETH_TX_EN
+        direction: output
+        clock: ETH_RX_CLK
+        max_ns: 2.0
+        min_ns: 0.0
+        comment: "Ethernet TX enable"
+
+      - port: ETH_TX_ER
+        direction: output
+        clock: ETH_RX_CLK
+        max_ns: 2.0
+        min_ns: 0.0
+        comment: "Ethernet TX error (ETH_RX_CLK domain)"

@@ -68,14 +68,15 @@ class BoardTclEmitter:
         project = system.project
         selected = expand_features_for_project(board, project)
 
-        # Add bind targets not already covered
+        # Add bind targets not already covered by a selected parent path
         for mod in project.modules:
             for pb in mod.port_bindings:
                 if not pb.target.startswith("board:"):
                     continue
                 path = pb.target[len("board:"):]
-                if path not in selected.paths:
-                    selected.paths.append(path)
+                if any(path == p or path.startswith(p + ".") for p in selected.paths):
+                    continue
+                selected.paths.append(path)
 
         if not selected.paths:
             return
@@ -127,13 +128,50 @@ class BoardTclEmitter:
             io_std = self._get_io_standard(u, board)
             if io_std:
                 lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}")
+            cs = self._get_current_strength(u, board)
+            if cs:
+                lines.append(f"set_instance_assignment -name CURRENT_STRENGTH_NEW \"{cs}\" -to {top_name}")
+            sr = self._get_slew_rate(u, board)
+            if sr is not None:
+                lines.append(f"set_instance_assignment -name SLEW_RATE {sr} -to {top_name}")
 
         if vector_uses:
             for u in sorted(vector_uses, key=lambda x: x.bit):
                 lines.append(f"set_location_assignment {_pin(u.pin)} -to {top_name}[{u.bit}]")
             io_std = self._get_io_standard(vector_uses[0], board)
             if io_std:
-                lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}")
+                lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}[*]")
+            cs = self._get_current_strength(vector_uses[0], board)
+            if cs:
+                lines.append(f"set_instance_assignment -name CURRENT_STRENGTH_NEW \"{cs}\" -to {top_name}[*]")
+            sr = self._get_slew_rate(vector_uses[0], board)
+            if sr is not None:
+                lines.append(f"set_instance_assignment -name SLEW_RATE {sr} -to {top_name}[*]")
+
+    def _get_signal(self, use, board):
+        """Return the BoardScalarSignal or BoardVectorSignal for a PinUse."""
+        path = use.resource_path
+        if path.startswith("onboard."):
+            sub = path[len("onboard."):]
+            res_key = sub.split(".")[0]
+            res = board.onboard.get(res_key)
+            if res is None:
+                return None
+            for sig in res.scalars.values():
+                if sig.top_name == use.top_name:
+                    return sig
+            for vec in res.vectors.values():
+                if vec.top_name == use.top_name:
+                    return vec
+        return None
+
+    def _get_current_strength(self, use, board) -> str | None:
+        sig = self._get_signal(use, board)
+        return sig.current_strength if sig is not None else None
+
+    def _get_slew_rate(self, use, board) -> int | None:
+        sig = self._get_signal(use, board)
+        return sig.slew_rate if sig is not None else None
 
     def _get_io_standard(self, use, board) -> str | None:
         path = use.resource_path

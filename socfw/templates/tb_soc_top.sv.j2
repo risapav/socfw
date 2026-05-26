@@ -20,15 +20,21 @@ module tb_soc_top;
   );
 
   always #(CLK_HALF_NS) {{ clk_port }} = ~{{ clk_port }};
+{% for c in extra_clocks %}
+  always #({{ "%.4f" | format(c.half_ns) }}) {{ c.port }} = ~{{ c.port }};
+{% endfor %}
 
   initial begin
     $dumpfile("wave.vcd");
     $dumpvars(0, dut);
     {{ clk_port }} = 0;
+{% for c in extra_clocks %}
+    {{ c.port }} = 0;
+{% endfor %}
 {% if rst_port %}
     {{ rst_port }} = {{ "0" if rst_active_low else "1" }};  // assert reset
 {% endif %}
-{% for p in module.ports if p.direction == "input" and p.name != clk_port and p.name != rst_port %}
+{% for p in module.ports if p.direction == "input" and p.name != clk_port and p.name != rst_port and p.name not in extra_clk_ports %}
     {{ p.name }} = {{ "'0" if p.width > 1 else "1'b0" }};
 {% endfor %}
     repeat(10) @(posedge {{ clk_port }});
