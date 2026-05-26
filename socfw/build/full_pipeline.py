@@ -7,6 +7,7 @@ from socfw.build.pipeline import BuildPipeline, BuildResult
 from dataclasses import replace
 
 from socfw.builders.rtl_ir_builder import RtlIrBuilder
+from socfw.emit.orchestrator import EmitOrchestrator
 from socfw.builders.vendor_artifact_collector import VendorArtifactCollector
 from socfw.build.provenance import SocBuildProvenance
 from socfw.config.system_loader import SystemLoader
@@ -46,6 +47,8 @@ class FullBuildPipeline:
         self.files_tcl_emitter = FilesTclEmitter()
         self.sdc_emitter = SdcEmitter()
         self.board_tcl_emitter = BoardTclEmitter()
+        self.pipeline = BuildPipeline(self.registry)
+        self.emitters = EmitOrchestrator(self.registry)
 
     def validate(self, project_file: str) -> Result:
         from socfw.validate.runner import ValidationRunner

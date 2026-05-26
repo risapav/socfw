@@ -102,15 +102,16 @@ class BuildPipeline:
             if shell_ir is not None:
                 shell_irs.append(shell_ir)
 
-        for s in shell_irs:
-            generated_path = f"rtl/{s.module_name}.sv"
-            if generated_path not in rtl_ir.extra_sources:
-                rtl_ir.extra_sources.append(generated_path)
+        if rtl_ir is not None:
+            for s in shell_irs:
+                generated_path = f"rtl/{s.module_name}.sv"
+                if generated_path not in rtl_ir.extra_sources:
+                    rtl_ir.extra_sources.append(generated_path)
 
-        for r in regblk_irs:
-            generated_path = f"rtl/{r.module_name}.sv"
-            if generated_path not in rtl_ir.extra_sources:
-                rtl_ir.extra_sources.append(generated_path)
+            for r in regblk_irs:
+                generated_path = f"rtl/{r.module_name}.sv"
+                if generated_path not in rtl_ir.extra_sources:
+                    rtl_ir.extra_sources.append(generated_path)
 
         return BuildResult(
             ok=True,

@@ -9,7 +9,7 @@ _SRC_EXTS = {".sv", ".v"}
 
 
 class SimFilelistEmitter:
-    def emit(self, out_dir: str, system, planned_bridges: list) -> str:
+    def emit(self, out_dir: str, system, planned_bridges: list, extra_rtl_files: list[str] | None = None) -> str:
         out_path = Path(out_dir).resolve()
         sim_dir = out_path / "sim"
         sim_dir.mkdir(parents=True, exist_ok=True)
@@ -51,6 +51,10 @@ class SimFilelistEmitter:
         for bridge in planned_bridges:
             if Path(str(bridge.rtl_file)).suffix in _SRC_EXTS:
                 src_files.append(str(bridge.rtl_file))
+
+        for fp in extra_rtl_files or []:
+            if Path(fp).suffix in _SRC_EXTS:
+                src_files.append(fp)
 
         lines: list[str] = []
 

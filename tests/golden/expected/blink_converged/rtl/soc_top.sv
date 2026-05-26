@@ -1,4 +1,7 @@
 // AUTO-GENERATED - DO NOT EDIT
+`ifndef SOC_TOP_SV
+`define SOC_TOP_SV
+
 `default_nettype none
 
 module soc_top (
@@ -17,4 +20,5 @@ module soc_top (
   );
 
 endmodule : soc_top
-`default_nettype wire
+
+`endif // SOC_TOP_SV
