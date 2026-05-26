@@ -26,15 +26,48 @@ class SdcEmitter:
         return str(out)
 
     def _emit_primary_clock(self, lines: list[str], system) -> None:
+        lines.append("# Primary clocks")
+
+        timing = system.timing
+        if timing is not None and timing.primary_clocks:
+            emitted: set[str] = set()
+            for clk in timing.primary_clocks:
+                port = self._resolve_source_port(clk.source_port, system)
+                name = port if clk.source_port.startswith("board:") else clk.name
+                if name in emitted:
+                    continue
+                emitted.add(name)
+                lines.append(
+                    f"create_clock -name {name} "
+                    f"-period {float(clk.period_ns):.3f} "
+                    f"[get_ports {{{port}}}]"
+                )
+                if clk.uncertainty_ns is not None:
+                    lines.append(
+                        f"set_clock_uncertainty {float(clk.uncertainty_ns):.3f} "
+                        f"[get_clocks {{{name}}}]"
+                    )
+            lines.append("")
+            return
+
         clk = system.board.sys_clock
         period_ns = 1_000_000_000.0 / float(clk.frequency_hz)
-
-        lines.append("# Primary clocks")
         lines.append(
             f"create_clock -name {clk.top_name} "
             f"-period {period_ns:.3f} [get_ports {{{clk.top_name}}}]"
         )
         lines.append("")
+
+    def _resolve_source_port(self, source: str, system) -> str:
+        """Resolve board:selector or direct port name to the actual top-level port name."""
+        if not source.startswith("board:"):
+            return source
+        selector = source[len("board:"):]
+        if system.board.sys_clock and system.board.sys_clock.id == selector:
+            return system.board.sys_clock.top_name
+        if system.board.sys_reset and system.board.sys_reset.id == selector:
+            return system.board.sys_reset.top_name
+        return selector
 
     def _emit_generated_clocks(self, lines: list[str], system) -> None:
         timing = system.timing
@@ -90,12 +123,12 @@ class SdcEmitter:
         lines.append("")
 
     def _resolve_sdc_clock(self, name: str, system) -> str:
-        """Resolve a timing domain name to its SDC clock name (board port name)."""
+        """Resolve a timing clock/domain name to the emitted SDC clock name."""
         timing = system.timing
         if timing:
             for pc in timing.primary_clocks:
-                if pc.name == name:
-                    return pc.source_port
+                if pc.name == name or pc.source_port == name:
+                    return pc.name
         return name
 
     def _emit_io_delays(self, lines: list[str], system) -> None:

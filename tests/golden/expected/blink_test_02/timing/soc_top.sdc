@@ -2,6 +2,7 @@
 
 # Primary clocks
 create_clock -name SYS_CLK -period 20.000 [get_ports {SYS_CLK}]
+set_clock_uncertainty 0.100 [get_clocks {SYS_CLK}]
 
 # Generated clocks
 create_generated_clock -name clk_100mhz -multiply_by 2 -source [get_pins {clkpll|inclk[0]}] [get_pins {clkpll|altpll_component|auto_generated|pll1|clk[0]}]
