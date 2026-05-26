@@ -207,21 +207,18 @@ resources:
           pin: V21
           io_standard: "3.3-V LVTTL"
           current_strength: "8MA"
-          slew_rate: 1
         tx_er:
           direction: output
           top_name: ETH_TX_ER
           pin: AA18
           io_standard: "3.3-V LVTTL"
           current_strength: "8MA"
-          slew_rate: 1
         gtx_clk:
           direction: output
           top_name: ETH_GTX_CLK
           pin: U22
           io_standard: "3.3-V LVTTL"
           current_strength: "8MA"
-          slew_rate: 1
         reset:
           direction: output
           top_name: ETH_RESET
@@ -242,7 +239,6 @@ resources:
           pins: [V22, W22, Y21, Y22, AA20, AB19, AA19, AB18]
           io_standard: "3.3-V LVTTL"
           current_strength: "8MA"
-          slew_rate: 1
 
   external:
     sdram:
