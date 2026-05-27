@@ -140,6 +140,12 @@ class BoardTclEmitter:
                 sr = self._get_slew_rate(u, board)
                 if sr is not None:
                     lines.append(f"set_instance_assignment -name SLEW_RATE {sr} -to {top_name}")
+                if self._get_fast_input_register(u, board):
+                    lines.append(f"set_instance_assignment -name FAST_INPUT_REGISTER ON -to {top_name}")
+                if self._get_fast_output_register(u, board):
+                    lines.append(f"set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {top_name}")
+                if self._get_global_clock(u, board):
+                    lines.append(f"set_instance_assignment -name GLOBAL_SIGNAL GLOBAL_CLOCK -to {top_name}")
 
         if vector_uses:
             u0 = vector_uses[0]
@@ -157,6 +163,12 @@ class BoardTclEmitter:
                 sr = self._get_slew_rate(u0, board)
                 if sr is not None:
                     lines.append(f"set_instance_assignment -name SLEW_RATE {sr} -to {top_name}[*]")
+                if self._get_fast_input_register(u0, board):
+                    lines.append(f"set_instance_assignment -name FAST_INPUT_REGISTER ON -to {top_name}[*]")
+                if self._get_fast_output_register(u0, board):
+                    lines.append(f"set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to {top_name}[*]")
+                if self._get_global_clock(u0, board):
+                    lines.append(f"set_instance_assignment -name GLOBAL_SIGNAL GLOBAL_CLOCK -to {top_name}[*]")
 
     def _get_emit_config(self, use, board, board_overrides: dict | None) -> dict:
         """Merge emit config from board signal definition and project board_overrides."""
@@ -212,6 +224,18 @@ class BoardTclEmitter:
     def _get_slew_rate(self, use, board) -> int | None:
         sig = self._get_signal(use, board)
         return sig.slew_rate if sig is not None else None
+
+    def _get_fast_input_register(self, use, board) -> bool:
+        sig = self._get_signal(use, board)
+        return sig.fast_input_register if sig is not None else False
+
+    def _get_fast_output_register(self, use, board) -> bool:
+        sig = self._get_signal(use, board)
+        return sig.fast_output_register if sig is not None else False
+
+    def _get_global_clock(self, use, board) -> bool:
+        sig = self._get_signal(use, board)
+        return sig.global_clock if sig is not None else False
 
     def _get_io_standard(self, use, board) -> str | None:
         path = use.resource_path

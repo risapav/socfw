@@ -106,6 +106,7 @@ module ethernet_test (
   udp u_udp (
     .rst_ni             (rst_ni),
     .clk_i             (eth_rx_clk_i),
+    .tx_clk_i          (eth_tx_clk_i),
     .rx_data_i         (eth_rx_data_i),
     .rx_dv_i           (eth_rx_dv_i),
     .tx_en_o           (eth_tx_en_o),
@@ -129,14 +130,14 @@ module ethernet_test (
   // Dual-Port RAM pre ukladanie prijatych/vysielanych paketov
   // (Predpokladame existenciu refaktorovaneho modulu 'ram')
   // ==========================================================================
-   ram u_ram (
-    .clk_wr_i   (eth_rx_clk_i),
+  ram u_ram (
+    .clk_wr_i  (eth_rx_clk_i),
     .we_i      (wea_w),
     .addr_wr_i (addra_w),
     .data_i    (dina_w),
-    .clk_rd_i   (eth_rx_clk_i),
+    .clk_rd_i  (eth_tx_clk_i),
     .addr_rd_i (ram_rd_addr_w),
-    .data_o     (ram_rd_data_w)
+    .data_o    (ram_rd_data_w)
   );
 
   // ==========================================================================

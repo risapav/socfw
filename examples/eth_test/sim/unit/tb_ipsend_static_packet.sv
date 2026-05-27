@@ -31,7 +31,7 @@ module tb_ipsend_static_packet;
   logic [15:0] tx_total_length_i;
   logic [8:0]  ram_rd_addr_o;
 
-  // ipsend uses negedge clk_i for its FSM
+  // ipsend uses posedge clk_i (eth_tx_clk domain in HW)
   always #5 clk = ~clk;
 
   ipsend dut (
@@ -99,8 +99,8 @@ module tb_ipsend_static_packet;
     #1;
     release dut.time_counter_q;
 
-    // Wait: ST_START(1) + ST_MAKE(5 pipeline) + enter ST_SEND_55(1) = 7 more negedges
-    repeat (7) @(negedge clk); #1;
+    // Wait: ST_START(1) + ST_MAKE(6 pipeline) + enter ST_SEND_55(1) = 8 more negedges
+    repeat (8) @(negedge clk); #1;
 
     // -- T1: tx_en_o should be 1 --
     $display("-- T1: tx_en_o active --");

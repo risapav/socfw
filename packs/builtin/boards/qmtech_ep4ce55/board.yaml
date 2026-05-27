@@ -161,7 +161,7 @@ resources:
           direction: output
           pin: V4
 
-# RTL8211EG
+# RTL8211EG-VB-CG (Table 4 GMII, Table 6 Reset, Table 7 Mode Selection)
     eth:
       io_standard: "3.3-V LVTTL"
       signals:
@@ -176,52 +176,60 @@ resources:
           top_name: ETH_MDIO
           pin: AA17
           io_standard: "3.3-V LVTTL"
-        rx_clk:
+        rxc:
           direction: input
-          top_name: ETH_RX_CLK
+          top_name: ETH_RXC
           pin: R19
           io_standard: "3.3-V LVTTL"
-        rx_clk_0:
+          global_clock: true
+        rxc_0:
           direction: input
-          top_name: ETH_RX_CLK_0
+          top_name: ETH_RXC_0
           pin: M22
           io_standard: "3.3-V LVTTL"
-        rx_dv:
+        rxdv:
           direction: input
-          top_name: ETH_RX_DV
+          top_name: ETH_RXDV
           pin: K21
           io_standard: "3.3-V LVTTL"
-        rx_er:
+          fast_input_register: true
+        rxer:
           direction: input
-          top_name: ETH_RX_ER
+          top_name: ETH_RXER
           pin: R21
           io_standard: "3.3-V LVTTL"
-        tx_clk:
+          fast_input_register: true
+        txclk:
           direction: input
-          top_name: ETH_TX_CLK
+          top_name: ETH_TXCLK
           pin: AB20
           io_standard: "3.3-V LVTTL"
-        tx_en:
+          emit:
+            pin_assignment: false
+            io_assignments: false
+        txen:
           direction: output
-          top_name: ETH_TX_EN
+          top_name: ETH_TXEN
           pin: V21
           io_standard: "3.3-V LVTTL"
           current_strength: "8MA"
-        tx_er:
+          fast_output_register: true
+        txer:
           direction: output
-          top_name: ETH_TX_ER
+          top_name: ETH_TXER
           pin: AA18
           io_standard: "3.3-V LVTTL"
           current_strength: "8MA"
+          fast_output_register: true
         gtx_clk:
           direction: output
           top_name: ETH_GTX_CLK
           pin: U22
           io_standard: "3.3-V LVTTL"
           current_strength: "8MA"
-        reset:
+        phyrstb:
           direction: output
-          top_name: ETH_RESET
+          top_name: ETH_PHYRSTB
           pin: W21
           io_standard: "3.3-V LVTTL"
           current_strength: "8MA"
@@ -232,6 +240,7 @@ resources:
           width: 8
           pins: [K22, L21, L22, M21, N21, N22, P21, P22]
           io_standard: "3.3-V LVTTL"
+          fast_input_register: true
         txd:
           top_name: ETH_TXD
           direction: output
@@ -239,6 +248,7 @@ resources:
           pins: [V22, W22, Y21, Y22, AA20, AB19, AA19, AB18]
           io_standard: "3.3-V LVTTL"
           current_strength: "8MA"
+          fast_output_register: true
 
   external:
     sdram:

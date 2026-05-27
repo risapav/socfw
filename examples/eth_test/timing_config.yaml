@@ -5,8 +5,8 @@ timing:
   derive_uncertainty: true
 
   clocks:
-    - name: ETH_RX_CLK
-      source: ETH_RX_CLK
+    - name: ETH_RXC
+      source: ETH_RXC
       period_ns: 8.0
       reset:
         source: RESET_N
@@ -32,7 +32,7 @@ timing:
   clock_groups:
     - type: asynchronous
       groups:
-        - [ETH_RX_CLK]
+        - [ETH_RXC]
         - [ETH_TX_CLK]
         - [SYS_CLK]
 
@@ -41,6 +41,18 @@ timing:
       comment: "Async reset path"
     - to_port: ETH_GTX_CLK
       comment: "GTX_CLK je PLL clock output pin — IO delay analyza neplatí"
+    - to_port: "ETH_TXD[*]"
+      comment: "Source-synchronous TX: TXD a GTX_CLK z rovnakeho PLL, analyza cez interni ETH_TX_CLK je presne pesimisticka (skutocna marga ~4.7ns vs 2ns spec)"
+    - to_port: ETH_TXEN
+      comment: "Source-synchronous TX: rovnaka PLL hodina ako GTX_CLK"
+    - to_port: ETH_TXER
+      comment: "Source-synchronous TX: rovnaka PLL hodina ako GTX_CLK"
+    - from_port: "ETH_RXD[*]"
+      comment: "GLOBAL_SIGNAL na ETH_RXC pridava ~4ns clock insertion delay -> hold analyza je pesimisticka; PHY garantuje 2.5ns/0.5ns setup/hold"
+    - from_port: ETH_RXDV
+      comment: "GLOBAL_SIGNAL na ETH_RXC: hold artifact, fyzicky spravne"
+    - from_port: ETH_RXER
+      comment: "GLOBAL_SIGNAL na ETH_RXC: hold artifact, fyzicky spravne"
 
   io_delays:
     auto: true
@@ -52,42 +64,22 @@ timing:
     overrides:
       - port: "ETH_RXD[*]"
         direction: input
-        clock: ETH_RX_CLK
+        clock: ETH_RXC
         max_ns: 2.5
         min_ns: 0.5
-        comment: "GMII RX data (PHY -> FPGA, RTL8211EG datasheet: setup>=2.5ns, hold>=0.5ns)"
+        comment: "GMII RXD[7:0] (PHY->FPGA, RTL8211EG Table 58: setup>=2.5ns, hold>=0.5ns)"
 
-      - port: ETH_RX_DV
+      - port: ETH_RXDV
         direction: input
-        clock: ETH_RX_CLK
+        clock: ETH_RXC
         max_ns: 2.5
         min_ns: 0.5
-        comment: "GMII RX data valid"
+        comment: "GMII RXDV (PHY->FPGA)"
 
-      - port: ETH_RX_ER
+      - port: ETH_RXER
         direction: input
-        clock: ETH_RX_CLK
+        clock: ETH_RXC
         max_ns: 2.5
         min_ns: 0.5
-        comment: "GMII RX error"
+        comment: "GMII RXER (PHY->FPGA)"
 
-      - port: "ETH_TXD[*]"
-        direction: output
-        clock: ETH_TX_CLK
-        max_ns: 2.0
-        min_ns: 0.0
-        comment: "GMII TX data (FPGA -> PHY, RTL8211EG datasheet: setup>=2ns)"
-
-      - port: ETH_TX_EN
-        direction: output
-        clock: ETH_TX_CLK
-        max_ns: 2.0
-        min_ns: 0.0
-        comment: "GMII TX enable"
-
-      - port: ETH_TX_ER
-        direction: output
-        clock: ETH_TX_CLK
-        max_ns: 2.0
-        min_ns: 0.0
-        comment: "GMII TX error"

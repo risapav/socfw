@@ -146,6 +146,9 @@ class BoardLoader:
                         weak_pull_up=sig.weak_pull_up,
                         current_strength=sig.current_strength,
                         slew_rate=sig.slew_rate,
+                        fast_input_register=sig.fast_input_register,
+                        fast_output_register=sig.fast_output_register,
+                        global_clock=sig.global_clock,
                         emit=dict(sig.emit),
                     )
                     for sig_key, sig in res.signals.items()
@@ -161,6 +164,9 @@ class BoardLoader:
                         weak_pull_up=grp.weak_pull_up,
                         current_strength=grp.current_strength,
                         slew_rate=grp.slew_rate,
+                        fast_input_register=grp.fast_input_register,
+                        fast_output_register=grp.fast_output_register,
+                        global_clock=grp.global_clock,
                         emit=dict(grp.emit),
                     )
                     for grp_key, grp in res.groups.items()

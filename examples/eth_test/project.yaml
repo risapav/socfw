@@ -24,7 +24,7 @@ features:
     - board:onboard.leds
 
 board_overrides:
-  board:onboard.eth.rx_clk_0:
+  board:onboard.eth.rxc_0:
     emit:
       pin_assignment: false
       io_assignments: false
@@ -32,7 +32,7 @@ board_overrides:
 clocks:
   primary:
     domain: eth_rx_clk
-    source: board:onboard.eth.rx_clk
+    source: board:onboard.eth.rxc
     frequency_hz: 125000000
   generated:
     - domain: eth_tx_clk
@@ -66,19 +66,19 @@ modules:
         eth_mdio_io:
           target: board:onboard.eth.mdio
         eth_rx_clk_i:
-          target: board:onboard.eth.rx_clk
+          target: board:onboard.eth.rxc
         eth_rx_dv_i:
-          target: board:onboard.eth.rx_dv
+          target: board:onboard.eth.rxdv
         eth_rx_er_i:
-          target: board:onboard.eth.rx_er
+          target: board:onboard.eth.rxer
         eth_tx_en_o:
-          target: board:onboard.eth.tx_en
+          target: board:onboard.eth.txen
         eth_tx_er_o:
-          target: board:onboard.eth.tx_er
+          target: board:onboard.eth.txer
         eth_gtx_clk_o:
           target: board:onboard.eth.gtx_clk
         eth_rst_no:
-          target: board:onboard.eth.reset
+          target: board:onboard.eth.phyrstb
         eth_rx_data_i:
           target: board:onboard.eth.rxd
         eth_tx_data_o:

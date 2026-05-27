@@ -52,13 +52,14 @@ module ipsend (
   logic [31:0] ip_header_q [7];
   logic [17:0] csum_part0_q;
   logic [17:0] csum_part1_q;
+  logic [16:0] csum_part2_q;
   logic [4:0]  i_cnt_q;
   logic [4:0]  j_cnt_q;
   logic [31:0] check_buffer_q;
   logic [31:0] time_counter_q;
   logic [15:0] tx_data_counter_q;
 
-  always_ff @(negedge clk_i or negedge rst_ni) begin
+  always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
       state_q           <= ST_IDLE;
       tx_en_o           <= 1'b0;
@@ -74,6 +75,7 @@ module ipsend (
       check_buffer_q    <= 32'd0;
       csum_part0_q      <= '0;
       csum_part1_q      <= '0;
+      csum_part2_q      <= '0;
       datain_q          <= 32'd0;
 
       for (int k = 0; k < 7; k++) ip_header_q[k] <= 32'd0;
@@ -111,7 +113,7 @@ module ipsend (
         end
 
         ST_MAKE: begin
-          // Pipelined checksum: max 4 adds per stage, fits 8 ns @ 125 MHz
+          // Pipelined checksum: max 4 adds per stage (stages 0-1), 3 adds (stage 3)
           if (i_cnt_q == 5'd0) begin
             csum_part0_q <= {2'b0, ip_header_q[0][15:0]} + {2'b0, ip_header_q[0][31:16]}
                           + {2'b0, ip_header_q[1][15:0]} + {2'b0, ip_header_q[1][31:16]};
@@ -121,10 +123,13 @@ module ipsend (
                           + {2'b0, ip_header_q[3][15:0]} + {2'b0, ip_header_q[3][31:16]};
             i_cnt_q <= i_cnt_q + 1'b1;
           end else if (i_cnt_q == 5'd2) begin
-            check_buffer_q <= {14'b0, csum_part0_q} + {14'b0, csum_part1_q}
-                            + {16'b0, ip_header_q[4][15:0]} + {16'b0, ip_header_q[4][31:16]};
+            csum_part2_q <= {1'b0, ip_header_q[4][15:0]} + {1'b0, ip_header_q[4][31:16]};
             i_cnt_q <= i_cnt_q + 1'b1;
           end else if (i_cnt_q == 5'd3) begin
+            check_buffer_q <= {14'b0, csum_part0_q} + {14'b0, csum_part1_q}
+                            + {15'b0, csum_part2_q};
+            i_cnt_q <= i_cnt_q + 1'b1;
+          end else if (i_cnt_q == 5'd4) begin
             check_buffer_q[15:0] <= check_buffer_q[31:16] + check_buffer_q[15:0];
             i_cnt_q <= i_cnt_q + 1'b1;
           end else begin

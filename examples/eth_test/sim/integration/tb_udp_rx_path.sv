@@ -20,7 +20,8 @@ module tb_udp_rx_path;
 
   int fail_count = 0;
 
-  logic        clk = 1'b0;
+  logic        clk    = 1'b0;
+  logic        tx_clk = 1'b0;
   logic        rst_ni;
   logic [7:0]  rx_data_i;
   logic        rx_dv_i;
@@ -43,11 +44,13 @@ module tb_udp_rx_path;
   logic [15:0] tx_data_length_i  = 16'd28;
   logic [15:0] tx_total_length_i = 16'd48;
 
-  always #4 clk = ~clk;  // 125 MHz
+  always #4 clk    = ~clk;     // 125 MHz RX clock
+  always #4 tx_clk = ~tx_clk;  // 125 MHz TX clock (independent PLL in HW)
 
   udp dut (
     .rst_ni            (rst_ni),
     .clk_i             (clk),
+    .tx_clk_i          (tx_clk),
     .rx_data_i         (rx_data_i),
     .rx_dv_i           (rx_dv_i),
     .tx_en_o           (tx_en_o),

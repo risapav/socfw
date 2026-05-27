@@ -93,7 +93,7 @@ class SdcEmitter:
         lines.append("")
 
     def _pll_input_pin(self, instance: str) -> str:
-        return f"{instance}|inclk[0]"
+        return f"{instance}|altpll_component|auto_generated|pll1|inclk[0]"
 
     def _pll_output_pin(self, instance: str, output: str) -> str:
         if len(output) >= 2 and output[0] == "c" and output[1:].isdigit():

@@ -15,6 +15,9 @@ class BoardScalarSignal:
     weak_pull_up: bool = False
     current_strength: str | None = None
     slew_rate: int | None = None
+    fast_input_register: bool = False
+    fast_output_register: bool = False
+    global_clock: bool = False
     emit: dict[str, Any] = field(default_factory=dict)
     meta: dict[str, Any] = field(default_factory=dict)
 
@@ -30,6 +33,9 @@ class BoardVectorSignal:
     weak_pull_up: bool = False
     current_strength: str | None = None
     slew_rate: int | None = None
+    fast_input_register: bool = False
+    fast_output_register: bool = False
+    global_clock: bool = False
     emit: dict[str, Any] = field(default_factory=dict)
     meta: dict[str, Any] = field(default_factory=dict)
 

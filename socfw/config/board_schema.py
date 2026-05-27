@@ -13,6 +13,9 @@ class BoardScalarSignalSchema(BaseModel):
     weak_pull_up: bool = False
     current_strength: str | None = None
     slew_rate: int | None = None
+    fast_input_register: bool = False
+    fast_output_register: bool = False
+    global_clock: bool = False
     emit: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -25,6 +28,9 @@ class BoardVectorSignalSchema(BaseModel):
     weak_pull_up: bool = False
     current_strength: str | None = None
     slew_rate: int | None = None
+    fast_input_register: bool = False
+    fast_output_register: bool = False
+    global_clock: bool = False
     emit: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")

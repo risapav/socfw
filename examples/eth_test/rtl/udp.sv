@@ -11,7 +11,8 @@
 
 module udp (
   input  wire         rst_ni,
-  input  wire         clk_i,
+  input  wire         clk_i,    // eth_rx_clk — RX path clock (PHY recovered)
+  input  wire         tx_clk_i, // eth_tx_clk — TX path clock (PLL 125 MHz)
   input  wire  [7:0]  rx_data_i,
   input  wire         rx_dv_i,
   output logic        tx_en_o,
@@ -39,7 +40,7 @@ module udp (
   logic        crc_en_w;
 
   ipsend u_ip_send (
-    .clk_i             (clk_i),
+    .clk_i             (tx_clk_i),
     .rst_ni            (rst_ni),
     .tx_en_o           (tx_en_o),
     .tx_er_o           (tx_er_o),
@@ -55,7 +56,7 @@ module udp (
   );
 
   crc u_crc (
-    .clk_i             (clk_i),
+    .clk_i             (tx_clk_i),
     .rst_ni            (crc_rst_nw),
     .data_i            (tx_data_o),
     .en_i              (crc_en_w),
