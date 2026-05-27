@@ -248,20 +248,16 @@ module ipsend (
           crc_en_o <= 1'b0;
           if (i_cnt_q == 5'd0) begin
             crc_hold_q <= crc_i; // latch crc_next_w — CRC includes last data byte
-            tx_data_o  <= {~crc_i[24], ~crc_i[25], ~crc_i[26], ~crc_i[27],
-                           ~crc_i[28], ~crc_i[29], ~crc_i[30], ~crc_i[31]};
+            tx_data_o  <= ~crc_i[7:0];   // LSB-first: byte 0 of FCS
             i_cnt_q    <= i_cnt_q + 1'b1;
           end else if (i_cnt_q == 5'd1) begin
-            tx_data_o <= {~crc_hold_q[16], ~crc_hold_q[17], ~crc_hold_q[18], ~crc_hold_q[19],
-                          ~crc_hold_q[20], ~crc_hold_q[21], ~crc_hold_q[22], ~crc_hold_q[23]};
+            tx_data_o <= ~crc_hold_q[15:8];
             i_cnt_q   <= i_cnt_q + 1'b1;
           end else if (i_cnt_q == 5'd2) begin
-            tx_data_o <= {~crc_hold_q[8],  ~crc_hold_q[9],  ~crc_hold_q[10], ~crc_hold_q[11],
-                          ~crc_hold_q[12], ~crc_hold_q[13], ~crc_hold_q[14], ~crc_hold_q[15]};
+            tx_data_o <= ~crc_hold_q[23:16];
             i_cnt_q   <= i_cnt_q + 1'b1;
           end else if (i_cnt_q == 5'd3) begin
-            tx_data_o <= {~crc_hold_q[0], ~crc_hold_q[1], ~crc_hold_q[2], ~crc_hold_q[3],
-                          ~crc_hold_q[4], ~crc_hold_q[5], ~crc_hold_q[6], ~crc_hold_q[7]};
+            tx_data_o <= ~crc_hold_q[31:24];
             i_cnt_q   <= 5'd0;
             state_q   <= ST_IDLE;
           end else begin
