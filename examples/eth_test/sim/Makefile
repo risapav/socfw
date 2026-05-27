@@ -4,7 +4,9 @@ SHELL      := bash
 # RTL paths
 RTL_AXI  ?= ../../../rtl/axi
 RTL_AXIL ?= ../../../rtl/axil
-RTL_ETH  ?= ../rtl
+RTL_ETH  ?= ../rtl/eth
+RTL_CDC  ?= ../rtl/cdc
+RTL_TOP  ?= ../rtl
 
 LOGDIR ?= logs
 
@@ -29,8 +31,9 @@ ETH_CORE = \
 ETH_TOP = \
 	$(ETH_CORE) \
 	$(RTL_ETH)/ram.sv \
+	$(RTL_CDC)/cdc_two_flop_synchronizer.sv \
 	$(RTL_ETH)/eth_status_leds.sv \
-	$(RTL_ETH)/ethernet_test.sv
+	$(RTL_TOP)/ethernet_test.sv
 
 .PHONY: all unit integration regression report clean \
         tb_crc_smoke tb_ram_latency tb_ipreceive_udp_frame \

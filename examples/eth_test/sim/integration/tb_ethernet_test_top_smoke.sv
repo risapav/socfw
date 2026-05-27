@@ -10,8 +10,10 @@
 //
 // Run (from sim/):
 //   vlog -sv -suppress 2892 \
-//        ../rtl/crc.sv ../rtl/ipsend.sv ../rtl/ipreceive.sv \
-//        ../rtl/udp.sv ../rtl/ram.sv ../rtl/eth_status_leds.sv \
+//        ../rtl/eth/crc.sv ../rtl/eth/ipsend.sv ../rtl/eth/ipreceive.sv \
+//        ../rtl/eth/udp.sv ../rtl/eth/ram.sv \
+//        ../rtl/cdc/cdc_two_flop_synchronizer.sv \
+//        ../rtl/eth/eth_status_leds.sv \
 //        ../rtl/ethernet_test.sv \
 //        integration/tb_ethernet_test_top_smoke.sv
 //   vsim -c -do "run -all; quit" tb_ethernet_test_top_smoke
@@ -35,6 +37,7 @@ module tb_ethernet_test_top_smoke;
   logic       eth_tx_en_o;
   logic       eth_tx_er_o;
   logic [7:0] eth_tx_data_o;
+  logic [3:0] status_led_o;
 
   always #4  clk     = ~clk;      // 125 MHz
   always #4  pll_clk = ~pll_clk;  // 125 MHz (simuluje PLL vystup)
@@ -54,7 +57,8 @@ module tb_ethernet_test_top_smoke;
     .eth_gtx_clk_o (eth_gtx_clk_o),
     .eth_tx_en_o   (eth_tx_en_o),
     .eth_tx_er_o   (eth_tx_er_o),
-    .eth_tx_data_o (eth_tx_data_o)
+    .eth_tx_data_o (eth_tx_data_o),
+    .status_led_o  (status_led_o)
   );
 
   task automatic chk1(input string tag, input logic got, input logic exp);

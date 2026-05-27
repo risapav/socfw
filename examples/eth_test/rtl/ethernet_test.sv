@@ -46,7 +46,7 @@ module ethernet_test (
   logic unused_eth_inputs_w;
   assign unused_eth_inputs_w = ^{eth_rx_er_i};
 
-  // PHY reset extender: 2^21 / 125 MHz = 16.8 ms hold time
+  // PHY reset extender: 2^21 / 50 MHz = 41.9 ms hold time
   logic [20:0] phy_rst_cnt_q;
   logic        phy_rst_done_q;
 
@@ -177,13 +177,13 @@ module ethernet_test (
   // ==========================================================================
   eth_status_leds #(
     .SYS_CLK_HZ     (50_000_000),
-    .ETH_CLK_HZ     (125_000_000),
     .LED_COUNT      (4),
     .LED_ACTIVE_LOW (1'b0),
     .ACTIVITY_MS    (80)
   ) u_eth_status_leds (
     .sys_clk_i       (sys_clk_i),
     .eth_rx_clk_i    (eth_rx_clk_i),
+    .eth_tx_clk_i    (eth_tx_clk_i),
     .rst_ni          (rst_ni),
     .phy_reset_done_i(phy_rst_done_q),
     .eth_rx_dv_i     (eth_rx_dv_i),

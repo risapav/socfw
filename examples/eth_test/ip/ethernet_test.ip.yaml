@@ -87,14 +87,16 @@ ports:
 
 artifacts:
   synthesis:
+    # CDC (shared rtl/cdc via symlink)
+    - ../rtl/cdc/cdc_two_flop_synchronizer.sv
     # ETH infrastructure
-    - ../rtl/udp.sv
-    - ../rtl/ram.sv
-    - ../rtl/crc.sv
-    - ../rtl/ipsend.sv
-    - ../rtl/ipreceive.sv
+    - ../rtl/eth/crc.sv
+    - ../rtl/eth/ipsend.sv
+    - ../rtl/eth/ipreceive.sv
+    - ../rtl/eth/udp.sv
+    - ../rtl/eth/ram.sv
     # Diagnostika
-    - ../rtl/eth_status_leds.sv
+    - ../rtl/eth/eth_status_leds.sv
     # Top-level
     - ../rtl/ethernet_test.sv
 
