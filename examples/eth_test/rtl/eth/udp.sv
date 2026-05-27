@@ -45,7 +45,7 @@ module udp (
     .tx_en_o           (tx_en_o),
     .tx_er_o           (tx_er_o),
     .tx_data_o         (tx_data_o),
-    .crc_i             (crc_w),
+    .crc_i             (crc_next_w),
     .ram_rd_data_i     (ram_rd_data_i),
     .crc_en_o          (crc_en_w),
     .crc_rst_no        (crc_rst_nw),

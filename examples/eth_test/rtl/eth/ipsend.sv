@@ -49,6 +49,7 @@ module ipsend (
   };
 
   logic [31:0] datain_q;
+  logic [31:0] crc_hold_q;
   logic [31:0] ip_header_q [7];
   logic [17:0] csum_part0_q;
   logic [17:0] csum_part1_q;
@@ -77,6 +78,7 @@ module ipsend (
       csum_part1_q      <= '0;
       csum_part2_q      <= '0;
       datain_q          <= 32'd0;
+      crc_hold_q        <= 32'd0;
 
       for (int k = 0; k < 7; k++) ip_header_q[k] <= 32'd0;
     end else begin
@@ -103,10 +105,10 @@ module ipsend (
           ip_header_q[1][31:16] <= ip_header_q[1][31:16] + 1'b1;
           ip_header_q[1][15:0]  <= 16'h4000;
           ip_header_q[2] <= 32'h80110000;   // TTL=128, Protokol=UDP, Checksum=0 (dočasně)
-          ip_header_q[3] <= 32'hC0A81442; // Nová zdrojová IP: 192.168.20.66
-          ip_header_q[4] <= 32'hC0A814EA; // Nová cieľová IP: 192.168.20.234
-//          ip_header_q[3] <= 32'hC0A80002;   // zdrojová IP adresa: 192.168.0.2
-//          ip_header_q[4] <= 32'hC0A80003;   // cieľová IP adresa: 192.168.0.3
+//          ip_header_q[3] <= 32'hC0A81442; // Nová zdrojová IP: 192.168.20.66
+//          ip_header_q[4] <= 32'hC0A814EA; // Nová cieľová IP: 192.168.20.234
+          ip_header_q[3] <= 32'hC0A80002;   // zdrojová IP adresa: 192.168.0.2
+          ip_header_q[4] <= 32'hC0A80003;   // cieľová IP adresa: 192.168.0.3
           ip_header_q[5] <= 32'h1F901F90;   // Zdrojový a cílový port: 8080 (0x1F90)
           ip_header_q[6] <= {tx_data_length_i, 16'h0000};
           state_q        <= ST_MAKE;
@@ -245,16 +247,21 @@ module ipsend (
         ST_SEND_CRC: begin // Odesílání CRC
           crc_en_o <= 1'b0;
           if (i_cnt_q == 5'd0) begin
-            tx_data_o <= {~crc_i[24], ~crc_i[25], ~crc_i[26], ~crc_i[27], ~crc_i[28], ~crc_i[29], ~crc_i[30], ~crc_i[31]};
-            i_cnt_q   <= i_cnt_q + 1'b1;
+            crc_hold_q <= crc_i; // latch crc_next_w — CRC includes last data byte
+            tx_data_o  <= {~crc_i[24], ~crc_i[25], ~crc_i[26], ~crc_i[27],
+                           ~crc_i[28], ~crc_i[29], ~crc_i[30], ~crc_i[31]};
+            i_cnt_q    <= i_cnt_q + 1'b1;
           end else if (i_cnt_q == 5'd1) begin
-            tx_data_o <= {~crc_i[16], ~crc_i[17], ~crc_i[18], ~crc_i[19], ~crc_i[20], ~crc_i[21], ~crc_i[22], ~crc_i[23]};
+            tx_data_o <= {~crc_hold_q[16], ~crc_hold_q[17], ~crc_hold_q[18], ~crc_hold_q[19],
+                          ~crc_hold_q[20], ~crc_hold_q[21], ~crc_hold_q[22], ~crc_hold_q[23]};
             i_cnt_q   <= i_cnt_q + 1'b1;
           end else if (i_cnt_q == 5'd2) begin
-            tx_data_o <= {~crc_i[8], ~crc_i[9], ~crc_i[10], ~crc_i[11], ~crc_i[12], ~crc_i[13], ~crc_i[14], ~crc_i[15]};
+            tx_data_o <= {~crc_hold_q[8],  ~crc_hold_q[9],  ~crc_hold_q[10], ~crc_hold_q[11],
+                          ~crc_hold_q[12], ~crc_hold_q[13], ~crc_hold_q[14], ~crc_hold_q[15]};
             i_cnt_q   <= i_cnt_q + 1'b1;
           end else if (i_cnt_q == 5'd3) begin
-            tx_data_o <= {~crc_i[0], ~crc_i[1], ~crc_i[2], ~crc_i[3], ~crc_i[4], ~crc_i[5], ~crc_i[6], ~crc_i[7]};
+            tx_data_o <= {~crc_hold_q[0], ~crc_hold_q[1], ~crc_hold_q[2], ~crc_hold_q[3],
+                          ~crc_hold_q[4], ~crc_hold_q[5], ~crc_hold_q[6], ~crc_hold_q[7]};
             i_cnt_q   <= 5'd0;
             state_q   <= ST_IDLE;
           end else begin
