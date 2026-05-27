@@ -14,6 +14,7 @@
 module ethernet_test (
   input  wire        rst_ni,
   input  wire        sys_clk_i,   // 50 MHz board oscillator pre PHY reset counter
+  input  wire        eth_tx_clk_i, // 125 MHz PLL output pre GTX_CLK a TX MAC
 
   // Fyzicke PHY ovladanie
   output logic       eth_rst_no,  // Reset pre PHY (Aktivny nizky)
@@ -25,16 +26,17 @@ module ethernet_test (
   input  wire        eth_rx_dv_i,
   input  wire  [7:0] eth_rx_data_i,
   input  wire        eth_rx_er_i,
-  input  wire        eth_tx_clk_i,
 
-  output logic       eth_gtx_clk_o, // 125 MHz GTX clock (forwarded zo rx_clk)
+  output logic       eth_gtx_clk_o, // 125 MHz GTX clock z PLL
   output logic       eth_tx_en_o,
   output logic       eth_tx_er_o,
-  output logic [7:0] eth_tx_data_o
+  output logic [7:0] eth_tx_data_o,
+
+  output logic [3:0] status_led_o
 );
 
-  // GTX clock: FPGA forwarded zo ETH_RX_CLK (125 MHz)
-  assign eth_gtx_clk_o = eth_rx_clk_i;
+  // GTX clock: PLL output (125 MHz) — nesmi ist cez fabric routing
+  assign eth_gtx_clk_o = eth_tx_clk_i;
 
   // MDC/MDIO: neaktivny rezim (PHY konfiguracia cez strap piny dosky)
   assign eth_mdc_o   = 1'b0;
@@ -42,7 +44,7 @@ module ethernet_test (
 
   // Fyzicky existujuce, zatial nepouzivane vstupy — zamerne spotrebovane aby nevznikli warningy
   logic unused_eth_inputs_w;
-  assign unused_eth_inputs_w = ^{eth_rx_er_i, eth_tx_clk_i};
+  assign unused_eth_inputs_w = ^{eth_rx_er_i};
 
   // PHY reset extender: 2^21 / 125 MHz = 16.8 ms hold time
   logic [20:0] phy_rst_cnt_q;
@@ -168,6 +170,25 @@ module ethernet_test (
       end
     end
   end
+
+  // ==========================================================================
+  // Diagnosticke LED indikatory
+  // ==========================================================================
+  eth_status_leds #(
+    .SYS_CLK_HZ     (50_000_000),
+    .ETH_CLK_HZ     (125_000_000),
+    .LED_COUNT      (4),
+    .LED_ACTIVE_LOW (1'b0),
+    .ACTIVITY_MS    (80)
+  ) u_eth_status_leds (
+    .sys_clk_i       (sys_clk_i),
+    .eth_rx_clk_i    (eth_rx_clk_i),
+    .rst_ni          (rst_ni),
+    .phy_reset_done_i(phy_rst_done_q),
+    .eth_rx_dv_i     (eth_rx_dv_i),
+    .eth_tx_en_i     (eth_tx_en_o),
+    .led_o           (status_led_o)
+  );
 
 endmodule
 

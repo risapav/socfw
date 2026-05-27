@@ -29,6 +29,7 @@ ETH_CORE = \
 ETH_TOP = \
 	$(ETH_CORE) \
 	$(RTL_ETH)/ram.sv \
+	$(RTL_ETH)/eth_status_leds.sv \
 	$(RTL_ETH)/ethernet_test.sv
 
 .PHONY: all unit integration regression report clean \

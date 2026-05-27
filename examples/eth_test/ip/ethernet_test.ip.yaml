@@ -22,7 +22,7 @@ reset:
 
 clocking:
   primary_input_port: eth_rx_clk_i
-  additional_input_ports: [sys_clk_i]
+  additional_input_ports: [sys_clk_i, eth_tx_clk_i]
   outputs:
     - port: eth_gtx_clk_o
       kind: generated_clock
@@ -81,6 +81,10 @@ ports:
     direction: output
     width: 8
 
+  - name: status_led_o
+    direction: output
+    width: 4
+
 artifacts:
   synthesis:
     # ETH infrastructure
@@ -89,6 +93,8 @@ artifacts:
     - ../rtl/crc.sv
     - ../rtl/ipsend.sv
     - ../rtl/ipreceive.sv
+    # Diagnostika
+    - ../rtl/eth_status_leds.sv
     # Top-level
     - ../rtl/ethernet_test.sv
 

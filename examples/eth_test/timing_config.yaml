@@ -20,9 +20,27 @@ timing:
         active_low: true
         sync_stages: 2
 
+  generated_clocks:
+    - name: ETH_TX_CLK
+      source:
+        instance: clkpll
+        output: c0
+        # 125 MHz TX clock pre GMII GTX_CLK: 50 MHz * 5/2 = 125 MHz
+      multiply_by: 5
+      divide_by: 2
+
+  clock_groups:
+    - type: asynchronous
+      groups:
+        - [ETH_RX_CLK]
+        - [ETH_TX_CLK]
+        - [SYS_CLK]
+
   false_paths:
     - from_port: RESET_N
       comment: "Async reset path"
+    - to_port: ETH_GTX_CLK
+      comment: "GTX_CLK je PLL clock output pin — IO delay analyza neplatí"
 
   io_delays:
     auto: true
@@ -35,34 +53,41 @@ timing:
       - port: "ETH_RXD[*]"
         direction: input
         clock: ETH_RX_CLK
-        max_ns: 6.0
-        min_ns: 6.0
-        comment: "Ethernet RX data bus"
+        max_ns: 2.5
+        min_ns: 0.5
+        comment: "GMII RX data (PHY -> FPGA, RTL8211EG datasheet: setup>=2.5ns, hold>=0.5ns)"
 
       - port: ETH_RX_DV
         direction: input
         clock: ETH_RX_CLK
-        max_ns: 6.0
-        min_ns: 6.0
-        comment: "Ethernet RX data valid"
+        max_ns: 2.5
+        min_ns: 0.5
+        comment: "GMII RX data valid"
+
+      - port: ETH_RX_ER
+        direction: input
+        clock: ETH_RX_CLK
+        max_ns: 2.5
+        min_ns: 0.5
+        comment: "GMII RX error"
 
       - port: "ETH_TXD[*]"
         direction: output
-        clock: ETH_RX_CLK
+        clock: ETH_TX_CLK
         max_ns: 2.0
         min_ns: 0.0
-        comment: "Ethernet TX data bus"
+        comment: "GMII TX data (FPGA -> PHY, RTL8211EG datasheet: setup>=2ns)"
 
       - port: ETH_TX_EN
         direction: output
-        clock: ETH_RX_CLK
+        clock: ETH_TX_CLK
         max_ns: 2.0
         min_ns: 0.0
-        comment: "Ethernet TX enable"
+        comment: "GMII TX enable"
 
       - port: ETH_TX_ER
         direction: output
-        clock: ETH_RX_CLK
+        clock: ETH_TX_CLK
         max_ns: 2.0
         min_ns: 0.0
-        comment: "Ethernet TX error (ETH_RX_CLK domain)"
+        comment: "GMII TX error"

@@ -15,11 +15,13 @@ registries:
     - ../../packs/builtin
   ip:
     - ip
+    - cores/clkpll
   cpu: []
 
 features:
   use:
     - board:onboard.eth
+    - board:onboard.leds
 
 board_overrides:
   board:onboard.eth.rx_clk_0:
@@ -32,14 +34,30 @@ clocks:
     domain: eth_rx_clk
     source: board:onboard.eth.rx_clk
     frequency_hz: 125000000
-  generated: []
+  generated:
+    - domain: eth_tx_clk
+      source:
+        instance: clkpll
+        output: c0
+      frequency_hz: 125000000
+      reset:
+        none: true
 
 modules:
+  - instance: clkpll
+    type: clkpll
+    clocks:
+      inclk0:
+        domain: sys_clk
+        no_reset: true
+    reset: "~RESET_N"
+
   - instance: ethernet_test
     type: ethernet_test
     clocks:
       eth_rx_clk_i: eth_rx_clk
       sys_clk_i: sys_clk
+      eth_tx_clk_i: eth_tx_clk
 
     bind:
       ports:
@@ -53,8 +71,6 @@ modules:
           target: board:onboard.eth.rx_dv
         eth_rx_er_i:
           target: board:onboard.eth.rx_er
-        eth_tx_clk_i:
-          target: board:onboard.eth.tx_clk
         eth_tx_en_o:
           target: board:onboard.eth.tx_en
         eth_tx_er_o:
@@ -67,6 +83,9 @@ modules:
           target: board:onboard.eth.rxd
         eth_tx_data_o:
           target: board:onboard.eth.txd
+        status_led_o:
+          target: board:onboard.leds
+          adapt: zero_extend
 
 artifacts:
   emit: [rtl, board, timing]
