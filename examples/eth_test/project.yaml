@@ -21,6 +21,12 @@ features:
   use:
     - board:onboard.eth
 
+board_overrides:
+  board:onboard.eth.rx_clk_0:
+    emit:
+      pin_assignment: false
+      io_assignments: false
+
 clocks:
   primary:
     domain: eth_rx_clk
@@ -33,6 +39,7 @@ modules:
     type: ethernet_test
     clocks:
       eth_rx_clk_i: eth_rx_clk
+      sys_clk_i: sys_clk
 
     bind:
       ports:
@@ -40,8 +47,6 @@ modules:
           target: board:onboard.eth.mdc
         eth_mdio_io:
           target: board:onboard.eth.mdio
-        eth_rx_clk_0_i:
-          target: board:onboard.eth.rx_clk_0
         eth_rx_clk_i:
           target: board:onboard.eth.rx_clk
         eth_rx_dv_i:

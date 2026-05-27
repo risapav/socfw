@@ -136,6 +136,7 @@ class ProjectLoader:
                 for b in doc.buses
             ],
             reset_driver=doc.reset_driver,
+            board_overrides=dict(doc.board_overrides),
         )
 
         errs = model.validate()

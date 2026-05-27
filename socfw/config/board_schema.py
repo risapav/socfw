@@ -13,6 +13,7 @@ class BoardScalarSignalSchema(BaseModel):
     weak_pull_up: bool = False
     current_strength: str | None = None
     slew_rate: int | None = None
+    emit: dict[str, Any] = Field(default_factory=dict)
 
 
 class BoardVectorSignalSchema(BaseModel):
@@ -24,6 +25,7 @@ class BoardVectorSignalSchema(BaseModel):
     weak_pull_up: bool = False
     current_strength: str | None = None
     slew_rate: int | None = None
+    emit: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _validate_shape(self) -> "BoardVectorSignalSchema":

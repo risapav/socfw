@@ -13,21 +13,21 @@
 
 module ethernet_test (
   input  wire        rst_ni,
+  input  wire        sys_clk_i,   // 50 MHz board oscillator pre PHY reset counter
 
   // Fyzicke PHY ovladanie
-  output logic       eth_rst_no, // Reset pre PHY (Aktivny nizky)
-  output logic       eth_mdc_o,  // MDIO Clock pre PHY
+  output logic       eth_rst_no,  // Reset pre PHY (Aktivny nizky)
+  output logic       eth_mdc_o,   // MDIO management clock (zatial neaktivny)
   inout  wire        eth_mdio_io,
 
   // GMII/MII rozhranie
-  input  wire        eth_rx_clk_i,  // 125Mhz ethernet gmii rx clock
-  input  wire        eth_rx_clk_0_i,// 125Mhz ethernet gmii rx clock
+  input  wire        eth_rx_clk_i,  // 125 MHz ethernet gmii rx clock
   input  wire        eth_rx_dv_i,
-  input  wire        eth_rx_er_i,
   input  wire  [7:0] eth_rx_data_i,
+  input  wire        eth_rx_er_i,
+  input  wire        eth_tx_clk_i,
 
-  input  wire        eth_tx_clk_i,  //25Mhz ethernet gmii tx clock
-  output logic       eth_gtx_clk_o, //25Mhz ethernet gmii tx clock
+  output logic       eth_gtx_clk_o, // 125 MHz GTX clock (forwarded zo rx_clk)
   output logic       eth_tx_en_o,
   output logic       eth_tx_er_o,
   output logic [7:0] eth_tx_data_o
@@ -36,15 +36,21 @@ module ethernet_test (
   // GTX clock: FPGA forwarded zo ETH_RX_CLK (125 MHz)
   assign eth_gtx_clk_o = eth_rx_clk_i;
 
-  // MDIO: neaktivny rezim (PHY konfiguracia cez strap piny dosky)
+  // MDC/MDIO: neaktivny rezim (PHY konfiguracia cez strap piny dosky)
   assign eth_mdc_o   = 1'b0;
   assign eth_mdio_io = 1'bz;
+
+  // Fyzicky existujuce, zatial nepouzivane vstupy — zamerne spotrebovane aby nevznikli warningy
+  logic unused_eth_inputs_w;
+  assign unused_eth_inputs_w = ^{eth_rx_er_i, eth_tx_clk_i};
 
   // PHY reset extender: 2^21 / 125 MHz = 16.8 ms hold time
   logic [20:0] phy_rst_cnt_q;
   logic        phy_rst_done_q;
 
-  always_ff @(posedge eth_rx_clk_i or negedge rst_ni) begin
+  // Pouzivame sys_clk_i (50 MHz, vzdy dostupny) nie eth_rx_clk_i —
+  // PHY pocas resetu negeneruje RX_CLK, co by sposobilo deadlock.
+  always_ff @(posedge sys_clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
       phy_rst_cnt_q  <= '0;
       phy_rst_done_q <= 1'b0;

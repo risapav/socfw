@@ -19,12 +19,12 @@ module tb_ethernet_test_top_smoke;
 
   int fail_count = 0;
 
-  logic       clk = 1'b0;
+  logic       clk     = 1'b0;  // eth_rx_clk_i @ 125 MHz
+  logic       sys_clk = 1'b0;  // sys_clk_i @ 50 MHz
   logic       rst_ni;
 
   logic       eth_mdc_o;
   wire        eth_mdio_io;
-  logic       eth_rx_clk_0_i = 1'b0;
   logic       eth_rx_dv_i    = 1'b0;
   logic       eth_rx_er_i    = 1'b0;
   logic [7:0] eth_rx_data_i  = 8'h00;
@@ -35,23 +35,24 @@ module tb_ethernet_test_top_smoke;
   logic       eth_tx_er_o;
   logic [7:0] eth_tx_data_o;
 
-  always #4 clk = ~clk;  // 125 MHz
+  always #4  clk     = ~clk;      // 125 MHz
+  always #10 sys_clk = ~sys_clk;  // 50 MHz
 
   ethernet_test dut (
-    .rst_ni         (rst_ni),
-    .eth_rst_no     (eth_rst_no),
-    .eth_mdc_o      (eth_mdc_o),
-    .eth_mdio_io    (eth_mdio_io),
-    .eth_rx_clk_i   (clk),
-    .eth_rx_clk_0_i (eth_rx_clk_0_i),
-    .eth_rx_dv_i    (eth_rx_dv_i),
-    .eth_rx_er_i    (eth_rx_er_i),
-    .eth_rx_data_i  (eth_rx_data_i),
-    .eth_tx_clk_i   (eth_tx_clk_i),
-    .eth_gtx_clk_o  (eth_gtx_clk_o),
-    .eth_tx_en_o    (eth_tx_en_o),
-    .eth_tx_er_o    (eth_tx_er_o),
-    .eth_tx_data_o  (eth_tx_data_o)
+    .rst_ni        (rst_ni),
+    .sys_clk_i     (sys_clk),
+    .eth_rst_no    (eth_rst_no),
+    .eth_mdc_o     (eth_mdc_o),
+    .eth_mdio_io   (eth_mdio_io),
+    .eth_rx_clk_i  (clk),
+    .eth_rx_dv_i   (eth_rx_dv_i),
+    .eth_rx_er_i   (eth_rx_er_i),
+    .eth_rx_data_i (eth_rx_data_i),
+    .eth_tx_clk_i  (eth_tx_clk_i),
+    .eth_gtx_clk_o (eth_gtx_clk_o),
+    .eth_tx_en_o   (eth_tx_en_o),
+    .eth_tx_er_o   (eth_tx_er_o),
+    .eth_tx_data_o (eth_tx_data_o)
   );
 
   task automatic chk1(input string tag, input logic got, input logic exp);
@@ -65,18 +66,18 @@ module tb_ethernet_test_top_smoke;
 
   initial begin
     rst_ni = 1'b0;
-    repeat (4) @(posedge clk); #1;
+    repeat (4) @(posedge sys_clk); #1;
     rst_ni = 1'b1;
-    repeat (2) @(posedge clk); #1;
+    repeat (2) @(posedge sys_clk); #1;
 
     // -- T1: PHY reset extender still counting after release --
     $display("-- T1: eth_rst_no=0 (PHY extender active) --");
     chk1("T1 eth_rst_no=0", eth_rst_no, 1'b0);
 
-    // -- T2: force counter to 21'h1FFFFF, &cnt fires on next posedge --
+    // -- T2: force counter to 21'h1FFFFF, &cnt fires on next posedge of sys_clk --
     $display("-- T2: eth_rst_no=1 after counter overflow --");
     force dut.phy_rst_cnt_q = 21'h1FFFFF;
-    @(posedge clk); #1;
+    @(posedge sys_clk); #1;
     release dut.phy_rst_cnt_q;
     chk1("T2 eth_rst_no=1", eth_rst_no, 1'b1);
 

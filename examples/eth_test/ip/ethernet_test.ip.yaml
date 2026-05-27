@@ -22,7 +22,7 @@ reset:
 
 clocking:
   primary_input_port: eth_rx_clk_i
-  additional_input_ports: []
+  additional_input_ports: [sys_clk_i]
   outputs:
     - port: eth_gtx_clk_o
       kind: generated_clock
@@ -45,7 +45,7 @@ ports:
     direction: input
     width: 1
 
-  - name: eth_rx_clk_0_i
+  - name: sys_clk_i
     direction: input
     width: 1
 
@@ -53,13 +53,13 @@ ports:
     direction: input
     width: 1
 
-  - name: eth_rx_er_i
-    direction: input
-    width: 1
-
   - name: eth_rx_data_i
     direction: input
     width: 8
+
+  - name: eth_rx_er_i
+    direction: input
+    width: 1
 
   - name: eth_tx_clk_i
     direction: input

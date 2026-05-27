@@ -92,6 +92,7 @@ class ProjectModel:
     debug: bool = False
     bus_fabrics: list[BusFabricRequest] = field(default_factory=list)
     reset_driver: str | None = None
+    board_overrides: dict[str, Any] = field(default_factory=dict)
 
     def module_by_name(self, instance: str) -> ModuleInstance | None:
         for m in self.modules:

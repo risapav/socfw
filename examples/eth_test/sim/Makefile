@@ -49,7 +49,7 @@ $(LOGDIR):
 
 # -- Regression --------------------------------------------------------------
 
-regression: all
+regression: clean all
 	@if grep -ql "FAIL\|\*\* Fatal:" $(LOGDIR)/tb_*.log 2>/dev/null; then \
 		echo "======================================"; \
 		echo " ETH_TEST REGRESSION FAILED"; \

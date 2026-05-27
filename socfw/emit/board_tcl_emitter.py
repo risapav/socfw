@@ -102,21 +102,24 @@ class BoardTclEmitter:
                 if use.top_name not in external_tops:
                     external_tops.append(use.top_name)
 
+        board_overrides = getattr(getattr(system, "project", None), "board_overrides", {}) or {}
+
         if onboard_tops:
             lines.append("# Board resources")
             for top_name in sorted(onboard_tops):
                 uses = top_to_uses[top_name]
-                self._emit_pin_uses(lines, top_name, uses, board)
+                self._emit_pin_uses(lines, top_name, uses, board, board_overrides)
             lines.append("")
 
         if external_tops:
             lines.append("# External resources")
             for top_name in sorted(external_tops):
                 uses = top_to_uses[top_name]
-                self._emit_pin_uses(lines, top_name, uses, board)
+                self._emit_pin_uses(lines, top_name, uses, board, board_overrides)
             lines.append("")
 
-    def _emit_pin_uses(self, lines: list[str], top_name: str, uses, board) -> None:
+    def _emit_pin_uses(self, lines: list[str], top_name: str, uses, board,
+                       board_overrides: dict | None = None) -> None:
         from socfw.board.resource_tree import iter_resource_leaves
 
         scalar_uses = [u for u in uses if u.bit is None]
@@ -124,29 +127,66 @@ class BoardTclEmitter:
 
         if scalar_uses:
             u = scalar_uses[0]
-            lines.append(f"set_location_assignment {_pin(u.pin)} -to {top_name}")
-            io_std = self._get_io_standard(u, board)
-            if io_std:
-                lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}")
-            cs = self._get_current_strength(u, board)
-            if cs:
-                lines.append(f"set_instance_assignment -name CURRENT_STRENGTH_NEW \"{cs}\" -to {top_name}")
-            sr = self._get_slew_rate(u, board)
-            if sr is not None:
-                lines.append(f"set_instance_assignment -name SLEW_RATE {sr} -to {top_name}")
+            emit_cfg = self._get_emit_config(u, board, board_overrides)
+            if emit_cfg.get("pin_assignment", True) is not False:
+                lines.append(f"set_location_assignment {_pin(u.pin)} -to {top_name}")
+            if emit_cfg.get("io_assignments", True) is not False:
+                io_std = self._get_io_standard(u, board)
+                if io_std:
+                    lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}")
+                cs = self._get_current_strength(u, board)
+                if cs:
+                    lines.append(f"set_instance_assignment -name CURRENT_STRENGTH_NEW \"{cs}\" -to {top_name}")
+                sr = self._get_slew_rate(u, board)
+                if sr is not None:
+                    lines.append(f"set_instance_assignment -name SLEW_RATE {sr} -to {top_name}")
 
         if vector_uses:
-            for u in sorted(vector_uses, key=lambda x: x.bit):
-                lines.append(f"set_location_assignment {_pin(u.pin)} -to {top_name}[{u.bit}]")
-            io_std = self._get_io_standard(vector_uses[0], board)
-            if io_std:
-                lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}[*]")
-            cs = self._get_current_strength(vector_uses[0], board)
-            if cs:
-                lines.append(f"set_instance_assignment -name CURRENT_STRENGTH_NEW \"{cs}\" -to {top_name}[*]")
-            sr = self._get_slew_rate(vector_uses[0], board)
-            if sr is not None:
-                lines.append(f"set_instance_assignment -name SLEW_RATE {sr} -to {top_name}[*]")
+            u0 = vector_uses[0]
+            emit_cfg = self._get_emit_config(u0, board, board_overrides)
+            if emit_cfg.get("pin_assignment", True) is not False:
+                for u in sorted(vector_uses, key=lambda x: x.bit):
+                    lines.append(f"set_location_assignment {_pin(u.pin)} -to {top_name}[{u.bit}]")
+            if emit_cfg.get("io_assignments", True) is not False:
+                io_std = self._get_io_standard(u0, board)
+                if io_std:
+                    lines.append(f"set_instance_assignment -name IO_STANDARD \"{io_std}\" -to {top_name}[*]")
+                cs = self._get_current_strength(u0, board)
+                if cs:
+                    lines.append(f"set_instance_assignment -name CURRENT_STRENGTH_NEW \"{cs}\" -to {top_name}[*]")
+                sr = self._get_slew_rate(u0, board)
+                if sr is not None:
+                    lines.append(f"set_instance_assignment -name SLEW_RATE {sr} -to {top_name}[*]")
+
+    def _get_emit_config(self, use, board, board_overrides: dict | None) -> dict:
+        """Merge emit config from board signal definition and project board_overrides."""
+        sig = self._get_signal(use, board)
+        sig_emit = dict(sig.emit) if sig is not None and hasattr(sig, "emit") else {}
+        if board_overrides:
+            specific_key = self._signal_board_ref(use, board)
+            if specific_key:
+                override = board_overrides.get(specific_key, {})
+                override_emit = override.get("emit", {}) if isinstance(override, dict) else {}
+                sig_emit.update(override_emit)
+        return sig_emit
+
+    def _signal_board_ref(self, use, board) -> str | None:
+        """Return the board: ref for this signal (e.g. 'board:onboard.eth.rx_clk_0')."""
+        path = use.resource_path
+        if not path.startswith("onboard."):
+            return None
+        sub = path[len("onboard."):]
+        res_key = sub.split(".")[0]
+        res = board.onboard.get(res_key)
+        if res is None:
+            return None
+        for sig_key, sig in res.scalars.items():
+            if sig.top_name == use.top_name:
+                return f"board:onboard.{res_key}.{sig_key}"
+        for vec_key, vec in res.vectors.items():
+            if vec.top_name == use.top_name:
+                return f"board:onboard.{res_key}.{vec_key}"
+        return None
 
     def _get_signal(self, use, board):
         """Return the BoardScalarSignal or BoardVectorSignal for a PinUse."""

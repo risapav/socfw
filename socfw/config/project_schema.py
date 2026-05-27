@@ -183,6 +183,7 @@ class ProjectConfigSchema(BaseModel):
             "through its own locked output."
         ),
     )
+    board_overrides: dict[str, Any] = Field(default_factory=dict)
     artifacts: ArtifactsSchema = Field(default_factory=ArtifactsSchema)
 
     @model_validator(mode="after")

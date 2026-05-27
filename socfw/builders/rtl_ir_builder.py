@@ -7,7 +7,7 @@ from socfw.core.expr_eval import resolve_port_width
 def _port_dir_str(direction) -> str:
     """Convert PortDir enum or string to 'input'/'output' string."""
     v = getattr(direction, "value", direction)
-    return str(v) if v in ("input", "output") else "output"
+    return str(v) if v in ("input", "output", "inout") else "output"
 
 
 class RtlIrBuilder:
