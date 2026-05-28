@@ -87,7 +87,7 @@ ports:
 
   - name: status_led_o
     direction: output
-    width: 4
+    width: 6
 
 artifacts:
   synthesis:

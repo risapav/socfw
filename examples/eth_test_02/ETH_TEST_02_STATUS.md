@@ -30,6 +30,10 @@ Hodinove domeny:
 
 FPGA IP: `192.168.20.50` (0xC0A81432), Echo port: `8080`, MAC: `00:0A:35:01:FE:C0`
 
+**RX RAM adresovanie:** ipreceive pise payload od adresy **1** (nie 0) — `data_o_valid_o`
+je registrovany signal; RAM write nastane 1 cyklus neskor ked `ram_wr_addr_o` uz
+inkrementovalo. `udp_rx_ram_to_stream` zacina citat od `word_addr_q = 9'd1`.
+
 ---
 
 ## Faza 1 — Implementacia a simulacia — DOKONCENA
@@ -43,9 +47,9 @@ FPGA IP: `192.168.20.50` (0xC0A81432), Echo port: `8080`, MAC: `00:0A:35:01:FE:C
 | `rtl/eth/udp_rx_ram_to_stream.sv` | CDC toggle + RX RAM -> byte stream |
 | `rtl/eth/udp_tx_stream_to_ram.sv` | Byte stream -> TX RAM + tx_start pulz |
 | `rtl/eth/ipsend.sv` | Rozsireny: dynamicke IP/porty, tx_start_i, timer_en_i, ST_SEND_PAD |
-| `rtl/eth/ipreceive.sv` | Nezmeneny z eth_test |
+| `rtl/eth/ipreceive.sv` | Opraveny (BUG-1 fix), viz Faza 4 |
 | `rtl/eth/crc.sv` | Nezmeneny z eth_test (CRC-32/ISO-HDLC) |
-| `rtl/eth/ram.sv` | Dual-port M9K, 2-cyklova latencia citania |
+| `rtl/eth/ram.sv` | Dual-port M9K, 1-cyklova latencia citania |
 
 ### Klucove dizajnove rozhodnutia
 
@@ -72,22 +76,6 @@ end
 ```
 Stav `ST_SEND_LOAD`: 1 cyklus cakania na platny M9K vystup pred `ST_SEND_PAY`.
 
-### Simulacia — 3/3 PASS
-
-| Test | Typ | Vysledok | Popis |
-|------|-----|----------|-------|
-| `tb_tx_stream` | unit | PASS | RAM packing MSB-first, dlzky, tx_start pulz |
-| `tb_rx_stream` | unit | PASS | CDC toggle, metadata, byte order, last signal |
-| `tb_udp_echo_path` | integration | PASS | End-to-end echo, FCS reziduum 0xDEBB20E3, padding 13x 0x00 |
-
-Integracny test verifikuje:
-- T5: TX aktivita (72 bajtov: 8 preamble + 14 MAC + 20 IP + 8 UDP + 5 payload + 13 pad + 4 FCS)
-- T6: Dst IP v odoslanopm pakete = src IP z prijateho paketu (echo)
-- T7: `tx_data_length=13`, `tx_total_length=33`
-- T8: CRC reziduum 0xDEBB20E3 (CRC-32/ISO-HDLC)
-- T9: 13 bajtov paddingu = 0x00
-- T10: `tx_er_o` nikdy neassertovany
-
 ---
 
 ## Faza 2 — Quartus build a timing closure — DOKONCENA
@@ -100,130 +88,215 @@ Integracny test verifikuje:
 | ETH_RXC (125 MHz) | **+0.817 ns** |
 | SYS_CLK (50 MHz) | **+6.853 ns** |
 
-Bitfile: `output_files/soc_top.sof` (checksum 0x003B81E2)
+Bitfile: `output_files/soc_top.sof` (pred navrhy_02 opravami — treba rebuild)
 
 ---
 
-## Faza 3 — HW test — ZLYHANIE
+## Faza 3 — HW test — ZLYHANIE (pred opravami)
 
 ### Testovaci postup
 
 ```bash
-# PC strana
 sudo arp -s 192.168.20.50 00:0a:35:01:fe:c0
 python3 tools/udp_echo_test.py --host 192.168.20.50 --port 8080 --count 10
 ```
 
 PC interface: `enp0s20f0u4u1` (USB Ethernet, 192.168.20.234/24)
 
-### Vysledky
+### Vysledky (pred opravami)
 
 | Test | Vysledok |
 |------|----------|
-| arp záznam nastavený | OK |
 | python echo test (10 paketov) | **0/10 — 100% timeout** |
-| tcpdump (PC→FPGA pakety) | vidi odchadzajuce pakety ✓ |
-| tcpdump (FPGA→PC pakety) | **NULA prichadzajucich** |
+| tcpdump PC→FPGA | vidí odchadzajuce pakety ✓ |
+| tcpdump FPGA→PC | **NULA prichadzajucich** |
 | Diagnostika timer_en_i=1 | LED 3 bliká ✓ (ipsend fyzicky spusteny) |
 
-### Zaver diagnostiky
-
-**ipsend vie vysielat** — LED 3 potvrdzuje `eth_tx_en_o` pulsovanie pri periodickom timeri.
-**PC nevidí žiadne rámce od FPGA** — ani pri timer_en_i=1 tcpdump nič nezachytil.
+**Pricina zlyhania:** BUG-1 (data_receive_o stuck-high) — CDC toggle sa neprepinal →
+echo pipeline ignorovala prijate pakety. Opravene v Faze 4.
 
 ---
 
-## Identifikovane problemy
+## Faza 4 — navrhy_02 opravy — DOKONCENA (commit 5ca35d8)
 
-### BUG-1 (Kriticke): `ipreceive.data_receive_o` nikdy nevymaze
+### Opravene bugy
 
-**Subor:** `rtl/eth/ipreceive.sv`
+#### BUG-1: `ipreceive.data_receive_o` stuck-high (KRITICKE — pricina HW zlyhania)
 
-**Popis:**
-Po prichode prveho paketu sa `data_receive_o` nastavi na 1 a uz nikdy neklesne.
-V stave `ST_IDLE` nie je ziadne `data_receive_o <= 1'b0`.
+**Symptom:** Po prvom pakete `data_receive_o` zostalo trvalo na 1. `rx_tog_q` prepinal
+KAZDY rx_clk cyklus → spurious CDC triggery. Od druheho paketu: signal 1→1 (ziadna zmena)
+→ toggle neprepne → echo pipeline slepa pre vsetky dalsie pakety.
+
+**Oprava** (`rtl/eth/ipreceive.sv`): pridany default `data_receive_o <= 1'b0` pred
+`case` blokom v `always_ff`. `ST_RX_FINISH` ho prepisuje na `1'b1` iba na 1 cyklus.
 
 ```systemverilog
-// ipreceive.sv — PROBLEM
-ST_RX_FINISH: begin
-  data_receive_o <= 1'b1;   // nastavi
-  state_q        <= ST_IDLE;
-end
-ST_IDLE: begin
-  // CHYBA: data_receive_o <= 1'b0  <-- toto CHYBA
-  ...
-end
+end else begin
+  data_receive_o <= 1'b0;   // default: 1-cyklovy pulz iba v ST_RX_FINISH
+  case (state_q)
+    ...
+    ST_RX_FINISH: begin
+      data_o_valid_o <= 1'b0;
+      data_receive_o <= 1'b1;  // prepisuje default — presne 1 cyklus
+      state_q        <= ST_IDLE;
+    end
 ```
 
-**Dosledky:**
-1. `rx_tog_q` v `udp_rx_ram_to_stream` prepina KAZDY rx_clk cyklus (125 MHz) kym signal=1
-2. Po prvom pakete: zaplava spurious CDC pulzov → udp_rx_ram_to_stream dostava falošné triggery
-3. Od druhého paketu: `data_receive_o` = 1→1 (bez zmeny) → toggle sa neprepne → **echo cesta slepa pre vsetky dalsie pakety**
+#### BUG-2: RX RAM off-by-one (skryty bug v adresovani)
 
-**Simulacny testbench toto maskuje:**
+**Symptom:** TX payload bajty 50..54 = `00 00 00 00 48` namiesto `48 45 4C 4C 4F` (HELLO).
+Prvy slovo HELL skonvilo do RX RAM adresy 1 (nie 0), ale `udp_rx_ram_to_stream` citalo
+od adresy 0 → 4 nulove bajty + iba H na pozicii 4.
+
+**Pricina:** V `ipreceive.sv` su `data_o_valid_o` a `ram_wr_addr_o` oba NB priradenia
+v tom istom cykle. RAM write nastane az nasledujuci cyklus, ked `ram_wr_addr_o` uz
+inkrementovalo na `addr+1`. Prvy zapis teda ide na adresu 1, nie 0.
+
+**Oprava** (`rtl/eth/udp_rx_ram_to_stream.sv`): v stave `ST_META` zmena
+`word_addr_q <= 9'd0` na `word_addr_q <= 9'd1`.
+
+Opravene aj testbench mocky:
+- `sim/unit/tb_rx_stream.sv`: `ram_addr == 0` → `ram_addr == 1`
+- `sim/integration/tb_udp_echo_path.sv`: `mem[0]/mem[1]` → `mem[1]/mem[2]`
+
+#### Cleanup (navrhy_02 Krok 7)
+
+- `udp_tx_stream_to_ram.sv`: odstraneny nepouzity `len_latch_q` register
+- `eth_udp_echo_test.sv`: odstraneny nepouzity `local_ip_w` wire
+- `tools/udp_echo_test.py`: opravene default hodnoty (`--host 192.168.20.50`, `--port 8080`)
+
+### Nove testy (navrhy_02)
+
+| Test | Typ | Popis |
+|------|-----|-------|
+| `tb_ipreceive_data_receive_pulse` | unit | Overuje presne 1-cyklovy pulz po kazdom GMII ramci (2 pakety) |
+| `tb_ethernet_test_echo_gmii_packet` | integration | Kompletny GMII test bez `force` na `ipr_*` — realny GMII RX stream |
+
+`tb_ethernet_test_echo_gmii_packet` overuje celu cestu:
+- Realny GMII frame (preamble + SFD + MAC + IP + UDP + "HELLO")
+- ipreceive → CDC → RX RAM → echo FSM → TX RAM → ipsend → GMII TX
+- T5: TX aktivita (72 B), T6: dst IP = echo, T7: dlzky 13/33
+- T8: CRC reziduum `0xDEBB20E3`, T9: 13x padding `0x00`, T10: bez tx_er
+
+### Regresia — 5/5 PASS
+
+| Test | Typ | Vysledok |
+|------|-----|----------|
+| `tb_rx_stream` | unit | **PASS** |
+| `tb_tx_stream` | unit | **PASS** |
+| `tb_ipreceive_data_receive_pulse` | unit | **PASS** |
+| `tb_udp_echo_path` | integration | **PASS** |
+| `tb_ethernet_test_echo_gmii_packet` | integration | **PASS** |
+
+---
+
+## Faza 5 — navrhy_03/04 diagnosticke rozsirenia — DOKONCENA (2026-05-28)
+
+Implementovane odporucania z `navrhy_03.md` a `navrhy_04.md`.
+
+### Nove RTL funkcie
+
+#### 1. `EXPECT_PREAMBLE` parameter v `ipreceive.sv`
+
+RTL8211EG moze v GMII rezime vynechat preamble/SFD. Novy parameter:
+
 ```systemverilog
-// tb_udp_echo_path.sv — maskuje bug
-force dut.ipr_data_receive_w = 1'b1;
-@(posedge rx_clk); #1;
-force dut.ipr_data_receive_w = 1'b0;   // <-- force na 0 po 1 cykle
-release dut.ipr_data_receive_w;
+parameter bit EXPECT_PREAMBLE = 1'b1
 ```
 
-**Navrhovana oprava:**
+Ked `EXPECT_PREAMBLE=0`, ST_IDLE pri prvom `rx_dv_i` okamzite prechodzi do ST_RX_MAC
+a ulozi prvy bajt ako `my_mac_q[7:0]` so `state_counter_q=1`. Zvysok parsovania je zhodny.
+
+#### 2. `rx_er_i` abort logika v `ipreceive.sv`
+
+Nove chovanie: akykolvek PHY error signal abort aktualny stav spat do ST_IDLE:
+
 ```systemverilog
-// ipreceive.sv ST_IDLE — pridat
-ST_IDLE: begin
-  data_receive_o  <= 1'b0;   // OPRAVA: vymaz po 1 cykle
-  valid_ip_p_o    <= 1'b0;
-  ...
-end
+if (rx_er_i && (state_q != ST_IDLE))
+  state_q <= ST_IDLE;
+else
+  case (state_q) ... endcase
 ```
 
-### BUG-2 (Podozrenie): PHY link speed mismatch
+#### 3. 6-bitove diagnosticke LED v `eth_status_leds.sv`
 
-**Popis:**
-`enp0s20f0u4u1` je USB Ethernet adapter — typicky 100 Mbps.
-FPGA poskytuje `ETH_GTX_CLK = 125 MHz` (pre 1 Gbps GMII).
-Ak PHY vyjednalo 100 Mbps, ocakava 25 MHz GTX_CLK → TX moze byt nefunkcny.
+Rozsirenie zo 4 na 6 LED. Kazda je samostatne natiahuta (stretch) na ~0.2 s pre
+viditelnost jednorazovych pulsov:
 
-**Overenie:** `ethtool enp0s20f0u4u1` → skontroluj `Speed:` a `Duplex:`.
+| LED | Signal | Domena | Popis |
+|-----|--------|--------|-------|
+| 0 | heartbeat | sys_clk | Trvalo bliká, potvrdenie FPGA zivosti |
+| 1 | phy_reset_done | sys_clk | PHY reset dokonceny |
+| 2 | eth_rx_dv_i | rx_clk → CDC | RX aktivita (paket prijaty) |
+| 3 | ipr_data_receive_o | rx_clk → CDC | ipreceive dokoncil paket |
+| 4 | tx_start | tx_clk → CDC | echo pipeline spustila TX |
+| 5 | eth_tx_en_o | tx_clk → CDC | ipsend fyzicky vysiela |
 
-**Poznamka:** eth_test (predchodca) testoval TX cestu uspesne s rovnakym hardware.
-Ak eth_test prebehol na rovnakom PC+NIC, PHY/speed mismatch je nepravdepodobny.
+LED 3 vs LED 5: ak LED 3 svieti ale LED 5 nie → pipeline zasekla v echo FSM alebo ipsend.
+
+#### 4. `DEBUG_TIMER_TX_EN` parameter v `ethernet_test_echo.sv`
+
+Ked `DEBUG_TIMER_TX_EN=1`, ipsend periodicky vysiela (timer_en_i=1) bez cakania na
+RX paket. Umoznuje overit fyzicku TX cestu nezavisle od ipreceive.
+
+#### 5. `rx_er_i` teraz prepojeny v `ethernet_test_echo.sv`
+
+Predtym `rx_er_i` sa do ipreceive neprikladal (neimplementovany port). Teraz:
+`.rx_er_i(eth_rx_er_i)` — PHY error signal spravne odrusuva prijmany ramec.
+
+### Novy integracny test: `tb_ethernet_test_echo_gmii_no_preamble`
+
+Overuje `EXPECT_PREAMBLE=0`: vstupny GMII stream zacina priamo DST MAC[0] (bez
+`55 55 55 55 55 55 55 D5`). Ocakavany TX vystup je identicky (72 B, rovnake CRC,
+rovnaky HELLO payload).
+
+### Regresia — 6/6 PASS
+
+| Test | Typ | Vysledok |
+|------|-----|----------|
+| `tb_rx_stream` | unit | **PASS** |
+| `tb_tx_stream` | unit | **PASS** |
+| `tb_ipreceive_data_receive_pulse` | unit | **PASS** |
+| `tb_udp_echo_path` | integration | **PASS** |
+| `tb_ethernet_test_echo_gmii_packet` | integration | **PASS** |
+| `tb_ethernet_test_echo_gmii_no_preamble` | integration | **PASS** |
 
 ---
 
 ## Dalsi postup
 
-### Priorita 1 — Opravit BUG-1
+### Priorita 1 — Quartus rebuild + HW test
 
-```systemverilog
-// rtl/eth/ipreceive.sv — ST_IDLE vetva
-ST_IDLE: begin
-  data_receive_o  <= 1'b0;  // PRIDAT
-  valid_ip_p_o    <= 1'b0;
-  byte_counter_q  <= 3'd0;
-  ...
-```
-
-Potom:
-1. Aktualizovat testbench (odstrânit `force/release` data_receive_w — test by mal bezat s realnym signalom)
-2. Spustit `make regression` → overit 3/3 PASS
-3. Rekompilovaat Quartus + reprogram FPGA
-4. Zopakovat echo test
-
-### Priorita 2 — Overit link speed
+Aktualne `output_files/soc_top.sof` je zo stareho buildu. Treba rebuild s navrhy_02
++ navrhy_03/04 opravami.
 
 ```bash
-ethtool enp0s20f0u4u1
-# Ocakavame: Speed: 1000Mb/s
-# Ak: Speed: 100Mb/s → problem s GTX_CLK
+cd examples/eth_test_02
+# Rebuild v Quartus Prime 25.1 Lite
+# Naflasovat soc_top.sof
+sudo arp -s 192.168.20.50 00:0a:35:01:fe:c0
+python3 tools/udp_echo_test.py --host 192.168.20.50 --port 8080 --count 10
 ```
 
-### Priorita 3 (navrhy_01 P2) — Dynamicke DST MAC
+Diagnosticky postup podla LED:
+- LED 0 bliká → FPGA zije
+- LED 1 on → PHY reset OK
+- LED 2 bliká pri prichadzajucich paketoch → ipreceive cita GMII
+- LED 3 bliká → ipreceive dokoncil paket (DST MAC filter presiel)
+- LED 4 bliká → echo FSM odovzdala TX pipeline
+- LED 5 bliká → ipsend fyzicky vysiela
+
+Ak LED 2 nereaguje: skus `EXPECT_PREAMBLE=0` rebuild (RTL8211EG bez preamble).
+
+### Priorita 2 — Dynamicke DST MAC (navrhy_01 P2 / navrhy_03 Krok E)
 
 Aktualny `ipsend.sv` pouziva broadcast `FF:FF:FF:FF:FF:FF` ako DST MAC.
-Riesenie: pouzit `ipreceive.pc_mac_o` ako DST MAC echo odpovede.
+Riesenie: propagovat `ipreceive.pc_mac_o` cez `udp_rx_ram_to_stream` do tx_clk domeny
+a pouzit ako DST MAC echo odpovede.
+
+### Volitelne — PLL lock → reset tie (navrhy_03 polozka 7)
+
+Sys_clk pochadzа z PLL. `rst_ni` by mala byt drzana v 0 kym `sys_pll_locked` neni 1.
 
 ---
 
@@ -236,22 +309,33 @@ examples/eth_test_02/
 ├── project.yaml
 ├── soc_top.qpf / soc_top.qsf
 ├── navrhy/
-│   └── navrhy_01.md            (expertny review — timing + funkcne pripomienky)
+│   ├── navrhy_01.md            (expertny review — timing + funkcne pripomienky)
+│   ├── navrhy_02.md            (expertny review — BUG-1 fix, testy, iteracie B/C/D)
+│   ├── navrhy_03.md            (expertny review — LED diagnostika, EXPECT_PREAMBLE, rx_er_i)
+│   └── navrhy_04.md            (expertny review — no-preamble variant, force test analiza)
 ├── rtl/
-│   ├── ethernet_test_echo.sv   (top-level)
+│   ├── ethernet_test_echo.sv   (EXPECT_PREAMBLE, DEBUG_TIMER_TX_EN, [5:0] status_led_o)
 │   ├── eth_udp_echo_test.sv    (echo FSM + AXI-Lite)
 │   └── eth/
-│       ├── ipreceive.sv        (BUG-1: data_receive_o nevymaza)
-│       ├── ipsend.sv           (rozsireny: padding, ip_cur_word_q)
-│       ├── udp_rx_ram_to_stream.sv
-│       ├── udp_tx_stream_to_ram.sv
+│       ├── ipreceive.sv        (EXPECT_PREAMBLE param, rx_er_i abort, BUG-1 opraveny)
+│       ├── ipsend.sv           (rozsireny: padding, ip_cur_word_q, tx_start_i)
+│       ├── eth_status_leds.sv  (6 LED: heartbeat, PHY, RXDV, ipr_done, tx_start, TXEN)
+│       ├── udp_rx_ram_to_stream.sv  (cita od adresy 1 po BUG-2 oprave)
+│       ├── udp_tx_stream_to_ram.sv  (pise do TX RAM od adresy 1, MSB-first)
 │       ├── crc.sv
 │       └── ram.sv
 ├── sim/
-│   ├── integration/tb_udp_echo_path.sv
-│   └── unit/tb_tx_stream.sv, tb_rx_stream.sv
+│   ├── Makefile
+│   ├── integration/
+│   │   ├── tb_udp_echo_path.sv                       (force-based)
+│   │   ├── tb_ethernet_test_echo_gmii_packet.sv      (GMII realny test)
+│   │   └── tb_ethernet_test_echo_gmii_no_preamble.sv (EXPECT_PREAMBLE=0 test)
+│   └── unit/
+│       ├── tb_tx_stream.sv
+│       ├── tb_rx_stream.sv
+│       └── tb_ipreceive_data_receive_pulse.sv
 ├── tools/
-│   └── udp_echo_test.py
+│   └── udp_echo_test.py        (default: --host 192.168.20.50 --port 8080)
 └── output_files/
-    └── soc_top.sof             (bitfile, checksum 0x003B81E2)
+    └── soc_top.sof             (STARY build — treba rebuild)
 ```

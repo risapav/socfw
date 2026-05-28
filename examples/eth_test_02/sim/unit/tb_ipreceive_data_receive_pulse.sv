@@ -39,6 +39,7 @@ module tb_ipreceive_data_receive_pulse;
     .rst_ni            (rst_ni),
     .rx_data_i         (rx_data),
     .rx_dv_i           (rx_dv),
+    .rx_er_i           (1'b0),
     .board_mac_o       (board_mac_w),
     .pc_mac_o          (pc_mac_w),
     .ip_protocol_o     (ip_protocol_w),

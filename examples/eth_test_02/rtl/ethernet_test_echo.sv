@@ -15,8 +15,12 @@
  *              MAC filtrovanie: ipreceive prijima iba dst MAC 00:0A:35:01:FE:C0.
  *              Na PC: sudo arp -s <BOARD_IP> 00:0a:35:01:fe:c0
  *
- * @param BOARD_IP   IP adresa FPGA boardu
- * @param ECHO_PORT  UDP port pre echo
+ * @param BOARD_IP          IP adresa FPGA boardu
+ * @param ECHO_PORT         UDP port pre echo
+ * @param EXPECT_PREAMBLE   1=ipreceive ocakava preambulu+SFD (default),
+ *                          0=prvy bajt GMII je uz destination MAC[0]
+ * @param DEBUG_TIMER_TX_EN 1=ipsend vysiela periodicky bez echa (HW TX test),
+ *                          0=normalne echo-triggerovane vysielanie (default)
  */
 `ifndef ETHERNET_TEST_ECHO_SV
 `define ETHERNET_TEST_ECHO_SV
@@ -24,8 +28,10 @@
 `default_nettype none
 
 module ethernet_test_echo #(
-  parameter logic [31:0] BOARD_IP  = 32'hC0A81432, // 192.168.20.50
-  parameter logic [15:0] ECHO_PORT = 16'd8080
+  parameter logic [31:0] BOARD_IP          = 32'hC0A81432, // 192.168.20.50
+  parameter logic [15:0] ECHO_PORT         = 16'd8080,
+  parameter bit          EXPECT_PREAMBLE   = 1'b1,
+  parameter bit          DEBUG_TIMER_TX_EN = 1'b0
 )(
   input  wire        rst_ni,          // async reset (active-low, from framework)
   input  wire        sys_clk_i,       // 50 MHz system clock
@@ -51,7 +57,7 @@ module ethernet_test_echo #(
   output logic       eth_rst_no,
 
   // Diagnosticke LED
-  output logic [3:0] status_led_o
+  output logic [5:0] status_led_o
 );
 
   import axi_pkg::*;
@@ -98,11 +104,14 @@ module ethernet_test_echo #(
   logic [8:0]   ipr_ram_wr_addr_w;
   logic         ipr_data_receive_w;
 
-  ipreceive u_ipreceive (
+  ipreceive #(
+    .EXPECT_PREAMBLE (EXPECT_PREAMBLE)
+  ) u_ipreceive (
     .clk_i             (eth_rx_clk_i),
     .rst_ni            (rst_ni),
     .rx_data_i         (eth_rx_data_i),
     .rx_dv_i           (eth_rx_dv_i),
+    .rx_er_i           (eth_rx_er_i),
     .board_mac_o       (ipr_board_mac_w),
     .pc_mac_o          (ipr_pc_mac_w),
     .ip_protocol_o     (ipr_ip_proto_w),
@@ -339,7 +348,7 @@ module ethernet_test_echo #(
     .tx_src_port_i     (ECHO_PORT),
     .tx_dst_port_i     (tx_dst_port_q),
     .tx_start_i        (tx_start_w),
-    .timer_en_i        (1'b0)  // len echo-triggerovane vysielanie
+    .timer_en_i        (DEBUG_TIMER_TX_EN)
   );
 
   crc u_crc (
@@ -356,17 +365,19 @@ module ethernet_test_echo #(
   // ---------------------------------------------------------------------------
   eth_status_leds #(
     .SYS_CLK_HZ     (50_000_000),
-    .LED_COUNT      (4),
+    .LED_COUNT      (6),
     .LED_ACTIVE_LOW (1'b0)
   ) u_leds (
-    .sys_clk_i        (sys_clk_i),
-    .eth_rx_clk_i     (eth_rx_clk_i),
-    .eth_tx_clk_i     (eth_tx_clk_i),
-    .rst_ni           (rst_ni),
-    .phy_reset_done_i (phy_rst_done_q),
-    .eth_rx_dv_i      (eth_rx_dv_i),
-    .eth_tx_en_i      (eth_tx_en_o),
-    .led_o            (status_led_o)
+    .sys_clk_i           (sys_clk_i),
+    .eth_rx_clk_i        (eth_rx_clk_i),
+    .eth_tx_clk_i        (eth_tx_clk_i),
+    .rst_ni              (rst_ni),
+    .phy_reset_done_i    (phy_rst_done_q),
+    .eth_rx_dv_i         (eth_rx_dv_i),
+    .ipr_data_receive_i  (ipr_data_receive_w),
+    .tx_start_i          (tx_start_w),
+    .eth_tx_en_i         (eth_tx_en_o),
+    .led_o               (status_led_o)
   );
 
 endmodule

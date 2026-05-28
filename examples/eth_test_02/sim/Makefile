@@ -38,13 +38,15 @@ ETH_ECHO = \
 
 .PHONY: all unit integration regression clean \
         tb_udp_echo_path tb_rx_stream tb_tx_stream \
-        tb_ipreceive_data_receive_pulse tb_ethernet_test_echo_gmii_packet
+        tb_ipreceive_data_receive_pulse tb_ethernet_test_echo_gmii_packet \
+        tb_ethernet_test_echo_gmii_no_preamble
 
 all: unit integration
 
 unit: tb_rx_stream tb_tx_stream tb_ipreceive_data_receive_pulse
 
-integration: tb_udp_echo_path tb_ethernet_test_echo_gmii_packet
+integration: tb_udp_echo_path tb_ethernet_test_echo_gmii_packet \
+             tb_ethernet_test_echo_gmii_no_preamble
 
 $(LOGDIR):
 	mkdir -p $(LOGDIR)
@@ -94,6 +96,11 @@ tb_ethernet_test_echo_gmii_packet: $(LOGDIR)
 	$(VLOG) $(ETH_ECHO) \
 	        integration/tb_ethernet_test_echo_gmii_packet.sv
 	$(VSIM) tb_ethernet_test_echo_gmii_packet | tee $(LOGDIR)/tb_ethernet_test_echo_gmii_packet.log
+
+tb_ethernet_test_echo_gmii_no_preamble: $(LOGDIR)
+	$(VLOG) $(ETH_ECHO) \
+	        integration/tb_ethernet_test_echo_gmii_no_preamble.sv
+	$(VSIM) tb_ethernet_test_echo_gmii_no_preamble | tee $(LOGDIR)/tb_ethernet_test_echo_gmii_no_preamble.log
 
 clean:
 	rm -rf work transcript *.log $(LOGDIR)

@@ -1,22 +1,20 @@
 `timescale 1ns/1ps
 
-// Integration test: kompletna echo cesta cez realny GMII RX stream
+// Integration test: echo cesta s GMII RX bez preambuly (EXPECT_PREAMBLE=0)
 //
-// Na rozdiel od tb_udp_echo_path tu NEEXISTUJE force na ipr_* ani rx_ram.
-// Skutocny GMII stream vstupuje cez eth_rx_dv_i/eth_rx_data_i -> ipreceive
-// -> RX RAM -> CDC -> echo FSM -> TX RAM -> ipsend -> GMII TX vystup.
+// Overuje spravanie pri EXPECT_PREAMBLE=0: ipsend stale musi vyslat
+// korektny 72-bajtovy ramec aj ked vstupny RX stream nezacina preambulou.
+// Prvy bajt rx_dv_i je priamo destination MAC[0].
 //
-// Vstupny ramec: dst MAC=00:0A:35:01:FE:C0, src MAC=DE:AD:BE:EF:12:34
-//   src IP=192.168.20.100, dst IP=192.168.20.50, dst port=8080, payload "HELLO"
-//
-// T5: ipsend vysiela (eth_tx_en_o asserted)
-// T6: dst IP v TX pakete = src IP z RX paketu (echo)
+// Rovnake ocakavane vystupy ako tb_ethernet_test_echo_gmii_packet:
+// T5: TX aktivita (72 B ramec)
+// T6: dst IP = src IP z RX (echo)
 // T7: tx_data_length=13, tx_total_length=33
-// T8: FCS platne (CRC reziduum 0xDEBB20E3)
+// T8: CRC reziduum 0xDEBB20E3
 // T9: 13 bajtov paddingu = 0x00
-// T10: eth_tx_er_o nikdy neassertovany
+// T10: eth_tx_er_o nikdy
 
-module tb_ethernet_test_echo_gmii_packet;
+module tb_ethernet_test_echo_gmii_no_preamble;
 
   int fail_count = 0;
 
@@ -30,7 +28,7 @@ module tb_ethernet_test_echo_gmii_packet;
   always #10   sys_clk = ~sys_clk;
 
   // ---------------------------------------------------------------------------
-  // DUT
+  // DUT — EXPECT_PREAMBLE=0: parser ocakava MAC priamo bez preambuly/SFD
   // ---------------------------------------------------------------------------
   logic       eth_rx_dv   = 0;
   logic [7:0] eth_rx_data = 0;
@@ -45,8 +43,9 @@ module tb_ethernet_test_echo_gmii_packet;
   logic [5:0] status_led;
 
   ethernet_test_echo #(
-    .BOARD_IP  (32'hC0A81432),
-    .ECHO_PORT (16'd8080)
+    .BOARD_IP        (32'hC0A81432),
+    .ECHO_PORT       (16'd8080),
+    .EXPECT_PREAMBLE (1'b0)
   ) dut (
     .rst_ni         (rst_ni),
     .sys_clk_i      (sys_clk),
@@ -118,13 +117,10 @@ module tb_ethernet_test_echo_gmii_packet;
       $display("PASS %s: 0x%04x", tag, got);
   endtask
 
-  // Send real GMII frame (rx_clk domain)
-  // Ramec: dst MAC=00:0A:35:01:FE:C0, src MAC=DE:AD:BE:EF:12:34
-  //   IPv4: src=192.168.20.100, dst=192.168.20.50
-  //   UDP: src=4567, dst=8080, len=13, payload "HELLO"
-  task automatic send_gmii_frame();
+  // RX frame BEZ preambuly/SFD — prvy bajt je destination MAC[0]
+  task automatic send_gmii_frame_no_preamble();
     automatic byte f [] = '{
-      8'h55, 8'h55, 8'h55, 8'h55, 8'h55, 8'h55, 8'h55, 8'hD5,  // preamble+SFD
+      // bez 55 55 55 55 55 55 55 D5
       8'h00, 8'h0A, 8'h35, 8'h01, 8'hFE, 8'hC0,                  // DST MAC (FPGA)
       8'hDE, 8'hAD, 8'hBE, 8'hEF, 8'h12, 8'h34,                  // SRC MAC
       8'h08, 8'h00,                                                 // EtherType IPv4
@@ -157,14 +153,11 @@ module tb_ethernet_test_echo_gmii_packet;
     repeat (8) @(posedge tx_clk); #1;
     rst_ni = 1;
 
-    // Obchod PHY reset countera
     force dut.phy_rst_done_q = 1'b1;
     @(posedge tx_clk); #1;
 
-    // Odoslat GMII ramec (rx_clk domena)
-    send_gmii_frame();
+    send_gmii_frame_no_preamble();
 
-    // Cakaj na TX aktivitu (max 5000 tx cyklov)
     fork
       begin
         @(posedge eth_tx_en);
@@ -179,7 +172,6 @@ module tb_ethernet_test_echo_gmii_packet;
     join_any
     disable fork;
 
-    // -- T5: TX aktivita --
     $display("-- T5: TX aktivita --");
     if (tx_bytes.size() == 0) begin
       $display("FAIL T5: ziadne TX bajty");
@@ -189,7 +181,6 @@ module tb_ethernet_test_echo_gmii_packet;
     end else
       $display("PASS T5: TX prebehlo (%0d bajtov)", tx_bytes.size());
 
-    // -- T7: dlzky --
     $display("-- T7: tx_data/total length --");
     chk16("T7 tx_data_length",  dut.tx_data_length_w,  16'd13);
     chk16("T7 tx_total_length", dut.tx_total_length_w, 16'd33);
@@ -201,8 +192,6 @@ module tb_ethernet_test_echo_gmii_packet;
     end else
       $display("PASS frame length: 72");
 
-    // -- T6: dst IP = SRC_IP (echo) --
-    // IP dst: byte offset 8 preamble + 14 Eth + 16 = 38
     $display("-- T6: dst IP = echo ciel --");
     begin
       logic [31:0] pkt_dst_ip;
@@ -210,7 +199,6 @@ module tb_ethernet_test_echo_gmii_packet;
       chk32("T6 dst_ip", pkt_dst_ip, SRC_IP);
     end
 
-    // -- T3: payload HELLO (bajty 50..54) --
     $display("-- payload HELLO --");
     chkb("payload[0]", tx_bytes[50], 8'h48);
     chkb("payload[1]", tx_bytes[51], 8'h45);
@@ -218,7 +206,6 @@ module tb_ethernet_test_echo_gmii_packet;
     chkb("payload[3]", tx_bytes[53], 8'h4C);
     chkb("payload[4]", tx_bytes[54], 8'h4F);
 
-    // -- T9: padding 13x 0x00 (bajty 55..67) --
     $display("-- T9: Ethernet padding --");
     begin
       automatic int pad_fail = 0;
@@ -233,7 +220,6 @@ module tb_ethernet_test_echo_gmii_packet;
         $display("PASS T9: 13 padding bytes = 0x00");
     end
 
-    // -- T8: CRC reziduum --
     $display("-- T8: CRC residue --");
     begin
       automatic logic [31:0] residue;
@@ -243,7 +229,6 @@ module tb_ethernet_test_echo_gmii_packet;
       chk32("T8 CRC residue", residue, 32'hDEBB_20E3);
     end
 
-    // -- T10: tx_er_o --
     $display("-- T10: tx_er_o --");
     if (tx_err_seen) begin
       $display("FAIL T10: eth_tx_er_o bol asserted");

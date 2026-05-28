@@ -43,7 +43,7 @@ module tb_udp_echo_path;
   logic       eth_mdc;
   wire        eth_mdio;
   logic       eth_rst_no;
-  logic [3:0] status_led;
+  logic [5:0] status_led;
 
   ethernet_test_echo #(
     .BOARD_IP  (32'hC0A81432),  // 192.168.20.50
