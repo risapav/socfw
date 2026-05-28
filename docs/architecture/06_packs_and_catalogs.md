@@ -58,7 +58,41 @@ When multiple packs provide a resource with the same name, the first match (by p
 
 ## Relative Artifact Path Normalization
 
-IP and CPU descriptors list artifact paths relative to the descriptor file. The loaders resolve these to absolute paths at load time so that consumers never need to know the descriptor's location.
+### Loader phase (ip_loader.py)
+
+IP and CPU descriptors list artifact paths relative to the descriptor file. The loaders
+resolve these to absolute paths at load time so that consumers never need to know the
+descriptor's location:
+
+```python
+# ip_loader.py
+synthesis=tuple(str((base_dir / p).resolve()) for p in doc.artifacts.synthesis)
+```
+
+A descriptor at `examples/eth_test_02/ip/foo.ip.yaml` listing `../../../rtl/axi/axi_pkg.sv`
+becomes `/abs/path/to/socfw/rtl/axi/axi_pkg.sv` in memory.
+
+### Emitter phase (files_tcl_emitter.py)
+
+When generating `build/hal/files.tcl`, all paths are re-expressed relative to the project
+directory using `os.path.relpath`. This means:
+
+- Files **inside** the project directory emit short relative paths: `rtl/eth/crc.sv`
+- Files **outside** the project directory (shared framework RTL, packs) emit `../..`-prefixed
+  paths: `../../rtl/axi/axi_pkg.sv`
+
+```python
+def _norm(p: str) -> str:
+    return os.path.relpath(Path(p).resolve(), base)   # base = project_dir
+```
+
+Quartus resolves all `set_global_assignment` paths relative to the `.qpf` project file,
+which lives in the project directory — so `../../rtl/axi/axi_pkg.sv` resolves correctly
+regardless of where Quartus or the shell is invoked from.
+
+**Important:** `Path.relative_to()` only works when the target is under the base directory
+and raises `ValueError` otherwise. `os.path.relpath` handles cross-directory traversal
+and always returns a valid relative path.
 
 ## Built-in vs Project-local Packs
 

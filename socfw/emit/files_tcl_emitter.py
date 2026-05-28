@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from socfw.build.context import BuildContext
@@ -31,15 +32,7 @@ class FilesTclEmitter:
         cwd = Path.cwd().resolve()
 
         def _norm(p: str) -> str:
-            abs_p = Path(p).resolve()
-            try:
-                return str(abs_p.relative_to(base))
-            except ValueError:
-                pass
-            try:
-                return str(abs_p.relative_to(cwd))
-            except ValueError:
-                return str(abs_p)
+            return os.path.relpath(Path(p).resolve(), base)
 
         out = hal_dir / "files.tcl"
         lines: list[str] = []
@@ -82,13 +75,10 @@ class QuartusFilesEmitter:
     def emit(self, ctx: BuildContext, ir: FilesIR) -> list[GeneratedArtifact]:
         out = Path(ctx.out_dir) / "files.tcl"
         out.parent.mkdir(parents=True, exist_ok=True)
-        cwd = Path.cwd().resolve()
+        base = Path(ctx.project_dir).resolve() if hasattr(ctx, "project_dir") and ctx.project_dir else Path.cwd().resolve()
 
         def _norm(p: str) -> str:
-            try:
-                return str(Path(p).resolve().relative_to(cwd))
-            except ValueError:
-                return p
+            return os.path.relpath(Path(p).resolve(), base)
 
         lines: list[str] = []
         lines.append("# AUTO-GENERATED - DO NOT EDIT")
