@@ -1,6 +1,6 @@
 # ETH Test — stav projektu
 
-> Stav k: 2026-05-27
+> Stav k: 2026-05-28
 > Board: QMTech EP4CE55F23C8
 > PHY: Realtek RTL8211EG-VB-CG (GMII, 10/100/1000 Mbps)
 > Referencny projekt: `Project09_Test_Ethernet.zip` (ethernet_test.v, Quartus Classic)
@@ -17,7 +17,15 @@ Fázy:
 
 ---
 
-## Stav Faza 1 — DOKONCENA
+## Stav Faza 1 — DOKONCENA (sim kompletna, HW test caka)
+
+**Simulation:** Regression 7/7 PASS (commit `7c1e79c`, 2026-05-28).
+
+**HW test:** Vyžaduje prebudovanie bitfile v Quartus (crc.sv zmenený).
+Postup: IP adresy `192.168.0.2 → 192.168.0.3`, UDP port 8080.
+Nastaviť PC na `192.168.0.3/24`, spustiť `sudo tcpdump -i ethN -v ether host 00:0a:35:01:fe:c0`.
+
+---
 
 ### Generovane artefakty (po opravach)
 
@@ -105,12 +113,32 @@ Opravene:
 - `timing_config.yaml`: false paths pre ETH_TXD/TXEN/TXER (source-synchronous TX, analyza cez interni ETH_TX_CLK je pesimisticka; skutocna marga ~4.7 ns vs 2 ns spec)
 - `timing_config.yaml`: false paths pre ETH_RXD/RXDV/RXER (GLOBAL_SIGNAL GLOBAL_CLOCK pridava ~4.5 ns clock insertion delay, hold analyza je artifact, v HW je +0.87 ns marga)
 
+**10. crc.sv — oprava CRC-32/BZIP2 → CRC-32/ISO-HDLC (2026-05-28, root cause)**
+
+Koren priciny 0 zachytenych paketov v tcpdump: `crc.sv` implementoval CRC-32/BZIP2
+(nereflektovany polynom) namiesto CRC-32/ISO-HDLC (reflektovany polynom 0xEDB88320).
+
+Oprava: 32 riadkovych rovnic preprepísané pomocou transformácie ISO[p] = BZIP2[31-p]:
+`crc_o[k] → crc_o[31-k]`, `data_i[k] → data_i[7-k]`.
+Overenie: T4 golden vektor "123456789" → `~crc_o == 0xCBF43926` ✓
+
+Nové sim testy pridané do `sim/`:
+- `unit/tb_crc_smoke.sv`: T4 golden vektor
+- `integration/tb_ipsend_full_frame.sv`: T1-T10 kompletny TX ramec (74 bajtov)
+  - T9 CRC reziduum: `0xDEBB20E3` (reflektovaná konvencia; IEEE 802.3 MSB-first = `0xC704DD7B = BITREV32`)
+
 **9. ipsend.sv — pipelinovy checksum stage (2026-05-27)**
 
 Pricina: ST_MAKE stage 2 sumoval 4 × 32-bit hodnoty (8.35 ns > 8 ns @ 125 MHz).
 Pridany novy stage 2: `csum_part2_q = ip_header_q[4] words sum` (17-bit, fast).
 Stage 3 (byvaly stage 2) teraz sumuje 3 operandy (18+18+17 bit = ~6 ns, OK).
 ST_MAKE teraz 6 cyklov (bol 5). TB `tb_ipsend_static_packet.sv` aktualizovany.
+
+**Opravy CRC pipeline — FCS generovanie (2026-05-26..27):**
+
+- `udp.sv`: `.crc_i(crc_w)` → `.crc_i(crc_next_w)` — FCS zahrnoval chybajuci posledny bajt
+- `ipsend.sv` ST_SEND_CRC: FCS bajty LSB-first: `~crc[7:0], ~crc[15:8], ~crc[23:16], ~crc[31:24]`
+- Pridany `crc_hold_q` latch — drzi `crc_next_w` v prvom ST_SEND_CRC cykle
 
 **Vysledok Quartus kompilacie (Slow 1200mV 85C):**
 - ETH_TX_CLK setup: +0.397 ns ✓ (bol -3.951 ns)
@@ -161,6 +189,24 @@ python3 udp_echo_test.py --host 192.168.1.50 --sweep   # sweep velkosti 1..508 B
 | 0x24 | ERR_OVERFLOW | RO | 0 | Pretecenie buffera (saturating) |
 | 0x28–0x44 | (rezerva) | RO | 0 | Buduce citace |
 | 0x48 | CLEAR_COUNTERS | PULSE | — | Zapis 1 → reset vsetkych citacov |
+
+---
+
+## Simulation regression (7/7 PASS — 2026-05-28)
+
+```
+make regression   # z examples/eth_test/sim/
+```
+
+| Test | Typ | Popis | Stav |
+|------|-----|-------|------|
+| tb_crc_smoke | unit | T1-T4: reset, hold, zmena, golden "123456789" | PASS |
+| tb_ram_latency | unit | RAM read latencia (1 cyklus) | PASS |
+| tb_ipreceive_udp_frame | unit | UDP prijem, IP checksum | PASS |
+| tb_ipsend_static_packet | unit | Staticka IP hlavicka, 6-cyklovy ST_MAKE | PASS |
+| tb_udp_rx_path | integration | UDP RX cesta end-to-end | PASS |
+| tb_ethernet_test_top_smoke | integration | Top-level smoke test | PASS |
+| tb_ipsend_full_frame | integration | T1-T10: 74B TX ramec, FCS + CRC reziduum | PASS |
 
 ---
 
