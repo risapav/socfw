@@ -105,10 +105,10 @@ module ipsend (
           ip_header_q[1][31:16] <= ip_header_q[1][31:16] + 1'b1;
           ip_header_q[1][15:0]  <= 16'h4000;
           ip_header_q[2] <= 32'h80110000;   // TTL=128, Protokol=UDP, Checksum=0 (dočasně)
-//          ip_header_q[3] <= 32'hC0A81442; // Nová zdrojová IP: 192.168.20.66
-//          ip_header_q[4] <= 32'hC0A814EA; // Nová cieľová IP: 192.168.20.234
-          ip_header_q[3] <= 32'hC0A80002;   // zdrojová IP adresa: 192.168.0.2
-          ip_header_q[4] <= 32'hC0A80003;   // cieľová IP adresa: 192.168.0.3
+          ip_header_q[3] <= 32'hC0A81442; // Nová zdrojová IP: 192.168.20.66
+          ip_header_q[4] <= 32'hC0A814EA; // Nová cieľová IP: 192.168.20.234
+//          ip_header_q[3] <= 32'hC0A80002;   // zdrojová IP adresa: 192.168.0.2
+//          ip_header_q[4] <= 32'hC0A80003;   // cieľová IP adresa: 192.168.0.3
           ip_header_q[5] <= 32'h1F901F90;   // Zdrojový a cílový port: 8080 (0x1F90)
           ip_header_q[6] <= {tx_data_length_i, 16'h0000};
           state_q        <= ST_MAKE;

@@ -73,6 +73,20 @@ module tb_crc_smoke;
       $display("PASS T3 crc_o changed to: 0x%08x", crc_o);
     end
 
+    // -- T4: golden vector "123456789" -> FCS = 0xCBF43926 --
+    // Standard Ethernet CRC32 test vector (polynomial EDB88320, LSB-first)
+    $display("-- T4: CRC32 golden vector '123456789' --");
+    rst_ni = 1'b0;
+    @(posedge clk); #1;
+    rst_ni = 1'b1;
+    en_i   = 1'b1;
+    for (int c = 8'h31; c <= 8'h39; c++) begin
+      data_i = c[7:0];
+      @(posedge clk); #1;
+    end
+    en_i = 1'b0;
+    chk32("T4 FCS '123456789'", ~crc_o, 32'hCBF4_3926);
+
     if (fail_count == 0)
       $display("\n       ALL PASSED (0 failures)");
     else

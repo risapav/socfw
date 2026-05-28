@@ -38,7 +38,7 @@ ETH_TOP = \
 .PHONY: all unit integration regression report clean \
         tb_crc_smoke tb_ram_latency tb_ipreceive_udp_frame \
         tb_ipsend_static_packet tb_udp_rx_path \
-        tb_ethernet_test_top_smoke
+        tb_ethernet_test_top_smoke tb_ipsend_full_frame
 
 # -- Defaultny ciel ----------------------------------------------------------
 
@@ -46,7 +46,7 @@ all: unit integration
 
 unit: tb_crc_smoke tb_ram_latency tb_ipreceive_udp_frame tb_ipsend_static_packet
 
-integration: tb_udp_rx_path tb_ethernet_test_top_smoke
+integration: tb_udp_rx_path tb_ethernet_test_top_smoke tb_ipsend_full_frame
 
 $(LOGDIR):
 	mkdir -p $(LOGDIR)
@@ -102,6 +102,12 @@ tb_ethernet_test_top_smoke: $(LOGDIR)
 	$(VLOG) $(ETH_TOP) \
 	        integration/tb_ethernet_test_top_smoke.sv
 	$(VSIM) tb_ethernet_test_top_smoke | tee $(LOGDIR)/tb_ethernet_test_top_smoke.log
+
+tb_ipsend_full_frame: $(LOGDIR)
+	$(VLOG) $(RTL_ETH)/crc.sv \
+	        $(RTL_ETH)/ipsend.sv \
+	        integration/tb_ipsend_full_frame.sv
+	$(VSIM) tb_ipsend_full_frame | tee $(LOGDIR)/tb_ipsend_full_frame.log
 
 clean:
 	rm -rf work transcript *.log $(LOGDIR)
