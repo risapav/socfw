@@ -1,0 +1,117 @@
+version: 2
+kind: ip
+
+ip:
+  name: ethernet_test_echo
+  module: ethernet_test_echo
+  category: debug
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: eth_rx_clk_i
+  additional_input_ports: [sys_clk_i, eth_tx_clk_i]
+  outputs:
+    - port: eth_gtx_clk_o
+      kind: generated_clock
+      domain: eth_gtx_clk
+
+ports:
+  - name: rst_ni
+    direction: input
+    width: 1
+
+  - name: eth_rst_no
+    direction: output
+    width: 1
+
+  - name: eth_mdc_o
+    direction: output
+    width: 1
+
+  - name: eth_mdio_io
+    direction: inout
+    width: 1
+
+  - name: eth_rx_clk_i
+    direction: input
+    width: 1
+
+  - name: sys_clk_i
+    direction: input
+    width: 1
+
+  - name: eth_rx_dv_i
+    direction: input
+    width: 1
+
+  - name: eth_rx_data_i
+    direction: input
+    width: 8
+
+  - name: eth_rx_er_i
+    direction: input
+    width: 1
+
+  - name: eth_tx_clk_i
+    direction: input
+    width: 1
+
+  - name: eth_gtx_clk_o
+    direction: output
+    width: 1
+
+  - name: eth_tx_en_o
+    direction: output
+    width: 1
+
+  - name: eth_tx_er_o
+    direction: output
+    width: 1
+
+  - name: eth_tx_data_o
+    direction: output
+    width: 8
+
+  - name: status_led_o
+    direction: output
+    width: 4
+
+artifacts:
+  synthesis:
+    # Shared repo-level RTL
+    - ../../../rtl/axi/axi_pkg.sv
+    - ../../../rtl/axi/axi_interfaces.sv
+    - ../../../rtl/axil/axil_regfile.sv
+    - ../../../rtl/cdc/cdc_two_flop_synchronizer.sv
+    # ETH infrastructure (local copies)
+    - ../rtl/eth/crc.sv
+    - ../rtl/eth/ipsend.sv
+    - ../rtl/eth/ipreceive.sv
+    - ../rtl/eth/ram.sv
+    - ../rtl/eth/eth_status_leds.sv
+    - ../rtl/eth/udp_rx_ram_to_stream.sv
+    - ../rtl/eth/udp_tx_stream_to_ram.sv
+    # Echo peripheral
+    - ../rtl/eth_udp_echo_test.sv
+    # Top-level
+    - ../rtl/ethernet_test_echo.sv
+
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - ethernet_test_echo
