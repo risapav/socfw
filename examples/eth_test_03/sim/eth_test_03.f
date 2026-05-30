@@ -20,3 +20,8 @@
 ../rtl/eth/l4/udp_rx_meta_assembler.sv
 ../rtl/eth/l4/udp_echo_app.sv
 ../rtl/eth/l4/udp_ipv4_tx_builder.sv
+
+../rtl/eth/cdc/async_fifo.sv
+../rtl/eth/cdc/cdc_two_flop_synchronizer.sv
+../rtl/eth/util/eth_debug_leds.sv
+../rtl/eth/ethernet_test_03_top.sv
