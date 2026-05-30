@@ -4,7 +4,8 @@
  * @details Standard gray-code FIFO design (Cummings 2002).
  *   Write and read interfaces use valid/ready handshake.
  *   DEPTH must be a power of 2, minimum 4.
- *   Storage is a dual-port RAM: synchronous write (wr_clk), asynchronous read.
+ *   Storage uses synchronous write + registered FWFT output (M10K-compatible).
+ *   (* ramstyle = "no_rw_check" *) allows Quartus to infer block RAM.
  *
  * @param DATA_WIDTH  Width of each FIFO entry in bits.
  * @param DEPTH       Entry count; must be a power of 2 >= 4.
@@ -33,11 +34,10 @@ module async_fifo #(
   output      logic                  rd_valid_o,
   input  wire logic                  rd_ready_i
 );
-  // PTR_W = ADDR_W + 1; the extra MSB disambiguates full from empty.
   localparam int ADDR_W = $clog2(DEPTH);
   localparam int PTR_W  = ADDR_W + 1;
 
-  // Dual-port RAM (async read, sync write).
+  (* ramstyle = "no_rw_check" *)
   logic [DATA_WIDTH-1:0] mem [0:DEPTH-1];
 
   // Write-domain binary pointer + gray-coded version.
@@ -50,21 +50,23 @@ module async_fifo #(
   // Read-domain synced gray write pointer (2-FF synchronizer from wr domain).
   logic [PTR_W-1:0] wptr_gray_s1_q, wptr_gray_s2_q;
 
-  // Full (write domain): write pointer gray equals read pointer gray synced to
-  // write domain with top two bits inverted (Cummings 2002).
+  // FWFT output register: pre-fetched data from RAM.
+  logic [DATA_WIDTH-1:0] rd_data_q;
+  logic                  oq_valid_q;
+
+  // Full (write domain): Cummings 2002 gray-code full condition.
   logic full_w;
   assign full_w = (wptr_gray_q == {~rptr_gray_s2_q[PTR_W-1],
                                    ~rptr_gray_s2_q[PTR_W-2],
                                     rptr_gray_s2_q[PTR_W-3:0]});
 
-  // Empty (read domain): read pointer gray equals write pointer gray synced to
-  // read domain.
+  // Empty (read domain): read pointer gray equals synced write pointer gray.
   logic empty_w;
   assign empty_w = (rptr_gray_q == wptr_gray_s2_q);
 
   assign wr_ready_o = !full_w;
-  assign rd_valid_o = !empty_w;
-  assign rd_data_o  = mem[rptr_bin_q[ADDR_W-1:0]];
+  assign rd_data_o  = rd_data_q;
+  assign rd_valid_o = oq_valid_q;
 
   // ----- Write logic (wr_clk domain) -----
   always_ff @(posedge wr_clk_i or negedge wr_rst_ni) begin
@@ -89,14 +91,26 @@ module async_fifo #(
     end
   end
 
-  // ----- Read logic (rd_clk domain) -----
+  // ----- Read logic (rd_clk domain) — FWFT with registered output -----
+  // Fetch from RAM when output register is empty or consumer is taking data.
+  logic do_rd_w;
+  assign do_rd_w = !empty_w && (!oq_valid_q || rd_ready_i);
+
   always_ff @(posedge rd_clk_i or negedge rd_rst_ni) begin
     if (!rd_rst_ni) begin
       rptr_bin_q  <= '0;
       rptr_gray_q <= '0;
-    end else if (!empty_w && rd_ready_i) begin
-      rptr_bin_q  <= rptr_bin_q + PTR_W'(1);
-      rptr_gray_q <= (rptr_bin_q + PTR_W'(1)) ^ ((rptr_bin_q + PTR_W'(1)) >> 1);
+      rd_data_q   <= '0;
+      oq_valid_q  <= 1'b0;
+    end else begin
+      if (do_rd_w) begin
+        rd_data_q   <= mem[rptr_bin_q[ADDR_W-1:0]];
+        rptr_bin_q  <= rptr_bin_q + PTR_W'(1);
+        rptr_gray_q <= (rptr_bin_q + PTR_W'(1)) ^ ((rptr_bin_q + PTR_W'(1)) >> 1);
+        oq_valid_q  <= 1'b1;
+      end else if (rd_ready_i) begin
+        oq_valid_q  <= 1'b0;
+      end
     end
   end
 
