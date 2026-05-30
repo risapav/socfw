@@ -25,6 +25,8 @@
 
 `default_nettype none
 
+import eth_pkg::*;
+
 module ethernet_test_03_top #(
   parameter logic [47:0] LOCAL_MAC      = 48'h000A3501FEC0,
   parameter logic [31:0] LOCAL_IP       = 32'hC0A81432,
@@ -103,11 +105,11 @@ module ethernet_test_03_top #(
 
   // Meta assembler -> echo app
   logic                      rx_meta_valid, rx_meta_ready;
-  eth_pkg::udp_packet_meta_t rx_meta;
+  udp_packet_meta_t rx_meta;
 
   // Echo app -> TX builder
   logic                      tx_meta_valid, tx_meta_ready;
-  eth_pkg::udp_packet_meta_t tx_meta;
+  udp_packet_meta_t tx_meta;
   logic [7:0]  echo_tdata;
   logic        echo_tvalid, echo_tready, echo_tlast;
 

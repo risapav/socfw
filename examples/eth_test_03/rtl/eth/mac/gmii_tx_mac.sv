@@ -78,9 +78,9 @@ module gmii_tx_mac #(
     state_d       = state_q;
     s_axis_tready = 1'b0;
     fcs_clear     = (state_q == ST_IDLE);
-    fcs_en        = (state_q inside {ST_ETH_HEADER, ST_PAYLOAD, ST_PADDING});
-    gmii_tx_en_o  = (state_q inside {ST_PREAMBLE, ST_SFD, ST_ETH_HEADER,
-                                      ST_PAYLOAD, ST_PADDING, ST_FCS});
+    fcs_en        = (state_q == ST_ETH_HEADER) || (state_q == ST_PAYLOAD) ||
+                    (state_q == ST_PADDING);
+    gmii_tx_en_o  = (state_q != ST_IDLE) && (state_q != ST_IFG);
     gmii_txd_o    = 8'h00;
 
     case (state_q)

@@ -30,6 +30,8 @@
 
 `default_nettype none
 
+import eth_pkg::*;
+
 module udp_rx_meta_assembler (
   input  wire logic        clk_i,
   input  wire logic        rst_ni,
@@ -45,11 +47,11 @@ module udp_rx_meta_assembler (
 
   output      logic        rx_meta_valid_o,
   input  wire logic        rx_meta_ready_i,
-  output      eth_pkg::udp_packet_meta_t rx_meta_o
+  output      udp_packet_meta_t rx_meta_o
 );
 
   logic valid_q;
-  eth_pkg::udp_packet_meta_t meta_q;
+  udp_packet_meta_t meta_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin

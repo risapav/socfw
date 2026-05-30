@@ -14,12 +14,13 @@
 
 module tb_udp_ipv4_tx_builder;
   import tb_eth_pkg::*;
+  import eth_pkg::*;
 
   logic clk   = 1'b0;
   logic rst_n = 1'b0;
   always #4 clk = ~clk;
 
-  eth_pkg::udp_packet_meta_t tx_meta_s;
+  udp_packet_meta_t tx_meta_s;
   logic        tx_meta_valid;
   logic        tx_meta_ready;
 
@@ -75,7 +76,7 @@ module tb_udp_ipv4_tx_builder;
   // Drive one full packet and collect all m_axis output bytes.
   // Handshake check is done at posedge BEFORE #1 so tx_meta_ready is seen before NBA.
   task automatic run_packet(
-    input  eth_pkg::udp_packet_meta_t meta,
+    input  udp_packet_meta_t meta,
     input  logic [7:0] payload[$],
     output logic [7:0] cap[$],
     output logic       tlast_seen
@@ -140,7 +141,7 @@ module tb_udp_ipv4_tx_builder;
 
     // ===== T1: "HELLO" payload, 192.168.1.2 -> 192.168.1.1 =====
     begin
-      eth_pkg::udp_packet_meta_t meta;
+      udp_packet_meta_t meta;
       logic [7:0]  pl[$], cap[$];
       logic        tlast;
       logic [15:0] csum;
@@ -240,7 +241,7 @@ module tb_udp_ipv4_tx_builder;
 
     // ===== T2: 3-byte payload, 10.0.0.1 -> 10.0.0.2 =====
     begin
-      eth_pkg::udp_packet_meta_t meta;
+      udp_packet_meta_t meta;
       logic [7:0]  pl[$], cap[$];
       logic        tlast;
       logic [15:0] csum;
@@ -293,7 +294,7 @@ module tb_udp_ipv4_tx_builder;
 
     // ===== T3: Back-to-back, 1-byte payload (FSM recovery test) =====
     begin
-      eth_pkg::udp_packet_meta_t meta;
+      udp_packet_meta_t meta;
       logic [7:0]  pl[$], cap[$];
       logic        tlast;
 

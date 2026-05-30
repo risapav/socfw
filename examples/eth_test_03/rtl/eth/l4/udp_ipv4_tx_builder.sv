@@ -23,13 +23,15 @@
 
 `default_nettype none
 
+import eth_pkg::*;
+
 module udp_ipv4_tx_builder (
   input  wire logic        clk_i,
   input  wire logic        rst_ni,
 
   input  wire logic        tx_meta_valid_i,
   output      logic        tx_meta_ready_o,
-  input  wire eth_pkg::udp_packet_meta_t tx_meta_i,
+  input  wire udp_packet_meta_t tx_meta_i,
 
   input  wire logic [7:0]  s_axis_tdata,
   input  wire logic        s_axis_tvalid,
@@ -52,7 +54,7 @@ module udp_ipv4_tx_builder (
 
   state_e                    state_q;
   logic [4:0]                hdr_cnt_q;
-  eth_pkg::udp_packet_meta_t tx_meta_q;
+  udp_packet_meta_t tx_meta_q;
   logic [15:0]               total_len_q;
   logic [15:0]               udp_len_q;
 

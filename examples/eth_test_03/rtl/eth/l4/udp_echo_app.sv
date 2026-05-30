@@ -18,6 +18,8 @@
 
 `default_nettype none
 
+import eth_pkg::*;
+
 module udp_echo_app #(
   parameter int MAX_PAYLOAD_BYTES = 1500
 )(
@@ -26,7 +28,7 @@ module udp_echo_app #(
 
   input  wire logic        rx_meta_valid_i,
   output      logic        rx_meta_ready_o,
-  input  wire eth_pkg::udp_packet_meta_t rx_meta_i,
+  input  wire udp_packet_meta_t rx_meta_i,
 
   input  wire logic [7:0]  s_axis_tdata,
   input  wire logic        s_axis_tvalid,
@@ -35,7 +37,7 @@ module udp_echo_app #(
 
   output      logic        tx_meta_valid_o,
   input  wire logic        tx_meta_ready_i,
-  output      eth_pkg::udp_packet_meta_t tx_meta_o,
+  output      udp_packet_meta_t tx_meta_o,
 
   output      logic [7:0]  m_axis_tdata,
   output      logic        m_axis_tvalid,
@@ -56,7 +58,7 @@ module udp_echo_app #(
   logic [PTR_W-1:0]              write_ptr_q;
   logic [PTR_W-1:0]              read_ptr_q;
   logic [7:0]                    mem [0:MAX_PAYLOAD_BYTES-1];
-  eth_pkg::udp_packet_meta_t     rx_meta_q;
+  udp_packet_meta_t     rx_meta_q;
 
   wire last_read_w = (read_ptr_q == PTR_W'(rx_meta_q.payload_len) - {{(PTR_W-1){1'b0}}, 1'b1});
 

@@ -15,6 +15,8 @@
 
 `default_nettype none
 
+import eth_pkg::*;
+
 module eth_header_parser (
   input  wire logic        clk_i,
   input  wire logic        rst_ni,
@@ -51,14 +53,14 @@ module eth_header_parser (
   state_e state_q;
 
   logic [3:0]           byte_cnt;
-  eth_pkg::eth_hdr_t    header_reg;
+  eth_hdr_t    header_reg;
 
   // Drop decision: computed from fully-registered dst_mac (valid when byte_cnt==13)
   logic drop_decision_w;
   assign drop_decision_w = !promiscuous_i &&
                            (header_reg.dst_mac != local_mac_i) &&
                            !(accept_broadcast_i &&
-                             (header_reg.dst_mac == eth_pkg::ETH_BROADCAST_MAC));
+                             (header_reg.dst_mac == ETH_BROADCAST_MAC));
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
