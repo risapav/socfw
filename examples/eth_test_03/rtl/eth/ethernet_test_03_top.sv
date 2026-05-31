@@ -83,6 +83,16 @@ module ethernet_test_03_top #(
   // RX CLOCK DOMAIN
   // ===========================================================================
 
+  // Layer debug signals (ETH_RXC domain)
+  logic mac_frame_done_w;
+  logic eth_hdr_valid_w;
+  logic ipv4_hdr_valid_w;
+
+  // MAC debug pulse signals (ETH_RXC domain, 1-cycle)
+  logic mac_hdr_done_w;
+  logic mac_accept_pulse_w;
+  logic mac_drop_pulse_w;
+
   // MAC -> L2
   logic [7:0]  mac_tdata;
   logic        mac_tvalid, mac_tready, mac_tlast, mac_tuser;
@@ -119,8 +129,7 @@ module ethernet_test_03_top #(
 
   // --- GMII RX MAC ---
   gmii_rx_mac #(
-    .EXPECT_PREAMBLE  (EXPECT_PREAMBLE),
-    .ALLOW_NO_PREAMBLE(1'b1)
+    .EXPECT_PREAMBLE(EXPECT_PREAMBLE)
   ) u_mac (
     .clk_i        (eth_rx_clk_i),
     .rst_ni       (rst_ni),
@@ -132,7 +141,7 @@ module ethernet_test_03_top #(
     .m_axis_tready(mac_tready),
     .m_axis_tlast (mac_tlast),
     .m_axis_tuser (mac_tuser),
-    .frame_done_o ()
+    .frame_done_o (mac_frame_done_w)
   );
 
   // --- Ethernet Header Parser (L2) ---
@@ -155,8 +164,13 @@ module ethernet_test_03_top #(
     .rx_dst_mac_o      (eth_dst_mac),
     .rx_src_mac_o      (eth_src_mac),
     .rx_ethertype_o    (),
-    .hdr_valid_o       (),
-    .drop_o            ()
+    .hdr_valid_o       (eth_hdr_valid_w),
+    .drop_o            (),
+    .hdr_done_pulse_o  (mac_hdr_done_w),
+    .hdr_accept_pulse_o(mac_accept_pulse_w),
+    .hdr_drop_pulse_o  (mac_drop_pulse_w),
+    .dbg_dst_mac_o     (),
+    .dbg_mac_accept_o  ()
   );
 
   // --- IPv4 Header Parser (L3) ---
@@ -175,7 +189,7 @@ module ethernet_test_03_top #(
     .src_ip_o     (ip_src),
     .dst_ip_o     (ip_dst),
     .protocol_o   (),
-    .hdr_valid_o  ()
+    .hdr_valid_o  (ipv4_hdr_valid_w)
   );
 
   // --- UDP Header Parser (L4) ---
@@ -183,7 +197,7 @@ module ethernet_test_03_top #(
     .clk_i                   (eth_rx_clk_i),
     .rst_ni                  (rst_ni),
     .local_port_i            (UDP_PORT),
-    .promiscuous_i           (1'b0),
+    .promiscuous_i           (1'b1),
     .s_axis_tdata            (ip_tdata),
     .s_axis_tvalid           (ip_tvalid),
     .s_axis_tready           (ip_tready),
@@ -305,8 +319,23 @@ module ethernet_test_03_top #(
     end
   end
 
-  logic meta_wr_valid, meta_wr_ready;
-  assign meta_wr_valid = txb_tvalid && pkt_wr_ready && txb_tlast;
+  // Registered stage before meta FIFO write -- cuts FF->RAM critical path
+  logic [95:0] meta_wr_data_q;
+  logic        meta_wr_valid_q;
+  logic        meta_wr_ready;
+
+  always_ff @(posedge eth_rx_clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      meta_wr_data_q  <= '0;
+      meta_wr_valid_q <= 1'b0;
+    end else begin
+      meta_wr_valid_q <= 1'b0;
+      if (txb_tvalid && pkt_wr_ready && txb_tlast && meta_wr_ready) begin
+        meta_wr_data_q  <= {meta_latch_dst_q, meta_latch_src_q};
+        meta_wr_valid_q <= 1'b1;
+      end
+    end
+  end
 
   logic [95:0] meta_rd_data;
   logic        meta_rd_valid, meta_rd_ready;
@@ -317,8 +346,8 @@ module ethernet_test_03_top #(
   ) u_meta_fifo (
     .wr_clk_i  (eth_rx_clk_i),
     .wr_rst_ni (rst_ni),
-    .wr_data_i ({meta_latch_dst_q, meta_latch_src_q}),
-    .wr_valid_i(meta_wr_valid),
+    .wr_data_i (meta_wr_data_q),
+    .wr_valid_i(meta_wr_valid_q),
     .wr_ready_o(meta_wr_ready),
     .rd_clk_i  (eth_tx_clk_i),
     .rd_rst_ni (rst_ni),
@@ -400,18 +429,26 @@ module ethernet_test_03_top #(
   eth_debug_leds #(
     .SYS_CLK_HZ    (SYS_CLK_HZ),
     .ACTIVITY_MS   (150),
-    .LED_ACTIVE_LOW(1'b0)
+    .LED_ACTIVE_LOW(1'b1),
+    .LAYER_DEBUG   (1'b0),
+    .MAC_DEBUG     (1'b1)
   ) u_leds (
-    .sys_clk_i      (sys_clk_i),
-    .eth_rx_clk_i   (eth_rx_clk_i),
-    .eth_tx_clk_i   (eth_tx_clk_i),
-    .rst_ni         (rst_ni),
-    .phy_reset_done_i(phy_rst_done_w),
-    .rx_dv_i        (eth_rxdv_i),
-    .udp_accept_i   (rx_meta_valid),
-    .tx_active_i    (tx_mac_busy_w),
-    .tx_en_i        (eth_txen_o),
-    .led_o          (led_o)
+    .sys_clk_i           (sys_clk_i),
+    .eth_rx_clk_i        (eth_rx_clk_i),
+    .eth_tx_clk_i        (eth_tx_clk_i),
+    .rst_ni              (rst_ni),
+    .phy_reset_done_i    (phy_rst_done_w),
+    .rx_dv_i             (eth_rxdv_i),
+    .udp_accept_i        (rx_meta_valid),
+    .tx_active_i         (tx_mac_busy_w),
+    .tx_en_i             (eth_txen_o),
+    .layer_frame_done_i  (mac_frame_done_w),
+    .layer_eth_hdr_i     (eth_hdr_valid_w),
+    .layer_ipv4_hdr_i    (ipv4_hdr_valid_w),
+    .mac_hdr_done_i      (mac_hdr_done_w),
+    .mac_accept_i        (mac_accept_pulse_w),
+    .mac_drop_i          (mac_drop_pulse_w),
+    .led_o               (led_o)
   );
 
 endmodule

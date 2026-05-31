@@ -2,10 +2,13 @@
  * @file eth_header_parser.sv
  * @brief Parses Ethernet header, filters by MAC, forwards payload via AXI-Stream.
  * @details FSM states:
- *   ST_HEADER — collects 14 header bytes (s_axis_tready=1, no downstream stall).
- *   ST_PAYLOAD — forwards payload bytes with backpressure (s_axis_tready=m_axis_tready).
- *   ST_DROP — consumes frame bytes without forwarding (s_axis_tready=1, no downstream stall).
- * Drop decision is evaluated from the fully-registered dst_mac when byte 13 arrives.
+ *   ST_HEADER  -- collects 14 header bytes (s_axis_tready=1, no downstream stall).
+ *   ST_PAYLOAD -- forwards payload bytes with backpressure (s_axis_tready=m_axis_tready).
+ *   ST_DROP    -- consumes frame bytes without forwarding (s_axis_tready=1).
+ * MAC accept decision uses explicit dst_mac_q / mac_accept_q registers (no packed struct)
+ * to avoid Quartus Lite packed-struct member comparison synthesis issue.
+ * mac_accept_q is registered at byte 5 from combinatorial dst_mac_complete_w;
+ * state transition at byte 13 uses only the pre-registered mac_accept_q.
  * Short frames (tlast before byte 13) are discarded: FSM resets to ST_HEADER.
  * @param None
  */
@@ -41,7 +44,16 @@ module eth_header_parser (
   output      logic [47:0] rx_src_mac_o,
   output      logic [15:0] rx_ethertype_o,
   output      logic        hdr_valid_o,
-  output      logic        drop_o
+  output      logic        drop_o,
+
+  // 1-cycle registered pulses fired when header decision is made (byte 13)
+  output      logic        hdr_done_pulse_o,
+  output      logic        hdr_accept_pulse_o,
+  output      logic        hdr_drop_pulse_o,
+
+  // First-frame capture (latched after reset) for HW debug
+  output      logic [47:0] dbg_dst_mac_o,
+  output      logic        dbg_mac_accept_o
 );
 
   typedef enum logic [1:0] {
@@ -50,72 +62,101 @@ module eth_header_parser (
     ST_DROP    = 2'd2
   } state_e;
 
-  state_e state_q;
+  state_e      state_q;
+  logic [3:0]  byte_cnt_q;
 
-  logic [3:0]           byte_cnt;
-  eth_hdr_t    header_reg;
+  logic [47:0] dst_mac_q;
+  logic [47:0] src_mac_q;
+  logic [15:0] ethertype_q;
+  logic        mac_accept_q;
 
-  // Drop decision: computed from fully-registered dst_mac (valid when byte_cnt==13)
-  logic drop_decision_w;
-  assign drop_decision_w = !promiscuous_i &&
-                           (header_reg.dst_mac != local_mac_i) &&
-                           !(accept_broadcast_i &&
-                             (header_reg.dst_mac == ETH_BROADCAST_MAC));
+  // Combinatorial complete dst_mac when byte 5 arrives — avoids packed-struct on critical path
+  logic [47:0] dst_mac_complete_w;
+  assign dst_mac_complete_w = {dst_mac_q[47:8], s_axis_tdata};
+
+  logic dbg_locked_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
-      state_q    <= ST_HEADER;
-      byte_cnt   <= 4'd0;
-      header_reg <= '0;
+      state_q            <= ST_HEADER;
+      byte_cnt_q         <= 4'd0;
+      dst_mac_q          <= '0;
+      src_mac_q          <= '0;
+      ethertype_q        <= '0;
+      mac_accept_q       <= 1'b0;
+      hdr_done_pulse_o   <= 1'b0;
+      hdr_accept_pulse_o <= 1'b0;
+      hdr_drop_pulse_o   <= 1'b0;
+      dbg_locked_q       <= 1'b0;
+      dbg_dst_mac_o      <= '0;
+      dbg_mac_accept_o   <= 1'b0;
     end else begin
+      hdr_done_pulse_o   <= 1'b0;
+      hdr_accept_pulse_o <= 1'b0;
+      hdr_drop_pulse_o   <= 1'b0;
+
       case (state_q)
 
         ST_HEADER: begin
-          // s_axis_tready=1 here; consume unconditionally when tvalid
           if (s_axis_tvalid) begin
             if (s_axis_tlast) begin
-              // Short frame (< 14 bytes) — discard and reset
-              byte_cnt   <= 4'd0;
-              header_reg <= '0;
+              // Short frame before byte 13 -- discard, reset
+              byte_cnt_q  <= 4'd0;
+              dst_mac_q   <= '0;
+              src_mac_q   <= '0;
+              ethertype_q <= '0;
             end else begin
-              case (byte_cnt)
-                4'd0:  header_reg.dst_mac[47:40] <= s_axis_tdata;
-                4'd1:  header_reg.dst_mac[39:32] <= s_axis_tdata;
-                4'd2:  header_reg.dst_mac[31:24] <= s_axis_tdata;
-                4'd3:  header_reg.dst_mac[23:16] <= s_axis_tdata;
-                4'd4:  header_reg.dst_mac[15:8]  <= s_axis_tdata;
-                4'd5:  header_reg.dst_mac[7:0]   <= s_axis_tdata;
-                4'd6:  header_reg.src_mac[47:40] <= s_axis_tdata;
-                4'd7:  header_reg.src_mac[39:32] <= s_axis_tdata;
-                4'd8:  header_reg.src_mac[31:24] <= s_axis_tdata;
-                4'd9:  header_reg.src_mac[23:16] <= s_axis_tdata;
-                4'd10: header_reg.src_mac[15:8]  <= s_axis_tdata;
-                4'd11: header_reg.src_mac[7:0]   <= s_axis_tdata;
-                4'd12: header_reg.ethertype[15:8] <= s_axis_tdata;
+              byte_cnt_q <= byte_cnt_q + 4'd1;
+              case (byte_cnt_q)
+                4'd0:  dst_mac_q[47:40] <= s_axis_tdata;
+                4'd1:  dst_mac_q[39:32] <= s_axis_tdata;
+                4'd2:  dst_mac_q[31:24] <= s_axis_tdata;
+                4'd3:  dst_mac_q[23:16] <= s_axis_tdata;
+                4'd4:  dst_mac_q[15:8]  <= s_axis_tdata;
+                4'd5: begin
+                  dst_mac_q[7:0] <= s_axis_tdata;
+                  // Register accept decision from combinatorial dst_mac_complete_w
+                  mac_accept_q   <= promiscuous_i ||
+                                    (dst_mac_complete_w == local_mac_i) ||
+                                    (accept_broadcast_i &&
+                                     (dst_mac_complete_w == ETH_BROADCAST_MAC));
+                end
+                4'd6:  src_mac_q[47:40] <= s_axis_tdata;
+                4'd7:  src_mac_q[39:32] <= s_axis_tdata;
+                4'd8:  src_mac_q[31:24] <= s_axis_tdata;
+                4'd9:  src_mac_q[23:16] <= s_axis_tdata;
+                4'd10: src_mac_q[15:8]  <= s_axis_tdata;
+                4'd11: src_mac_q[7:0]   <= s_axis_tdata;
+                4'd12: ethertype_q[15:8] <= s_axis_tdata;
                 4'd13: begin
-                  header_reg.ethertype[7:0] <= s_axis_tdata;
-                  state_q <= drop_decision_w ? ST_DROP : ST_PAYLOAD;
+                  ethertype_q[7:0]   <= s_axis_tdata;
+                  hdr_done_pulse_o   <= 1'b1;
+                  hdr_accept_pulse_o <= mac_accept_q;
+                  hdr_drop_pulse_o   <= !mac_accept_q;
+                  state_q            <= mac_accept_q ? ST_PAYLOAD : ST_DROP;
+                  if (!dbg_locked_q) begin
+                    dbg_locked_q     <= 1'b1;
+                    dbg_dst_mac_o    <= dst_mac_q;
+                    dbg_mac_accept_o <= mac_accept_q;
+                  end
                 end
                 default: ;
               endcase
-              byte_cnt <= byte_cnt + 4'd1;
             end
           end
         end
 
         ST_PAYLOAD: begin
-          // s_axis_tready=m_axis_tready here
           if (s_axis_tvalid && m_axis_tready && s_axis_tlast) begin
-            state_q  <= ST_HEADER;
-            byte_cnt <= 4'd0;
+            state_q    <= ST_HEADER;
+            byte_cnt_q <= 4'd0;
           end
         end
 
         ST_DROP: begin
-          // s_axis_tready=1 here; consume without forwarding
           if (s_axis_tvalid && s_axis_tlast) begin
-            state_q  <= ST_HEADER;
-            byte_cnt <= 4'd0;
+            state_q    <= ST_HEADER;
+            byte_cnt_q <= 4'd0;
           end
         end
 
@@ -125,7 +166,6 @@ module eth_header_parser (
     end
   end
 
-  // Stream routing: ST_PAYLOAD forwards with backpressure; all other states accept freely
   assign s_axis_tready = (state_q == ST_PAYLOAD) ? m_axis_tready : 1'b1;
 
   assign m_axis_tdata  = s_axis_tdata;
@@ -133,10 +173,9 @@ module eth_header_parser (
   assign m_axis_tlast  = s_axis_tlast;
   assign m_axis_tuser  = s_axis_tuser;
 
-  // Header outputs (valid and stable once state_q == ST_PAYLOAD)
-  assign rx_dst_mac_o   = header_reg.dst_mac;
-  assign rx_src_mac_o   = header_reg.src_mac;
-  assign rx_ethertype_o = header_reg.ethertype;
+  assign rx_dst_mac_o   = dst_mac_q;
+  assign rx_src_mac_o   = src_mac_q;
+  assign rx_ethertype_o = ethertype_q;
   assign hdr_valid_o    = (state_q == ST_PAYLOAD);
   assign drop_o         = (state_q == ST_DROP);
 

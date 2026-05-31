@@ -38,6 +38,12 @@ module tb_eth_header_parser;
   logic        hdr_valid;
   logic        drop;
 
+  logic        hdr_done_pulse;
+  logic        hdr_accept_pulse;
+  logic        hdr_drop_pulse;
+  logic [47:0] dbg_dst_mac;
+  logic        dbg_mac_accept;
+
   always #4 clk = ~clk;
 
   eth_header_parser dut (
@@ -48,13 +54,19 @@ module tb_eth_header_parser;
     .m_axis_tdata(m_tdata), .m_axis_tvalid(m_tvalid), .m_axis_tready(m_tready),
     .m_axis_tlast(m_tlast), .m_axis_tuser(m_tuser),
     .rx_dst_mac_o(rx_dst_mac), .rx_src_mac_o(rx_src_mac), .rx_ethertype_o(rx_ethertype),
-    .hdr_valid_o(hdr_valid), .drop_o(drop)
+    .hdr_valid_o(hdr_valid), .drop_o(drop),
+    .hdr_done_pulse_o  (hdr_done_pulse),
+    .hdr_accept_pulse_o(hdr_accept_pulse),
+    .hdr_drop_pulse_o  (hdr_drop_pulse),
+    .dbg_dst_mac_o     (dbg_dst_mac),
+    .dbg_mac_accept_o  (dbg_mac_accept)
   );
 
   // Pre-NBA capture — sample DUT outputs before state_q NBA
   logic        m_tvalid_cap, m_tlast_cap, hdr_valid_cap, drop_cap;
   logic [7:0]  m_tdata_cap;
   logic        s_tready_cap;
+  logic        hdr_acc_cap, hdr_drp_cap;
   always @(posedge clk) begin
     m_tvalid_cap  = m_tvalid;
     m_tlast_cap   = m_tlast;
@@ -62,6 +74,8 @@ module tb_eth_header_parser;
     hdr_valid_cap = hdr_valid;
     drop_cap      = drop;
     s_tready_cap  = s_tready;
+    hdr_acc_cap   = hdr_accept_pulse;
+    hdr_drp_cap   = hdr_drop_pulse;
   end
 
   int fails = 0;
@@ -87,15 +101,19 @@ module tb_eth_header_parser;
     output logic [7:0]  cap[$],
     output logic        hdr_valid_seen,
     output logic        drop_seen,
-    output logic        tlast_seen
+    output logic        tlast_seen,
+    output logic        hdr_acc_seen,
+    output logic        hdr_drp_seen
   );
     logic [7:0] hdr[14];
     int total;
 
-    cap           = {};
+    cap            = {};
     hdr_valid_seen = 1'b0;
     drop_seen      = 1'b0;
     tlast_seen     = 1'b0;
+    hdr_acc_seen   = 1'b0;
+    hdr_drp_seen   = 1'b0;
 
     build_eth_hdr(dst_mac, SRC_MAC, ETYPE, hdr);
     total = 14 + payload.size();
@@ -116,6 +134,8 @@ module tb_eth_header_parser;
       end
       if (hdr_valid_cap) hdr_valid_seen = 1'b1;
       if (drop_cap)      drop_seen      = 1'b1;
+      if (hdr_acc_cap)   hdr_acc_seen   = 1'b1;
+      if (hdr_drp_cap)   hdr_drp_seen   = 1'b1;
     end
 
     @(negedge clk);
@@ -129,6 +149,8 @@ module tb_eth_header_parser;
         cap.push_back(m_tdata_cap);
         if (m_tlast_cap) tlast_seen = 1'b1;
       end
+      if (hdr_acc_cap) hdr_acc_seen = 1'b1;
+      if (hdr_drp_cap) hdr_drp_seen = 1'b1;
     end
   endtask
 
@@ -168,11 +190,11 @@ module tb_eth_header_parser;
     // ===== T1: matching dst_mac — forwarded =====
     begin
       logic [7:0]  pl[$], cap[$];
-      logic        hdr_seen, drop_seen, tlast_seen;
+      logic        hdr_seen, drop_seen, tlast_seen, acc_seen, drp_seen;
 
       for (int i = 0; i < 5; i++) pl.push_back(8'(8'hA0 + i)); // A0..A4
 
-      send_frame(LOCAL_MAC, pl, 1'b1, cap, hdr_seen, drop_seen, tlast_seen);
+      send_frame(LOCAL_MAC, pl, 1'b1, cap, hdr_seen, drop_seen, tlast_seen, acc_seen, drp_seen);
 
       if (!hdr_seen) begin
         $error("T1 FAIL: hdr_valid never asserted"); fails++;
@@ -197,6 +219,14 @@ module tb_eth_header_parser;
         end
       end
       if (fails == 0) $display("T1e PASS: payload bytes match");
+
+      if (!acc_seen) begin
+        $error("T1 FAIL: hdr_accept_pulse never fired"); fails++;
+      end else $display("T1f PASS: hdr_accept_pulse fired");
+
+      if (drp_seen) begin
+        $error("T1 FAIL: hdr_drop_pulse fired for matching MAC"); fails++;
+      end else $display("T1g PASS: hdr_drop_pulse=0 for matching MAC");
     end
 
     clk_wait(4);
@@ -204,10 +234,10 @@ module tb_eth_header_parser;
     // ===== T2: broadcast dst_mac — forwarded =====
     begin
       logic [7:0]  pl[$], cap[$];
-      logic        hdr_seen, drop_seen, tlast_seen;
+      logic        hdr_seen, drop_seen, tlast_seen, acc_seen, drp_seen;
 
       pl.push_back(8'hBB);
-      send_frame(BCAST_MAC, pl, 1'b1, cap, hdr_seen, drop_seen, tlast_seen);
+      send_frame(BCAST_MAC, pl, 1'b1, cap, hdr_seen, drop_seen, tlast_seen, acc_seen, drp_seen);
 
       if (drop_seen) begin
         $error("T2 FAIL: drop_o asserted for broadcast"); fails++;
@@ -223,12 +253,12 @@ module tb_eth_header_parser;
     // ===== T3: mismatched dst_mac — dropped, downstream not stalled =====
     begin
       logic [7:0]  pl[$], cap[$];
-      logic        hdr_seen, drop_seen, tlast_seen;
+      logic        hdr_seen, drop_seen, tlast_seen, acc_seen, drp_seen;
 
       for (int i = 0; i < 5; i++) pl.push_back(8'(8'hC0 + i));
 
       // m_tready=0 to verify ST_DROP doesn't stall
-      send_frame(OTHER_MAC, pl, 1'b0, cap, hdr_seen, drop_seen, tlast_seen);
+      send_frame(OTHER_MAC, pl, 1'b0, cap, hdr_seen, drop_seen, tlast_seen, acc_seen, drp_seen);
 
       if (!drop_seen) begin
         $error("T3 FAIL: drop_o never asserted for mismatch MAC"); fails++;
@@ -244,6 +274,14 @@ module tb_eth_header_parser;
         $error("T3 FAIL: FSM stuck after drop (hdr_valid=%0b drop=%0b)", hdr_valid, drop);
         fails++;
       end else $display("T3c PASS: FSM reset after drop");
+
+      if (!drp_seen) begin
+        $error("T3 FAIL: hdr_drop_pulse never fired for mismatch MAC"); fails++;
+      end else $display("T3d PASS: hdr_drop_pulse fired for mismatch MAC");
+
+      if (acc_seen) begin
+        $error("T3 FAIL: hdr_accept_pulse fired for mismatch MAC"); fails++;
+      end else $display("T3e PASS: hdr_accept_pulse=0 for mismatch MAC");
     end
 
     clk_wait(4);
@@ -260,10 +298,10 @@ module tb_eth_header_parser;
       // After reset, send a valid frame and verify it parses correctly
       begin
         logic [7:0]  pl[$], cap[$];
-        logic        hdr_seen, drop_seen, tlast_seen;
+        logic        hdr_seen, drop_seen, tlast_seen, acc_seen, drp_seen;
 
         pl.push_back(8'hD1);
-        send_frame(LOCAL_MAC, pl, 1'b1, cap, hdr_seen, drop_seen, tlast_seen);
+        send_frame(LOCAL_MAC, pl, 1'b1, cap, hdr_seen, drop_seen, tlast_seen, acc_seen, drp_seen);
 
         if (!hdr_seen || drop_seen || cap.size() !== 1) begin
           $error("T4 FAIL: frame after short-frame not parsed correctly (hdr=%0b drop=%0b cap=%0d)",
@@ -278,13 +316,14 @@ module tb_eth_header_parser;
     // ===== T5: back-to-back frames — both parsed correctly =====
     begin
       logic [7:0] pl1[$], pl2[$], cap1[$], cap2[$];
-      logic hdr1, drop1, tlast1, hdr2, drop2, tlast2;
+      logic hdr1, drop1, tlast1, acc1, drp1;
+      logic hdr2, drop2, tlast2, acc2, drp2;
 
       pl1.push_back(8'hE1); pl1.push_back(8'hE2);
       pl2.push_back(8'hF1); pl2.push_back(8'hF2); pl2.push_back(8'hF3);
 
-      send_frame(LOCAL_MAC, pl1, 1'b1, cap1, hdr1, drop1, tlast1);
-      send_frame(LOCAL_MAC, pl2, 1'b1, cap2, hdr2, drop2, tlast2);
+      send_frame(LOCAL_MAC, pl1, 1'b1, cap1, hdr1, drop1, tlast1, acc1, drp1);
+      send_frame(LOCAL_MAC, pl2, 1'b1, cap2, hdr2, drop2, tlast2, acc2, drp2);
 
       if (cap1.size() !== 2 || cap2.size() !== 3) begin
         $error("T5 FAIL: back-to-back byte counts cap1=%0d (want 2), cap2=%0d (want 3)",

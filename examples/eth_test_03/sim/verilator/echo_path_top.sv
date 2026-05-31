@@ -111,7 +111,12 @@ module echo_path_top #(
     .rx_src_mac_o      (eth_src_mac),
     .rx_ethertype_o    (),
     .hdr_valid_o       (),
-    .drop_o            (eth_drop_o)
+    .drop_o            (eth_drop_o),
+    .hdr_done_pulse_o  (),
+    .hdr_accept_pulse_o(),
+    .hdr_drop_pulse_o  (),
+    .dbg_dst_mac_o     (),
+    .dbg_mac_accept_o  ()
   );
 
   // --- IPv4 Header Parser (L3) ---
