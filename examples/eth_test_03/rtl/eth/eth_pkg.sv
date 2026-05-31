@@ -8,6 +8,7 @@
 `ifndef ETH_PKG_SV
 `define ETH_PKG_SV
 
+`default_nettype none
 
 package eth_pkg;
 

@@ -20,9 +20,9 @@ MAC_COMMON := \
 TB_COMMON := \
 	common/tb_eth_pkg.sv
 
-.PHONY: all unit integration crc32 gmii_tx gmii_rx mac_stream gmii_rx_l2_align eth_hdr_builder eth_hdr_parser ipv4_checksum ipv4_hdr_parser udp_hdr_parser udp_tx_builder rx_path echo_path echo_path_dc regression clean
+.PHONY: all unit integration crc32 gmii_tx gmii_rx gmii_rx_sfd mac_stream gmii_rx_l2_align eth_hdr_builder eth_hdr_parser ipv4_checksum ipv4_hdr_parser udp_hdr_parser udp_tx_builder rx_path echo_path echo_path_dc regression clean
 
-unit: crc32 gmii_tx gmii_rx mac_stream gmii_rx_l2_align eth_hdr_builder eth_hdr_parser ipv4_checksum ipv4_hdr_parser udp_hdr_parser udp_tx_builder
+unit: crc32 gmii_tx gmii_rx gmii_rx_sfd mac_stream gmii_rx_l2_align eth_hdr_builder eth_hdr_parser ipv4_checksum ipv4_hdr_parser udp_hdr_parser udp_tx_builder
 
 integration: rx_path echo_path echo_path_dc
 
@@ -57,6 +57,14 @@ gmii_rx: $(LOGDIR)
 	        mac/tb_gmii_rx_mac.sv
 	$(VSIM) tb_gmii_rx_mac | tee $(LOGDIR)/tb_gmii_rx_mac.log
 	@grep -E "PASS|FAIL|Error" $(LOGDIR)/tb_gmii_rx_mac.log
+
+gmii_rx_sfd: $(LOGDIR)
+	$(VLOG) $(MAC_COMMON) \
+	        $(RTL)/mac/gmii_rx_mac.sv \
+	        $(TB_COMMON) \
+	        mac/tb_gmii_rx_mac_sfd_boundary.sv
+	$(VSIM) tb_gmii_rx_mac_sfd_boundary | tee $(LOGDIR)/tb_gmii_rx_mac_sfd_boundary.log
+	@grep -E "PASS|FAIL|Error" $(LOGDIR)/tb_gmii_rx_mac_sfd_boundary.log
 
 mac_stream: $(LOGDIR)
 	$(VLOG) $(MAC_COMMON) \

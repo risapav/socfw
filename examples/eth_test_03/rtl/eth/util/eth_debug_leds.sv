@@ -40,7 +40,8 @@
  * @param ACTIVITY_MS    LED activity stretch window in ms (default 150)
  * @param LED_ACTIVE_LOW 1 = LEDs light on logic 0 (default 0)
  * @param LAYER_DEBUG    1 = debug mode: LED3/4/5 show RX pipeline layers
- * @param MAC_DEBUG      1 = MAC debug mode: LED3/4/5 show L2 MAC filter pulses (overrides LAYER_DEBUG)
+ * @param MAC_DEBUG      1 = MAC debug mode: LED3/4/5 show L2 MAC filter pulses
+ *                       (overrides LAYER_DEBUG)
  */
 
 `ifndef ETH_DEBUG_LEDS_SV

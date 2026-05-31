@@ -1,0 +1,113 @@
+------------------------------------------------------------
+Timing Analyzer Summary
+------------------------------------------------------------
+
+Type  : Slow 1200mV 85C Model Setup 'ETH_RXC'
+Slack : 0.480
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Setup 'ETH_TX_CLK'
+Slack : 0.882
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Setup 'SYS_CLK'
+Slack : 4.861
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Hold 'ETH_RXC'
+Slack : 0.445
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Hold 'ETH_TX_CLK'
+Slack : 0.448
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Hold 'SYS_CLK'
+Slack : 0.449
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Minimum Pulse Width 'ETH_RXC'
+Slack : 3.643
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Minimum Pulse Width 'ETH_TX_CLK'
+Slack : 3.666
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Minimum Pulse Width 'SYS_CLK'
+Slack : 9.768
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Setup 'ETH_RXC'
+Slack : 0.746
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Setup 'ETH_TX_CLK'
+Slack : 1.284
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Setup 'SYS_CLK'
+Slack : 5.724
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Hold 'ETH_TX_CLK'
+Slack : 0.397
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Hold 'ETH_RXC'
+Slack : 0.398
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Hold 'SYS_CLK'
+Slack : 0.398
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Minimum Pulse Width 'ETH_RXC'
+Slack : 3.535
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Minimum Pulse Width 'ETH_TX_CLK'
+Slack : 3.642
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Minimum Pulse Width 'SYS_CLK'
+Slack : 9.778
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Setup 'ETH_RXC'
+Slack : 4.638
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Setup 'ETH_TX_CLK'
+Slack : 4.860
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Setup 'SYS_CLK'
+Slack : 11.289
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Hold 'ETH_RXC'
+Slack : 0.155
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Hold 'ETH_TX_CLK'
+Slack : 0.183
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Hold 'SYS_CLK'
+Slack : 0.184
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Minimum Pulse Width 'ETH_RXC'
+Slack : 3.134
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Minimum Pulse Width 'ETH_TX_CLK'
+Slack : 3.756
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Minimum Pulse Width 'SYS_CLK'
+Slack : 9.268
+TNS   : 0.000
+
+------------------------------------------------------------

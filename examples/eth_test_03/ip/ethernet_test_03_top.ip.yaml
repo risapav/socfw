@@ -89,6 +89,14 @@ ports:
     direction: output
     width: 6
 
+  - name: dbg_mac_data_o
+    direction: output
+    width: 8
+
+  - name: dbg_ctrl_o
+    direction: output
+    width: 8
+
 artifacts:
   synthesis:
     - ../rtl/eth/eth_pkg.sv

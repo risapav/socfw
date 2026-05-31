@@ -52,7 +52,11 @@ module ethernet_test_03_top #(
   inout  wire logic        eth_mdio_io,
   output      logic        eth_phyrstb_o,
 
-  output      logic [5:0]  led_o
+  output      logic [5:0]  led_o,
+
+  // Debug bus for J10/J11 logic analyzer (ETH_RXC domain, raw signals)
+  output      logic [7:0]  dbg_mac_data_o,
+  output      logic [7:0]  dbg_ctrl_o
 );
 
   // ===========================================================================
@@ -92,6 +96,10 @@ module ethernet_test_03_top #(
   logic mac_hdr_done_w;
   logic mac_accept_pulse_w;
   logic mac_drop_pulse_w;
+
+  // Parser debug capture (ETH_RXC domain, held after byte 13)
+  logic [47:0] dbg_dst_mac_w;
+  logic        dbg_mac_accept_w;
 
   // MAC -> L2
   logic [7:0]  mac_tdata;
@@ -150,7 +158,7 @@ module ethernet_test_03_top #(
     .rst_ni            (rst_ni),
     .local_mac_i       (LOCAL_MAC),
     .accept_broadcast_i(1'b1),
-    .promiscuous_i     (1'b0),
+    .promiscuous_i     (1'b1),
     .s_axis_tdata      (mac_tdata),
     .s_axis_tvalid     (mac_tvalid),
     .s_axis_tready     (mac_tready),
@@ -169,8 +177,8 @@ module ethernet_test_03_top #(
     .hdr_done_pulse_o  (mac_hdr_done_w),
     .hdr_accept_pulse_o(mac_accept_pulse_w),
     .hdr_drop_pulse_o  (mac_drop_pulse_w),
-    .dbg_dst_mac_o     (),
-    .dbg_mac_accept_o  ()
+    .dbg_dst_mac_o     (dbg_dst_mac_w),
+    .dbg_mac_accept_o  (dbg_mac_accept_w)
   );
 
   // --- IPv4 Header Parser (L3) ---
@@ -285,7 +293,22 @@ module ethernet_test_03_top #(
   logic [8:0] pkt_rd_data;
   logic       pkt_rd_valid, pkt_rd_ready;
 
-  assign txb_tready = pkt_wr_ready;
+  // Gate packet start on meta_fifo having space; mid-packet only needs pkt_fifo.
+  // Prevents pkt_fifo from holding a full packet with no matching meta entry.
+  // txb_fire_w is the true AXI-S handshake: byte is consumed only when both
+  // builder and FIFO agree. wr_valid_i must use fire, not just tvalid, otherwise
+  // pkt_fifo writes bytes that the builder has not yet been told were accepted.
+  logic txb_started_q;
+  logic txb_fire_w;
+
+  assign txb_tready = pkt_wr_ready && (txb_started_q || meta_wr_ready);
+  assign txb_fire_w = txb_tvalid && txb_tready;
+
+  always_ff @(posedge eth_rx_clk_i or negedge rst_ni) begin
+    if (!rst_ni) txb_started_q <= 1'b0;
+    else if (txb_fire_w && txb_tlast) txb_started_q <= 1'b0;
+    else if (txb_fire_w)              txb_started_q <= 1'b1;
+  end
 
   async_fifo #(
     .DATA_WIDTH(9),
@@ -294,7 +317,7 @@ module ethernet_test_03_top #(
     .wr_clk_i  (eth_rx_clk_i),
     .wr_rst_ni (rst_ni),
     .wr_data_i ({txb_tlast, txb_tdata}),
-    .wr_valid_i(txb_tvalid),
+    .wr_valid_i(txb_fire_w),
     .wr_ready_o(pkt_wr_ready),
     .rd_clk_i  (eth_tx_clk_i),
     .rd_rst_ni (rst_ni),
@@ -319,20 +342,31 @@ module ethernet_test_03_top #(
     end
   end
 
-  // Registered stage before meta FIFO write -- cuts FF->RAM critical path
+  // Registered stage before meta FIFO write -- cuts FF->RAM critical path.
+  // commit_pending_q separates last-byte detection from FIFO write, removing
+  // the txb_tlast enable path to meta_wr_data_q and ensuring meta is written
+  // even if meta_wr_ready is low at the moment of the last packet byte.
   logic [95:0] meta_wr_data_q;
   logic        meta_wr_valid_q;
   logic        meta_wr_ready;
+  logic        commit_pending_q;
 
   always_ff @(posedge eth_rx_clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
-      meta_wr_data_q  <= '0;
-      meta_wr_valid_q <= 1'b0;
+      meta_wr_data_q   <= '0;
+      meta_wr_valid_q  <= 1'b0;
+      commit_pending_q <= 1'b0;
     end else begin
       meta_wr_valid_q <= 1'b0;
-      if (txb_tvalid && pkt_wr_ready && txb_tlast && meta_wr_ready) begin
-        meta_wr_data_q  <= {meta_latch_dst_q, meta_latch_src_q};
-        meta_wr_valid_q <= 1'b1;
+      if (commit_pending_q && meta_wr_ready) begin
+        meta_wr_valid_q  <= 1'b1;
+        commit_pending_q <= 1'b0;
+      end
+      // Last byte accepted into pkt_fifo: latch meta and mark commit pending.
+      // This overrides the clear above if both conditions fire simultaneously.
+      if (txb_fire_w && txb_tlast) begin
+        meta_wr_data_q   <= {meta_latch_dst_q, meta_latch_src_q};
+        commit_pending_q <= 1'b1;
       end
     end
   end
@@ -450,6 +484,27 @@ module ethernet_test_03_top #(
     .mac_drop_i          (mac_drop_pulse_w),
     .led_o               (led_o)
   );
+
+  // ===========================================================================
+  // Debug bus for J10/J11 logic analyzer (all signals in ETH_RXC domain)
+  // J10 (dbg_mac_data_o[7:0]): AXI-S data from gmii_rx_mac; 0xEE sentinel
+  //   when mac_tvalid=0 to avoid confusing D5 preamble with valid payload.
+  // J11 (dbg_ctrl_o[7:0]):
+  //   [0]=mac_tvalid  [1]=mac_tlast   [2]=frame_done [3]=hdr_done (1-cyc)
+  //   [4]=dbg_mac_accept_w (HELD from parser capture at byte 13)
+  //   [5]=mac_drop (1-cyc)  [6]=eth_rxdv  [7]=eth_rxer
+  // ===========================================================================
+  assign dbg_mac_data_o = mac_tvalid ? mac_tdata : 8'hEE;
+  assign dbg_ctrl_o = {
+    eth_rxer_i,
+    eth_rxdv_i,
+    mac_drop_pulse_w,
+    dbg_mac_accept_w,
+    mac_hdr_done_w,
+    mac_frame_done_w,
+    mac_tlast,
+    mac_tvalid
+  };
 
 endmodule
 

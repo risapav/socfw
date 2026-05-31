@@ -1,0 +1,37 @@
+# svlint configuration for socfw RTL projects
+# Enforces rules from CLAUDE.md coding standard.
+# Place this file at the repo root — svlint searches hierarchically upward.
+
+[option]
+textwidth = 100
+
+[textrules]
+header_copyright = false
+style_textwidth  = true
+
+[syntaxrules]
+# always_ff must use only non-blocking assignments
+blocking_assignment_in_always_ff       = true
+# always_comb must use only blocking assignments
+non_blocking_assignment_in_always_comb = true
+
+# Every case statement must have a default branch
+case_default = true
+
+# `default_nettype none required at top of every file
+default_nettype_none = true
+
+# Enum values must carry an explicit base type (e.g. logic [1:0])
+enum_with_type = true
+
+# Plain `always` is forbidden; use always_ff or always_comb
+keyword_forbidden_always = true
+
+# Module ports must be declared ANSI-style (no non-ANSI port lists)
+module_nonansi_forbidden = true
+
+# No tab characters — use spaces
+tab_character = true
+
+# No trailing whitespace
+style_trailingwhitespace = true

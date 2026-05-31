@@ -28,7 +28,7 @@ module udp_echo_app #(
 
   input  wire logic        rx_meta_valid_i,
   output      logic        rx_meta_ready_o,
-  input  wire udp_packet_meta_t rx_meta_i,
+  input       udp_packet_meta_t rx_meta_i,
 
   input  wire logic [7:0]  s_axis_tdata,
   input  wire logic        s_axis_tvalid,

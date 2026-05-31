@@ -20,10 +20,13 @@ endif
 PROJECT ?= $(basename $(notdir $(firstword $(wildcard *.qpf))))
 SOF     := output_files/$(PROJECT).sof
 
+# --- svlint: prefer PATH, fall back to cargo install location ---
+SVLINT  := $(shell command -v svlint 2>/dev/null || echo $(HOME)/.cargo/bin/svlint)
+
 # =============================================================================
 # socfw ciele
 # =============================================================================
-.PHONY: all gen build sw validate clean help
+.PHONY: all gen build sw validate lint clean help
 
 all: gen
 
@@ -44,6 +47,17 @@ build: gen
 sw:
 	@echo "[SOCFW] Spúšťam build-fw..."
 	socfw build-fw $(CFG)
+
+# Lint RTL files using svlint.
+# Depends on gen so build/sim/files.f exists.
+# Excludes generated wrappers (build/rtl/*.sv) and testbenches (build/sim/*.sv).
+lint: gen
+	@test -x "$(SVLINT)" || { echo "[!] svlint not found (install: cargo install svlint)"; exit 1; }
+	@echo "[LINT] svlint — $(PROJECT)"
+	@grep -v "/build/rtl/.*\.sv\|/build/sim/.*\.sv" $(BUILD_DIR)/sim/files.f \
+	    > /tmp/lint_$(PROJECT).f
+	$(SVLINT) --config $(ROOT)/.svlint.toml --oneline -f /tmp/lint_$(PROJECT).f
+	@echo "[OK] svlint PASS — $(PROJECT)"
 
 # =============================================================================
 # Quartus ciele
@@ -141,3 +155,6 @@ help:
 	@echo "Kombinované:"
 	@echo "  make full       socfw gen + Quartus compile (end-to-end)"
 	@echo "  make clean      Vymaže všetky vygenerované súbory"
+	@echo ""
+	@echo "Linting:"
+	@echo "  make lint       svlint na RTL zdrojáky (vyžaduje make gen)"

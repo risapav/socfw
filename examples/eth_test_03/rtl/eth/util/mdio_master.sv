@@ -30,7 +30,9 @@ module mdio_master (
   logic       mdc_en;
 
   // FSM a interné registre
-  typedef enum logic [3:0] {ST_IDLE, ST_PRE, ST_START, ST_OP, ST_ADDR, ST_TA, ST_DATA, ST_DONE} state_e;
+  typedef enum logic [3:0] {
+    ST_IDLE, ST_PRE, ST_START, ST_OP, ST_ADDR, ST_TA, ST_DATA, ST_DONE
+  } state_e;
   state_e state_q;
 
   logic [5:0]  bit_cnt;

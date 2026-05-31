@@ -6,8 +6,13 @@
  * first byte of the Ethernet header (dst_mac[47:40]). tlast fires on the last cycle
  * where dv_q=1 and gmii_rx_dv_i has just deasserted. No AXI-Stream backpressure —
  * assumes downstream can always accept data at line rate.
+ *
+ * Preamble-suppressed PHY handling: if the PHY asserts RXDV starting from the SFD
+ * byte (0xD5) rather than from the first preamble byte, RX_IDLE detects 0xD5 directly
+ * and jumps to RX_SFD to discard it, then enters RX_DATA normally. This covers both
+ * standard (full preamble) and preamble-suppressed PHY configurations.
+ *
  * @param EXPECT_PREAMBLE   1 = require preamble/SFD before data (default); 0 = raw data
- * @param ALLOW_NO_PREAMBLE Reserved for future use
  */
 
 `ifndef GMII_RX_MAC_SV
@@ -16,8 +21,7 @@
 `default_nettype none
 
 module gmii_rx_mac #(
-  parameter bit EXPECT_PREAMBLE    = 1'b1,
-  parameter bit ALLOW_NO_PREAMBLE  = 1'b1
+  parameter bit EXPECT_PREAMBLE = 1'b1
 )(
   input  wire logic        clk_i,
   input  wire logic        rst_ni,
@@ -63,8 +67,9 @@ module gmii_rx_mac #(
     case (state_q)
       RX_IDLE: begin
         if (gmii_rx_dv_i) begin
-          if (EXPECT_PREAMBLE && gmii_rxd_i == 8'h55) state_d = RX_PRE;
-          else if (!EXPECT_PREAMBLE)                  state_d = RX_DATA;
+          if      (gmii_rxd_i == 8'hD5)               state_d = RX_SFD; // preamble-suppressed PHY
+          else if (EXPECT_PREAMBLE && gmii_rxd_i == 8'h55) state_d = RX_PRE;  // normal preamble
+          else if (!EXPECT_PREAMBLE)                   state_d = RX_DATA; // raw mode
         end
       end
 

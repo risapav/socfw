@@ -22,6 +22,8 @@ features:
   use:
     - board:onboard.eth
     - board:onboard.leds
+    - board:external.pmod.j10_led8
+    - board:external.pmod.j11_led8
 
 board_overrides:
   board:onboard.eth.rxc_0:
@@ -54,6 +56,8 @@ modules:
 
   - instance: ethernet_test_03_top
     type: ethernet_test_03_top
+    params:
+      EXPECT_PREAMBLE: true
     clocks:
       eth_rx_clk_i: eth_rx_clk
       sys_clk_i: sys_clk
@@ -85,6 +89,10 @@ modules:
           target: board:onboard.eth.txd
         led_o:
           target: board:onboard.leds
+        dbg_mac_data_o:
+          target: board:external.pmod.j10_led8
+        dbg_ctrl_o:
+          target: board:external.pmod.j11_led8
 
 artifacts:
   emit: [rtl, board, timing]
