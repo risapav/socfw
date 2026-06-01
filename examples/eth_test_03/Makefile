@@ -7,7 +7,7 @@ FPGA_UDP_PORT := 8080
 PC_IFACE := enp0s20f0u4u1
 
 .PHONY: sim sim-unit sim-integration sim-regression sim-clean
-.PHONY: arp-setup arp-show udp-send udp-test tcpdump hw-test
+.PHONY: arp-setup arp-show udp-send udp-test tcpdump hw-test fpga-test
 
 # --- Simulation ---
 
@@ -54,6 +54,11 @@ udp-test: arp-setup
 tcpdump:
 	sudo tcpdump -i $(PC_IFACE) -e -n -XX \
 	    'ether host $(FPGA_MAC) or udp port $(FPGA_UDP_PORT)'
+
+# Python UDP echo test — sends payloads, verifies echo responses, reports PASS/FAIL.
+fpga-test:
+	python3 test_fpga.py --ip $(FPGA_IP) --port $(FPGA_UDP_PORT) \
+	                     --mac $(FPGA_MAC) --iface $(PC_IFACE)
 
 # Full HW test sequence: set ARP, start capture, send packets.
 # Opens tcpdump in background, waits 1 s, then sends test packets.

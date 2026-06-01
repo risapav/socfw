@@ -103,6 +103,7 @@ module rx_path_top #(
     .clk_i        (clk_i),
     .rst_ni       (rst_ni),
     .local_ip_i   (LOCAL_IP),
+    .promiscuous_i(1'b0),
     .s_axis_tdata (eth_tdata),
     .s_axis_tvalid(eth_tvalid),
     .s_axis_tready(eth_tready),

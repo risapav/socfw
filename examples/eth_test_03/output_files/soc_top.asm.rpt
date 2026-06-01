@@ -1,5 +1,5 @@
 Assembler report for soc_top
-Sun May 31 15:10:14 2026
+Mon Jun  1 18:10:47 2026
 Quartus Prime Version 25.1std.0 Build 1129 10/21/2025 SC Lite Edition
 
 
@@ -38,7 +38,7 @@ on the Quartus Prime software download page.
 +---------------------------------------------------------------+
 ; Assembler Summary                                             ;
 +-----------------------+---------------------------------------+
-; Assembler Status      ; Successful - Sun May 31 15:10:14 2026 ;
+; Assembler Status      ; Successful - Mon Jun  1 18:10:47 2026 ;
 ; Revision Name         ; soc_top                               ;
 ; Top-level Entity Name ; soc_top                               ;
 ; Family                ; Cyclone IV E                          ;
@@ -94,8 +94,8 @@ on the Quartus Prime software download page.
 +----------------+----------------------+
 ; Option         ; Setting              ;
 +----------------+----------------------+
-; JTAG usercode  ; 0x0045E7FF           ;
-; Checksum       ; 0x0045E7FF           ;
+; JTAG usercode  ; 0x0045EB57           ;
+; Checksum       ; 0x0045EB57           ;
 +----------------+----------------------+
 
 
@@ -119,14 +119,14 @@ Info: Running Quartus Prime Assembler
     Info: Altera and sold by Altera or its authorized distributors.  Please
     Info: refer to the Altera Software License Subscription Agreements 
     Info: on the Quartus Prime software download page.
-    Info: Processing started: Sun May 31 15:10:11 2026
+    Info: Processing started: Mon Jun  1 18:10:45 2026
 Info: Command: quartus_asm soc_top
 Info (115031): Writing out detailed assembly data for power analysis
 Info (115030): Assembler is generating device programming files
 Info: Quartus Prime Assembler was successful. 0 errors, 0 warnings
-    Info: Peak virtual memory: 588 megabytes
-    Info: Processing ended: Sun May 31 15:10:14 2026
-    Info: Elapsed time: 00:00:03
+    Info: Peak virtual memory: 598 megabytes
+    Info: Processing ended: Mon Jun  1 18:10:47 2026
+    Info: Elapsed time: 00:00:02
     Info: Total CPU time (on all processors): 00:00:02
 
 

@@ -1,7 +1,7 @@
 # ETH_TEST_03 — Status
 
-**Dátum:** 2026-05-31
-**Stav:** HW TESTOVANIE — Faza 4B: txb_fire_w + promiscuous_i=1 (diagnóza TX cesty)
+**Dátum:** 2026-06-01
+**Stav:** HW TESTOVANIE — Faza 4G: GMII TX output register fix (root cause TX silence)
 
 ---
 
@@ -21,20 +21,22 @@ TX: udp_echo_app -> udp_ipv4_tx_builder -> async_fifo (CDC) -> TX controller -> 
 
 - **Syntéza:** 0 errors, 8 warnings (ASYNC_REG atribút ignorovaný — benígne)
 - **Fitter + Assembler + STA:** 0 errors
-- **SOF:** `output_files/soc_top.sof` (build Faza 4A/4B, 2026-05-31)
+- **SOF:** `output_files/soc_top.sof` (build Faza 4G, Mon Jun 1 18:10 2026)
 
-### Timing Summary (Faza 4A build, Sun May 31 10:46:22 2026)
+### Timing Summary (Faza 4G build, Mon Jun 1 18:10 2026)
 
-| Clock | Fmax | Slack Slow 85°C | Stav |
+| Clock | Slack Setup Slow 85°C | Slack Hold | Stav |
 |---|---|---|---|
-| ETH_RXC (125 MHz) | ~130 MHz | **+0.448 ns** | PASS |
-| ETH_TX_CLK (125 MHz) | ~133 MHz | +0.737 ns | PASS |
-| SYS_CLK (50 MHz) | ~68 MHz | +5.303 ns | PASS |
-| ETH_RXC hold | — | +0.430 ns | PASS |
+| ETH_RXC (125 MHz) | **+0.444 ns** | +0.428 ns | PASS |
+| ETH_TX_CLK (125 MHz) | +0.793 ns | +0.448 ns | PASS |
+| SYS_CLK (50 MHz) | +5.341 ns | +0.449 ns | PASS |
 
 **Timing história:**
 - Pred fixom: ETH_RXC slack = −7.18 ns (Fmax 65.86 MHz)
-- Po 4-CSUM-state redesign (navrhy_19/20): ETH_RXC +0.448 ns — PASS
+- Faza 4A (4-CSUM-state): +0.448 ns PASS
+- Faza 4E (RX_PIPE_DEBUG na J11): +0.291 ns PASS
+- Faza 4F (TX_PATH_DEBUG na J11): +0.444 ns PASS
+- Faza 4G (GMII TX output reg): +0.793 ns PASS (ETH_TX_CLK)
 
 ---
 
@@ -171,21 +173,72 @@ LED5: bliká  ✓
 
 ---
 
-### Test 8 — Faza 4B (ČAKÁ NA HW)
+### Test 8 — Faza 4B: promiscuous L2+L3+L4 + txb_fire_w fix
 
-**Kód (aktuálny build):**
-- `eth_header_parser.promiscuous_i = 1'b1` — bypass MAC comparison
-- `MAC_DEBUG = 1`
-- `txb_fire_w` CDC handshake fix
+**Kód:** eth/ipv4/udp promiscuous=1, LAYER_DEBUG=0 (rx_meta_valid/tx_mac_busy/eth_txen).
+**Výsledok:** LED3/4/5 neblikajú. rx_meta_valid NIKDY nevzniká. TX ticho.
+**Záver:** Problém je pred rx_meta_valid. Konkrétna vrstva neznáma.
 
-**Účel:** Overiť, či TX echo cesta funguje end-to-end.
+---
 
-**Očakávania:**
-- LED4 bliká ✓ (promiscuous=1 → vždy accept)
-- Echo paket v tcpdump ← kľúčový výsledok
+### Test 9 — Faza 4C: LAYER_DEBUG=1 (frame_done/eth_hdr/ipv4_hdr)
 
-**Ak echo nepríde aj s promiscuous=1:**
-TX cesta má ďalší bug (CDC, TX builder, TX controller, TX MAC).
+**Kód:** LAYER_DEBUG=1, L2/L3/L4 promiscuous=1.
+**Výsledok:** LED3/4/5 preblikli ✓. ipv4_hdr_valid potvrdený. Ale 0/6 echo FAIL.
+**Záver:** RX cesta funguje po L3 (ipv4_hdr_valid). Kde sa stráca pred rx_meta_valid — neznáme.
+
+---
+
+### Test 10 — Faza 4D: LAYER_DEBUG=0 (rx_meta/tx_mac/eth_txen)
+
+**Kód:** LAYER_DEBUG=0 (normálny mód), L2/L3/L4 promiscuous=1.
+**Výsledok:** LED3/4/5 neblikajú. 0/6 echo FAIL. tcpdump: iba PC→FPGA.
+**Záver:** rx_meta_valid nevzniká, TX sa nespustí. Gap medzi ipv4_hdr_valid a rx_meta_valid.
+
+---
+
+### Test 11 — Faza 4E (DOKONČENÝ)
+
+**Kód:** RX_PIPE_DEBUG na J10/J11 — všetky RX pipeline štádiá.
+
+**Výsledok (J11 statický):** `01101011` = 0x6B
+```
+[7]=rx_meta_valid=0, [6]=rx_meta_ready=1, [5]=udp_tlast=1,
+[4]=udp_tvalid=1,    [3]=udp_hdr_pre=1,  [2]=ipv4_hdr=1,
+[1]=eth_hdr=1,       [0]=frame_done=1
+```
+**Výsledok (J11 blinking):** `b11b1b11` — rx_meta_valid ([7]) PREBLIKÁ!
+
+**Záver:** RX pipeline kompletne funguje. rx_meta_valid sa generuje správne.
+TX chain je záhadne ticho — bug je v TX (echo_app ST_TX_META → pkt_fifo → meta_fifo → TX controller → TX MAC).
+
+---
+
+### Test 12 — Faza 4F TX_PATH_DEBUG (PREBEHOL PRED 4G FIXOM — viz navrhy_22)
+
+
+**Kód (aktuálny build — kompilacia prebieha 2026-06-01):**
+- J11[0]=tx_meta_valid   (echo app ST_TX_META: meta valid)
+- J11[1]=tx_meta_ready   (tx_builder ST_IDLE: ready)
+- J11[2]=txb_tvalid      (tx_builder outputting bytes)
+- J11[3]=txb_fire_w      (byte written to pkt_fifo)
+- J11[4]=meta_wr_valid_q (meta committed to meta_fifo)
+- J11[5]=pkt_rd_valid    (pkt_fifo non-empty, eth_tx_clk domain)
+- J11[6]=meta_rd_valid   (meta_fifo non-empty, eth_tx_clk domain)
+- J11[7]=eth_txen_o      (TX MAC transmitting)
+- J10 = txb_tdata when txb_tvalid, else pkt_rd_data[7:0], else 0xEE
+
+**Účel:** Pinpointovanie kde sa zastavuje TX chain.
+
+**Interpretácia výsledkov:**
+- J11[0]=0: echo_app sa nikdy nedostane do ST_TX_META
+- J11[0]=1, J11[1]=0: tx_builder stuck (nie v ST_IDLE)
+- J11[1]=1, J11[2]=0: meta handshake OK ale tx_builder nevypisuje
+- J11[3]=0: pkt_fifo sa nezapisuje
+- J11[4]=0: commit_pending_q nikdy nevzniká
+- J11[5]=0: pkt_fifo write OK ale CDC nefunguje (eth_tx_clk problém?)
+- J11[5]=1, J11[6]=0: meta_fifo problém
+- J11[6]=1, J11[7]=0: TX controller nespustí TX MAC
 
 ---
 
@@ -224,15 +277,54 @@ TX cesta má ďalší bug (CDC, TX builder, TX controller, TX MAC).
 - `dbg_ctrl_o[4]` = `dbg_mac_accept_w` (HELD, nie 1-cyc pulz)
 - Napojené `dbg_dst_mac_o` a `dbg_mac_accept_o` z parsera
 
-### Faza 4B (2026-05-31, aktuálny build)
+### Faza 4B (2026-05-31)
 
 **ethernet_test_03_top.sv — txb_fire_w CDC fix (navrhy_21):**
 - `txb_fire_w = txb_tvalid && txb_tready` — skutočný AXI-S handshake
-- `pkt_fifo.wr_valid_i = txb_fire_w` (pred: `txb_tvalid` — zapisovalo aj keď tready=0)
-- `txb_started_q` a `commit_pending_q` používajú `txb_fire_w`
+- `pkt_fifo.wr_valid_i = txb_fire_w`
+- `eth/ipv4/udp_header_parser.promiscuous_i = 1'b1` (dočasné)
 
-**ethernet_test_03_top.sv — promiscuous_i=1 (diagnóza TX):**
-- `eth_header_parser.promiscuous_i = 1'b1` (dočasné — overenie TX cesty)
+### Faza 4C (2026-05-31)
+
+**LAYER_DEBUG=1** — overenie L2/L3 cesty cez LED.
+Potvrdené: frame_done, eth_hdr_valid, ipv4_hdr_valid fungujú v HW.
+
+### Faza 4E (2026-05-31 — navrhy_22)
+
+**ethernet_test_03_top.sv — RX_PIPE_DEBUG na J10/J11:**
+- J11: frame_done, eth_hdr_valid, ipv4_hdr_valid, udp_hdr_pre_valid, udp_tvalid, udp_tlast, rx_meta_ready, rx_meta_valid
+- J10: deepest valid layer data mux (udp > ip > eth > mac > 0xEE)
+- HW výsledok: J11=0x6B (staticky), rx_meta_valid prebliká → RX pipeline OK
+
+### Faza 4F (2026-06-01 — navrhy_22)
+
+**ethernet_test_03_top.sv — TX_PATH_DEBUG na J10/J11:**
+- J11[0..4]: tx_meta_valid, tx_meta_ready, txb_tvalid, txb_fire_w, meta_wr_valid_q (eth_rx_clk)
+- J11[5..7]: pkt_rd_valid, meta_rd_valid, eth_txen_o (eth_tx_clk)
+- J10: txb_tdata when valid, else pkt_rd_data, else 0xEE
+
+### Faza 4G (2026-06-01, aktuálny build — root cause TX silence)
+
+**Root cause TX silence:** GMII TX kombinačné výstupy (gmii_txd_o, gmii_tx_en_o z
+`always_comb`) — RTL8211EG PHY setup Tsu=1.5 ns nebola dodržaná. Kombinačná cesta
+state_q FF → mux → I/O buffer trvala ~5-7 ns (8 ns perióda pri 125 MHz).
+
+**gmii_tx_mac.sv — output register fix:**
+- Pridané `gmii_txd_comb_w`, `gmii_tx_en_comb_w` (kombinačné)
+- Výstupný `always_ff`: `gmii_txd_o <= gmii_txd_comb_w; gmii_tx_en_o <= gmii_tx_en_comb_w`
+- CRC vstup zostáva na `gmii_txd_comb_w` (správnosť FCS zachovaná)
+- `IFG_BYTES`: 12 → 13 (output FF drží posledný FCS byte počas IFG[0]; PHY vidí iba 12 idle bajtov)
+- `PREAMBLE_BYTES`: 7 (nemení sa — output FF delay je transparentný)
+
+**echo_path_top.sv — tx_start race fix (IFG=13):**
+- Pridané `logic tx_mac_busy_w;`
+- TX MAC: `.tx_busy_o(tx_mac_busy_w)` (bolo `()`)
+- TX builder: `.tx_meta_valid_i(tx_meta_valid && !tx_mac_busy_w)` — meta handshake začína až keď MAC idle
+- Echo app: `.tx_meta_ready_i(tx_meta_ready && !tx_mac_busy_w)` — echo_app nepostupuje počas IFG
+- TX MAC: `.tx_start_i(tx_meta_valid && tx_meta_ready && !tx_mac_busy_w)`
+- Dôvod: 1-cyklový tx_start pulz by sa stratil ak MAC ešte v ST_IFG
+
+**Výsledok:** sim regression 16/16 ALL PASS, Quartus timing PASS.
 
 ---
 
@@ -274,7 +366,9 @@ Platí aj po prepise eth_header_parser (Faza 4A).
 
 ### Záhada 2: TX Silence
 
-**Neoverené** — čaká na Faza 4B HW test s promiscuous_i=1.
+**VYRIEŠENÁ (Faza 4G):** Root cause — kombinačné GMII TX výstupy porušovali PHY Tsu=1.5 ns.
+Fix: output register v gmii_tx_mac.sv + IFG_BYTES=13 + tx_start race fix v echo_path_top.sv.
+**Čaká na HW verifikáciu** s novou 4G SOF.
 
 ---
 
@@ -294,7 +388,7 @@ Platí aj po prepise eth_header_parser (Faza 4A).
 | `udp_echo_app` | `l4/udp_echo_app.sv` | PASS (cez echo_path) |
 | `udp_ipv4_tx_builder` | `l4/udp_ipv4_tx_builder.sv` | PASS — 4-CSUM timing fix |
 | `async_fifo` | `cdc/async_fifo.sv` | PASS — FWFT + no_rw_check |
-| `ethernet_test_03_top` | `ethernet_test_03_top.sv` | HW testovanie Faza 4B |
+| `ethernet_test_03_top` | `ethernet_test_03_top.sv` | HW testovanie Faza 4F |
 
 ---
 
@@ -330,5 +424,5 @@ TX: 0x0000 (disabled). RX: DROP_NONZERO_CHECKSUM=0.
 ### Known Issues
 
 - [ ] **HW: MAC comparison bug** — dst_mac comparison failuje v HW napriek sim 12/12 PASS
-- [ ] **HW: TX echo neoverené** — čaká na Faza 4B HW test
+- [ ] **HW: TX echo neoverené** — čaká na Faza 4G HW test (SOF pripravená)
 - [ ] `gmii_rx_mac` FCS strip — dlhodobý cieľ

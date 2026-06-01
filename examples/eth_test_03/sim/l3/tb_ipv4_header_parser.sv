@@ -38,6 +38,7 @@ module tb_ipv4_header_parser;
   ipv4_header_parser dut (
     .clk_i(clk), .rst_ni(rst_n),
     .local_ip_i(local_ip),
+    .promiscuous_i(1'b0),
     .s_axis_tdata(s_tdata),   .s_axis_tvalid(s_tvalid),
     .s_axis_tready(s_tready), .s_axis_tlast(s_tlast),
     .m_axis_tdata(m_tdata),   .m_axis_tvalid(m_tvalid),

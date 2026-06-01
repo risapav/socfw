@@ -37,6 +37,7 @@ module ipv4_header_parser (
   input  wire logic        clk_i,
   input  wire logic        rst_ni,
   input  wire logic [31:0] local_ip_i,
+  input  wire logic        promiscuous_i,
 
   input  wire logic [7:0]  s_axis_tdata,
   input  wire logic        s_axis_tvalid,
@@ -71,10 +72,12 @@ module ipv4_header_parser (
   assign header_next_w = {header_reg_q[151:0], s_axis_tdata};
 
   // Drop when: version/IHL != 0x45, protocol != UDP, or dst_ip mismatch.
+  // promiscuous_i bypasses all checks (diagnostic mode).
   logic drop_decision_w;
-  assign drop_decision_w = (header_next_w[159:152] != 8'h45)  ||
-                           (header_next_w[87:80]   != 8'h11)  ||
-                           (header_next_w[31:0]    != local_ip_i);
+  assign drop_decision_w = !promiscuous_i && (
+      (header_next_w[159:152] != 8'h45)  ||
+      (header_next_w[87:80]   != 8'h11)  ||
+      (header_next_w[31:0]    != local_ip_i));
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin

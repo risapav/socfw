@@ -74,6 +74,7 @@ module echo_path_top #(
   // --- TX builder -> GMII TX MAC ---
   logic [7:0] txb_tdata;
   logic       txb_tvalid, txb_tready, txb_tlast;
+  logic       tx_mac_busy_w;
 
   // --- GMII RX MAC ---
   gmii_rx_mac u_mac (
@@ -124,6 +125,7 @@ module echo_path_top #(
     .clk_i        (clk_i),
     .rst_ni       (rst_ni),
     .local_ip_i   (LOCAL_IP),
+    .promiscuous_i(1'b0),
     .s_axis_tdata (eth_tdata),
     .s_axis_tvalid(eth_tvalid),
     .s_axis_tready(eth_tready),
@@ -197,7 +199,7 @@ module echo_path_top #(
     .s_axis_tready  (udp_tready),
     .s_axis_tlast   (udp_tlast),
     .tx_meta_valid_o(tx_meta_valid),
-    .tx_meta_ready_i(tx_meta_ready),
+    .tx_meta_ready_i(tx_meta_ready && !tx_mac_busy_w),
     .tx_meta_o      (tx_meta),
     .m_axis_tdata   (echo_tdata),
     .m_axis_tvalid  (echo_tvalid),
@@ -211,7 +213,7 @@ module echo_path_top #(
   udp_ipv4_tx_builder u_txb (
     .clk_i          (clk_i),
     .rst_ni         (rst_ni),
-    .tx_meta_valid_i(tx_meta_valid),
+    .tx_meta_valid_i(tx_meta_valid && !tx_mac_busy_w),
     .tx_meta_ready_o(tx_meta_ready),
     .tx_meta_i      (tx_meta),
     .s_axis_tdata   (echo_tdata),
@@ -234,8 +236,8 @@ module echo_path_top #(
     .tx_dst_mac_i (tx_meta.dst_mac),
     .tx_src_mac_i (tx_meta.src_mac),
     .tx_ethertype_i(16'h0800),
-    .tx_start_i   (tx_meta_valid && tx_meta_ready),
-    .tx_busy_o    (),
+    .tx_start_i   (tx_meta_valid && tx_meta_ready && !tx_mac_busy_w),
+    .tx_busy_o    (tx_mac_busy_w),
     .tx_done_o    (),
     .s_axis_tdata (txb_tdata),
     .s_axis_tvalid(txb_tvalid),

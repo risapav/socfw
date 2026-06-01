@@ -186,6 +186,7 @@ module ethernet_test_03_top #(
     .clk_i        (eth_rx_clk_i),
     .rst_ni       (rst_ni),
     .local_ip_i   (LOCAL_IP),
+    .promiscuous_i(1'b1),
     .s_axis_tdata (eth_tdata),
     .s_axis_tvalid(eth_tvalid),
     .s_axis_tready(eth_tready),
@@ -465,7 +466,7 @@ module ethernet_test_03_top #(
     .ACTIVITY_MS   (150),
     .LED_ACTIVE_LOW(1'b1),
     .LAYER_DEBUG   (1'b0),
-    .MAC_DEBUG     (1'b1)
+    .MAC_DEBUG     (1'b0)
   ) u_leds (
     .sys_clk_i           (sys_clk_i),
     .eth_rx_clk_i        (eth_rx_clk_i),
@@ -486,24 +487,31 @@ module ethernet_test_03_top #(
   );
 
   // ===========================================================================
-  // Debug bus for J10/J11 logic analyzer (all signals in ETH_RXC domain)
-  // J10 (dbg_mac_data_o[7:0]): AXI-S data from gmii_rx_mac; 0xEE sentinel
-  //   when mac_tvalid=0 to avoid confusing D5 preamble with valid payload.
-  // J11 (dbg_ctrl_o[7:0]):
-  //   [0]=mac_tvalid  [1]=mac_tlast   [2]=frame_done [3]=hdr_done (1-cyc)
-  //   [4]=dbg_mac_accept_w (HELD from parser capture at byte 13)
-  //   [5]=mac_drop (1-cyc)  [6]=eth_rxdv  [7]=eth_rxer
+  // Debug bus for J10/J11 logic analyzer — Faza 4F: TX_PATH_DEBUG
+  // J10 (dbg_mac_data_o[7:0]): txb_tdata when txb_tvalid, else pkt_rd_data,
+  //   else 0xEE sentinel.
+  // J11 (dbg_ctrl_o[7:0]) — eth_rx_clk domain [0..4], eth_tx_clk domain [5..7]:
+  //   [0] = tx_meta_valid   (echo app ST_TX_META: meta valid to tx_builder)
+  //   [1] = tx_meta_ready   (tx_builder in ST_IDLE: ready to accept meta)
+  //   [2] = txb_tvalid      (tx_builder outputting bytes to pkt_fifo)
+  //   [3] = txb_fire_w      (byte actually written to pkt_fifo = valid&&ready)
+  //   [4] = meta_wr_valid_q (meta committed to meta_fifo write side)
+  //   [5] = pkt_rd_valid    (pkt_fifo non-empty on TX side, eth_tx_clk domain)
+  //   [6] = meta_rd_valid   (meta_fifo non-empty on TX side, eth_tx_clk domain)
+  //   [7] = eth_txen_o      (TX MAC transmitting)
   // ===========================================================================
-  assign dbg_mac_data_o = mac_tvalid ? mac_tdata : 8'hEE;
+  assign dbg_mac_data_o = txb_tvalid    ? txb_tdata         :
+                          pkt_rd_valid  ? pkt_rd_data[7:0]  :
+                          8'hEE;
   assign dbg_ctrl_o = {
-    eth_rxer_i,
-    eth_rxdv_i,
-    mac_drop_pulse_w,
-    dbg_mac_accept_w,
-    mac_hdr_done_w,
-    mac_frame_done_w,
-    mac_tlast,
-    mac_tvalid
+    eth_txen_o,
+    meta_rd_valid,
+    pkt_rd_valid,
+    meta_wr_valid_q,
+    txb_fire_w,
+    txb_tvalid,
+    tx_meta_ready,
+    tx_meta_valid
   };
 
 endmodule
