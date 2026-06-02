@@ -1,0 +1,44 @@
+version: 2
+kind: project
+
+project:
+  name: pmod_led_test
+  mode: standalone
+  board: qmtech_ep4ce55
+  output_dir: build
+  debug: true
+
+registries:
+  packs:
+    - ../../packs/builtin
+  ip:
+    - ip
+
+features:
+  use:
+    - board:external.pmod.j11_led8
+
+timing:
+  file: timing_config.yaml
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:SYS_CLK
+
+modules:
+  - instance: led_01
+    type: led_test
+    clocks:
+      clk_i: sys_clk
+    params:
+      CLK_FREQ: 50000000
+    bind:
+      ports:
+        leds_o:
+          target: board:external.pmod.j11_led8
+          width:    8
+          adapt:    zero_extend
+
+artifacts:
+  emit: [rtl, board, timing]
