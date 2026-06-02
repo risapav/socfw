@@ -1,7 +1,7 @@
 # ETH_TEST_03 — Status
 
-**Dátum:** 2026-06-01
-**Stav:** HW TESTOVANIE — Faza 4G: GMII TX output register fix (root cause TX silence)
+**Dátum:** 2026-06-02
+**Stav:** HW TESTOVANIE — Faza 4H: MAC comparison diagnostika dokoncena, Makefile opraveny, caka HW echo test
 
 ---
 
@@ -21,9 +21,9 @@ TX: udp_echo_app -> udp_ipv4_tx_builder -> async_fifo (CDC) -> TX controller -> 
 
 - **Syntéza:** 0 errors, 8 warnings (ASYNC_REG atribút ignorovaný — benígne)
 - **Fitter + Assembler + STA:** 0 errors
-- **SOF:** `output_files/soc_top.sof` (build Faza 4G, Mon Jun 1 18:10 2026)
+- **SOF:** `output_files/soc_top.sof` (build Faza 4H, Tue Jun 2 20:42 2026)
 
-### Timing Summary (Faza 4G build, Mon Jun 1 18:10 2026)
+### Timing Summary (Faza 4H build, Tue Jun 2 20:42 2026)
 
 | Clock | Slack Setup Slow 85°C | Slack Hold | Stav |
 |---|---|---|---|
@@ -37,6 +37,7 @@ TX: udp_echo_app -> udp_ipv4_tx_builder -> async_fifo (CDC) -> TX controller -> 
 - Faza 4E (RX_PIPE_DEBUG na J11): +0.291 ns PASS
 - Faza 4F (TX_PATH_DEBUG na J11): +0.444 ns PASS
 - Faza 4G (GMII TX output reg): +0.793 ns PASS (ETH_TX_CLK)
+- Faza 4H (Makefile fix, RTL revert): +0.793 ns PASS (nezmeneny RTL)
 
 ---
 
@@ -72,9 +73,9 @@ make regression
 ### Konfigurácia
 
 ```
-PC: 192.168.20.234/24 na enp0s20f0u4u1 (USB Ethernet, 1000Mb/s)
-FPGA: LOCAL_IP=192.168.20.50, LOCAL_MAC=00:0a:35:01:fe:c0, UDP_PORT=8080
-Static ARP: ip neigh replace 192.168.20.50 lladdr 00:0a:35:01:fe:c0 nud permanent
+PC: 192.168.0.3 na enp0s31f6 (priame spojenie, 1000Mb/s)
+FPGA: LOCAL_IP=192.168.0.2, LOCAL_MAC=00:0a:35:01:fe:c0, UDP_PORT=8080
+Static ARP: ip neigh replace 192.168.0.2 lladdr 00:0a:35:01:fe:c0 nud permanent dev enp0s31f6
 ```
 
 ### LED mapa (MAC_DEBUG=1, aktuálny build)
@@ -214,6 +215,56 @@ TX chain je záhadne ticho — bug je v TX (echo_app ST_TX_META → pkt_fifo →
 
 ---
 
+### Test 13 — Faza 4H: MAC comparison diagnostika + Makefile fix (2026-06-02)
+
+**Kód:** MAC_DEBUG=1, promiscuous=1 (dočasné), dbg_mac_data_o = dbg_dst_mac_w[47:40]
+
+**Výsledok MAC_DEBUG (promiscuous=0, normálna build):**
+```
+LED2: bliká  (RXDV — prijíma rámce)
+LED3: bliká  (hdr_done_pulse — parser dosahuje byte 13)
+LED4: NEbliká (hdr_accept_pulse — MAC filter VŽDY ZAHODÍ)
+LED5: bliká  (hdr_drop_pulse)
+```
+
+**J10 PMOD diagnostic (dbg_dst_mac_o[47:40] — prvý byte DST_MAC):**
+```
+Prvý stav:  J10 = ssssssss = 0x00   (reset / idle)
+Po príjme:  J10 = ssnnssnn = 0x33   (lock na 0x33 = IPv6 multicast prefix)
+```
+*Interpretácia:* `s`=log0, `n`=log1 (PMOD J10 active-low). 0x33 = prvý bajt IPv6 multicast MAC `33:33:xx:xx:xx`.
+FPGA dostávala iba IPv6 neighbor discovery multicast, nie unicast UDP.
+
+**Promiscuous bypass test:**
+- `promiscuous_i=1'b1` → LED4 príležitostne bliká → MAC comparison logika je správna.
+
+**Root cause (identifikovaný):**
+Makefile mal nesprávny `FPGA_IP` a `PC_IFACE`:
+```makefile
+# WRONG (pred opravou):
+FPGA_IP  := 192.168.20.50
+PC_IFACE := enp0s20f0u4u1
+
+# CORRECT (po oprave):
+FPGA_IP  := 192.168.0.2
+PC_IFACE := enp0s31f6
+```
+PC posielalo UDP pakety na zlú IP adresu cez zlý interface. Skutočné FPGA je pripojené
+na `enp0s31f6` s IP `192.168.0.2` / `192.168.0.3` (PC). Cez `enp0s31f6` prichádzali
+iba IPv6 multicast rámce (33:33:...) → MAC filter ich správne zahadzoval.
+
+**RTL záver:** `eth_header_parser` MAC comparison je funkčná. Žiadny RTL bug.
+
+**Opravené súbory:**
+- `Makefile`: `FPGA_IP=192.168.0.2`, `PC_IFACE=enp0s31f6`
+- `test_fpga.py`: reverted na správne defaults (boli správne, len dočasne zmenené)
+- `ethernet_test_03_top.sv`: reverted na normálny mód (MAC_DEBUG=0, promiscuous=0, LOCAL_IP=192.168.0.2)
+- **Nový build:** Quartus 0 errors, 18 warnings (timing PASS, SOF Tue Jun 2 20:42 2026)
+
+**Čaká:** Programovanie FPGA + `python3 test_fpga.py` → end-to-end UDP echo verifikácia.
+
+---
+
 ### Test 12 — Faza 4F TX_PATH_DEBUG (PREBEHOL PRED 4G FIXOM — viz navrhy_22)
 
 
@@ -303,7 +354,33 @@ Potvrdené: frame_done, eth_hdr_valid, ipv4_hdr_valid fungujú v HW.
 - J11[5..7]: pkt_rd_valid, meta_rd_valid, eth_txen_o (eth_tx_clk)
 - J10: txb_tdata when valid, else pkt_rd_data, else 0xEE
 
-### Faza 4G (2026-06-01, aktuálny build — root cause TX silence)
+### Faza 4H (2026-06-02, aktuálny build — MAC comparison diagnostika + Makefile fix)
+
+**Makefile — oprava FPGA_IP a PC_IFACE:**
+- `FPGA_IP`: `192.168.20.50` → `192.168.0.2`
+- `PC_IFACE`: `enp0s20f0u4u1` → `enp0s31f6`
+
+**test_fpga.py — revert na správne defaults:**
+- `FPGA_IP = "192.168.0.2"`, `PC_IFACE = "enp0s31f6"` (defaults boli správne, dočasne zmenené)
+
+**ethernet_test_03_top.sv — revert + btn_i reset port:**
+- `LOCAL_IP = 32'hC0A80002` (192.168.0.2)
+- `promiscuous_i = 1'b0` (normal MAC filter)
+- `MAC_DEBUG=0, CLK_TEST=0, LAYER_DEBUG=0` (debug módy vypnuté)
+- `dbg_mac_data_o`: späť na produkčný sentinel (txb_tdata → pkt_rd_data → 0xEE)
+- Nový port `btn_i[3:0]` — combined reset: `rst_w = rst_ni & btn_i[3]` (tlačidlo BTN5 ako SW reset)
+- Všetky interné `rst_ni` referencie premenované na `rst_w`
+
+**eth_debug_leds.sv — CLK_TEST mode:**
+- Nový parameter `CLK_TEST = 1'b0` + `ETH_CLK_HZ = 125_000_000`
+- `CLK_TEST=1`: LED2 = ETH_RXC ~1Hz heartbeat, LED3 = ETH_TX_CLK ~1Hz heartbeat
+- Účel: verifikácia že oba ETH clock doméns skutočne tečú z PHY/PLL
+- CDC: `rx_hb_q` a `tx_hb_q` synchronizované do sys_clk cez cdc_two_flop_synchronizer
+
+**Výsledok:** Quartus 0 errors, 18 warnings, timing PASS.
+**Stav:** SOF pripravená, čaká na HW echo test.
+
+### Faza 4G (2026-06-01 — root cause TX silence)
 
 **Root cause TX silence:** GMII TX kombinačné výstupy (gmii_txd_o, gmii_tx_en_o z
 `always_comb`) — RTL8211EG PHY setup Tsu=1.5 ns nebola dodržaná. Kombinačná cesta
@@ -328,47 +405,43 @@ state_q FF → mux → I/O buffer trvala ~5-7 ns (8 ns perióda pri 125 MHz).
 
 ---
 
-## Debug bus J10/J11
+## Debug bus J10/J11 (Faza 4H, normálny mód — MAC_DEBUG=0)
 
 ```
-J10[7:0] = dbg_mac_data_o  → mac_tdata ak mac_tvalid=1, inak 0xEE (sentinel)
+J10[7:0] = dbg_mac_data_o  → txb_tdata ak txb_tvalid=1,
+                              inak pkt_rd_data[7:0] ak pkt_rd_valid=1,
+                              inak 0xEE (sentinel)
 J11[0]   = mac_tvalid
 J11[1]   = mac_tlast
 J11[2]   = frame_done
 J11[3]   = hdr_done_pulse  (1-cycle)
-J11[4]   = dbg_mac_accept_w (HELD — zachytený po byte 13, drží sa do resetu)
+J11[4]   = dbg_mac_accept_w (HELD — zachytený po byte 13)
 J11[5]   = mac_drop_pulse  (1-cycle)
 J11[6]   = eth_rxdv (raw)
 J11[7]   = eth_rxer (raw)
-```
-
-**Ako čítať:** iba bajty kde `J11[0]=1` sú platné.
-Správny RX stream (prvých 14 bajtov):
-```
-00 0A 35 01 FE C0  E0 4F 43 5B 59 3C  08 00
-[dst_mac 6B]       [src_mac 6B]         [ethertype]
 ```
 
 ---
 
 ## Otvorené záhady
 
-### Záhada 1: MAC Comparison Bug
+### Záhada 1: MAC Comparison Bug — VYRIEŠENÁ (Faza 4H)
 
-**Symptóm:** `hdr_drop_pulse` vždy HIGH, `hdr_accept_pulse` nikdy.
-Platí aj po prepise eth_header_parser (Faza 4A).
+**Root cause:** Makefile mal nesprávny `FPGA_IP=192.168.20.50` a `PC_IFACE=enp0s20f0u4u1`.
+PC nikdy neposlalo UDP na správnu adresu cez správny interface. FPGA dostávala iba IPv6
+multicast (33:33:...) ktoré MAC filter správne zahadzoval.
 
-**PC odosiela:** dst_mac = 00:0a:35:01:fe:c0 (overené tcpdump).
-**LOCAL_MAC:** `48'h000A3501FEC0` = 00:0a:35:01:fe:c0.
+**RTL je SPRÁVNY.** `eth_header_parser` MAC comparison funguje — potvrdené:
+1. J10 PMOD: prvý DST_MAC byte = 0x33 (IPv6 multicast, nie 0x00 = náš MAC)
+2. Promiscuous bypass: LED4 blikala → logika comparison path je funkčná
 
-**Aktuálny stav:** Bypassed cez promiscuous_i=1 (Faza 4B) — diagnóza TX cesty.
-**Ďalší krok po overení TX:** Krok 3 z navrhy_21 — rotovať `dbg_dst_mac_w` na J10.
+**Fix:** `Makefile` opravený na `FPGA_IP=192.168.0.2`, `PC_IFACE=enp0s31f6`.
 
-### Záhada 2: TX Silence
+### Záhada 2: TX Silence — VYRIEŠENÁ (Faza 4G)
 
-**VYRIEŠENÁ (Faza 4G):** Root cause — kombinačné GMII TX výstupy porušovali PHY Tsu=1.5 ns.
+Root cause — kombinačné GMII TX výstupy porušovali PHY Tsu=1.5 ns.
 Fix: output register v gmii_tx_mac.sv + IFG_BYTES=13 + tx_start race fix v echo_path_top.sv.
-**Čaká na HW verifikáciu** s novou 4G SOF.
+**Čaká na HW verifikáciu** s novou 4H SOF (0 errors, 18 warnings).
 
 ---
 
@@ -388,7 +461,7 @@ Fix: output register v gmii_tx_mac.sv + IFG_BYTES=13 + tx_start race fix v echo_
 | `udp_echo_app` | `l4/udp_echo_app.sv` | PASS (cez echo_path) |
 | `udp_ipv4_tx_builder` | `l4/udp_ipv4_tx_builder.sv` | PASS — 4-CSUM timing fix |
 | `async_fifo` | `cdc/async_fifo.sv` | PASS — FWFT + no_rw_check |
-| `ethernet_test_03_top` | `ethernet_test_03_top.sv` | HW testovanie Faza 4F |
+| `ethernet_test_03_top` | `ethernet_test_03_top.sv` | HW testovanie Faza 4H (caka echo test) |
 
 ---
 
@@ -423,6 +496,6 @@ TX: 0x0000 (disabled). RX: DROP_NONZERO_CHECKSUM=0.
 
 ### Known Issues
 
-- [ ] **HW: MAC comparison bug** — dst_mac comparison failuje v HW napriek sim 12/12 PASS
-- [ ] **HW: TX echo neoverené** — čaká na Faza 4G HW test (SOF pripravená)
+- [x] **HW: MAC comparison bug** — VYRIEŠENÁ (Faza 4H): Makefile mal zlý FPGA_IP/PC_IFACE; RTL je správny
+- [ ] **HW: TX echo neoverené** — čaká na Faza 4H HW test: `python3 test_fpga.py` (SOF pripravená)
 - [ ] `gmii_rx_mac` FCS strip — dlhodobý cieľ

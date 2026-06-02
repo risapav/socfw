@@ -3,6 +3,14 @@
  * @brief LED diagnostics for ETH_TEST_03 UDP echo HW bring-up.
  * @details Six LEDs indicate pipeline progress across clock domains.
  *
+ *   CLK_TEST mode (CLK_TEST=1, overrides all other debug modes):
+ *     LED0 = SYS_CLK heartbeat (~1 Hz)
+ *     LED1 = PHY reset released (static once set)
+ *     LED2 = ETH_RXC heartbeat (~1 Hz, from PHY)
+ *     LED3 = ETH_TX_CLK heartbeat (~1 Hz, from PLL)
+ *     LED4 = off
+ *     LED5 = off
+ *
  *   Normal mode (LAYER_DEBUG=0, MAC_DEBUG=0):
  *     LED0 = SYS_CLK heartbeat (~1 Hz)
  *     LED1 = PHY reset released (static once set)
@@ -37,8 +45,10 @@
  *   edge detect in sys_clk, stretch counter drives LED).
  *
  * @param SYS_CLK_HZ     System clock frequency in Hz (default 50 MHz)
+ * @param ETH_CLK_HZ     ETH RX/TX clock frequency in Hz (default 125 MHz)
  * @param ACTIVITY_MS    LED activity stretch window in ms (default 150)
  * @param LED_ACTIVE_LOW 1 = LEDs light on logic 0 (default 0)
+ * @param CLK_TEST       1 = clock test mode: LED2=ETH_RXC hb, LED3=ETH_TX_CLK hb
  * @param LAYER_DEBUG    1 = debug mode: LED3/4/5 show RX pipeline layers
  * @param MAC_DEBUG      1 = MAC debug mode: LED3/4/5 show L2 MAC filter pulses
  *                       (overrides LAYER_DEBUG)
@@ -51,8 +61,10 @@
 
 module eth_debug_leds #(
   parameter int SYS_CLK_HZ     = 50_000_000,
+  parameter int ETH_CLK_HZ     = 125_000_000,
   parameter int ACTIVITY_MS    = 150,
   parameter bit LED_ACTIVE_LOW = 1'b0,
+  parameter bit CLK_TEST       = 1'b0,
   parameter bit LAYER_DEBUG    = 1'b0,
   parameter bit MAC_DEBUG      = 1'b0
 )(
@@ -98,6 +110,43 @@ module eth_debug_leds #(
       hb_q     <= ~hb_q;
     end else begin
       hb_cnt_q <= hb_cnt_q + 1'b1;
+    end
+  end
+
+  // ---------------------------------------------------------------------------
+  // ETH_RXC heartbeat ~1 Hz (CLK_TEST mode, eth_rx_clk domain)
+  // ETH_TX_CLK heartbeat ~1 Hz (CLK_TEST mode, eth_tx_clk domain)
+  // ---------------------------------------------------------------------------
+  localparam int HB_DIV_ETH = ETH_CLK_HZ / 2;
+  localparam int HB_W_ETH   = $clog2(HB_DIV_ETH + 1);
+
+  logic [HB_W_ETH-1:0] rx_hb_cnt_q;
+  logic                rx_hb_q;
+
+  always_ff @(posedge eth_rx_clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      rx_hb_cnt_q <= '0;
+      rx_hb_q     <= 1'b0;
+    end else if (rx_hb_cnt_q == HB_W_ETH'(HB_DIV_ETH - 1)) begin
+      rx_hb_cnt_q <= '0;
+      rx_hb_q     <= ~rx_hb_q;
+    end else begin
+      rx_hb_cnt_q <= rx_hb_cnt_q + 1'b1;
+    end
+  end
+
+  logic [HB_W_ETH-1:0] tx_hb_cnt_q;
+  logic                tx_hb_q;
+
+  always_ff @(posedge eth_tx_clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      tx_hb_cnt_q <= '0;
+      tx_hb_q     <= 1'b0;
+    end else if (tx_hb_cnt_q == HB_W_ETH'(HB_DIV_ETH - 1)) begin
+      tx_hb_cnt_q <= '0;
+      tx_hb_q     <= ~tx_hb_q;
+    end else begin
+      tx_hb_cnt_q <= tx_hb_cnt_q + 1'b1;
     end
   end
 
@@ -225,6 +274,17 @@ module eth_debug_leds #(
   cdc_two_flop_synchronizer #(.WIDTH(1)) u_mac_md_sync (
     .clk_i (sys_clk_i), .rst_ni (rst_ni),
     .d_i   (mac_md_tog_q), .q_o (mac_md_sync_w)
+  );
+
+  logic rx_hb_sync_w, tx_hb_sync_w;
+
+  cdc_two_flop_synchronizer #(.WIDTH(1)) u_rx_hb_sync (
+    .clk_i (sys_clk_i), .rst_ni (rst_ni),
+    .d_i   (rx_hb_q),   .q_o (rx_hb_sync_w)
+  );
+  cdc_two_flop_synchronizer #(.WIDTH(1)) u_tx_hb_sync (
+    .clk_i (sys_clk_i), .rst_ni (rst_ni),
+    .d_i   (tx_hb_q),   .q_o (tx_hb_sync_w)
   );
 
   // --- Edge detection in sys_clk ---
@@ -376,15 +436,25 @@ module eth_debug_leds #(
   end
 
   // ---------------------------------------------------------------------------
-  // LED output — MAC_DEBUG overrides LAYER_DEBUG overrides normal
+  // LED output — CLK_TEST overrides MAC_DEBUG overrides LAYER_DEBUG overrides normal
   // ---------------------------------------------------------------------------
   logic [5:0] led_raw_w;
   assign led_raw_w[0] = hb_q;
   assign led_raw_w[1] = phy_reset_done_i;
-  assign led_raw_w[2] = rx_dv_act_q;
-  assign led_raw_w[3] = MAC_DEBUG  ? mac_hd_act_q  : LAYER_DEBUG ? dbg_fd_act_q  : udp_act_q;
-  assign led_raw_w[4] = MAC_DEBUG  ? mac_ma_act_q  : LAYER_DEBUG ? dbg_l2_act_q  : tx_act_act_q;
-  assign led_raw_w[5] = MAC_DEBUG  ? mac_md_act_q  : LAYER_DEBUG ? dbg_l3_act_q  : tx_en_act_q;
+  assign led_raw_w[2] = CLK_TEST   ? rx_hb_sync_w  :
+                        rx_dv_act_q;
+  assign led_raw_w[3] = CLK_TEST   ? tx_hb_sync_w  :
+                        MAC_DEBUG  ? mac_hd_act_q   :
+                        LAYER_DEBUG ? dbg_fd_act_q  :
+                        udp_act_q;
+  assign led_raw_w[4] = CLK_TEST   ? 1'b0          :
+                        MAC_DEBUG  ? mac_ma_act_q   :
+                        LAYER_DEBUG ? dbg_l2_act_q  :
+                        tx_act_act_q;
+  assign led_raw_w[5] = CLK_TEST   ? 1'b0          :
+                        MAC_DEBUG  ? mac_md_act_q   :
+                        LAYER_DEBUG ? dbg_l3_act_q  :
+                        tx_en_act_q;
 
   assign led_o = LED_ACTIVE_LOW ? ~led_raw_w : led_raw_w;
 

@@ -1,5 +1,5 @@
 Analysis & Synthesis report for soc_top
-Mon Jun  1 18:10:20 2026
+Tue Jun  2 21:36:46 2026
 Quartus Prime Version 25.1std.0 Build 1129 10/21/2025 SC Lite Edition
 
 
@@ -25,62 +25,69 @@ Quartus Prime Version 25.1std.0 Build 1129 10/21/2025 SC Lite Edition
  17. State Machine - |soc_top|ethernet_test_03_top:ethernet_test_03_top|gmii_rx_mac:u_mac|state_q
  18. Logic Cells Representing Combinational Loops
  19. Registers Removed During Synthesis
- 20. General Register Statistics
- 21. Inverted Register Statistics
- 22. Registers Added for RAM Pass-Through Logic
- 23. Multiplexer Restructuring Statistics (Restructuring Performed)
- 24. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_rx_dv_sync
- 25. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_udp_sync
- 26. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_act_sync
- 27. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_en_sync
- 28. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_fd_sync
- 29. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_l2_sync
- 30. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_l3_sync
- 31. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_hd_sync
- 32. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_ma_sync
- 33. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_md_sync
- 34. Source assignments for ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|altsyncram:mem_rtl_0|altsyncram_oic1:auto_generated
- 35. Source assignments for ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_pkt_fifo|altsyncram:mem_rtl_0|altsyncram_fle1:auto_generated
- 36. Parameter Settings for User Entity Instance: clkpll:clkpll|altpll:altpll_component
- 37. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top
- 38. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|gmii_rx_mac:u_mac
- 39. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp
- 40. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo
- 41. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_pkt_fifo
- 42. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_meta_fifo
- 43. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac
- 44. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds
- 45. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_rx_dv_sync
- 46. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_udp_sync
- 47. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_act_sync
- 48. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_en_sync
- 49. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_fd_sync
- 50. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_l2_sync
- 51. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_l3_sync
- 52. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_hd_sync
- 53. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_ma_sync
- 54. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_md_sync
- 55. Parameter Settings for Inferred Entity Instance: ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|altsyncram:mem_rtl_0
- 56. Parameter Settings for Inferred Entity Instance: ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_pkt_fifo|altsyncram:mem_rtl_0
- 57. altpll Parameter Settings by Entity Instance
- 58. altsyncram Parameter Settings by Entity Instance
- 59. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_md_sync"
- 60. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_ma_sync"
- 61. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_hd_sync"
- 62. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_l3_sync"
- 63. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_l2_sync"
- 64. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_fd_sync"
- 65. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc"
- 66. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac"
- 67. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb"
- 68. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp"
- 69. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip"
- 70. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth"
- 71. Port Connectivity Checks: "clkpll:clkpll"
- 72. Post-Synthesis Netlist Statistics for Top Partition
- 73. Elapsed Time Per Partition
- 74. Analysis & Synthesis Messages
- 75. Analysis & Synthesis Suppressed Messages
+ 20. Removed Registers Triggering Further Register Optimizations
+ 21. General Register Statistics
+ 22. Inverted Register Statistics
+ 23. Registers Added for RAM Pass-Through Logic
+ 24. Multiplexer Restructuring Statistics (Restructuring Performed)
+ 25. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_rx_dv_sync
+ 26. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_udp_sync
+ 27. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_act_sync
+ 28. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_en_sync
+ 29. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_fd_sync
+ 30. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_l2_sync
+ 31. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_l3_sync
+ 32. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_hd_sync
+ 33. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_ma_sync
+ 34. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_md_sync
+ 35. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_rx_hb_sync
+ 36. Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_hb_sync
+ 37. Source assignments for ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|altsyncram:mem_rtl_0|altsyncram_oic1:auto_generated
+ 38. Source assignments for ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_pkt_fifo|altsyncram:mem_rtl_0|altsyncram_fle1:auto_generated
+ 39. Parameter Settings for User Entity Instance: clkpll:clkpll|altpll:altpll_component
+ 40. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top
+ 41. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|gmii_rx_mac:u_mac
+ 42. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp
+ 43. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo
+ 44. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_pkt_fifo
+ 45. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_meta_fifo
+ 46. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac
+ 47. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds
+ 48. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_rx_dv_sync
+ 49. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_udp_sync
+ 50. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_act_sync
+ 51. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_en_sync
+ 52. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_fd_sync
+ 53. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_l2_sync
+ 54. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_l3_sync
+ 55. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_hd_sync
+ 56. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_ma_sync
+ 57. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_md_sync
+ 58. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_rx_hb_sync
+ 59. Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_hb_sync
+ 60. Parameter Settings for Inferred Entity Instance: ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|altsyncram:mem_rtl_0
+ 61. Parameter Settings for Inferred Entity Instance: ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_pkt_fifo|altsyncram:mem_rtl_0
+ 62. altpll Parameter Settings by Entity Instance
+ 63. altsyncram Parameter Settings by Entity Instance
+ 64. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_hb_sync"
+ 65. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_rx_hb_sync"
+ 66. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_md_sync"
+ 67. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_ma_sync"
+ 68. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_hd_sync"
+ 69. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_l3_sync"
+ 70. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_l2_sync"
+ 71. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_dbg_fd_sync"
+ 72. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc"
+ 73. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac"
+ 74. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb"
+ 75. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp"
+ 76. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip"
+ 77. Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth"
+ 78. Port Connectivity Checks: "clkpll:clkpll"
+ 79. Post-Synthesis Netlist Statistics for Top Partition
+ 80. Elapsed Time Per Partition
+ 81. Analysis & Synthesis Messages
+ 82. Analysis & Synthesis Suppressed Messages
 
 
 
@@ -107,16 +114,16 @@ on the Quartus Prime software download page.
 +--------------------------------------------------------------------------------------+
 ; Analysis & Synthesis Summary                                                         ;
 +------------------------------------+-------------------------------------------------+
-; Analysis & Synthesis Status        ; Successful - Mon Jun  1 18:10:19 2026           ;
+; Analysis & Synthesis Status        ; Successful - Tue Jun  2 21:36:46 2026           ;
 ; Quartus Prime Version              ; 25.1std.0 Build 1129 10/21/2025 SC Lite Edition ;
 ; Revision Name                      ; soc_top                                         ;
 ; Top-level Entity Name              ; soc_top                                         ;
 ; Family                             ; Cyclone IV E                                    ;
-; Total logic elements               ; 3,244                                           ;
+; Total logic elements               ; 3,344                                           ;
 ;     Total combinational functions  ; 1,680                                           ;
-;     Dedicated logic registers      ; 2,277                                           ;
-; Total registers                    ; 2277                                            ;
-; Total pins                         ; 49                                              ;
+;     Dedicated logic registers      ; 2,329                                           ;
+; Total registers                    ; 2329                                            ;
+; Total pins                         ; 53                                              ;
 ; Total virtual pins                 ; 0                                               ;
 ; Total memory bits                  ; 30,432                                          ;
 ; Embedded Multiplier 9-bit elements ; 0                                               ;
@@ -277,23 +284,23 @@ on the Quartus Prime software download page.
 +---------------------------------------------+---------------+
 ; Resource                                    ; Usage         ;
 +---------------------------------------------+---------------+
-; Estimated Total logic elements              ; 3,244         ;
+; Estimated Total logic elements              ; 3,344         ;
 ;                                             ;               ;
 ; Total combinational functions               ; 1680          ;
 ; Logic element usage by number of LUT inputs ;               ;
-;     -- 4 input functions                    ; 938           ;
-;     -- 3 input functions                    ; 201           ;
-;     -- <=2 input functions                  ; 541           ;
+;     -- 4 input functions                    ; 932           ;
+;     -- 3 input functions                    ; 204           ;
+;     -- <=2 input functions                  ; 544           ;
 ;                                             ;               ;
 ; Logic elements by mode                      ;               ;
 ;     -- normal mode                          ; 1230          ;
 ;     -- arithmetic mode                      ; 450           ;
 ;                                             ;               ;
-; Total registers                             ; 2277          ;
-;     -- Dedicated logic registers            ; 2277          ;
+; Total registers                             ; 2329          ;
+;     -- Dedicated logic registers            ; 2329          ;
 ;     -- I/O registers                        ; 0             ;
 ;                                             ;               ;
-; I/O pins                                    ; 49            ;
+; I/O pins                                    ; 53            ;
 ; Total memory bits                           ; 30432         ;
 ;                                             ;               ;
 ; Embedded Multiplier 9-bit elements          ; 0             ;
@@ -302,9 +309,9 @@ on the Quartus Prime software download page.
 ;     -- PLLs                                 ; 1             ;
 ;                                             ;               ;
 ; Maximum fan-out node                        ; ETH_RXC~input ;
-; Maximum fan-out                             ; 1786          ;
-; Total fan-out                               ; 14409         ;
-; Average fan-out                             ; 3.54          ;
+; Maximum fan-out                             ; 1838          ;
+; Total fan-out                               ; 14751         ;
+; Average fan-out                             ; 3.57          ;
 +---------------------------------------------+---------------+
 
 
@@ -313,11 +320,11 @@ on the Quartus Prime software download page.
 +----------------------------------------------------+---------------------+---------------------------+-------------+--------------+---------+-----------+------+--------------+------------------------------------------------------------------------------------------------------------------------------+---------------------------+--------------+
 ; Compilation Hierarchy Node                         ; Combinational ALUTs ; Dedicated Logic Registers ; Memory Bits ; DSP Elements ; DSP 9x9 ; DSP 18x18 ; Pins ; Virtual Pins ; Full Hierarchy Name                                                                                                          ; Entity Name               ; Library Name ;
 +----------------------------------------------------+---------------------+---------------------------+-------------+--------------+---------+-----------+------+--------------+------------------------------------------------------------------------------------------------------------------------------+---------------------------+--------------+
-; |soc_top                                           ; 1680 (1)            ; 2277 (0)                  ; 30432       ; 0            ; 0       ; 0         ; 49   ; 0            ; |soc_top                                                                                                                     ; soc_top                   ; work         ;
+; |soc_top                                           ; 1680 (1)            ; 2329 (0)                  ; 30432       ; 0            ; 0       ; 0         ; 53   ; 0            ; |soc_top                                                                                                                     ; soc_top                   ; work         ;
 ;    |clkpll:clkpll|                                 ; 0 (0)               ; 0 (0)                     ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|clkpll:clkpll                                                                                                       ; clkpll                    ; work         ;
 ;       |altpll:altpll_component|                    ; 0 (0)               ; 0 (0)                     ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|clkpll:clkpll|altpll:altpll_component                                                                               ; altpll                    ; work         ;
 ;          |altpll_jub2:auto_generated|              ; 0 (0)               ; 0 (0)                     ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|clkpll:clkpll|altpll:altpll_component|altpll_jub2:auto_generated                                                    ; altpll_jub2               ; work         ;
-;    |ethernet_test_03_top:ethernet_test_03_top|     ; 1679 (52)           ; 2277 (318)                ; 30432       ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top                                                                           ; ethernet_test_03_top      ; work         ;
+;    |ethernet_test_03_top:ethernet_test_03_top|     ; 1679 (53)           ; 2329 (318)                ; 30432       ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top                                                                           ; ethernet_test_03_top      ; work         ;
 ;       |async_fifo:u_meta_fifo|                     ; 211 (211)           ; 505 (505)                 ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_meta_fifo                                                    ; async_fifo                ; work         ;
 ;       |async_fifo:u_pkt_fifo|                      ; 78 (78)             ; 116 (116)                 ; 18432       ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_pkt_fifo                                                     ; async_fifo                ; work         ;
 ;          |altsyncram:mem_rtl_0|                    ; 0 (0)               ; 0 (0)                     ; 18432       ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_pkt_fifo|altsyncram:mem_rtl_0                                ; altsyncram                ; work         ;
@@ -327,18 +334,18 @@ on the Quartus Prime software download page.
 ;          |cdc_two_flop_synchronizer:u_tx_act_sync| ; 0 (0)               ; 2 (2)                     ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_act_sync             ; cdc_two_flop_synchronizer ; work         ;
 ;          |cdc_two_flop_synchronizer:u_tx_en_sync|  ; 0 (0)               ; 2 (2)                     ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_en_sync              ; cdc_two_flop_synchronizer ; work         ;
 ;          |cdc_two_flop_synchronizer:u_udp_sync|    ; 0 (0)               ; 2 (2)                     ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_udp_sync                ; cdc_two_flop_synchronizer ; work         ;
-;       |eth_header_parser:u_eth|                    ; 50 (50)             ; 104 (104)                 ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth                                                   ; eth_header_parser         ; work         ;
+;       |eth_header_parser:u_eth|                    ; 77 (77)             ; 104 (104)                 ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth                                                   ; eth_header_parser         ; work         ;
 ;       |gmii_rx_mac:u_mac|                          ; 14 (14)             ; 13 (13)                   ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|gmii_rx_mac:u_mac                                                         ; gmii_rx_mac               ; work         ;
-;       |gmii_tx_mac:u_tx_mac|                       ; 252 (183)           ; 79 (47)                   ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac                                                      ; gmii_tx_mac               ; work         ;
-;          |crc32_eth:u_crc|                         ; 65 (65)             ; 32 (32)                   ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc                                      ; crc32_eth                 ; work         ;
-;          |eth_header_builder:u_hdr_builder|        ; 4 (4)               ; 0 (0)                     ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|eth_header_builder:u_hdr_builder                     ; eth_header_builder        ; work         ;
-;       |ipv4_header_parser:u_ip|                    ; 81 (81)             ; 71 (71)                   ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip                                                   ; ipv4_header_parser        ; work         ;
-;       |udp_echo_app:u_echo|                        ; 119 (119)           ; 274 (274)                 ; 12000       ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo                                                       ; udp_echo_app              ; work         ;
+;       |gmii_tx_mac:u_tx_mac|                       ; 252 (180)           ; 79 (47)                   ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac                                                      ; gmii_tx_mac               ; work         ;
+;          |crc32_eth:u_crc|                         ; 66 (66)             ; 32 (32)                   ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc                                      ; crc32_eth                 ; work         ;
+;          |eth_header_builder:u_hdr_builder|        ; 6 (6)               ; 0 (0)                     ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|eth_header_builder:u_hdr_builder                     ; eth_header_builder        ; work         ;
+;       |ipv4_header_parser:u_ip|                    ; 50 (50)             ; 159 (159)                 ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip                                                   ; ipv4_header_parser        ; work         ;
+;       |udp_echo_app:u_echo|                        ; 119 (119)           ; 265 (265)                 ; 12000       ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo                                                       ; udp_echo_app              ; work         ;
 ;          |altsyncram:mem_rtl_0|                    ; 0 (0)               ; 0 (0)                     ; 12000       ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|altsyncram:mem_rtl_0                                  ; altsyncram                ; work         ;
 ;             |altsyncram_oic1:auto_generated|       ; 0 (0)               ; 0 (0)                     ; 12000       ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|altsyncram:mem_rtl_0|altsyncram_oic1:auto_generated   ; altsyncram_oic1           ; work         ;
-;       |udp_header_parser:u_udp|                    ; 153 (153)           ; 95 (95)                   ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp                                                   ; udp_header_parser         ; work         ;
-;       |udp_ipv4_tx_builder:u_txb|                  ; 486 (486)           ; 351 (351)                 ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb                                                 ; udp_ipv4_tx_builder       ; work         ;
-;       |udp_rx_meta_assembler:u_meta|               ; 1 (1)               ; 209 (209)                 ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_rx_meta_assembler:u_meta                                              ; udp_rx_meta_assembler     ; work         ;
+;       |udp_header_parser:u_udp|                    ; 158 (158)           ; 95 (95)                   ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp                                                   ; udp_header_parser         ; work         ;
+;       |udp_ipv4_tx_builder:u_txb|                  ; 484 (484)           ; 333 (333)                 ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb                                                 ; udp_ipv4_tx_builder       ; work         ;
+;       |udp_rx_meta_assembler:u_meta|               ; 1 (1)               ; 200 (200)                 ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_rx_meta_assembler:u_meta                                              ; udp_rx_meta_assembler     ; work         ;
 +----------------------------------------------------+---------------------+---------------------------+-------------+--------------+---------+-----------+------+--------------+------------------------------------------------------------------------------------------------------------------------------+---------------------------+--------------+
 Note: For table entries with two numbers listed, the numbers in parentheses indicate the number of resources of the given type used by the specific entity alone. The numbers listed outside of parentheses indicate the total resources of the given type used by the specific entity and all of its sub-entities in the hierarchy.
 
@@ -499,110 +506,156 @@ Encoding Type:  One-Hot
 Note: All cells listed above may not be present at the end of synthesis due to various synthesis optimizations.
 
 
-+----------------------------------------------------------------------------------------------------------------------------------+
-; Registers Removed During Synthesis                                                                                               ;
-+-----------------------------------------------------------------------------------------+----------------------------------------+
-; Register name                                                                           ; Reason for Removal                     ;
-+-----------------------------------------------------------------------------------------+----------------------------------------+
-; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|gmii_tx_er_o             ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip|header_reg_q[64..151] ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][7]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][6]         ; Stuck at VCC due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][5]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][4]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][3]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][2]         ; Stuck at VCC due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][1]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][0]         ; Stuck at VCC due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][7]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][6]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][5]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][4]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][3]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][2]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][1]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][0]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][7]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][6]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][5]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][4]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][3]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][2]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][1]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][0]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][7]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][6]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][5]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][4]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][3]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][2]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][1]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][0]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][7]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][6]         ; Stuck at VCC due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][5]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][4]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][3]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][2]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][1]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][0]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][7]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][6]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][5]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][4]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][3]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][2]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][1]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][0]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][7]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][6]         ; Stuck at VCC due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][5]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][4]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][3]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][2]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][1]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][0]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][7]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][6]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][5]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][4]         ; Stuck at VCC due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][3]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][2]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][1]         ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][0]         ; Stuck at VCC due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][7]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][6]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][5]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][4]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][3]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][2]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][1]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][0]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][7]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][6]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][5]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][4]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][3]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][2]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][1]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][0]        ; Stuck at GND due to stuck port data_in ;
-; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|state_q~4                ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|state_q~5                ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|state_q~6                ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|state_q~7                ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|state_q~14          ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|state_q~15          ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|state_q~16          ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|state_q~17          ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|state_q~8                 ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|state_q~9                 ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp|state_q~8             ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp|state_q~9             ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|gmii_rx_mac:u_mac|state_q~4                   ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|gmii_rx_mac:u_mac|state_q~5                   ; Lost fanout                            ;
-; ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip|state_q.ST_DROP       ; Lost fanout                            ;
-; Total Number of Removed Registers = 184                                                 ;                                        ;
-+-----------------------------------------------------------------------------------------+----------------------------------------+
++--------------------------------------------------------------------------------------------------------------------------------------------------+
+; Registers Removed During Synthesis                                                                                                               ;
++---------------------------------------------------------------------------------------------------------+----------------------------------------+
+; Register name                                                                                           ; Reason for Removal                     ;
++---------------------------------------------------------------------------------------------------------+----------------------------------------+
+; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|gmii_tx_er_o                             ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][7]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][6]                         ; Stuck at VCC due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][5]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][4]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][3]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][2]                         ; Stuck at VCC due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][1]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[0][0]                         ; Stuck at VCC due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][7]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][6]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][5]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][4]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][3]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][2]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][1]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[1][0]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][7]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][6]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][5]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][4]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][3]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][2]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][1]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[4][0]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][7]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][6]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][5]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][4]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][3]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][2]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][1]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[5][0]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][7]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][6]                         ; Stuck at VCC due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][5]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][4]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][3]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][2]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][1]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[6][0]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][7]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][6]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][5]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][4]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][3]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][2]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][1]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[7][0]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][7]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][6]                         ; Stuck at VCC due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][5]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][4]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][3]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][2]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][1]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[8][0]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][7]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][6]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][5]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][4]                         ; Stuck at VCC due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][3]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][2]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][1]                         ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[9][0]                         ; Stuck at VCC due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][7]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][6]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][5]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][4]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][3]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][2]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][1]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[26][0]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][7]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][6]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][5]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][4]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][3]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][2]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][1]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[27][0]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_rx_meta_assembler:u_meta|meta_q.dst_port[0..3,5,6,13..15] ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|rx_meta_q.dst_port[0..3,5,6,13..15]       ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|tx_meta_q.src_port[0..3,5,6,13..15] ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[21][0]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[21][1]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[21][2]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[21][3]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[20][5]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[21][5]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[20][6]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[21][6]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[20][7]                        ; Stuck at GND due to stuck port data_in ;
+; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|state_q~4                                ; Lost fanout                            ;
+; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|state_q~5                                ; Lost fanout                            ;
+; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|state_q~6                                ; Lost fanout                            ;
+; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|state_q~7                                ; Lost fanout                            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|state_q~14                          ; Lost fanout                            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|state_q~15                          ; Lost fanout                            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|state_q~16                          ; Lost fanout                            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|state_q~17                          ; Lost fanout                            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|state_q~8                                 ; Lost fanout                            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|state_q~9                                 ; Lost fanout                            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp|state_q~8                             ; Lost fanout                            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp|state_q~9                             ; Lost fanout                            ;
+; ethernet_test_03_top:ethernet_test_03_top|gmii_rx_mac:u_mac|state_q~4                                   ; Lost fanout                            ;
+; ethernet_test_03_top:ethernet_test_03_top|gmii_rx_mac:u_mac|state_q~5                                   ; Lost fanout                            ;
+; ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip|state_q.ST_DROP                       ; Lost fanout                            ;
+; Total Number of Removed Registers = 132                                                                 ;                                        ;
++---------------------------------------------------------------------------------------------------------+----------------------------------------+
+
+
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Removed Registers Triggering Further Register Optimizations                                                                                                                                                          ;
++--------------------------------------------------------------------------------------------+---------------------------+---------------------------------------------------------------------------------------------+
+; Register name                                                                              ; Reason for Removal        ; Registers Removed due to This Register                                                      ;
++--------------------------------------------------------------------------------------------+---------------------------+---------------------------------------------------------------------------------------------+
+; ethernet_test_03_top:ethernet_test_03_top|udp_rx_meta_assembler:u_meta|meta_q.dst_port[0]  ; Stuck at GND              ; ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|rx_meta_q.dst_port[0],        ;
+;                                                                                            ; due to stuck port data_in ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|tx_meta_q.src_port[0],  ;
+;                                                                                            ;                           ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[21][0]            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_rx_meta_assembler:u_meta|meta_q.dst_port[1]  ; Stuck at GND              ; ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|rx_meta_q.dst_port[1],        ;
+;                                                                                            ; due to stuck port data_in ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|tx_meta_q.src_port[1],  ;
+;                                                                                            ;                           ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[21][1]            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_rx_meta_assembler:u_meta|meta_q.dst_port[2]  ; Stuck at GND              ; ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|rx_meta_q.dst_port[2],        ;
+;                                                                                            ; due to stuck port data_in ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|tx_meta_q.src_port[2],  ;
+;                                                                                            ;                           ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[21][2]            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_rx_meta_assembler:u_meta|meta_q.dst_port[3]  ; Stuck at GND              ; ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|rx_meta_q.dst_port[3],        ;
+;                                                                                            ; due to stuck port data_in ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|tx_meta_q.src_port[3],  ;
+;                                                                                            ;                           ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[21][3]            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_rx_meta_assembler:u_meta|meta_q.dst_port[13] ; Stuck at GND              ; ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|rx_meta_q.dst_port[13],       ;
+;                                                                                            ; due to stuck port data_in ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|tx_meta_q.src_port[13], ;
+;                                                                                            ;                           ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[20][5]            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_rx_meta_assembler:u_meta|meta_q.dst_port[5]  ; Stuck at GND              ; ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|rx_meta_q.dst_port[5],        ;
+;                                                                                            ; due to stuck port data_in ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|tx_meta_q.src_port[5],  ;
+;                                                                                            ;                           ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[21][5]            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_rx_meta_assembler:u_meta|meta_q.dst_port[14] ; Stuck at GND              ; ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|rx_meta_q.dst_port[14],       ;
+;                                                                                            ; due to stuck port data_in ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|tx_meta_q.src_port[14], ;
+;                                                                                            ;                           ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[20][6]            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_rx_meta_assembler:u_meta|meta_q.dst_port[6]  ; Stuck at GND              ; ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|rx_meta_q.dst_port[6],        ;
+;                                                                                            ; due to stuck port data_in ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|tx_meta_q.src_port[6],  ;
+;                                                                                            ;                           ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[21][6]            ;
+; ethernet_test_03_top:ethernet_test_03_top|udp_rx_meta_assembler:u_meta|meta_q.dst_port[15] ; Stuck at GND              ; ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|rx_meta_q.dst_port[15],       ;
+;                                                                                            ; due to stuck port data_in ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|tx_meta_q.src_port[15], ;
+;                                                                                            ;                           ; ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_q[20][7]            ;
++--------------------------------------------------------------------------------------------+---------------------------+---------------------------------------------------------------------------------------------+
 
 
 +------------------------------------------------------+
@@ -610,12 +663,12 @@ Note: All cells listed above may not be present at the end of synthesis due to v
 +----------------------------------------------+-------+
 ; Statistic                                    ; Value ;
 +----------------------------------------------+-------+
-; Total registers                              ; 2277  ;
-; Number of registers using Synchronous Clear  ; 29    ;
+; Total registers                              ; 2329  ;
+; Number of registers using Synchronous Clear  ; 165   ;
 ; Number of registers using Synchronous Load   ; 112   ;
-; Number of registers using Asynchronous Clear ; 1712  ;
+; Number of registers using Asynchronous Clear ; 1773  ;
 ; Number of registers using Asynchronous Load  ; 0     ;
-; Number of registers using Clock Enable       ; 2036  ;
+; Number of registers using Clock Enable       ; 2089  ;
 ; Number of registers using Preset             ; 0     ;
 +----------------------------------------------+-------+
 
@@ -635,7 +688,7 @@ Note: All cells listed above may not be present at the end of synthesis due to v
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[25] ; 2       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[18] ; 2       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[10] ; 2       ;
-; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[2]  ; 2       ;
+; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[2]  ; 5       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[26] ; 2       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[11] ; 2       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[19] ; 2       ;
@@ -643,7 +696,7 @@ Note: All cells listed above may not be present at the end of synthesis due to v
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[27] ; 2       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[20] ; 2       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[12] ; 2       ;
-; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[4]  ; 9       ;
+; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[4]  ; 6       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[28] ; 2       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[13] ; 2       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[21] ; 2       ;
@@ -651,7 +704,7 @@ Note: All cells listed above may not be present at the end of synthesis due to v
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[29] ; 2       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[22] ; 2       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[14] ; 2       ;
-; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[6]  ; 7       ;
+; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[6]  ; 6       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[30] ; 2       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[15] ; 2       ;
 ; ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[23] ; 2       ;
@@ -705,39 +758,39 @@ Note: All cells listed above may not be present at the end of synthesis due to v
 +--------------------+-----------+---------------+----------------------+------------------------+------------+-----------------------------------------------------------------------------------------------------+
 ; Multiplexer Inputs ; Bus Width ; Baseline Area ; Area if Restructured ; Saving if Restructured ; Registered ; Example Multiplexer Output                                                                          ;
 +--------------------+-----------+---------------+----------------------+------------------------+------------+-----------------------------------------------------------------------------------------------------+
-; 3:1                ; 3 bits    ; 6 LEs         ; 3 LEs                ; 3 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp|byte_cnt_q[0]            ;
-; 3:1                ; 48 bits   ; 96 LEs        ; 96 LEs               ; 0 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip|header_reg_q[52]         ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|src_mac_q[42]            ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|src_mac_q[32]            ;
+; 3:1                ; 3 bits    ; 6 LEs         ; 3 LEs                ; 3 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp|byte_cnt_q[2]            ;
+; 3:1                ; 136 bits  ; 272 LEs       ; 272 LEs              ; 0 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip|header_reg_q[124]        ;
+; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|src_mac_q[46]            ;
+; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|src_mac_q[37]            ;
 ; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|src_mac_q[31]            ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|src_mac_q[20]            ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|src_mac_q[10]            ;
+; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|src_mac_q[23]            ;
+; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|src_mac_q[8]             ;
 ; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|src_mac_q[4]             ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|dst_mac_q[45]            ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|dst_mac_q[39]            ;
+; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|dst_mac_q[44]            ;
+; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|dst_mac_q[33]            ;
 ; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|dst_mac_q[31]            ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|dst_mac_q[22]            ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|dst_mac_q[15]            ;
+; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|dst_mac_q[17]            ;
+; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|dst_mac_q[11]            ;
 ; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|dst_mac_q[0]             ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 16 LEs               ; 0 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip|header_reg_q[4]          ;
-; 3:1                ; 23 bits   ; 46 LEs        ; 23 LEs               ; 23 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|rx_dv_str_q[0]             ;
-; 3:1                ; 23 bits   ; 46 LEs        ; 23 LEs               ; 23 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|udp_str_q[11]              ;
+; 3:1                ; 8 bits    ; 16 LEs        ; 16 LEs               ; 0 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip|header_reg_q[7]          ;
+; 3:1                ; 23 bits   ; 46 LEs        ; 23 LEs               ; 23 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|rx_dv_str_q[1]             ;
+; 3:1                ; 23 bits   ; 46 LEs        ; 23 LEs               ; 23 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|udp_str_q[13]              ;
 ; 3:1                ; 23 bits   ; 46 LEs        ; 23 LEs               ; 23 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|tx_act_str_q[9]            ;
-; 3:1                ; 23 bits   ; 46 LEs        ; 23 LEs               ; 23 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|tx_en_str_q[8]             ;
-; 4:1                ; 8 bits    ; 16 LEs        ; 16 LEs               ; 0 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip|header_reg_q[62]         ;
+; 3:1                ; 23 bits   ; 46 LEs        ; 23 LEs               ; 23 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|tx_en_str_q[21]            ;
+; 4:1                ; 8 bits    ; 16 LEs        ; 16 LEs               ; 0 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip|header_reg_q[148]        ;
 ; 5:1                ; 5 bits    ; 15 LEs        ; 5 LEs                ; 10 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip|byte_cnt_q[0]            ;
-; 5:1                ; 10 bits   ; 30 LEs        ; 10 LEs               ; 20 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|write_ptr_q[4]               ;
-; 6:1                ; 15 bits   ; 60 LEs        ; 45 LEs               ; 15 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|csum_q[20]             ;
-; 6:1                ; 17 bits   ; 68 LEs        ; 68 LEs               ; 0 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|csum_q[6]              ;
-; 6:1                ; 40 bits   ; 160 LEs       ; 80 LEs               ; 80 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp|header_reg_q[46]         ;
-; 6:1                ; 8 bits    ; 32 LEs        ; 16 LEs               ; 16 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp|header_reg_q[4]          ;
-; 6:1                ; 16 bits   ; 64 LEs        ; 16 LEs               ; 48 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp|payload_cnt_q[14]        ;
-; 5:1                ; 8 bits    ; 24 LEs        ; 16 LEs               ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp|header_reg_q[54]         ;
+; 5:1                ; 10 bits   ; 30 LEs        ; 10 LEs               ; 20 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|write_ptr_q[10]              ;
+; 6:1                ; 15 bits   ; 60 LEs        ; 45 LEs               ; 15 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|csum_q[31]             ;
+; 6:1                ; 17 bits   ; 68 LEs        ; 68 LEs               ; 0 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|csum_q[13]             ;
+; 6:1                ; 40 bits   ; 160 LEs       ; 80 LEs               ; 80 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp|header_reg_q[30]         ;
+; 6:1                ; 8 bits    ; 32 LEs        ; 16 LEs               ; 16 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp|header_reg_q[1]          ;
+; 6:1                ; 16 bits   ; 64 LEs        ; 16 LEs               ; 48 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp|payload_cnt_q[4]         ;
+; 5:1                ; 8 bits    ; 24 LEs        ; 16 LEs               ; 8 LEs                  ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp|header_reg_q[52]         ;
 ; 7:1                ; 4 bits    ; 16 LEs        ; 4 LEs                ; 12 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|byte_cnt_q[3]            ;
-; 4:1                ; 32 bits   ; 64 LEs        ; 32 LEs               ; 32 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[20] ;
+; 4:1                ; 32 bits   ; 64 LEs        ; 32 LEs               ; 32 LEs                 ; Yes        ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc|crc_reg[19] ;
 ; 3:1                ; 8 bits    ; 16 LEs        ; 16 LEs               ; 0 LEs                  ; No         ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|dbg_mac_data_o[0]                                ;
 ; 3:1                ; 5 bits    ; 10 LEs        ; 10 LEs               ; 0 LEs                  ; No         ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|hdr_cnt_q              ;
-; 5:1                ; 3 bits    ; 9 LEs         ; 6 LEs                ; 3 LEs                  ; No         ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip|state_q                  ;
+; 5:1                ; 2 bits    ; 6 LEs         ; 4 LEs                ; 2 LEs                  ; No         ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip|state_q                  ;
 ; 6:1                ; 11 bits   ; 44 LEs        ; 22 LEs               ; 22 LEs                 ; No         ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|Selector8                    ;
 ; 6:1                ; 2 bits    ; 8 LEs         ; 4 LEs                ; 4 LEs                  ; No         ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth|Selector6                ;
 ; 7:1                ; 2 bits    ; 8 LEs         ; 4 LEs                ; 4 LEs                  ; No         ; |soc_top|ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb|Selector9              ;
@@ -841,6 +894,24 @@ Note: All cells listed above may not be present at the end of synthesis due to v
 +-----------------------------+------------------------+------+------------------------------------------------------------------+
 ; SYNCHRONIZER_IDENTIFICATION ; FORCED_IF_ASYNCHRONOUS ; -    ; q_stage1[0]                                                      ;
 +-----------------------------+------------------------+------+------------------------------------------------------------------+
+
+
++-------------------------------------------------------------------------------------------------------------------------------+
+; Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_rx_hb_sync ;
++-----------------------------+------------------------+------+-----------------------------------------------------------------+
+; Assignment                  ; Value                  ; From ; To                                                              ;
++-----------------------------+------------------------+------+-----------------------------------------------------------------+
+; SYNCHRONIZER_IDENTIFICATION ; FORCED_IF_ASYNCHRONOUS ; -    ; q_stage1[0]                                                     ;
++-----------------------------+------------------------+------+-----------------------------------------------------------------+
+
+
++-------------------------------------------------------------------------------------------------------------------------------+
+; Source assignments for ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_hb_sync ;
++-----------------------------+------------------------+------+-----------------------------------------------------------------+
+; Assignment                  ; Value                  ; From ; To                                                              ;
++-----------------------------+------------------------+------+-----------------------------------------------------------------+
+; SYNCHRONIZER_IDENTIFICATION ; FORCED_IF_ASYNCHRONOUS ; -    ; q_stage1[0]                                                     ;
++-----------------------------+------------------------+------+-----------------------------------------------------------------+
 
 
 +------------------------------------------------------------------------------------------------------------------------------------------+
@@ -1241,7 +1312,7 @@ Note: In order to hide this table in the UI and the text report file, please set
 ; Parameter Name  ; Value                                            ; Type              ;
 +-----------------+--------------------------------------------------+-------------------+
 ; LOCAL_MAC       ; 000000000000101000110101000000011111111011000000 ; Unsigned Binary   ;
-; LOCAL_IP        ; 11000000101010000001010000110010                 ; Unsigned Binary   ;
+; LOCAL_IP        ; 11000000101010000000000000000010                 ; Unsigned Binary   ;
 ; UDP_PORT        ; 0001111110010000                                 ; Unsigned Binary   ;
 ; SYS_CLK_HZ      ; 50000000                                         ; Signed Integer    ;
 ; EXPECT_PREAMBLE ; 1                                                ; Signed Integer    ;
@@ -1313,15 +1384,17 @@ Note: In order to hide this table in the UI and the text report file, please set
 
 +--------------------------------------------------------------------------------------------------------------+
 ; Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds ;
-+----------------+----------+----------------------------------------------------------------------------------+
-; Parameter Name ; Value    ; Type                                                                             ;
-+----------------+----------+----------------------------------------------------------------------------------+
-; SYS_CLK_HZ     ; 50000000 ; Signed Integer                                                                   ;
-; ACTIVITY_MS    ; 150      ; Signed Integer                                                                   ;
-; LED_ACTIVE_LOW ; 1        ; Unsigned Binary                                                                  ;
-; LAYER_DEBUG    ; 0        ; Unsigned Binary                                                                  ;
-; MAC_DEBUG      ; 0        ; Unsigned Binary                                                                  ;
-+----------------+----------+----------------------------------------------------------------------------------+
++----------------+-----------+---------------------------------------------------------------------------------+
+; Parameter Name ; Value     ; Type                                                                            ;
++----------------+-----------+---------------------------------------------------------------------------------+
+; SYS_CLK_HZ     ; 50000000  ; Signed Integer                                                                  ;
+; ETH_CLK_HZ     ; 125000000 ; Signed Integer                                                                  ;
+; ACTIVITY_MS    ; 150       ; Signed Integer                                                                  ;
+; LED_ACTIVE_LOW ; 1         ; Unsigned Binary                                                                 ;
+; CLK_TEST       ; 0         ; Unsigned Binary                                                                 ;
+; LAYER_DEBUG    ; 0         ; Unsigned Binary                                                                 ;
+; MAC_DEBUG      ; 0         ; Unsigned Binary                                                                 ;
++----------------+-----------+---------------------------------------------------------------------------------+
 Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
 
 
@@ -1422,6 +1495,26 @@ Note: In order to hide this table in the UI and the text report file, please set
 +----------------+-------+-----------------------------------------------------------------------------------------------------------------------------+
 ; WIDTH          ; 1     ; Signed Integer                                                                                                              ;
 +----------------+-------+-----------------------------------------------------------------------------------------------------------------------------+
+Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
+
+
++-----------------------------------------------------------------------------------------------------------------------------------------------------+
+; Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_rx_hb_sync ;
++----------------+-------+----------------------------------------------------------------------------------------------------------------------------+
+; Parameter Name ; Value ; Type                                                                                                                       ;
++----------------+-------+----------------------------------------------------------------------------------------------------------------------------+
+; WIDTH          ; 1     ; Signed Integer                                                                                                             ;
++----------------+-------+----------------------------------------------------------------------------------------------------------------------------+
+Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
+
+
++-----------------------------------------------------------------------------------------------------------------------------------------------------+
+; Parameter Settings for User Entity Instance: ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_hb_sync ;
++----------------+-------+----------------------------------------------------------------------------------------------------------------------------+
+; Parameter Name ; Value ; Type                                                                                                                       ;
++----------------+-------+----------------------------------------------------------------------------------------------------------------------------+
+; WIDTH          ; 1     ; Signed Integer                                                                                                             ;
++----------------+-------+----------------------------------------------------------------------------------------------------------------------------+
 Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
 
 
@@ -1595,6 +1688,24 @@ Note: In order to hide this table in the UI and the text report file, please set
 +-------------------------------------------+--------------------------------------------------------------------------------------+
 
 
++------------------------------------------------------------------------------------------------------------------------------------+
+; Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_tx_hb_sync" ;
++------+--------+----------+---------------------------------------------------------------------------------------------------------+
+; Port ; Type   ; Severity ; Details                                                                                                 ;
++------+--------+----------+---------------------------------------------------------------------------------------------------------+
+; q_o  ; Output ; Info     ; Connected to dangling logic. Logic that only feeds a dangling port will be removed.                     ;
++------+--------+----------+---------------------------------------------------------------------------------------------------------+
+
+
++------------------------------------------------------------------------------------------------------------------------------------+
+; Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_rx_hb_sync" ;
++------+--------+----------+---------------------------------------------------------------------------------------------------------+
+; Port ; Type   ; Severity ; Details                                                                                                 ;
++------+--------+----------+---------------------------------------------------------------------------------------------------------+
+; q_o  ; Output ; Info     ; Connected to dangling logic. Logic that only feeds a dangling port will be removed.                     ;
++------+--------+----------+---------------------------------------------------------------------------------------------------------+
+
+
 +-------------------------------------------------------------------------------------------------------------------------------------+
 ; Port Connectivity Checks: "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_mac_md_sync" ;
 +------+--------+----------+----------------------------------------------------------------------------------------------------------+
@@ -1690,7 +1801,7 @@ Note: In order to hide this table in the UI and the text report file, please set
 ; local_port_i[6..5]       ; Input  ; Info     ; Stuck at GND                                   ;
 ; local_port_i[3..0]       ; Input  ; Info     ; Stuck at GND                                   ;
 ; local_port_i[4]          ; Input  ; Info     ; Stuck at VCC                                   ;
-; promiscuous_i            ; Input  ; Info     ; Stuck at VCC                                   ;
+; promiscuous_i            ; Input  ; Info     ; Stuck at GND                                   ;
 ; s_axis_tuser             ; Input  ; Info     ; Stuck at GND                                   ;
 ; m_axis_tuser             ; Output ; Info     ; Explicitly unconnected                         ;
 ; src_port_o               ; Output ; Info     ; Explicitly unconnected                         ;
@@ -1710,22 +1821,16 @@ Note: In order to hide this table in the UI and the text report file, please set
 ; Port               ; Type   ; Severity ; Details                                              ;
 +--------------------+--------+----------+------------------------------------------------------+
 ; local_ip_i[31..30] ; Input  ; Info     ; Stuck at VCC                                         ;
-; local_ip_i[5..4]   ; Input  ; Info     ; Stuck at VCC                                         ;
 ; local_ip_i[29..24] ; Input  ; Info     ; Stuck at GND                                         ;
-; local_ip_i[18..13] ; Input  ; Info     ; Stuck at GND                                         ;
-; local_ip_i[9..6]   ; Input  ; Info     ; Stuck at GND                                         ;
-; local_ip_i[3..2]   ; Input  ; Info     ; Stuck at GND                                         ;
+; local_ip_i[18..2]  ; Input  ; Info     ; Stuck at GND                                         ;
 ; local_ip_i[23]     ; Input  ; Info     ; Stuck at VCC                                         ;
 ; local_ip_i[22]     ; Input  ; Info     ; Stuck at GND                                         ;
 ; local_ip_i[21]     ; Input  ; Info     ; Stuck at VCC                                         ;
 ; local_ip_i[20]     ; Input  ; Info     ; Stuck at GND                                         ;
 ; local_ip_i[19]     ; Input  ; Info     ; Stuck at VCC                                         ;
-; local_ip_i[12]     ; Input  ; Info     ; Stuck at VCC                                         ;
-; local_ip_i[11]     ; Input  ; Info     ; Stuck at GND                                         ;
-; local_ip_i[10]     ; Input  ; Info     ; Stuck at VCC                                         ;
 ; local_ip_i[1]      ; Input  ; Info     ; Stuck at VCC                                         ;
 ; local_ip_i[0]      ; Input  ; Info     ; Stuck at GND                                         ;
-; promiscuous_i      ; Input  ; Info     ; Stuck at VCC                                         ;
+; promiscuous_i      ; Input  ; Info     ; Stuck at GND                                         ;
 ; protocol_o         ; Output ; Info     ; Explicitly unconnected                               ;
 +--------------------+--------+----------+------------------------------------------------------+
 
@@ -1751,7 +1856,7 @@ Note: In order to hide this table in the UI and the text report file, please set
 ; local_mac_i[24]     ; Input  ; Info     ; Stuck at VCC                                                                        ;
 ; local_mac_i[8]      ; Input  ; Info     ; Stuck at GND                                                                        ;
 ; accept_broadcast_i  ; Input  ; Info     ; Stuck at VCC                                                                        ;
-; promiscuous_i       ; Input  ; Info     ; Stuck at VCC                                                                        ;
+; promiscuous_i       ; Input  ; Info     ; Stuck at GND                                                                        ;
 ; m_axis_tuser        ; Output ; Info     ; Explicitly unconnected                                                              ;
 ; rx_ethertype_o      ; Output ; Info     ; Explicitly unconnected                                                              ;
 ; drop_o              ; Output ; Info     ; Explicitly unconnected                                                              ;
@@ -1774,13 +1879,13 @@ Note: In order to hide this table in the UI and the text report file, please set
 +-----------------------+-----------------------------+
 ; Type                  ; Count                       ;
 +-----------------------+-----------------------------+
-; boundary_port         ; 49                          ;
-; cycloneiii_ff         ; 2277                        ;
-;     CLR               ; 201                         ;
+; boundary_port         ; 53                          ;
+; cycloneiii_ff         ; 2329                        ;
+;     CLR               ; 200                         ;
 ;     CLR SLD           ; 20                          ;
-;     ENA               ; 545                         ;
-;     ENA CLR           ; 1370                        ;
-;     ENA CLR SCLR      ; 29                          ;
+;     ENA               ; 536                         ;
+;     ENA CLR           ; 1296                        ;
+;     ENA CLR SCLR      ; 165                         ;
 ;     ENA CLR SLD       ; 92                          ;
 ;     plain             ; 20                          ;
 ; cycloneiii_io_obuf    ; 1                           ;
@@ -1791,14 +1896,14 @@ Note: In order to hide this table in the UI and the text report file, please set
 ;     normal            ; 1237                        ;
 ;         0 data inputs ; 2                           ;
 ;         1 data inputs ; 55                          ;
-;         2 data inputs ; 125                         ;
-;         3 data inputs ; 117                         ;
-;         4 data inputs ; 938                         ;
+;         2 data inputs ; 128                         ;
+;         3 data inputs ; 120                         ;
+;         4 data inputs ; 932                         ;
 ; cycloneiii_pll        ; 1                           ;
 ; cycloneiii_ram_block  ; 17                          ;
 ;                       ;                             ;
 ; Max LUT depth         ; 8.00                        ;
-; Average LUT depth     ; 3.17                        ;
+; Average LUT depth     ; 3.19                        ;
 +-----------------------+-----------------------------+
 
 
@@ -1831,7 +1936,7 @@ Info: Running Quartus Prime Analysis & Synthesis
     Info: Altera and sold by Altera or its authorized distributors.  Please
     Info: refer to the Altera Software License Subscription Agreements 
     Info: on the Quartus Prime software download page.
-    Info: Processing started: Mon Jun  1 18:10:05 2026
+    Info: Processing started: Tue Jun  2 21:36:32 2026
 Info: Command: quartus_map soc_top --read_settings_files=on
 Info (20032): Parallel compilation is enabled and will use up to 4 processors
 Info (12021): Found 1 design units, including 1 entities, in source file build/rtl/soc_top.sv
@@ -1870,9 +1975,9 @@ Info (12021): Found 1 design units, including 1 entities, in source file rtl/eth
 Info (12021): Found 1 design units, including 1 entities, in source file rtl/eth/mac/gmii_tx_mac.sv
     Info (12023): Found entity 1: gmii_tx_mac File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/mac/gmii_tx_mac.sv Line: 19
 Info (12021): Found 1 design units, including 1 entities, in source file rtl/eth/util/eth_debug_leds.sv
-    Info (12023): Found entity 1: eth_debug_leds File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/util/eth_debug_leds.sv Line: 52
+    Info (12023): Found entity 1: eth_debug_leds File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/util/eth_debug_leds.sv Line: 62
 Info (12127): Elaborating entity "soc_top" for the top level hierarchy
-Info (12128): Elaborating entity "clkpll" for hierarchy "clkpll:clkpll" File: /home/palo/Projekty/socfw/examples/eth_test_03/build/rtl/soc_top.sv Line: 40
+Info (12128): Elaborating entity "clkpll" for hierarchy "clkpll:clkpll" File: /home/palo/Projekty/socfw/examples/eth_test_03/build/rtl/soc_top.sv Line: 41
 Info (12128): Elaborating entity "altpll" for hierarchy "clkpll:clkpll|altpll:altpll_component" File: /home/palo/Projekty/socfw/examples/eth_test_03/cores/clkpll/clkpll.v Line: 86
 Info (12130): Elaborated megafunction instantiation "clkpll:clkpll|altpll:altpll_component" File: /home/palo/Projekty/socfw/examples/eth_test_03/cores/clkpll/clkpll.v Line: 86
 Info (12133): Instantiated megafunction "clkpll:clkpll|altpll:altpll_component" with the following parameter: File: /home/palo/Projekty/socfw/examples/eth_test_03/cores/clkpll/clkpll.v Line: 86
@@ -1933,21 +2038,21 @@ Info (12133): Instantiated megafunction "clkpll:clkpll|altpll:altpll_component" 
 Info (12021): Found 1 design units, including 1 entities, in source file db/altpll_jub2.tdf
     Info (12023): Found entity 1: altpll_jub2 File: /home/palo/Projekty/socfw/examples/eth_test_03/db/altpll_jub2.tdf Line: 28
 Info (12128): Elaborating entity "altpll_jub2" for hierarchy "clkpll:clkpll|altpll:altpll_component|altpll_jub2:auto_generated" File: /home/palo/altera_lite/25.1std/quartus/libraries/megafunctions/altpll.tdf Line: 898
-Info (12128): Elaborating entity "ethernet_test_03_top" for hierarchy "ethernet_test_03_top:ethernet_test_03_top" File: /home/palo/Projekty/socfw/examples/eth_test_03/build/rtl/soc_top.sv Line: 61
-Info (12128): Elaborating entity "gmii_rx_mac" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|gmii_rx_mac:u_mac" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 153
-Info (12128): Elaborating entity "eth_header_parser" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 182
-Info (12128): Elaborating entity "ipv4_header_parser" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 202
-Info (12128): Elaborating entity "udp_header_parser" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 232
-Info (12128): Elaborating entity "udp_rx_meta_assembler" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|udp_rx_meta_assembler:u_meta" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 249
-Info (12128): Elaborating entity "udp_echo_app" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 269
-Info (12128): Elaborating entity "udp_ipv4_tx_builder" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 287
-Info (12128): Elaborating entity "async_fifo" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_pkt_fifo" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 328
-Info (12128): Elaborating entity "async_fifo" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_meta_fifo" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 392
-Info (12128): Elaborating entity "gmii_tx_mac" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 459
+Info (12128): Elaborating entity "ethernet_test_03_top" for hierarchy "ethernet_test_03_top:ethernet_test_03_top" File: /home/palo/Projekty/socfw/examples/eth_test_03/build/rtl/soc_top.sv Line: 63
+Info (12128): Elaborating entity "gmii_rx_mac" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|gmii_rx_mac:u_mac" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 157
+Info (12128): Elaborating entity "eth_header_parser" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|eth_header_parser:u_eth" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 186
+Info (12128): Elaborating entity "ipv4_header_parser" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|ipv4_header_parser:u_ip" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 206
+Info (12128): Elaborating entity "udp_header_parser" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|udp_header_parser:u_udp" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 236
+Info (12128): Elaborating entity "udp_rx_meta_assembler" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|udp_rx_meta_assembler:u_meta" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 253
+Info (12128): Elaborating entity "udp_echo_app" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 273
+Info (12128): Elaborating entity "udp_ipv4_tx_builder" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|udp_ipv4_tx_builder:u_txb" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 291
+Info (12128): Elaborating entity "async_fifo" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_pkt_fifo" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 332
+Info (12128): Elaborating entity "async_fifo" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_meta_fifo" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 396
+Info (12128): Elaborating entity "gmii_tx_mac" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 463
 Info (12128): Elaborating entity "eth_header_builder" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|eth_header_builder:u_hdr_builder" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/mac/gmii_tx_mac.sv Line: 73
 Info (12128): Elaborating entity "crc32_eth" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|gmii_tx_mac:u_tx_mac|crc32_eth:u_crc" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/mac/gmii_tx_mac.sv Line: 80
-Info (12128): Elaborating entity "eth_debug_leds" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 487
-Info (12128): Elaborating entity "cdc_two_flop_synchronizer" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_rx_dv_sync" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/util/eth_debug_leds.sv Line: 192
+Info (12128): Elaborating entity "eth_debug_leds" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/ethernet_test_03_top.sv Line: 493
+Info (12128): Elaborating entity "cdc_two_flop_synchronizer" for hierarchy "ethernet_test_03_top:ethernet_test_03_top|eth_debug_leds:u_leds|cdc_two_flop_synchronizer:u_rx_dv_sync" File: /home/palo/Projekty/socfw/examples/eth_test_03/rtl/eth/util/eth_debug_leds.sv Line: 241
 Warning (276020): Inferred RAM node "ethernet_test_03_top:ethernet_test_03_top|udp_echo_app:u_echo|mem_rtl_0" from synchronous design logic.  Pass-through logic has been added to match the read-during-write behavior of the original design.
 Warning (276027): Inferred dual-clock RAM node "ethernet_test_03_top:ethernet_test_03_top|async_fifo:u_pkt_fifo|mem_rtl_0" from synchronous design logic.  The read-during-write behavior of a dual-clock RAM is undefined and may not match the behavior of the original design.
 Info (276014): Found 1 instances of uninferred RAM logic
@@ -2025,24 +2130,27 @@ Warning (13024): Output pins are stuck at VCC or GND
     Warning (13410): Pin "ETH_MDC" is stuck at GND File: /home/palo/Projekty/socfw/examples/eth_test_03/build/rtl/soc_top.sv Line: 9
     Warning (13410): Pin "ETH_TXER" is stuck at GND File: /home/palo/Projekty/socfw/examples/eth_test_03/build/rtl/soc_top.sv Line: 18
 Info (286030): Timing-Driven Synthesis is running
-Info (17049): 103 registers lost all their fanouts during netlist optimizations.
+Info (17049): 15 registers lost all their fanouts during netlist optimizations.
 Info (144001): Generated suppressed messages file /home/palo/Projekty/socfw/examples/eth_test_03/output_files/soc_top.map.smsg
 Info (16010): Generating hard_block partition "hard_block:auto_generated_inst"
     Info (16011): Adding 1 node(s), including 0 DDIO, 1 PLL, 0 transceiver and 0 LCELL
-Warning (21074): Design contains 1 input pin(s) that do not drive logic
+Warning (21074): Design contains 4 input pin(s) that do not drive logic
     Warning (15610): No output dependent on input pin "ETH_RXER" File: /home/palo/Projekty/socfw/examples/eth_test_03/build/rtl/soc_top.sv Line: 15
-Info (21057): Implemented 3398 device resources after synthesis - the final resource count might be different
-    Info (21058): Implemented 13 input pins
+    Warning (15610): No output dependent on input pin "ONB_BTN[0]" File: /home/palo/Projekty/socfw/examples/eth_test_03/build/rtl/soc_top.sv Line: 19
+    Warning (15610): No output dependent on input pin "ONB_BTN[1]" File: /home/palo/Projekty/socfw/examples/eth_test_03/build/rtl/soc_top.sv Line: 19
+    Warning (15610): No output dependent on input pin "ONB_BTN[2]" File: /home/palo/Projekty/socfw/examples/eth_test_03/build/rtl/soc_top.sv Line: 19
+Info (21057): Implemented 3503 device resources after synthesis - the final resource count might be different
+    Info (21058): Implemented 17 input pins
     Info (21059): Implemented 35 output pins
     Info (21060): Implemented 1 bidirectional pins
-    Info (21061): Implemented 3331 logic cells
+    Info (21061): Implemented 3432 logic cells
     Info (21064): Implemented 17 RAM segments
     Info (21065): Implemented 1 PLLs
-Info: Quartus Prime Analysis & Synthesis was successful. 0 errors, 8 warnings
-    Info: Peak virtual memory: 652 megabytes
-    Info: Processing ended: Mon Jun  1 18:10:20 2026
-    Info: Elapsed time: 00:00:15
-    Info: Total CPU time (on all processors): 00:00:31
+Info: Quartus Prime Analysis & Synthesis was successful. 0 errors, 11 warnings
+    Info: Peak virtual memory: 651 megabytes
+    Info: Processing ended: Tue Jun  2 21:36:46 2026
+    Info: Elapsed time: 00:00:14
+    Info: Total CPU time (on all processors): 00:00:28
 
 
 +------------------------------------------+

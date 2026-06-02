@@ -14,7 +14,7 @@
  *   GTX CLK:   eth_gtx_clk_o tied to eth_tx_clk_i (125 MHz PLL output).
  *
  * @param LOCAL_MAC      FPGA MAC address
- * @param LOCAL_IP       FPGA IPv4 address (big-endian, e.g. 192.168.20.50 = C0A81432)
+ * @param LOCAL_IP       FPGA IPv4 address (big-endian, e.g. 192.168.0.2 = C0A80002)
  * @param UDP_PORT       Listened UDP destination port
  * @param SYS_CLK_HZ     sys_clk_i frequency in Hz
  * @param EXPECT_PREAMBLE 1 = require GMII preamble/SFD before data
@@ -29,7 +29,7 @@ import eth_pkg::*;
 
 module ethernet_test_03_top #(
   parameter logic [47:0] LOCAL_MAC      = 48'h000A3501FEC0,
-  parameter logic [31:0] LOCAL_IP       = 32'hC0A81432,
+  parameter logic [31:0] LOCAL_IP       = 32'hC0A80002,
   parameter logic [15:0] UDP_PORT       = 16'd8080,
   parameter int          SYS_CLK_HZ    = 50_000_000,
   parameter bit          EXPECT_PREAMBLE = 1'b1
@@ -56,8 +56,12 @@ module ethernet_test_03_top #(
 
   // Debug bus for J10/J11 logic analyzer (ETH_RXC domain, raw signals)
   output      logic [7:0]  dbg_mac_data_o,
-  output      logic [7:0]  dbg_ctrl_o
+  output      logic [7:0]  dbg_ctrl_o,
+  input  wire logic [3:0]  btn_i
 );
+
+  // Combined reset: rst_ni AND btn_i[3] (ONB_BTN[3]=btn5, active-low).
+  wire rst_w = rst_ni & btn_i[3];
 
   // ===========================================================================
   // SYS CLOCK DOMAIN — PHY reset extender
@@ -68,8 +72,8 @@ module ethernet_test_03_top #(
   logic [PHY_RST_W-1:0] phy_rst_cnt_q;
   logic                 phy_rst_done_w;
 
-  always_ff @(posedge sys_clk_i or negedge rst_ni) begin
-    if (!rst_ni) phy_rst_cnt_q <= '0;
+  always_ff @(posedge sys_clk_i or negedge rst_w) begin
+    if (!rst_w) phy_rst_cnt_q <= '0;
     else if (phy_rst_cnt_q != '1) phy_rst_cnt_q <= phy_rst_cnt_q + 1'b1;
   end
 
@@ -140,7 +144,7 @@ module ethernet_test_03_top #(
     .EXPECT_PREAMBLE(EXPECT_PREAMBLE)
   ) u_mac (
     .clk_i        (eth_rx_clk_i),
-    .rst_ni       (rst_ni),
+    .rst_ni       (rst_w),
     .gmii_rxd_i   (eth_rxd_i),
     .gmii_rx_dv_i (eth_rxdv_i),
     .gmii_rx_er_i (eth_rxer_i),
@@ -155,10 +159,10 @@ module ethernet_test_03_top #(
   // --- Ethernet Header Parser (L2) ---
   eth_header_parser u_eth (
     .clk_i             (eth_rx_clk_i),
-    .rst_ni            (rst_ni),
+    .rst_ni            (rst_w),
     .local_mac_i       (LOCAL_MAC),
     .accept_broadcast_i(1'b1),
-    .promiscuous_i     (1'b1),
+    .promiscuous_i     (1'b0),
     .s_axis_tdata      (mac_tdata),
     .s_axis_tvalid     (mac_tvalid),
     .s_axis_tready     (mac_tready),
@@ -184,9 +188,9 @@ module ethernet_test_03_top #(
   // --- IPv4 Header Parser (L3) ---
   ipv4_header_parser u_ip (
     .clk_i        (eth_rx_clk_i),
-    .rst_ni       (rst_ni),
+    .rst_ni       (rst_w),
     .local_ip_i   (LOCAL_IP),
-    .promiscuous_i(1'b1),
+    .promiscuous_i(1'b0),
     .s_axis_tdata (eth_tdata),
     .s_axis_tvalid(eth_tvalid),
     .s_axis_tready(eth_tready),
@@ -204,9 +208,9 @@ module ethernet_test_03_top #(
   // --- UDP Header Parser (L4) ---
   udp_header_parser #(.DROP_NONZERO_CHECKSUM(1'b0)) u_udp (
     .clk_i                   (eth_rx_clk_i),
-    .rst_ni                  (rst_ni),
+    .rst_ni                  (rst_w),
     .local_port_i            (UDP_PORT),
-    .promiscuous_i           (1'b1),
+    .promiscuous_i           (1'b0),
     .s_axis_tdata            (ip_tdata),
     .s_axis_tvalid           (ip_tvalid),
     .s_axis_tready           (ip_tready),
@@ -234,7 +238,7 @@ module ethernet_test_03_top #(
   // --- RX Metadata Assembler ---
   udp_rx_meta_assembler u_meta (
     .clk_i              (eth_rx_clk_i),
-    .rst_ni             (rst_ni),
+    .rst_ni             (rst_w),
     .eth_src_mac_i      (eth_src_mac),
     .eth_dst_mac_i      (eth_dst_mac),
     .ip_src_i           (ip_src),
@@ -251,7 +255,7 @@ module ethernet_test_03_top #(
   // --- UDP Echo Application ---
   udp_echo_app u_echo (
     .clk_i          (eth_rx_clk_i),
-    .rst_ni         (rst_ni),
+    .rst_ni         (rst_w),
     .rx_meta_valid_i(rx_meta_valid),
     .rx_meta_ready_o(rx_meta_ready),
     .rx_meta_i      (rx_meta),
@@ -271,7 +275,7 @@ module ethernet_test_03_top #(
   // --- UDP/IPv4 TX Builder ---
   udp_ipv4_tx_builder u_txb (
     .clk_i          (eth_rx_clk_i),
-    .rst_ni         (rst_ni),
+    .rst_ni         (rst_w),
     .tx_meta_valid_i(tx_meta_valid),
     .tx_meta_ready_o(tx_meta_ready),
     .tx_meta_i      (tx_meta),
@@ -305,8 +309,8 @@ module ethernet_test_03_top #(
   assign txb_tready = pkt_wr_ready && (txb_started_q || meta_wr_ready);
   assign txb_fire_w = txb_tvalid && txb_tready;
 
-  always_ff @(posedge eth_rx_clk_i or negedge rst_ni) begin
-    if (!rst_ni) txb_started_q <= 1'b0;
+  always_ff @(posedge eth_rx_clk_i or negedge rst_w) begin
+    if (!rst_w) txb_started_q <= 1'b0;
     else if (txb_fire_w && txb_tlast) txb_started_q <= 1'b0;
     else if (txb_fire_w)              txb_started_q <= 1'b1;
   end
@@ -316,12 +320,12 @@ module ethernet_test_03_top #(
     .DEPTH     (2048)
   ) u_pkt_fifo (
     .wr_clk_i  (eth_rx_clk_i),
-    .wr_rst_ni (rst_ni),
+    .wr_rst_ni (rst_w),
     .wr_data_i ({txb_tlast, txb_tdata}),
     .wr_valid_i(txb_fire_w),
     .wr_ready_o(pkt_wr_ready),
     .rd_clk_i  (eth_tx_clk_i),
-    .rd_rst_ni (rst_ni),
+    .rd_rst_ni (rst_w),
     .rd_data_o (pkt_rd_data),
     .rd_valid_o(pkt_rd_valid),
     .rd_ready_i(pkt_rd_ready)
@@ -333,8 +337,8 @@ module ethernet_test_03_top #(
   // ===========================================================================
   logic [47:0] meta_latch_dst_q, meta_latch_src_q;
 
-  always_ff @(posedge eth_rx_clk_i or negedge rst_ni) begin
-    if (!rst_ni) begin
+  always_ff @(posedge eth_rx_clk_i or negedge rst_w) begin
+    if (!rst_w) begin
       meta_latch_dst_q <= '0;
       meta_latch_src_q <= '0;
     end else if (tx_meta_valid && tx_meta_ready) begin
@@ -352,8 +356,8 @@ module ethernet_test_03_top #(
   logic        meta_wr_ready;
   logic        commit_pending_q;
 
-  always_ff @(posedge eth_rx_clk_i or negedge rst_ni) begin
-    if (!rst_ni) begin
+  always_ff @(posedge eth_rx_clk_i or negedge rst_w) begin
+    if (!rst_w) begin
       meta_wr_data_q   <= '0;
       meta_wr_valid_q  <= 1'b0;
       commit_pending_q <= 1'b0;
@@ -380,12 +384,12 @@ module ethernet_test_03_top #(
     .DEPTH     (4)
   ) u_meta_fifo (
     .wr_clk_i  (eth_rx_clk_i),
-    .wr_rst_ni (rst_ni),
+    .wr_rst_ni (rst_w),
     .wr_data_i (meta_wr_data_q),
     .wr_valid_i(meta_wr_valid_q),
     .wr_ready_o(meta_wr_ready),
     .rd_clk_i  (eth_tx_clk_i),
-    .rd_rst_ni (rst_ni),
+    .rd_rst_ni (rst_w),
     .rd_data_o (meta_rd_data),
     .rd_valid_o(meta_rd_valid),
     .rd_ready_i(meta_rd_ready)
@@ -404,8 +408,8 @@ module ethernet_test_03_top #(
   logic [47:0] txc_dst_mac_q, txc_src_mac_q;
   logic        txmac_s_tready, tx_mac_busy_w;
 
-  always_ff @(posedge eth_tx_clk_i or negedge rst_ni) begin
-    if (!rst_ni) begin
+  always_ff @(posedge eth_tx_clk_i or negedge rst_w) begin
+    if (!rst_w) begin
       txc_state_q   <= TXC_IDLE;
       txc_dst_mac_q <= '0;
       txc_src_mac_q <= '0;
@@ -442,7 +446,7 @@ module ethernet_test_03_top #(
   // --- GMII TX MAC ---
   gmii_tx_mac u_tx_mac (
     .clk_i         (eth_tx_clk_i),
-    .rst_ni        (rst_ni),
+    .rst_ni        (rst_w),
     .tx_dst_mac_i  (txc_dst_mac_q),
     .tx_src_mac_i  (txc_src_mac_q),
     .tx_ethertype_i(16'h0800),
@@ -463,15 +467,17 @@ module ethernet_test_03_top #(
   // ===========================================================================
   eth_debug_leds #(
     .SYS_CLK_HZ    (SYS_CLK_HZ),
+    .ETH_CLK_HZ    (125_000_000),
     .ACTIVITY_MS   (150),
     .LED_ACTIVE_LOW(1'b1),
+    .CLK_TEST      (1'b0),
     .LAYER_DEBUG   (1'b0),
     .MAC_DEBUG     (1'b0)
   ) u_leds (
     .sys_clk_i           (sys_clk_i),
     .eth_rx_clk_i        (eth_rx_clk_i),
     .eth_tx_clk_i        (eth_tx_clk_i),
-    .rst_ni              (rst_ni),
+    .rst_ni              (rst_w),
     .phy_reset_done_i    (phy_rst_done_w),
     .rx_dv_i             (eth_rxdv_i),
     .udp_accept_i        (rx_meta_valid),

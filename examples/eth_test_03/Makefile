@@ -1,10 +1,10 @@
 include ../../Makefile.common
 
 # FPGA network config
-FPGA_IP  := 192.168.20.50
+FPGA_IP  := 192.168.0.2
 FPGA_MAC := 00:0a:35:01:fe:c0
 FPGA_UDP_PORT := 8080
-PC_IFACE := enp0s20f0u4u1
+PC_IFACE := enp0s31f6
 
 .PHONY: sim sim-unit sim-integration sim-regression sim-clean
 .PHONY: arp-setup arp-show udp-send udp-test tcpdump hw-test fpga-test

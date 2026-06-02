@@ -97,6 +97,10 @@ ports:
     direction: output
     width: 8
 
+  - name: btn_i
+    direction: input
+    width: 4
+
 artifacts:
   synthesis:
     - ../rtl/eth/eth_pkg.sv

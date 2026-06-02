@@ -22,6 +22,7 @@ features:
   use:
     - board:onboard.eth
     - board:onboard.leds
+    - board:onboard.buttons
     - board:external.pmod.j10_led8
     - board:external.pmod.j11_led8
 
@@ -93,6 +94,8 @@ modules:
           target: board:external.pmod.j10_led8
         dbg_ctrl_o:
           target: board:external.pmod.j11_led8
+        btn_i:
+          target: board:onboard.buttons
 
 artifacts:
   emit: [rtl, board, timing]
