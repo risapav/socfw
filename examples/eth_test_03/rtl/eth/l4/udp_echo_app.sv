@@ -85,6 +85,8 @@ module udp_echo_app #(
               if (s_axis_tvalid) begin
                 mem[0]      <= s_axis_tdata;
                 write_ptr_q <= PTR_W'(1);
+                // 1-byte payload: first byte has tlast; skip ST_RX entirely.
+                if (s_axis_tlast) state_q <= ST_TX_META;
               end else begin
                 write_ptr_q <= '0;
               end

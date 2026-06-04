@@ -5,10 +5,10 @@ Tento repository obsahuje:
 - **examples/**: SystemVerilog aplikácie
 - Interné build/simulačné nástroje
 
-**Aktuálny cieľ:** Vývoj full HDMI (projekt `vga_test_05`).
-- **RTL:** `examples/vga_test_05/rtl`
-- **Simulácie:** `examples/vga_test_05/sim`
-- **Kontext:** Vždy referuj `HDMI_STATUS.md` pre aktuálny stav a `rtl/navrhy/` pre komentáre dizajnéra.
+**Aktuálny cieľ:** Vývoj XFCP (projekt `xfcp_test`). Komunikácia cez python app, obojsmerná komunikácia sériovou linkou s fpga, v fpga prepojené moduly cez axilite zbernicu (LED, 7 SEGMENT).
+- **RTL:** `examples/xfcp_test/rtl`
+- **Simulácie:** `examples/xfcp_test/sim`
+- **Kontext:** Vždy referuj `XFCP_STATUS.md` pre aktuálny stav a `rtl/navrhy/` pre komentáre dizajnéra.
 
 ---
 
@@ -23,8 +23,8 @@ Všetok generovaný kód musí byť syntetizovateľný v **Intel Quartus Prime 2
 - **Hlavička súboru:** Povinný Doxygen header (`@file`, `@brief`, `@param`, `@details`).
 - **Nettype & Guards:**
   1. Doxygen hlavička
-  2. `` `default_nettype none ``
-  3. Include guards (`` `ifndef MOD_NAME_SV``, `` `define MOD_NAME_SV``, `` `endif ``)
+  2. Include guards (`` `ifndef MOD_NAME_SV``, `` `define MOD_NAME_SV``, `` `endif ``)
+  3. `` `default_nettype none ``
 
 ### RTL Kódovací štandard
 - **Porty a inštancie:** Používaj výhradne ANSI-style deklarácie portov. Pri inštanciách modulov vždy používaj pomenované porty a parametre (`.port(signal)`).
@@ -43,7 +43,7 @@ Všetok generovaný kód musí byť syntetizovateľný v **Intel Quartus Prime 2
 
 ### Naming Conventions
 - **Moduly:** `snake_case`, názov súboru sa musí zhodovať s názvom modulu (`<module>.sv`).
-- **Porty/Signály:** `i_*` (inputs), `o_*` (outputs), `r_*` (registers), `w_*` (wires).
+- **Porty/Signály:** `_i*` (inputs), `*_i` (outputs), `*_r` (registers), `*_w` (wires), `*_d` (delays).
 - **Parametre:** `CamelCase` alebo `ALL_CAPS`.
 - **Localparams:** `ALL_CAPS`.
 - **Typedefs (enum/struct/union):** Prípona `_t` alebo `_e`.

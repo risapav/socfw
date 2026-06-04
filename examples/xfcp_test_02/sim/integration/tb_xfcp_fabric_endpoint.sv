@@ -218,8 +218,16 @@ module tb_xfcp_fabric_endpoint;
     recv_read(rdata);
     chk32(rdata, 32'hDEAD_BEEF, "T3 slave0 still intact after slave1 write");
 
-    // T4: SKIPPED — Problem F: invalid address -> dec_valid=0 -> hfifo may
-    // never pop -> all future requests blocked. Needs separate RTL fix.
+    // ── T4: Invalid-address WRITE — silently dropped, no deadlock ────
+    // Address 0x100 matches no slave (ranges: 0x00, 0x40, 0x80, 0xC0 ± 64B).
+    // System must not deadlock: subsequent valid READ must still work.
+    // $error in DUT debug log is expected and does not count as test failure.
+    xfcp_write(32'h0000_0100, 32'hDEAD_0000);  // no 0xFE bytes in addr or data
+    // No response is sent for invalid WRITE (ofifo_wvalid=0 in fabric).
+    // Verify liveness: re-read slave0 addr 0x04 (written in T1) must return DEAD_BEEF.
+    xfcp_read(32'h0000_0004);
+    recv_read(rdata);
+    chk32(rdata, 32'hDEAD_BEEF, "T4 no deadlock after invalid-addr WRITE");
 
     // ── T5: Back-to-back WRITEs to different slaves ───────────────────
     // Send both requests before draining: verifies parallel engine dispatch.

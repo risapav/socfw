@@ -5,10 +5,12 @@
  *   ST_HEADER  -- collects 14 header bytes (s_axis_tready=1, no downstream stall).
  *   ST_PAYLOAD -- forwards payload bytes with backpressure (s_axis_tready=m_axis_tready).
  *   ST_DROP    -- consumes frame bytes without forwarding (s_axis_tready=1).
- * MAC accept decision uses explicit dst_mac_q / mac_accept_q registers (no packed struct)
- * to avoid Quartus Lite packed-struct member comparison synthesis issue.
- * mac_accept_q is registered at byte 5 from combinatorial dst_mac_complete_w;
- * state transition at byte 13 uses only the pre-registered mac_accept_q.
+ * MAC accept decision uses a byte-by-byte running match pipeline (mac_match_q /
+ * bcast_match_q) updated at bytes 0-5, avoiding Quartus Lite misoptimisation of
+ * 48-bit partial-slice register assignments used in comparisons.
+ * mac_accept_q is registered at byte 6 from mac_match_q and bcast_match_q (both
+ * pure 1-bit FF-only signals at that point); state transition at byte 13 uses
+ * mac_accept_q.
  * Short frames (tlast before byte 13) are discarded: FSM resets to ST_HEADER.
  * @param None
  */
@@ -65,14 +67,17 @@ module eth_header_parser (
   state_e      state_q;
   logic [3:0]  byte_cnt_q;
 
-  logic [47:0] dst_mac_q;
-  logic [47:0] src_mac_q;
-  logic [15:0] ethertype_q;
+  // Individual byte registers — avoids Quartus Lite partial-slice synthesis bugs.
+  logic [7:0] dst_b0_q, dst_b1_q, dst_b2_q, dst_b3_q, dst_b4_q, dst_b5_q;
+  logic [7:0] src_b0_q, src_b1_q, src_b2_q, src_b3_q, src_b4_q, src_b5_q;
+  logic [7:0] eth_b0_q, eth_b1_q;
   logic        mac_accept_q;
 
-  // Combinatorial complete dst_mac when byte 5 arrives — avoids packed-struct on critical path
-  logic [47:0] dst_mac_complete_w;
-  assign dst_mac_complete_w = {dst_mac_q[47:8], s_axis_tdata};
+  // Byte-by-byte running match: avoids 48-bit partial-slice synthesis issues in
+  // Quartus Lite. Each is a 1-bit FF updated at bytes 0-5 (one 8-bit comparison
+  // per byte). mac_match_q=1 iff all six bytes matched local_mac_i.
+  logic mac_match_q;
+  logic bcast_match_q;
 
   logic dbg_locked_q;
 
@@ -80,10 +85,14 @@ module eth_header_parser (
     if (!rst_ni) begin
       state_q            <= ST_HEADER;
       byte_cnt_q         <= 4'd0;
-      dst_mac_q          <= '0;
-      src_mac_q          <= '0;
-      ethertype_q        <= '0;
+      dst_b0_q           <= 8'h00; dst_b1_q <= 8'h00; dst_b2_q <= 8'h00;
+      dst_b3_q           <= 8'h00; dst_b4_q <= 8'h00; dst_b5_q <= 8'h00;
+      src_b0_q           <= 8'h00; src_b1_q <= 8'h00; src_b2_q <= 8'h00;
+      src_b3_q           <= 8'h00; src_b4_q <= 8'h00; src_b5_q <= 8'h00;
+      eth_b0_q           <= 8'h00; eth_b1_q <= 8'h00;
       mac_accept_q       <= 1'b0;
+      mac_match_q        <= 1'b0;
+      bcast_match_q      <= 1'b0;
       hdr_done_pulse_o   <= 1'b0;
       hdr_accept_pulse_o <= 1'b0;
       hdr_drop_pulse_o   <= 1'b0;
@@ -101,42 +110,62 @@ module eth_header_parser (
           if (s_axis_tvalid) begin
             if (s_axis_tlast) begin
               // Short frame before byte 13 -- discard, reset
-              byte_cnt_q  <= 4'd0;
-              dst_mac_q   <= '0;
-              src_mac_q   <= '0;
-              ethertype_q <= '0;
+              byte_cnt_q <= 4'd0;
             end else begin
               byte_cnt_q <= byte_cnt_q + 4'd1;
               case (byte_cnt_q)
-                4'd0:  dst_mac_q[47:40] <= s_axis_tdata;
-                4'd1:  dst_mac_q[39:32] <= s_axis_tdata;
-                4'd2:  dst_mac_q[31:24] <= s_axis_tdata;
-                4'd3:  dst_mac_q[23:16] <= s_axis_tdata;
-                4'd4:  dst_mac_q[15:8]  <= s_axis_tdata;
-                4'd5: begin
-                  dst_mac_q[7:0] <= s_axis_tdata;
-                  // Register accept decision from combinatorial dst_mac_complete_w
-                  mac_accept_q   <= promiscuous_i ||
-                                    (dst_mac_complete_w == local_mac_i) ||
-                                    (accept_broadcast_i &&
-                                     (dst_mac_complete_w == ETH_BROADCAST_MAC));
+                4'd0: begin
+                  dst_b0_q      <= s_axis_tdata;
+                  mac_match_q   <= (s_axis_tdata == local_mac_i[47:40]);
+                  bcast_match_q <= (s_axis_tdata == 8'hFF);
                 end
-                4'd6:  src_mac_q[47:40] <= s_axis_tdata;
-                4'd7:  src_mac_q[39:32] <= s_axis_tdata;
-                4'd8:  src_mac_q[31:24] <= s_axis_tdata;
-                4'd9:  src_mac_q[23:16] <= s_axis_tdata;
-                4'd10: src_mac_q[15:8]  <= s_axis_tdata;
-                4'd11: src_mac_q[7:0]   <= s_axis_tdata;
-                4'd12: ethertype_q[15:8] <= s_axis_tdata;
+                4'd1: begin
+                  dst_b1_q      <= s_axis_tdata;
+                  mac_match_q   <= mac_match_q   && (s_axis_tdata == local_mac_i[39:32]);
+                  bcast_match_q <= bcast_match_q && (s_axis_tdata == 8'hFF);
+                end
+                4'd2: begin
+                  dst_b2_q      <= s_axis_tdata;
+                  mac_match_q   <= mac_match_q   && (s_axis_tdata == local_mac_i[31:24]);
+                  bcast_match_q <= bcast_match_q && (s_axis_tdata == 8'hFF);
+                end
+                4'd3: begin
+                  dst_b3_q      <= s_axis_tdata;
+                  mac_match_q   <= mac_match_q   && (s_axis_tdata == local_mac_i[23:16]);
+                  bcast_match_q <= bcast_match_q && (s_axis_tdata == 8'hFF);
+                end
+                4'd4: begin
+                  dst_b4_q      <= s_axis_tdata;
+                  mac_match_q   <= mac_match_q   && (s_axis_tdata == local_mac_i[15:8]);
+                  bcast_match_q <= bcast_match_q && (s_axis_tdata == 8'hFF);
+                end
+                4'd5: begin
+                  dst_b5_q      <= s_axis_tdata;
+                  mac_match_q   <= mac_match_q   && (s_axis_tdata == local_mac_i[7:0]);
+                  bcast_match_q <= bcast_match_q && (s_axis_tdata == 8'hFF);
+                end
+                4'd6: begin
+                  src_b0_q     <= s_axis_tdata;
+                  // mac_match_q holds cumulative match for all 6 DST_MAC bytes
+                  mac_accept_q <= promiscuous_i || mac_match_q ||
+                                  (accept_broadcast_i && bcast_match_q);
+                end
+                4'd7:  src_b1_q <= s_axis_tdata;
+                4'd8:  src_b2_q <= s_axis_tdata;
+                4'd9:  src_b3_q <= s_axis_tdata;
+                4'd10: src_b4_q <= s_axis_tdata;
+                4'd11: src_b5_q <= s_axis_tdata;
+                4'd12: eth_b0_q <= s_axis_tdata;
                 4'd13: begin
-                  ethertype_q[7:0]   <= s_axis_tdata;
+                  eth_b1_q           <= s_axis_tdata;
                   hdr_done_pulse_o   <= 1'b1;
                   hdr_accept_pulse_o <= mac_accept_q;
                   hdr_drop_pulse_o   <= !mac_accept_q;
                   state_q            <= mac_accept_q ? ST_PAYLOAD : ST_DROP;
                   if (!dbg_locked_q) begin
                     dbg_locked_q     <= 1'b1;
-                    dbg_dst_mac_o    <= dst_mac_q;
+                    dbg_dst_mac_o    <= {dst_b0_q, dst_b1_q, dst_b2_q,
+                                         dst_b3_q, dst_b4_q, dst_b5_q};
                     dbg_mac_accept_o <= mac_accept_q;
                   end
                 end
@@ -173,9 +202,9 @@ module eth_header_parser (
   assign m_axis_tlast  = s_axis_tlast;
   assign m_axis_tuser  = s_axis_tuser;
 
-  assign rx_dst_mac_o   = dst_mac_q;
-  assign rx_src_mac_o   = src_mac_q;
-  assign rx_ethertype_o = ethertype_q;
+  assign rx_dst_mac_o   = {dst_b0_q, dst_b1_q, dst_b2_q, dst_b3_q, dst_b4_q, dst_b5_q};
+  assign rx_src_mac_o   = {src_b0_q, src_b1_q, src_b2_q, src_b3_q, src_b4_q, src_b5_q};
+  assign rx_ethertype_o = {eth_b0_q, eth_b1_q};
   assign hdr_valid_o    = (state_q == ST_PAYLOAD);
   assign drop_o         = (state_q == ST_DROP);
 

@@ -10,8 +10,7 @@ project:
 registries:
   packs:
     - ../../packs/builtin
-  ip:
-    - ip
+  ip: []
   cpu: []
 
 features:

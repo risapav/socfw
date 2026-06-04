@@ -55,11 +55,13 @@ derive_clock_uncertainty
 # -------------------------------------------------------------------------
 {% for fp in timing.false_paths -%}
 {% if fp.from_port %}
-set_false_path -from [get_ports { {{ fp.from_port }} }]{% if fp.comment %} ; # {{ fp.comment }}{% endif %}
+set_false_path{% if fp.hold_only %} -hold{% endif %} -from [get_ports { {{ fp.from_port }} }]{% if fp.comment %} ; # {{ fp.comment }}{% endif %}
+{% elif fp.to_port %}
+set_false_path{% if fp.hold_only %} -hold{% endif %} -to [get_ports { {{ fp.to_port }} }]{% if fp.comment %} ; # {{ fp.comment }}{% endif %}
 {% elif fp.from_clock and fp.to_clock %}
-set_false_path -from [get_clocks { {{ fp.from_clock }} }] -to [get_clocks { {{ fp.to_clock }} }]{% if fp.comment %} ; # {{ fp.comment }}{% endif %}
+set_false_path{% if fp.hold_only %} -hold{% endif %} -from [get_clocks { {{ fp.from_clock }} }] -to [get_clocks { {{ fp.to_clock }} }]{% if fp.comment %} ; # {{ fp.comment }}{% endif %}
 {% elif fp.from_cell or fp.to_cell %}
-set_false_path{% if fp.from_cell %} -from [get_cells { {{ fp.from_cell }} }]{% endif %}{% if fp.to_cell %} -to [get_cells { {{ fp.to_cell }} }]{% endif %}{% if fp.comment %} ; # {{ fp.comment }}{% endif %}
+set_false_path{% if fp.hold_only %} -hold{% endif %}{% if fp.from_cell %} -from [get_cells { {{ fp.from_cell }} }]{% endif %}{% if fp.to_cell %} -to [get_cells { {{ fp.to_cell }} }]{% endif %}{% if fp.comment %} ; # {{ fp.comment }}{% endif %}
 {% endif -%}
 {% endfor %}
 

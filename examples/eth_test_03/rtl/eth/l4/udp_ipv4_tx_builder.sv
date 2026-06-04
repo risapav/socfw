@@ -71,7 +71,9 @@ module udp_ipv4_tx_builder (
   udp_packet_meta_t tx_meta_q;
   logic [15:0]      total_len_q;
   logic [15:0]      udp_len_q;
-  logic [7:0]       hdr_q [0:27];
+  // ramstyle="logic" forces LE-based mux instead of M9K; avoids 8+ ns async RAM
+  // read on the hdr_cnt_q -> pkt_fifo porta_datain path at 125 MHz.
+  (* ramstyle = "logic" *) logic [7:0] hdr_q [0:27];
 
   // Single 32-bit checksum accumulator; one 16-bit word added per CSUM state.
   logic [31:0] csum_q;

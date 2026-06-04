@@ -92,20 +92,16 @@ ports:
 artifacts:
   synthesis:
     # Shared repo-level RTL
-    - ../../../rtl/axi/axi_pkg.sv
-    - ../../../rtl/axi/axi_interfaces.sv
-    - ../../../rtl/axil/axil_regfile.sv
     - ../../../rtl/cdc/cdc_two_flop_synchronizer.sv
-    # ETH infrastructure (local copies)
-    - ../rtl/eth/crc.sv
-    - ../rtl/eth/ipsend.sv
+    # ETH infrastructure
+    - ../rtl/eth/mdio_init.sv
+    - ../rtl/eth/eth_status_leds.sv
     - ../rtl/eth/ipreceive.sv
     - ../rtl/eth/ram.sv
-    - ../rtl/eth/eth_status_leds.sv
     - ../rtl/eth/udp_rx_ram_to_stream.sv
     - ../rtl/eth/udp_tx_stream_to_ram.sv
-    # Echo peripheral
-    - ../rtl/eth_udp_echo_test.sv
+    - ../rtl/eth/ipsend.sv
+    - ../rtl/eth/crc.sv
     # Top-level
     - ../rtl/ethernet_test_echo.sv
 

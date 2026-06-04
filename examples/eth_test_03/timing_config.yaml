@@ -48,11 +48,14 @@ timing:
     - to_port: ETH_TXER
       comment: "Source-synchronous TX: rovnaka PLL hodina ako GTX_CLK"
     - from_port: "ETH_RXD[*]"
-      comment: "GLOBAL_SIGNAL na ETH_RXC pridava ~4ns clock insertion delay -> hold analyza je pesimisticka; PHY garantuje 2.5ns/0.5ns setup/hold"
+      hold_only: true
+      comment: "GLOBAL_SIGNAL na ETH_RXC: hold analyza pesimisticka (+4ns GCK insertion); setup analysis enabled to constrain IOE->first-FF routing"
     - from_port: ETH_RXDV
-      comment: "GLOBAL_SIGNAL na ETH_RXC: hold artifact, fyzicky spravne"
+      hold_only: true
+      comment: "GLOBAL_SIGNAL na ETH_RXC: hold artifact only"
     - from_port: ETH_RXER
-      comment: "GLOBAL_SIGNAL na ETH_RXC: hold artifact, fyzicky spravne"
+      hold_only: true
+      comment: "GLOBAL_SIGNAL na ETH_RXC: hold artifact only"
 
   io_delays:
     auto: true

@@ -13,16 +13,14 @@
  *   ST_FLUSH   — consume remaining bytes to s_axis_tlast (padding + FCS).
  *   ST_DROP    — consume entire frame to s_axis_tlast without output.
  *
- * Drop conditions (evaluated on last header byte via header_next_w):
- *   - udp_len < 8 (invalid)
- *   - dst_port != local_port_i and !promiscuous_i
- *   - DROP_NONZERO_CHECKSUM=1 and udp_checksum != 0x0000
+ * Uses dedicated byte-capture registers (port_match_q, len_ok_q) to avoid Quartus
+ * Lite synthesis bugs with wide shift registers / concatenation-vs-constant forms.
  *
- * UDP header byte layout (MSB-first shift register):
- *   header_reg_q[63:48] bytes 0-1: Source Port
- *   header_reg_q[47:32] bytes 2-3: Destination Port
- *   header_reg_q[31:16] bytes 4-5: UDP Length (header + payload)
- *   header_reg_q[15:0]  bytes 6-7: UDP Checksum
+ * UDP header byte layout:
+ *   bytes 0-1: Source Port
+ *   bytes 2-3: Destination Port
+ *   bytes 4-5: UDP Length (header + payload)
+ *   bytes 6-7: UDP Checksum
  *
  * @param DROP_NONZERO_CHECKSUM  Drop frames with non-zero UDP checksum (default 0).
  * @param local_port_i   16-bit local UDP port filter.
@@ -66,7 +64,6 @@ module udp_header_parser #(
   output      logic [15:0] payload_len_o,
   output      logic        hdr_valid_o,
   // Fires on the last header byte cycle (byte_cnt==7), 1 cycle before hdr_valid_o.
-  // The _pre outputs below use header_next_w and are valid at hdr_pre_valid_o=1.
   output      logic        hdr_pre_valid_o,
   output      logic [15:0] src_port_pre_o,
   output      logic [15:0] dst_port_pre_o,
@@ -83,78 +80,107 @@ module udp_header_parser #(
     ST_DROP    = 2'd3
   } state_e;
 
-  state_e       state_q;
-  logic [2:0]   byte_cnt_q;
-  logic [63:0]  header_reg_q;
-  logic [15:0]  payload_len_q;
-  logic [15:0]  payload_cnt_q;
+  state_e     state_q;
+  logic [2:0] byte_cnt_q;
+  logic [15:0] payload_len_q;
+  logic [15:0] payload_cnt_q;
 
-  // Combinatorial next-state of header_reg: avoids stale validation at byte 7.
-  logic [63:0] header_next_w;
-  assign header_next_w = {header_reg_q[55:0], s_axis_tdata};
+  // Dedicated byte-capture registers: one 8-bit register per UDP header byte.
+  // Avoids Quartus Lite synthesis bugs with wide (64-bit) shift registers.
+  logic [7:0] src_b0_q, src_b1_q;   // bytes 0-1: source port
+  logic [7:0] dst_b0_q, dst_b1_q;   // bytes 2-3: destination port
+  logic [7:0] len_b0_q, len_b1_q;   // bytes 4-5: UDP length
+  logic [7:0] csum_b0_q, csum_b1_q; // bytes 6-7: checksum
 
-  // Drop when: udp_len < 8, port mismatch, or nonzero checksum with parameter set.
+  // Running match for port comparison (byte-by-byte, avoids 16-bit comparison issues)
+  logic port_match_q;  // 1 iff dst_port bytes 2-3 match local_port_i
+  // UDP length validity flag: registered at byte 5 when both length bytes are known
+  logic len_ok_q;      // 1 iff udp_len >= 8
+
+  // Drop decision at byte 7: all flags are pure FF values; no concat with live input.
   logic drop_decision_w;
+  logic csum_nonzero_w;
+  assign csum_nonzero_w = (csum_b0_q != 8'h00) || (s_axis_tdata != 8'h00);
   assign drop_decision_w =
-    (header_next_w[31:16] < 16'd8) ||
-    (!promiscuous_i && (header_next_w[47:32] != local_port_i)) ||
-    (DROP_NONZERO_CHECKSUM && (header_next_w[15:0] != 16'h0000));
+    !len_ok_q ||
+    (!promiscuous_i && !port_match_q) ||
+    (DROP_NONZERO_CHECKSUM && csum_nonzero_w);
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
       state_q       <= ST_HEADER;
       byte_cnt_q    <= 3'd0;
-      header_reg_q  <= '0;
       payload_len_q <= 16'd0;
       payload_cnt_q <= 16'd0;
+      src_b0_q      <= 8'h00;
+      src_b1_q      <= 8'h00;
+      dst_b0_q      <= 8'h00;
+      dst_b1_q      <= 8'h00;
+      len_b0_q      <= 8'h00;
+      len_b1_q      <= 8'h00;
+      csum_b0_q     <= 8'h00;
+      csum_b1_q     <= 8'h00;
+      port_match_q  <= 1'b0;
+      len_ok_q      <= 1'b0;
     end else if (s_axis_tvalid && s_axis_tready) begin
       case (state_q)
         ST_HEADER: begin
-          header_reg_q <= header_next_w;
           if (byte_cnt_q == 3'd7) begin
             byte_cnt_q <= 3'd0;
+            csum_b1_q  <= s_axis_tdata;
             if (drop_decision_w) begin
               state_q <= ST_DROP;
             end else begin
-              payload_len_q <= header_next_w[31:16] - 16'd8;
+              payload_len_q <= {len_b0_q, len_b1_q} - 16'd8;
               payload_cnt_q <= 16'd0;
               // udp_len == 8 means zero payload: skip ST_PAYLOAD
-              state_q <= (header_next_w[31:16] == 16'd8) ? ST_FLUSH : ST_PAYLOAD;
+              state_q <= ({len_b0_q, len_b1_q} == 16'd8) ? ST_FLUSH : ST_PAYLOAD;
             end
           end else if (s_axis_tlast) begin
             // Short frame < 8 bytes: reset silently
-            byte_cnt_q   <= 3'd0;
-            header_reg_q <= '0;
+            byte_cnt_q <= 3'd0;
           end else begin
             byte_cnt_q <= byte_cnt_q + 3'd1;
+            case (byte_cnt_q)
+              3'd0: src_b0_q     <= s_axis_tdata;
+              3'd1: src_b1_q     <= s_axis_tdata;
+              3'd2: begin
+                dst_b0_q    <= s_axis_tdata;
+                port_match_q <= (s_axis_tdata == local_port_i[15:8]);
+              end
+              3'd3: begin
+                dst_b1_q    <= s_axis_tdata;
+                port_match_q <= port_match_q && (s_axis_tdata == local_port_i[7:0]);
+              end
+              3'd4: len_b0_q     <= s_axis_tdata;
+              3'd5: begin
+                len_b1_q  <= s_axis_tdata;
+                // udp_len >= 8: high byte > 0, OR (high byte == 0 AND low byte >= 8)
+                len_ok_q  <= (len_b0_q != 8'h00) || (s_axis_tdata >= 8'h08);
+              end
+              3'd6: csum_b0_q    <= s_axis_tdata;
+              default: ;
+            endcase
           end
         end
         ST_PAYLOAD: begin
           if (payload_cnt_q == payload_len_q - 16'd1) begin
             // Last payload byte forwarded
             payload_cnt_q <= 16'd0;
-            header_reg_q  <= '0;
             state_q <= s_axis_tlast ? ST_HEADER : ST_FLUSH;
           end else if (s_axis_tlast) begin
             // Truncated frame: reset FSM
             state_q       <= ST_HEADER;
             payload_cnt_q <= 16'd0;
-            header_reg_q  <= '0;
           end else begin
             payload_cnt_q <= payload_cnt_q + 16'd1;
           end
         end
         ST_FLUSH: begin
-          if (s_axis_tlast) begin
-            state_q      <= ST_HEADER;
-            header_reg_q <= '0;
-          end
+          if (s_axis_tlast) state_q <= ST_HEADER;
         end
         ST_DROP: begin
-          if (s_axis_tlast) begin
-            state_q      <= ST_HEADER;
-            header_reg_q <= '0;
-          end
+          if (s_axis_tlast) state_q <= ST_HEADER;
         end
         default: state_q <= ST_HEADER;
       endcase
@@ -170,23 +196,23 @@ module udp_header_parser #(
   assign m_axis_tlast  = m_axis_tvalid && (payload_cnt_q == payload_len_q - 16'd1);
   assign m_axis_tuser  = s_axis_tuser;
 
-  // Field outputs valid when hdr_valid_o = 1 (state == ST_PAYLOAD).
-  assign src_port_o   = header_reg_q[63:48];
-  assign dst_port_o   = header_reg_q[47:32];
-  assign udp_len_o    = header_reg_q[31:16];
+  // Outputs assembled from individual byte registers (no wide register slice).
+  assign src_port_o    = {src_b0_q,  src_b1_q};
+  assign dst_port_o    = {dst_b0_q,  dst_b1_q};
+  assign udp_len_o     = {len_b0_q,  len_b1_q};
   assign payload_len_o = payload_len_q;
-  assign hdr_valid_o  = (state_q == ST_PAYLOAD);
-  assign hdr_pre_valid_o  = (state_q == ST_HEADER) && s_axis_tvalid &&
-                             (byte_cnt_q == 3'd7) && !drop_decision_w &&
-                             (header_next_w[31:16] >= 16'd8);
-  // header_next_w holds all 8 header bytes when hdr_pre_valid_o=1 (byte_cnt==7).
-  assign src_port_pre_o   = header_next_w[63:48];
-  assign dst_port_pre_o   = header_next_w[47:32];
-  assign payload_len_pre_o = header_next_w[31:16] - 16'd8;
-  assign drop_o       = (state_q == ST_DROP);
+  assign hdr_valid_o   = (state_q == ST_PAYLOAD);
 
-  assign udp_checksum_zero_o      = (header_reg_q[15:0] == 16'h0000);
-  assign udp_checksum_unchecked_o = (header_reg_q[15:0] != 16'h0000);
+  // Pre outputs: valid at hdr_pre_valid_o=1 (byte_cnt==7, frame accepted, udp_len>=8).
+  assign hdr_pre_valid_o   = (state_q == ST_HEADER) && s_axis_tvalid &&
+                              (byte_cnt_q == 3'd7) && !drop_decision_w;
+  assign src_port_pre_o    = {src_b0_q, src_b1_q};
+  assign dst_port_pre_o    = {dst_b0_q, dst_b1_q};
+  assign payload_len_pre_o = {len_b0_q, len_b1_q} - 16'd8;
+
+  assign drop_o                = (state_q == ST_DROP);
+  assign udp_checksum_zero_o      = (csum_b0_q == 8'h00) && (csum_b1_q == 8'h00);
+  assign udp_checksum_unchecked_o = (csum_b0_q != 8'h00) || (csum_b1_q != 8'h00);
 
 endmodule
 

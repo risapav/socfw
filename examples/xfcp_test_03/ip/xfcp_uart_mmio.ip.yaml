@@ -73,6 +73,11 @@ artifacts:
     # AXI infrastructure (packages + interfaces)
     - ../rtl/axi/axi_pkg.sv
     - ../rtl/axi/axi_interfaces.sv
+    # stream buffer library
+    - ../rtl/stream/stream_reg_slice.sv
+    - ../rtl/stream/stream_skid_buffer.sv
+    - ../rtl/stream/axis_reg_slice.sv
+    - ../rtl/stream/axis_skid_buffer.sv
     # UART core
     - ../rtl/uart/uart_pkg.sv
     - ../rtl/uart/uart_baud_gen.sv
@@ -99,6 +104,7 @@ artifacts:
     - ../rtl/xfcp/xfcp_tx_packetizer.sv
     - ../rtl/xfcp/xfcp_axi_engine.sv
     - ../rtl/xfcp/xfcp_fabric_endpoint.sv
+
     # Top-level
     - ../rtl/xfcp_uart_mmio_top.sv
 

@@ -97,6 +97,10 @@ ports:
     direction: output
     width: 8
 
+  - name: uart_tap_tx_o
+    direction: output
+    width: 1
+
   - name: btn_i
     direction: input
     width: 4
@@ -118,6 +122,8 @@ artifacts:
     - ../rtl/eth/l4/udp_echo_app.sv
     - ../rtl/eth/l4/udp_ipv4_tx_builder.sv
     - ../rtl/eth/util/eth_debug_leds.sv
+    - ../rtl/eth/util/uart_tx.sv
+    - ../rtl/eth/util/eth_stream_tap.sv
     - ../rtl/eth/ethernet_test_03_top.sv
 
   simulation: []

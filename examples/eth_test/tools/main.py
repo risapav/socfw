@@ -1,7 +1,7 @@
 import socket
 
 # IP tvojho PC a port, na ktorý FPGA odosiela dáta
-BIND_IP = "192.168.20.234"
+BIND_IP = "192.168.0.3"
 # Podľa tvojho kódu je dest port buď 8080 (1F90) alebo 50000
 BIND_PORT = 8080
 

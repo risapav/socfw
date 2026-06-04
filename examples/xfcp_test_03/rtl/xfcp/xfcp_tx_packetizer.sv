@@ -68,7 +68,7 @@ module xfcp_tx_packetizer #(
 
   // Riadiace signály od arbitera
   input  wire           resp_start,    // 1-takt pulz: začni odosielať paket
-  input  wire [7:0]     resp_type,     // typ response (xfcp_op_e: READ/WRITE)
+  input  wire xfcp_op_e resp_type,     // typ response (xfcp_op_e: READ/WRITE)
   input  wire [7:0]     resp_seq,      // SEQ z requestu (vrátiť v response)
 
   // Dátový kanál z engine read_buffer FIFO
@@ -137,7 +137,7 @@ module xfcp_tx_packetizer #(
 
   always_comb begin
     hdr_vec[  0 +: 8] = XFCP_SOP_RESP;
-    hdr_vec[  8 +: 8] = 8'(resp_type);
+    hdr_vec[  8 +: 8] = xfcp_op_e'(resp_type);
     hdr_vec[ 16 +: 8] = resp_seq;
     hdr_vec[ 24 +: 8] = XFCP_ID_TYPE[15:8];
     hdr_vec[ 32 +: 8] = XFCP_ID_TYPE[7:0];
@@ -403,7 +403,7 @@ module xfcp_tx_packetizer #(
     if (rst_n) begin
       // 1. Výpisy viazané na zmenu stavu (Udalosti)
       if (state_q == ST_IDLE && state_n == ST_HEADER)
-        $display("[%0t] %m: Štart paketu | type=0x%02h", $time, 8'(resp_type));
+        $display("[%0t] %m: Štart paketu | type=0x%02h", $time, xfcp_op_e'(resp_type));
 
       if (state_q == ST_HEADER && state_n == ST_PAYLOAD)
         $display("[%0t] %m: Header done → ST_PAYLOAD", $time);

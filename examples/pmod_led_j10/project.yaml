@@ -11,14 +11,14 @@ registries:
   packs:
     - ../../packs/builtin
   ip:
-    - ip
+    - ../blink_test_01/ip
 
 features:
   use:
-    - board:external.pmod.j10_led6
+    - board:external.pmod.j10_led8
 
 timing:
-  file: timing.yaml
+  file: timing_config.yaml
 
 clocks:
   primary:
@@ -29,13 +29,13 @@ modules:
   - instance: blink_01
     type: blink_test
     clocks:
-      SYS_CLK: sys_clk
+      clk_i: sys_clk
     params:
       CLK_FREQ: 50000000
     bind:
       ports:
         ONB_LEDS:
-          target: board:external.pmod.j10_led6
+          target: board:external.pmod.j10_led8
 
 artifacts:
   emit: [rtl, board, timing]

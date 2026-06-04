@@ -213,7 +213,7 @@ module xfcp_rx_parser #(
   // ============================================================
   logic                    hfifo_push;
   logic                    hfifo_w_ready;
-  xfcp_req_hdr_t            hfifo_in;
+  xfcp_req_hdr_t           hfifo_in;
   logic                    dfifo_w_ready;
   logic                    word_complete;
 
@@ -221,10 +221,15 @@ module xfcp_rx_parser #(
     .DATA_WIDTH ($bits(xfcp_req_hdr_t)),
     .DEPTH      (4)
   ) i_header_fifo (
-    .clk     (clk),    .rst_n   (rst_n),
+    .clk     (clk),
+    .rst_n   (rst_n),
     .flush   (1'b0),
-    .w_valid (hfifo_push),   .w_data  (hfifo_in),   .w_ready (hfifo_w_ready),
-    .r_valid (req_valid),    .r_data  (req_hdr),    .r_ready (req_ready)
+    .w_valid (hfifo_push),
+    .w_data  (hfifo_in),
+    .w_ready (hfifo_w_ready),
+    .r_valid (req_valid),
+    .r_data  (req_hdr),
+    .r_ready (req_ready)
   );
 
   xfcp_fifo #(

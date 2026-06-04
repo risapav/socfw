@@ -75,6 +75,7 @@ class TimingIRBuilder:
                     to_clock=fp.to_clock,
                     from_cell=fp.from_cell,
                     to_cell=fp.to_cell,
+                    hold_only=fp.hold_only,
                     comment=fp.comment,
                 )
             )

@@ -58,9 +58,14 @@ module xfcp_uart_mmio_top #(
   // uart_rx_raw_s: direct UART RX output (no buffering).
   // xfcp_rx_s: parser input, fed through u_rx_fifo elastic buffer.
   // --------------------------------------------------------------------------
-  axi4s_if #(.DATA_WIDTH(8)) uart_rx_raw_s (.TCLK(clk_i), .TRESETn(rst_ni));
-  axi4s_if #(.DATA_WIDTH(8)) xfcp_rx_s     (.TCLK(clk_i), .TRESETn(rst_ni));
-  axi4s_if #(.DATA_WIDTH(8)) xfcp_tx_s     (.TCLK(clk_i), .TRESETn(rst_ni));
+  axi4s_if #(.DATA_WIDTH(8)) uart_rx_raw_s  (.TCLK(clk_i), .TRESETn(rst_ni));
+  axi4s_if #(.DATA_WIDTH(8)) xfcp_rx_s      (.TCLK(clk_i), .TRESETn(rst_ni));
+
+  // TX stream from XFCP endpoint / packetizer.
+  axi4s_if #(.DATA_WIDTH(8)) xfcp_tx_s      (.TCLK(clk_i), .TRESETn(rst_ni));
+
+  // TX stream after skid buffer, directly feeding axis_uart_tx.
+  axi4s_if #(.DATA_WIDTH(8)) xfcp_tx_uart_s (.TCLK(clk_i), .TRESETn(rst_ni));
 
   // --------------------------------------------------------------------------
   // AXI-Lite: endpoint masters -> 7 slave periferias
@@ -128,7 +133,8 @@ module xfcp_uart_mmio_top #(
   wire  rx_lost_pulse_w   = uart_rx_raw_s.TVALID && !uart_rx_raw_s.TREADY;
   wire  rx_frame_pulse_w  = rx_status_w.frame_err;
   wire  rx_overrun_pulse_w = rx_status_w.overrun_err;
-  wire  tx_byte_pulse_w   = xfcp_tx_s.TVALID && xfcp_tx_s.TREADY;
+  //wire  tx_byte_pulse_w   = xfcp_tx_s.TVALID && xfcp_tx_s.TREADY;
+  wire tx_byte_pulse_w = xfcp_tx_uart_s.TVALID && xfcp_tx_uart_s.TREADY;
 
   xfcp_fabric_endpoint #(
     .NUM_SLAVES     (NUM_SLAVES),
@@ -218,17 +224,59 @@ module xfcp_uart_mmio_top #(
   assign xfcp_rx_s.TID    = '0;
   assign xfcp_rx_s.TDEST  = '0;
 
-  // --------------------------------------------------------------------------
-  // UART TX wrapper (xfcp_tx_s -> AXIS -> serial)
-  // --------------------------------------------------------------------------
-  axis_uart_tx u_uart_tx (
-    .s_axis         (xfcp_tx_s.slave),
-    .txd_o          (uart_tx_o),
-    .prescale_i     (baud_div_w[15:0]),
-    .cfg_i          (uart_cfg_w),
-    .status_o       (tx_status_w),
-    .tx_done_pulse_o()
-  );
+// --------------------------------------------------------------------------
+// TX skid buffer: XFCP packetizer -> skid -> UART TX
+//
+// Dôvod:
+//   axis_uart_tx je veľmi pomalý AXI-Stream consumer. Pri 115200 baud
+//   preberie nový bajt približne raz za 4340 taktov pri 50 MHz.
+//   Skid buffer oddeľuje ready cestu späť do packetizera a bezpečne drží
+//   TDATA/TLAST/TUSER pri backpressure.
+//
+// Poznámka:
+//   Používame USER_WIDTH=1, aj keď TUSER zatiaľ nepoužívame.
+//   AXIS wrapper vyžaduje USER_WIDTH >= 1.
+// --------------------------------------------------------------------------
+axis_skid_buffer #(
+  .DATA_WIDTH(8),
+  .USER_WIDTH(1),
+  .RESET_DATA(1'b1)
+) u_xfcp_tx_skid (
+  .clk_i     (clk_i),
+  .rst_ni    (rst_ni),
+
+  // Slave side: from XFCP endpoint / tx packetizer.
+  .s_valid_i (xfcp_tx_s.TVALID),
+  .s_ready_o (xfcp_tx_s.TREADY),
+  .s_data_i  (xfcp_tx_s.TDATA[7:0]),
+  .s_last_i  (xfcp_tx_s.TLAST),
+  .s_user_i  (1'b0),
+
+  // Master side: to UART TX.
+  .m_valid_o (xfcp_tx_uart_s.TVALID),
+  .m_ready_i (xfcp_tx_uart_s.TREADY),
+  .m_data_o  (xfcp_tx_uart_s.TDATA[7:0]),
+  .m_last_o  (xfcp_tx_uart_s.TLAST),
+  .m_user_o  (xfcp_tx_uart_s.TUSER)
+);
+
+// Sideband defaults for the stream into axis_uart_tx.
+assign xfcp_tx_uart_s.TKEEP = '1;
+//assign xfcp_tx_uart_s.TSTRB = '1;
+assign xfcp_tx_uart_s.TID   = '0;
+assign xfcp_tx_uart_s.TDEST = '0;
+
+// --------------------------------------------------------------------------
+// UART TX wrapper (buffered XFCP TX stream -> serial)
+// --------------------------------------------------------------------------
+axis_uart_tx u_uart_tx (
+  .s_axis         (xfcp_tx_uart_s.slave),
+  .txd_o          (uart_tx_o),
+  .prescale_i     (baud_div_w[15:0]),
+  .cfg_i          (uart_cfg_w),
+  .status_o       (tx_status_w),
+  .tx_done_pulse_o()
+);
 
   // --------------------------------------------------------------------------
   // Slot 0: System Control (SYSC) — axil_s[0]

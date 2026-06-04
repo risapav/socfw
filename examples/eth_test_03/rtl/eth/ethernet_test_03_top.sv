@@ -191,7 +191,7 @@ module ethernet_test_03_top #(
     .rst_ni            (rst_w),
     .local_mac_i       (LOCAL_MAC),
     .accept_broadcast_i(1'b1),
-    .promiscuous_i     (1'b1), // DBG: bypass MAC filter
+    .promiscuous_i     (1'b1),  // L2: accept all; L3+L4 still strict
     .s_axis_tdata      (mac_tdata),
     .s_axis_tvalid     (mac_tvalid),
     .s_axis_tready     (mac_tready),
@@ -219,7 +219,7 @@ module ethernet_test_03_top #(
     .clk_i        (eth_rx_clk_i),
     .rst_ni       (rst_w),
     .local_ip_i   (LOCAL_IP),
-    .promiscuous_i(1'b1), // DBG: bypass IP filter
+    .promiscuous_i(1'b1),  // L3: accept all; L4 still strict
     .s_axis_tdata (eth_tdata),
     .s_axis_tvalid(eth_tvalid),
     .s_axis_tready(eth_tready),
@@ -239,7 +239,7 @@ module ethernet_test_03_top #(
     .clk_i                   (eth_rx_clk_i),
     .rst_ni                  (rst_w),
     .local_port_i            (UDP_PORT),
-    .promiscuous_i           (1'b1), // DBG: bypass port filter
+    .promiscuous_i           (1'b1),  // L4: accept all; isolate upstream
     .s_axis_tdata            (ip_tdata),
     .s_axis_tvalid           (ip_tvalid),
     .s_axis_tready           (ip_tready),
@@ -330,18 +330,34 @@ module ethernet_test_03_top #(
   // Gate packet start on meta_fifo having space; mid-packet only needs pkt_fifo.
   // Prevents pkt_fifo from holding a full packet with no matching meta entry.
   // txb_fire_w is the true AXI-S handshake: byte is consumed only when both
-  // builder and FIFO agree. wr_valid_i must use fire, not just tvalid, otherwise
-  // pkt_fifo writes bytes that the builder has not yet been told were accepted.
+  // builder and FIFO agree.
   logic txb_started_q;
   logic txb_fire_w;
+  // One-register skid buffer between TX builder and pkt_fifo.
+  // Breaks the hdr_cnt_q -> hdr_q mux -> M9K porta_datain_reg routing path
+  // (was 8.325 ns at 125 MHz, leaving only +0.001 ns slack at 85 C slow corner).
+  // Credit: accept new txb byte only when skid slot is free OR FIFO drains it.
+  logic [8:0] pkt_wr_skid_q;
+  logic       pkt_wr_skid_v_q;
+  logic       pkt_wr_credit_w;
 
-  assign txb_tready = pkt_wr_ready && (txb_started_q || meta_wr_ready);
-  assign txb_fire_w = txb_tvalid && txb_tready;
+  assign pkt_wr_credit_w = !pkt_wr_skid_v_q || pkt_wr_ready;
+  assign txb_tready      = pkt_wr_credit_w && (txb_started_q || meta_wr_ready);
+  assign txb_fire_w      = txb_tvalid && txb_tready;
 
   always_ff @(posedge eth_rx_clk_i or negedge rst_w) begin
-    if (!rst_w) txb_started_q <= 1'b0;
-    else if (txb_fire_w && txb_tlast) txb_started_q <= 1'b0;
-    else if (txb_fire_w)              txb_started_q <= 1'b1;
+    if (!rst_w) begin
+      txb_started_q  <= 1'b0;
+      pkt_wr_skid_q  <= 9'h000;
+      pkt_wr_skid_v_q <= 1'b0;
+    end else begin
+      if (txb_fire_w && txb_tlast) txb_started_q <= 1'b0;
+      else if (txb_fire_w)         txb_started_q <= 1'b1;
+      if (pkt_wr_credit_w) begin
+        pkt_wr_skid_q   <= {txb_tlast, txb_tdata};
+        pkt_wr_skid_v_q <= txb_fire_w;
+      end
+    end
   end
 
   async_fifo #(
@@ -350,8 +366,8 @@ module ethernet_test_03_top #(
   ) u_pkt_fifo (
     .wr_clk_i  (eth_rx_clk_i),
     .wr_rst_ni (rst_w),
-    .wr_data_i ({txb_tlast, txb_tdata}),
-    .wr_valid_i(txb_fire_w),
+    .wr_data_i (pkt_wr_skid_q),
+    .wr_valid_i(pkt_wr_skid_v_q),
     .wr_ready_o(pkt_wr_ready),
     .rd_clk_i  (eth_tx_clk_i),
     .rd_rst_ni (rst_w),
@@ -604,22 +620,31 @@ module ethernet_test_03_top #(
   logic latch_meta_wr_q;     // meta FIFO write committed
   logic latch_udp_tvalid_q;  // udp_parser emitted >= 1 payload byte
   logic latch_udp_tlast_q;   // udp_parser fired tlast (full payload delivered)
+  logic latch_mac_accept_q;  // L2 accepted >= 1 frame
+  logic latch_mac_drop_q;    // L2 dropped >= 1 frame
+  logic latch_ipv4_acc_q;    // L3 entered ST_PAYLOAD >= once
 
   always_ff @(posedge eth_rx_clk_i or negedge rst_w) begin
     if (!rst_w) begin
-      latch_rx_meta_q   <= 1'b0;
-      latch_tx_meta_q   <= 1'b0;
-      latch_txb_fire_q  <= 1'b0;
-      latch_meta_wr_q   <= 1'b0;
+      latch_rx_meta_q    <= 1'b0;
+      latch_tx_meta_q    <= 1'b0;
+      latch_txb_fire_q   <= 1'b0;
+      latch_meta_wr_q    <= 1'b0;
       latch_udp_tvalid_q <= 1'b0;
       latch_udp_tlast_q  <= 1'b0;
+      latch_mac_accept_q <= 1'b0;
+      latch_mac_drop_q   <= 1'b0;
+      latch_ipv4_acc_q   <= 1'b0;
     end else begin
-      if (rx_meta_valid)            latch_rx_meta_q   <= 1'b1;
-      if (tx_meta_valid)            latch_tx_meta_q   <= 1'b1;
-      if (txb_fire_w)               latch_txb_fire_q  <= 1'b1;
-      if (meta_wr_valid_q)          latch_meta_wr_q   <= 1'b1;
+      if (rx_meta_valid)            latch_rx_meta_q    <= 1'b1;
+      if (tx_meta_valid)            latch_tx_meta_q    <= 1'b1;
+      if (txb_fire_w)               latch_txb_fire_q   <= 1'b1;
+      if (meta_wr_valid_q)          latch_meta_wr_q    <= 1'b1;
       if (udp_tvalid && udp_tready) latch_udp_tvalid_q <= 1'b1;
       if (udp_tvalid && udp_tlast)  latch_udp_tlast_q  <= 1'b1;
+      if (mac_accept_pulse_w)       latch_mac_accept_q <= 1'b1;
+      if (mac_drop_pulse_w)         latch_mac_drop_q   <= 1'b1;
+      if (ipv4_hdr_valid_w)         latch_ipv4_acc_q   <= 1'b1;
     end
   end
 
@@ -633,7 +658,14 @@ module ethernet_test_03_top #(
   // ===========================================================================
   // Debug bus J10/J11
   // J10 (dbg_mac_data_o[7:0]): txb_tdata when txb_tvalid, else pkt_rd_data,
-  //   else dbg_dst_mac_w[15:8] (idle: first-frame DST_MAC byte4).
+  //   idle: {latch_mac_drop_q, latch_mac_accept_q, latch_ipv4_acc_q,
+  //          dbg_mac_accept_w, dbg_dst_mac_w[15:12]}
+  //   idle[7] = latch_mac_drop_q   L2 dropped >= 1 frame
+  //   idle[6] = latch_mac_accept_q L2 accepted >= 1 frame
+  //   idle[5] = latch_ipv4_acc_q   L3 entered ST_PAYLOAD >= once
+  //   idle[4] = dbg_mac_accept_w   was first-frame accepted at L2?
+  //   idle[3:0] = dbg_dst_mac_w[47:44]  top nibble of first-frame MAC byte0
+  //     (FPGA_MAC 0x00 -> nibble=0x0=0000, broadcast 0xff -> 1111, unknown=other)
   // J11 (dbg_ctrl_o[7:0]) — STICKY bits persist after test:
   //   [7] = latch_tx_busy_q   (sticky: gmii_tx_mac ever became busy = GMII TX fired)
   //   [6] = latch_meta_wr_q   (sticky: meta FIFO was ever written -> TX triggered)
@@ -644,21 +676,16 @@ module ethernet_test_03_top #(
   //   [1] = latch_udp_tlast_q  (sticky: udp_parser fired tlast)
   //   [0] = tx_meta_valid      (live: echo_app in ST_TX_META right now)
   //
-  // Decode after fpga-test (n=1=event happened, s=0=never happened):
-  //   J11=ssssssss  -> nothing worked (GMII RX dead?)
-  //   J11=xxxxnsss  -> [3]=n: parsers OK, UDP meta assembled
-  //   J11=xxxxnsss  -> [2]=s: udp_parser NEVER emitted payload (len=0 or ST_PAYLOAD unreached)
-  //   J11=xxxxnnss  -> [2]=n,[1]=s: payload started but tlast NEVER fired (payload_cnt stuck)
-  //   J11=xxxxnnns  -> [1]=n,[4]=s: tlast fired but echo_app did not complete RX (FSM bug?)
-  //   J11=xxnnnnss  -> [4]=n: echo_app completed RX; [5]=n: TX builder fired
-  //   J11=xnnnnnss  -> [6]=n: meta FIFO written (CDC triggered)
-  //   J11=nnnnnnss  -> [7]=n: gmii_tx_mac activated (GMII TX on wire!)
-  // uart_tap_tx_o -> UART_TX (CP2102N, J1 pin, /dev/ttyUSBx on PC)
+  // J10 idle decode (when txb inactive, pkt_rd inactive):
+  //   bit7=s,bit6=s -> L2 NEVER accepted or dropped anything (GMII RX dead?)
+  //   bit7=n,bit6=s -> L2 dropped frames but accepted none (MAC filter broken)
+  //   bit7=x,bit6=n,bit5=s -> L2 accepted but L3 NEVER entered payload (IP filter broken)
+  //   bit7=x,bit6=n,bit5=n -> L3 OK; if J11[3]=0 -> UDP/meta filter broken
   // ===========================================================================
-  // J10 idle shows dbg_dst_mac_w[15:8] = DST_MAC[4] (should be 0xFE if MAC correct)
-  assign dbg_mac_data_o = txb_tvalid    ? txb_tdata         :
-                          pkt_rd_valid  ? pkt_rd_data[7:0]  :
-                          dbg_dst_mac_w[15:8];
+  assign dbg_mac_data_o = txb_tvalid   ? txb_tdata         :
+                          pkt_rd_valid ? pkt_rd_data[7:0]  :
+                          {latch_mac_drop_q, latch_mac_accept_q, latch_ipv4_acc_q,
+                           dbg_mac_accept_w, dbg_dst_mac_w[47:44]};
   assign dbg_ctrl_o = {
     latch_tx_busy_q,    // bit7
     latch_meta_wr_q,    // bit6

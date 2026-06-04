@@ -30,6 +30,7 @@ class FalsePathConstraintIR:
     to_clock: str | None = None
     from_cell: str | None = None
     to_cell: str | None = None
+    hold_only: bool = False
     comment: str = ""
 
 

@@ -6,8 +6,13 @@ FPGA_MAC := 00:0a:35:01:fe:c0
 FPGA_UDP_PORT := 8080
 PC_IFACE := enp0s31f6
 
+# UART tap config (CP2102N on board)
+TAP_PORT  := /dev/ttyUSB0
+TAP_BAUD  := 115200
+TAP_BYTES := 20
+
 .PHONY: sim sim-unit sim-integration sim-regression sim-clean
-.PHONY: arp-setup arp-show udp-send udp-test tcpdump hw-test fpga-test
+.PHONY: arp-setup arp-show udp-send udp-test tcpdump hw-test fpga-test tap-test wire-test
 
 # --- Simulation ---
 
@@ -59,6 +64,37 @@ tcpdump:
 fpga-test:
 	python3 test_fpga.py --ip $(FPGA_IP) --port $(FPGA_UDP_PORT) \
 	                     --mac $(FPGA_MAC) --iface $(PC_IFACE)
+
+# Wire-level diagnostic: tcpdump in background (shows PC-side DST MAC), then test.
+# Use this to confirm what the PC puts on the wire (reveals ARP vs GMII corruption).
+wire-test: arp-setup
+	@echo "=== Wire-level capture: DST MAC on enp0s31f6 ==="
+	@sudo tcpdump -i $(PC_IFACE) -e -n 'udp port $(FPGA_UDP_PORT)' & \
+	 DUMP_PID=$$!; \
+	 sleep 0.5; \
+	 python3 test_fpga.py --ip $(FPGA_IP) --port $(FPGA_UDP_PORT) \
+	                      --mac $(FPGA_MAC) --iface $(PC_IFACE) --no-arp; \
+	 sleep 0.5; \
+	 sudo kill $$DUMP_PID 2>/dev/null; \
+	 wait $$DUMP_PID 2>/dev/null; \
+	 true
+
+# UART stream tap + UDP test: ARP first (sudo), then tap reader + test simultaneously.
+# read_tap.py runs in background; test_fpga.py sends packets; tap output appears inline.
+tap-test: arp-setup
+	@echo ""
+	@echo "=== UART tap ($(TAP_PORT) @ $(TAP_BAUD)) + UDP echo test ==="
+	@echo ""
+	@python3 tools/read_tap.py \
+	     --port $(TAP_PORT) --baud $(TAP_BAUD) --count $(TAP_BYTES) --frames 0 & \
+	 TAP_PID=$$!; \
+	 sleep 0.5; \
+	 python3 test_fpga.py --ip $(FPGA_IP) --port $(FPGA_UDP_PORT) \
+	                      --mac $(FPGA_MAC) --iface $(PC_IFACE) --no-arp; \
+	 sleep 2; \
+	 kill $$TAP_PID 2>/dev/null; \
+	 wait $$TAP_PID 2>/dev/null; \
+	 true
 
 # Full HW test sequence: set ARP, start capture, send packets.
 # Opens tcpdump in background, waits 1 s, then sends test packets.
