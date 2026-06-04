@@ -3,23 +3,23 @@ Timing Analyzer Summary
 ------------------------------------------------------------
 
 Type  : Slow 1200mV 85C Model Setup 'ETH_RXC'
-Slack : 0.366
+Slack : 0.402
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Setup 'ETH_TX_CLK'
-Slack : 0.971
+Slack : 0.898
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Setup 'SYS_CLK'
-Slack : 5.422
+Slack : 5.135
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Hold 'ETH_RXC'
-Slack : 0.428
+Slack : 0.423
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Hold 'ETH_TX_CLK'
-Slack : 0.431
+Slack : 0.430
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Hold 'SYS_CLK'
@@ -27,83 +27,83 @@ Slack : 0.449
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Recovery 'SYS_CLK'
-Slack : 9.360
+Slack : 9.640
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Removal 'SYS_CLK'
-Slack : 5.882
-TNS   : 0.000
-
-Type  : Slow 1200mV 85C Model Minimum Pulse Width 'ETH_TX_CLK'
-Slack : 3.654
+Slack : 5.727
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Minimum Pulse Width 'ETH_RXC'
-Slack : 3.656
+Slack : 3.647
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Minimum Pulse Width 'ETH_TX_CLK'
+Slack : 3.658
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Minimum Pulse Width 'SYS_CLK'
-Slack : 9.765
+Slack : 9.647
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Setup 'ETH_RXC'
-Slack : 0.859
+Slack : 0.895
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Setup 'ETH_TX_CLK'
-Slack : 1.355
+Slack : 1.246
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Setup 'SYS_CLK'
-Slack : 6.258
+Slack : 5.997
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Hold 'ETH_RXC'
-Slack : 0.379
+Slack : 0.378
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Hold 'ETH_TX_CLK'
-Slack : 0.382
+Slack : 0.381
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Hold 'SYS_CLK'
-Slack : 0.397
+Slack : 0.398
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Recovery 'SYS_CLK'
-Slack : 10.153
+Slack : 10.410
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Removal 'SYS_CLK'
-Slack : 5.266
+Slack : 5.152
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Minimum Pulse Width 'ETH_RXC'
-Slack : 3.542
+Slack : 3.538
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Minimum Pulse Width 'ETH_TX_CLK'
-Slack : 3.641
+Slack : 3.645
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Minimum Pulse Width 'SYS_CLK'
-Slack : 9.769
+Slack : 9.647
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Setup 'ETH_RXC'
-Slack : 4.702
+Slack : 4.709
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Setup 'ETH_TX_CLK'
-Slack : 4.873
+Slack : 4.769
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Setup 'SYS_CLK'
-Slack : 11.541
+Slack : 11.403
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Hold 'ETH_RXC'
-Slack : 0.159
+Slack : 0.146
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Hold 'ETH_TX_CLK'
@@ -115,23 +115,23 @@ Slack : 0.184
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Recovery 'SYS_CLK'
-Slack : 12.920
+Slack : 13.026
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Removal 'SYS_CLK'
-Slack : 2.795
+Slack : 2.715
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Minimum Pulse Width 'ETH_RXC'
-Slack : 3.130
+Slack : 3.131
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Minimum Pulse Width 'ETH_TX_CLK'
-Slack : 3.756
+Slack : 3.755
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Minimum Pulse Width 'SYS_CLK'
-Slack : 9.254
+Slack : 9.209
 TNS   : 0.000
 
 ------------------------------------------------------------

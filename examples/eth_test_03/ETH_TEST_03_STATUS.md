@@ -1,7 +1,7 @@
 # ETH_TEST_03 — Status
 
-**Dátum:** 2026-06-02
-**Stav:** HW TESTOVANIE — Faza 4H: MAC comparison diagnostika dokoncena, Makefile opraveny, caka HW echo test
+**Dátum:** 2026-06-04
+**Stav:** HW TESTOVANIE — Faza 4I: TX beacon pridaný — diagnostika GMII TX fyzickej cesty
 
 ---
 
@@ -21,15 +21,16 @@ TX: udp_echo_app -> udp_ipv4_tx_builder -> async_fifo (CDC) -> TX controller -> 
 
 - **Syntéza:** 0 errors, 8 warnings (ASYNC_REG atribút ignorovaný — benígne)
 - **Fitter + Assembler + STA:** 0 errors
-- **SOF:** `output_files/soc_top.sof` (build Faza 4H, Tue Jun 2 20:42 2026)
+- **SOF (Faza 4I):** `output_files/soc_top.sof` — Thu Jun 4 05:11:35 2026 (beacon + invert_output fix)
+- **Predchádzajúci SOF:** Faza 4H, Tue Jun 2 20:42 2026
 
 ### Timing Summary (Faza 4H build, Tue Jun 2 20:42 2026)
 
 | Clock | Slack Setup Slow 85°C | Slack Hold | Stav |
 |---|---|---|---|
-| ETH_RXC (125 MHz) | **+0.444 ns** | +0.428 ns | PASS |
-| ETH_TX_CLK (125 MHz) | +0.793 ns | +0.448 ns | PASS |
-| SYS_CLK (50 MHz) | +5.341 ns | +0.449 ns | PASS |
+| ETH_RXC (125 MHz) | **+0.402 ns** | +0.423 ns | PASS |
+| ETH_TX_CLK (125 MHz) | **+0.895 ns** | +0.378 ns | PASS |
+| SYS_CLK (50 MHz) | +4.709 ns | +0.146 ns | PASS |
 
 **Timing história:**
 - Pred fixom: ETH_RXC slack = −7.18 ns (Fmax 65.86 MHz)
@@ -38,6 +39,7 @@ TX: udp_echo_app -> udp_ipv4_tx_builder -> async_fifo (CDC) -> TX controller -> 
 - Faza 4F (TX_PATH_DEBUG na J11): +0.444 ns PASS
 - Faza 4G (GMII TX output reg): +0.793 ns PASS (ETH_TX_CLK)
 - Faza 4H (Makefile fix, RTL revert): +0.793 ns PASS (nezmeneny RTL)
+- Faza 4I (TX beacon + invert_output): +0.895 ns PASS (ETH_TX_CLK improved)
 
 ---
 
@@ -380,6 +382,31 @@ Potvrdené: frame_done, eth_hdr_valid, ipv4_hdr_valid fungujú v HW.
 **Výsledok:** Quartus 0 errors, 18 warnings, timing PASS.
 **Stav:** SOF pripravená, čaká na HW echo test.
 
+### Faza 4I (2026-06-04 — TX beacon + GTxCLK invert fix)
+
+**ethernet_test_03_top.sv — TX beacon v TXC FSM:**
+- Beacon idle counter (27-bit, ~1.07 s pri 125 MHz): `bcn_cnt_q`
+- `bcn_pending_q`: nastavený po pretečení, vyčistený pri štarte beaconu
+- `bcn_fire_w`: kombinačná podmienka pre beacon TX
+- `bcn_mode_q`: 1 = aktuálny TX je beacon (nie echo reply)
+- `bcn_byte_q`: 0=prvý byte (0xBE), 1=druhý byte (0xAC)
+- TXC_IDLE: `bcn_fire_w` spustí broadcast frame (DST=FF:FF:FF:FF:FF:FF, SRC=LOCAL_MAC)
+- TXC_DATA v bcn_mode: servíruje 2 bajty, gmii_tx_mac dopĺňa padding + FCS
+- `pkt_rd_ready`: gated na `!bcn_mode_q` (echo a beacon sa navzájom nevyrušujú)
+- Účel: ak beacon viditeľný v pcap → GMII TX funguje; ak ticho → GTxCLK/PCB issue
+
+**altddio_out invert_output: OFF → ON:**
+- Pred: GTxCLK = eth_tx_clk_i → 0 ns setup time (spec: 2 ns min) — nevyhovujúce
+- Po: GTxCLK = ~eth_tx_clk_i → T/2 = 4 ns setup time — spec splnená
+- Fitter: `ddio_out_r6j` (invert variant) na PIN_U22, Bank 5, Row I/O ✓
+
+**diag.sh — nové diagnostické sekcie:**
+- [1b] Link speed: ethtool kontrola 1Gbps vs 100Mbps
+- [5/5] NIC CRC diff: `ethtool -S` baseline vs. post-test
+  (odhaľuje bad-FCS frames zahodené NIC hardvérom pred tcpdumpom)
+
+**Výsledok:** Quartus compile 0 errors, timing PASS. SOF 2026-06-04.
+
 ### Faza 4G (2026-06-01 — root cause TX silence)
 
 **Root cause TX silence:** GMII TX kombinačné výstupy (gmii_txd_o, gmii_tx_en_o z
@@ -405,21 +432,125 @@ state_q FF → mux → I/O buffer trvala ~5-7 ns (8 ns perióda pri 125 MHz).
 
 ---
 
-## Debug bus J10/J11 (Faza 4H, normálny mód — MAC_DEBUG=0)
+## Debug bus J10/J11 (Faza 4I, aktuálny mód — sticky latches)
 
 ```
 J10[7:0] = dbg_mac_data_o  → txb_tdata ak txb_tvalid=1,
                               inak pkt_rd_data[7:0] ak pkt_rd_valid=1,
-                              inak 0xEE (sentinel)
-J11[0]   = mac_tvalid
-J11[1]   = mac_tlast
-J11[2]   = frame_done
-J11[3]   = hdr_done_pulse  (1-cycle)
-J11[4]   = dbg_mac_accept_w (HELD — zachytený po byte 13)
-J11[5]   = mac_drop_pulse  (1-cycle)
-J11[6]   = eth_rxdv (raw)
-J11[7]   = eth_rxer (raw)
+                              inak dbg_dst_mac_w[15:8] (DST_MAC byte4 = 0xFE pri FPGA MAC)
+J11[7]   = latch_tx_busy_q   [TX-STICKY] gmii_tx_mac bol aktivny (GMII TX na drate)
+J11[6]   = latch_meta_wr_q   [RX-STICKY] meta FIFO write prebehol
+J11[5]   = latch_txb_fire_q  [RX-STICKY] TX builder vypalil aspon 1 byte
+J11[4]   = latch_tx_meta_q   [RX-STICKY] echo_app dokoncil RX, vstupil do TX_META
+J11[3]   = latch_rx_meta_q   [RX-STICKY] UDP meta OK, parsery funguju
+J11[2]   = latch_udp_tvalid_q [RX-STICKY] udp_parser emitoval payload byte
+J11[1]   = latch_udp_tlast_q  [RX-STICKY] udp_parser vypalil tlast
+J11[0]   = tx_meta_valid      [RX-LIVE]  echo_app je teraz v ST_TX_META
 ```
+
+**Interpretácia:**
+- `J11=nnnnnnns` → PLNÁ PIPELINE, gmii_tx_mac aktivny (ale TX stále ticho → GTxCLK issue)
+- `J11=sxxxxxxx` → gmii_tx_mac sa NIKDY nespustil
+- `J10=0xFE` pri idle → DST_MAC byte4 správny (FPGA MAC prijaté)
+- `J10=0x16` (pozorované 2026-06-03) → pkt_rd_data viditeľné v TX domene
+  (pkt_fifo má dáta z ďalšieho paketu, TXC IDLE čaká)
+
+---
+
+## Výsledky HW testovania — Chronológia (2026-06-03)
+
+### Test 14 — Faza 4H SOF: plná pipeline, TX stále ticho
+
+**Podmienky:** Link 1Gbps Full Duplex (potvrdené ethtool), promiscuous=1 (všetky parsery).
+
+**diag.sh výsledok:**
+```
+[1b] Link: yes   Speed: 1000Mb/s   Duplex: Full  -> OK
+[5/5] Frames od FPGA: 0
+      NIC CRC/FCS chyby: bez zmeny (FPGA neposiela ani bad-FCS frames)
+J11 = nnnnnnns (hex: všetky sticky bity = 1)
+J10 = sssnsnns (hex: 0x16)
+```
+
+**J11 decode:**
+```
+bit7 latch_tx_busy_q  = 1  [TX-STICKY]  gmii_tx_mac sa aktivoval
+bit6 latch_meta_wr_q  = 1  [RX-STICKY]  meta FIFO write ok
+bit5 latch_txb_fire_q = 1  [RX-STICKY]  TX builder vypalil byte
+bit4 latch_tx_meta_q  = 1  [RX-STICKY]  echo_app do TX_META
+bit3 latch_rx_meta_q  = 1  [RX-STICKY]  UDP meta ok
+bit2 latch_udp_tvalid = 1  [RX-STICKY]  udp_parser payload byte
+bit1 latch_udp_tlast  = 1  [RX-STICKY]  udp_parser tlast
+bit0 tx_meta_valid    = 0  [RX-LIVE]    echo_app nie je v ST_TX_META
+```
+
+**Záver:** PLNÁ PIPELINE prebehla — RX aj TX chain sú logicky funkčné.
+FPGA tvrdí že gmii_tx_mac vysielal (latch_tx_busy=1). Ale NUL frames na wire.
+Ani bad-FCS frames (NIC CRC counters bez zmeny). PHY nereaguje na GMII TX vôbec.
+
+---
+
+## Investigácie — ČO SME UŽ OVERILI (neopakovať)
+
+### 1. Link speed — OVERENÉ OK
+`ethtool enp0s31f6` → 1000Mb/s Full Duplex. Nie 100Mbps (MII 25MHz) problém.
+
+### 2. NIC CRC/FCS chyby — OVERENÉ: žiadne
+`ethtool -S enp0s31f6` baseline vs. post-test = beze zmeny.
+FPGA neposiela ANI garbled frames. PHY vôbec nevysiela na drôt.
+
+### 3. latch_tx_busy_q = 1 — OVERENÉ
+Registered v eth_tx_clk_i domain (125MHz PLL output = clkpll_c0).
+Potvrdzuje: PLL beží, TXC FSM opustil TXC_IDLE, gmii_tx_mac prešiel z ST_IDLE.
+
+### 4. CRC logika — OVERENÁ správna
+`crc32_eth.sv`: LSB-first, polynomial 0xEDB88320, init 0xFFFFFFFF, fcs_o = ~crc_reg.
+CRC vstup: `gmii_txd_comb_w` (combinational pred output FF) = správny byte.
+IFG_BYTES=13 (+1 pre output FF delay na poslednom FCS byte) = správne.
+
+### 5. eth_header_builder byte order — OVERENÝ
+`dst_mac[47:40]` = byte 0 (prvý na drôt). Network byte order. Správne.
+
+### 6. soc_top.sv connection — OVERENÁ
+`.eth_gtx_clk_o(ETH_GTX_CLK)` → priamo na top-level port → PIN_U22. Správne.
+Wire `ethernet_test_03_top_eth_gtx_clk_o` deklarovaný ale unconnected — benígny leftover.
+
+### 7. altddio_out invert_output — ZMENENÉ v tejto session
+Pred: `invert_output("OFF")` → GTxCLK = eth_tx_clk_i → 0ns setup time na PHY (spec 2ns min).
+Po: `invert_output("ON")` → GTxCLK = ~eth_tx_clk_i → T/2 = 4ns setup time. Správne.
+Fitter potvrdil: `ddio_out_r6j` (invert variant) na PIN_U22. Warning 15064 = 0. OK.
+**Ale TX stále ticho po tejto zmene.**
+
+### 8. pkt_fifo / meta_fifo CDC — OVERENÉ logicky
+J11 plná pipeline (latch_meta_wr=1 aj meta_rd: TXC FSM videl meta_rd_valid).
+CDC async_fifo 2-FF Gray-code synchronizer — štandardná implementácia. OK.
+
+### 9. PHYRSTB timing — OVERENÉ
+24-bit counter @ 50MHz → 336ms reset delay. PHY released pred linkupom (>500ms).
+RX funguje = PHY z resetu správne.
+
+### 10. gmii_tx_mac output registers — OVERENÉ
+`always_ff` registered `gmii_txd_o`, `gmii_tx_en_o` from `*_comb_w`.
+`FAST_OUTPUT_REGISTER ON` v board.tcl pre ETH_TXD[7:0] a ETH_TXEN. PIN_V21, Bank 5. OK.
+
+### 11. Fitter report ETH_GTX_CLK — OVERENÝ
+PIN_U22, Bank 5, Row I/O, Output Register = "yes" (DDR in IOE). Placed in IOE. OK.
+
+---
+
+## Aktuálna hypotéza: GTxCLK nedochádza k PHY
+
+**Symptómy** (latch_tx_busy=1, 0 frames, 0 NIC CRC errors) najlepšie vysvetľuje:
+- PHY nedostáva GTxCLK na input pin GTX_CLK
+- Bez GTxCLK PHY nevzorkuje TXD/TXEN → nevysiela nič na drôt
+
+**Možné príčiny:**
+1. altddio_out DDR cell na PIN_U22 toggluje ale PHY nevzorkuje (timing/PCB issue)
+2. PIN_U22 nie je prepojený na PHY GTX_CLK na PCB (nepravdepodobné — board schéma to definuje)
+3. altddio_out nefunguje správne napriek Fitter potvrdeniu (neznáma chyba)
+
+**Na overenie:** Ak beacon frames sa objavia v pcap → GTxCLK funguje, problém inde.
+Ak beacon ticho → GMII TX fyzická cesta je broken.
 
 ---
 
@@ -437,11 +568,29 @@ multicast (33:33:...) ktoré MAC filter správne zahadzoval.
 
 **Fix:** `Makefile` opravený na `FPGA_IP=192.168.0.2`, `PC_IFACE=enp0s31f6`.
 
-### Záhada 2: TX Silence — VYRIEŠENÁ (Faza 4G)
+### Záhada 2: TX Silence — PREBIEHA (Faza 4I)
 
-Root cause — kombinačné GMII TX výstupy porušovali PHY Tsu=1.5 ns.
-Fix: output register v gmii_tx_mac.sv + IFG_BYTES=13 + tx_start race fix v echo_path_top.sv.
-**Čaká na HW verifikáciu** s novou 4H SOF (0 errors, 18 warnings).
+Root cause stále neznámy. Pôvodná hypotéza (Faza 4G: kombinačné GMII TX výstupy)
+**NEVYRIEŠILA problém** — latch_tx_busy=1 ale 0 frames na wire.
+
+**Aktuálna teória:** GTxCLK nedochádza k PHY (altddio_out / PCB trace issue).
+
+**Faza 4I (2026-06-04):** TX beacon pridaný do TXC FSM:
+- Ked TXC IDLE > ~1s bez echo requestu: fire broadcast frame (DST=FF:FF:FF:FF:FF:FF,
+  SRC=LOCAL_MAC, payload=0xBE 0xAC)
+- Ak beacon v pcap → GMII TX fyzická cesta funguje (problém je inde)
+- Ak beacon ticho → GTxCLK/PHY/PCB broken
+
+**Interpretácia výsledkov beacon testu:**
+```
+Beacon visible in tcpdump (ether host FPGA_MAC filter):
+  -> GMII TX wire OK, GTxCLK OK
+  -> Hľadaj bug v echo CDC ceste alebo frame obsahu
+Beacon NOT visible:
+  -> GTxCLK nedochádza k PHY
+  -> Ďalší krok: bypass altddio_out (assign eth_gtx_clk_o = eth_tx_clk_i)
+     alebo osciloskop na PIN_U22
+```
 
 ---
 
@@ -497,5 +646,9 @@ TX: 0x0000 (disabled). RX: DROP_NONZERO_CHECKSUM=0.
 ### Known Issues
 
 - [x] **HW: MAC comparison bug** — VYRIEŠENÁ (Faza 4H): Makefile mal zlý FPGA_IP/PC_IFACE; RTL je správny
-- [ ] **HW: TX echo neoverené** — čaká na Faza 4H HW test: `python3 test_fpga.py` (SOF pripravená)
+- [ ] **HW: TX silence** — Faza 4I beacon test čaká na HW overenie
+  - Spusti `./diag.sh` s novou 4I SOF (2026-06-04)
+  - Ak beacon frames v pcap (DST=ff:ff:ff:ff:ff:ff, SRC=00:0a:35:01:fe:c0): GMII TX OK
+  - Ak beacon ticho: skúsiť bypass altddio_out (`assign eth_gtx_clk_o = eth_tx_clk_i`)
+    alebo osciloskop na PIN_U22 pre GTxCLK overenie
 - [ ] `gmii_rx_mac` FCS strip — dlhodobý cieľ

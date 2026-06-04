@@ -1,5 +1,5 @@
 Assembler report for soc_top
-Tue Jun  2 21:37:13 2026
+Thu Jun  4 05:11:31 2026
 Quartus Prime Version 25.1std.0 Build 1129 10/21/2025 SC Lite Edition
 
 
@@ -38,7 +38,7 @@ on the Quartus Prime software download page.
 +---------------------------------------------------------------+
 ; Assembler Summary                                             ;
 +-----------------------+---------------------------------------+
-; Assembler Status      ; Successful - Tue Jun  2 21:37:13 2026 ;
+; Assembler Status      ; Successful - Thu Jun  4 05:11:31 2026 ;
 ; Revision Name         ; soc_top                               ;
 ; Top-level Entity Name ; soc_top                               ;
 ; Family                ; Cyclone IV E                          ;
@@ -94,8 +94,8 @@ on the Quartus Prime software download page.
 +----------------+----------------------+
 ; Option         ; Setting              ;
 +----------------+----------------------+
-; JTAG usercode  ; 0x0045E3CA           ;
-; Checksum       ; 0x0045E3CA           ;
+; JTAG usercode  ; 0x00486476           ;
+; Checksum       ; 0x00486476           ;
 +----------------+----------------------+
 
 
@@ -119,13 +119,13 @@ Info: Running Quartus Prime Assembler
     Info: Altera and sold by Altera or its authorized distributors.  Please
     Info: refer to the Altera Software License Subscription Agreements 
     Info: on the Quartus Prime software download page.
-    Info: Processing started: Tue Jun  2 21:37:11 2026
+    Info: Processing started: Thu Jun  4 05:11:29 2026
 Info: Command: quartus_asm soc_top
 Info (115031): Writing out detailed assembly data for power analysis
 Info (115030): Assembler is generating device programming files
 Info: Quartus Prime Assembler was successful. 0 errors, 0 warnings
-    Info: Peak virtual memory: 606 megabytes
-    Info: Processing ended: Tue Jun  2 21:37:13 2026
+    Info: Peak virtual memory: 595 megabytes
+    Info: Processing ended: Thu Jun  4 05:11:31 2026
     Info: Elapsed time: 00:00:02
     Info: Total CPU time (on all processors): 00:00:02
 

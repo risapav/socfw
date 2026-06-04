@@ -57,6 +57,7 @@ module ethernet_test_03_top #(
   // Debug bus for J10/J11 logic analyzer (ETH_RXC domain, raw signals)
   output      logic [7:0]  dbg_mac_data_o,
   output      logic [7:0]  dbg_ctrl_o,
+  output      logic        uart_tap_tx_o,
   input  wire logic [3:0]  btn_i
 );
 
@@ -84,8 +85,36 @@ module ethernet_test_03_top #(
   assign eth_mdc_o   = 1'b0;
   assign eth_mdio_io = 1'bz;
 
-  // GTX CLK routed directly from PLL TX output
+  // GTX CLK forwarding: altddio_out routes GTxCLK through dedicated IOE path (same as
+  // TxD output FFs). invert_output="ON" shifts GTxCLK rising edge to falling edge of
+  // outclock (+T/2 = +4 ns at 125 MHz) so PHY sees TxD stable for 4 ns before sampling.
+  // tGSUR spec = 2 ns min (Table 58 RTL8211EG), 4 ns margin satisfies requirement.
+  // Simulation/svlint: direct assign (SYNTHESIS not defined by linter/verilator).
+`ifdef SYNTHESIS
+  altddio_out #(
+    .extend_oe_disable    ("OFF"),
+    .intended_device_family("Cyclone IV E"),
+    .invert_output        ("ON"),
+    .lpm_type             ("altddio_out"),
+    .oe_reg               ("UNREGISTERED"),
+    .power_up_high        ("OFF"),
+    .width                (1)
+  ) u_gtxclk_fwd (
+    .aclr      (1'b0),
+    .aset      (1'b0),
+    .sclr      (1'b0),
+    .sset      (1'b0),
+    .datain_h  (1'b1),
+    .datain_l  (1'b0),
+    .oe        (1'b1),
+    .outclocken(1'b1),
+    .outclock  (eth_tx_clk_i),
+    .dataout   (eth_gtx_clk_o),
+    .oe_out    ()
+  );
+`else
   assign eth_gtx_clk_o = eth_tx_clk_i;
+`endif
 
   // ===========================================================================
   // RX CLOCK DOMAIN
@@ -162,7 +191,7 @@ module ethernet_test_03_top #(
     .rst_ni            (rst_w),
     .local_mac_i       (LOCAL_MAC),
     .accept_broadcast_i(1'b1),
-    .promiscuous_i     (1'b0),
+    .promiscuous_i     (1'b1), // DBG: bypass MAC filter
     .s_axis_tdata      (mac_tdata),
     .s_axis_tvalid     (mac_tvalid),
     .s_axis_tready     (mac_tready),
@@ -190,7 +219,7 @@ module ethernet_test_03_top #(
     .clk_i        (eth_rx_clk_i),
     .rst_ni       (rst_w),
     .local_ip_i   (LOCAL_IP),
-    .promiscuous_i(1'b0),
+    .promiscuous_i(1'b1), // DBG: bypass IP filter
     .s_axis_tdata (eth_tdata),
     .s_axis_tvalid(eth_tvalid),
     .s_axis_tready(eth_tready),
@@ -210,7 +239,7 @@ module ethernet_test_03_top #(
     .clk_i                   (eth_rx_clk_i),
     .rst_ni                  (rst_w),
     .local_port_i            (UDP_PORT),
-    .promiscuous_i           (1'b0),
+    .promiscuous_i           (1'b1), // DBG: bypass port filter
     .s_axis_tdata            (ip_tdata),
     .s_axis_tvalid           (ip_tvalid),
     .s_axis_tready           (ip_tready),
@@ -397,6 +426,10 @@ module ethernet_test_03_top #(
 
   // ===========================================================================
   // TX CLOCK DOMAIN — TX controller FSM + gmii_tx_mac
+  // Beacon: if idle >~1 s with no echo pending, transmit a 2-byte broadcast
+  // frame (src=LOCAL_MAC, dst=FF:FF:FF:FF:FF:FF, payload 0xBE 0xAC).
+  // If beacon appears in pcap -> GMII TX physical path works.
+  // If beacon invisible      -> GTxCLK/PHY/PCB issue.
   // ===========================================================================
   typedef enum logic [1:0] {
     TXC_IDLE  = 2'd0,
@@ -407,18 +440,55 @@ module ethernet_test_03_top #(
   txc_state_e txc_state_q;
   logic [47:0] txc_dst_mac_q, txc_src_mac_q;
   logic        txmac_s_tready, tx_mac_busy_w;
+  logic        bcn_mode_q;  // 1 = current TX is a diagnostic beacon
+  logic        bcn_byte_q;  // 0 = first byte (0xBE), 1 = second byte (0xAC)
+
+  // Beacon idle counter: 2^27 cycles = ~1.07 s at 125 MHz
+  logic [26:0] bcn_cnt_q;
+  logic        bcn_pending_q;
+  logic        bcn_fire_w;
+  assign bcn_fire_w = (txc_state_q == TXC_IDLE) && bcn_pending_q &&
+                      !meta_rd_valid && !tx_mac_busy_w;
+
+  always_ff @(posedge eth_tx_clk_i or negedge rst_w) begin
+    if (!rst_w) begin
+      bcn_cnt_q     <= '0;
+      bcn_pending_q <= 1'b0;
+    end else if (bcn_fire_w) begin
+      bcn_cnt_q     <= '0;
+      bcn_pending_q <= 1'b0;
+    end else if (txc_state_q == TXC_IDLE && !meta_rd_valid) begin
+      if (&bcn_cnt_q) begin
+        bcn_cnt_q     <= '0;
+        bcn_pending_q <= 1'b1;
+      end else begin
+        bcn_cnt_q <= bcn_cnt_q + 1'b1;
+      end
+    end else begin
+      bcn_cnt_q <= '0;
+    end
+  end
 
   always_ff @(posedge eth_tx_clk_i or negedge rst_w) begin
     if (!rst_w) begin
       txc_state_q   <= TXC_IDLE;
       txc_dst_mac_q <= '0;
       txc_src_mac_q <= '0;
+      bcn_mode_q    <= 1'b0;
+      bcn_byte_q    <= 1'b0;
     end else begin
       case (txc_state_q)
         TXC_IDLE: begin
+          bcn_byte_q <= 1'b0;
           if (meta_rd_valid && !tx_mac_busy_w) begin
             txc_dst_mac_q <= meta_rd_data[95:48];
             txc_src_mac_q <= meta_rd_data[47:0];
+            bcn_mode_q    <= 1'b0;
+            txc_state_q   <= TXC_START;
+          end else if (bcn_fire_w) begin
+            txc_dst_mac_q <= 48'hFFFF_FFFF_FFFF;
+            txc_src_mac_q <= LOCAL_MAC;
+            bcn_mode_q    <= 1'b1;
             txc_state_q   <= TXC_START;
           end
         end
@@ -426,8 +496,15 @@ module ethernet_test_03_top #(
           txc_state_q <= TXC_DATA;
         end
         TXC_DATA: begin
-          if (pkt_rd_valid && txmac_s_tready && pkt_rd_data[8])
-            txc_state_q <= TXC_IDLE;
+          if (bcn_mode_q) begin
+            if (txmac_s_tready) begin
+              bcn_byte_q <= ~bcn_byte_q;
+              if (bcn_byte_q) txc_state_q <= TXC_IDLE;
+            end
+          end else begin
+            if (pkt_rd_valid && txmac_s_tready && pkt_rd_data[8])
+              txc_state_q <= TXC_IDLE;
+          end
         end
         default: txc_state_q <= TXC_IDLE;
       endcase
@@ -435,13 +512,21 @@ module ethernet_test_03_top #(
   end
 
   assign meta_rd_ready = (txc_state_q == TXC_IDLE) && meta_rd_valid && !tx_mac_busy_w;
-  assign pkt_rd_ready  = (txc_state_q == TXC_DATA) && txmac_s_tready;
+  assign pkt_rd_ready  = (txc_state_q == TXC_DATA) && txmac_s_tready && !bcn_mode_q;
 
   logic [7:0] txmac_s_tdata;
   logic       txmac_s_tvalid, txmac_s_tlast;
-  assign txmac_s_tdata  = pkt_rd_data[7:0];
-  assign txmac_s_tlast  = pkt_rd_data[8];
-  assign txmac_s_tvalid = pkt_rd_valid && (txc_state_q == TXC_DATA);
+  always_comb begin
+    if (bcn_mode_q) begin
+      txmac_s_tdata  = bcn_byte_q ? 8'hAC : 8'hBE;
+      txmac_s_tvalid = (txc_state_q == TXC_DATA);
+      txmac_s_tlast  = (txc_state_q == TXC_DATA) && bcn_byte_q;
+    end else begin
+      txmac_s_tdata  = pkt_rd_data[7:0];
+      txmac_s_tlast  = pkt_rd_data[8];
+      txmac_s_tvalid = pkt_rd_valid && (txc_state_q == TXC_DATA);
+    end
+  end
 
   // --- GMII TX MAC ---
   gmii_tx_mac u_tx_mac (
@@ -460,6 +545,23 @@ module ethernet_test_03_top #(
     .gmii_txd_o    (eth_txd_o),
     .gmii_tx_en_o  (eth_txen_o),
     .gmii_tx_er_o  (eth_txer_o)
+  );
+
+  // ===========================================================================
+  // UART stream tap: captures first 20 bytes of each RX frame -> J11[0] (M2)
+  // ===========================================================================
+  eth_stream_tap #(
+    .CAPTURE_BYTES(20),
+    .SYS_CLK_HZ  (SYS_CLK_HZ),
+    .BAUD_RATE   (115200)
+  ) u_tap (
+    .eth_rx_clk_i   (eth_rx_clk_i),
+    .sys_clk_i      (sys_clk_i),
+    .rst_ni         (rst_w),
+    .s_axis_tdata_i (mac_tdata),
+    .s_axis_tvalid_i(mac_tvalid),
+    .s_axis_tlast_i (mac_tlast),
+    .uart_tx_o      (uart_tap_tx_o)
   );
 
   // ===========================================================================
@@ -493,31 +595,79 @@ module ethernet_test_03_top #(
   );
 
   // ===========================================================================
-  // Debug bus for J10/J11 logic analyzer — Faza 4F: TX_PATH_DEBUG
-  // J10 (dbg_mac_data_o[7:0]): txb_tdata when txb_tvalid, else pkt_rd_data,
-  //   else 0xEE sentinel.
-  // J11 (dbg_ctrl_o[7:0]) — eth_rx_clk domain [0..4], eth_tx_clk domain [5..7]:
-  //   [0] = tx_meta_valid   (echo app ST_TX_META: meta valid to tx_builder)
-  //   [1] = tx_meta_ready   (tx_builder in ST_IDLE: ready to accept meta)
-  //   [2] = txb_tvalid      (tx_builder outputting bytes to pkt_fifo)
-  //   [3] = txb_fire_w      (byte actually written to pkt_fifo = valid&&ready)
-  //   [4] = meta_wr_valid_q (meta committed to meta_fifo write side)
-  //   [5] = pkt_rd_valid    (pkt_fifo non-empty on TX side, eth_tx_clk domain)
-  //   [6] = meta_rd_valid   (meta_fifo non-empty on TX side, eth_tx_clk domain)
-  //   [7] = eth_txen_o      (TX MAC transmitting)
+  // Sticky (latched) debug signals — set once on first event, cleared by rst_w.
+  // Persist after test so user can read LEDs while FPGA is idle.
   // ===========================================================================
+  logic latch_rx_meta_q;     // UDP meta assembled (parsers working)
+  logic latch_tx_meta_q;     // echo_app entered ST_TX_META (full RX done)
+  logic latch_txb_fire_q;    // TX builder fired at least one byte
+  logic latch_meta_wr_q;     // meta FIFO write committed
+  logic latch_udp_tvalid_q;  // udp_parser emitted >= 1 payload byte
+  logic latch_udp_tlast_q;   // udp_parser fired tlast (full payload delivered)
+
+  always_ff @(posedge eth_rx_clk_i or negedge rst_w) begin
+    if (!rst_w) begin
+      latch_rx_meta_q   <= 1'b0;
+      latch_tx_meta_q   <= 1'b0;
+      latch_txb_fire_q  <= 1'b0;
+      latch_meta_wr_q   <= 1'b0;
+      latch_udp_tvalid_q <= 1'b0;
+      latch_udp_tlast_q  <= 1'b0;
+    end else begin
+      if (rx_meta_valid)            latch_rx_meta_q   <= 1'b1;
+      if (tx_meta_valid)            latch_tx_meta_q   <= 1'b1;
+      if (txb_fire_w)               latch_txb_fire_q  <= 1'b1;
+      if (meta_wr_valid_q)          latch_meta_wr_q   <= 1'b1;
+      if (udp_tvalid && udp_tready) latch_udp_tvalid_q <= 1'b1;
+      if (udp_tvalid && udp_tlast)  latch_udp_tlast_q  <= 1'b1;
+    end
+  end
+
+  // TX-domain sticky: did gmii_tx_mac ever become busy (actually transmit)?
+  logic latch_tx_busy_q;
+  always_ff @(posedge eth_tx_clk_i or negedge rst_w) begin
+    if (!rst_w) latch_tx_busy_q <= 1'b0;
+    else if (tx_mac_busy_w) latch_tx_busy_q <= 1'b1;
+  end
+
+  // ===========================================================================
+  // Debug bus J10/J11
+  // J10 (dbg_mac_data_o[7:0]): txb_tdata when txb_tvalid, else pkt_rd_data,
+  //   else dbg_dst_mac_w[15:8] (idle: first-frame DST_MAC byte4).
+  // J11 (dbg_ctrl_o[7:0]) — STICKY bits persist after test:
+  //   [7] = latch_tx_busy_q   (sticky: gmii_tx_mac ever became busy = GMII TX fired)
+  //   [6] = latch_meta_wr_q   (sticky: meta FIFO was ever written -> TX triggered)
+  //   [5] = latch_txb_fire_q  (sticky: TX builder ever fired a byte)
+  //   [4] = latch_tx_meta_q   (sticky: echo_app ever completed RX -> entered TX_META)
+  //   [3] = latch_rx_meta_q   (sticky: UDP meta ever assembled -> parsers working)
+  //   [2] = latch_udp_tvalid_q (sticky: udp_parser emitted >= 1 payload byte)
+  //   [1] = latch_udp_tlast_q  (sticky: udp_parser fired tlast)
+  //   [0] = tx_meta_valid      (live: echo_app in ST_TX_META right now)
+  //
+  // Decode after fpga-test (n=1=event happened, s=0=never happened):
+  //   J11=ssssssss  -> nothing worked (GMII RX dead?)
+  //   J11=xxxxnsss  -> [3]=n: parsers OK, UDP meta assembled
+  //   J11=xxxxnsss  -> [2]=s: udp_parser NEVER emitted payload (len=0 or ST_PAYLOAD unreached)
+  //   J11=xxxxnnss  -> [2]=n,[1]=s: payload started but tlast NEVER fired (payload_cnt stuck)
+  //   J11=xxxxnnns  -> [1]=n,[4]=s: tlast fired but echo_app did not complete RX (FSM bug?)
+  //   J11=xxnnnnss  -> [4]=n: echo_app completed RX; [5]=n: TX builder fired
+  //   J11=xnnnnnss  -> [6]=n: meta FIFO written (CDC triggered)
+  //   J11=nnnnnnss  -> [7]=n: gmii_tx_mac activated (GMII TX on wire!)
+  // uart_tap_tx_o -> UART_TX (CP2102N, J1 pin, /dev/ttyUSBx on PC)
+  // ===========================================================================
+  // J10 idle shows dbg_dst_mac_w[15:8] = DST_MAC[4] (should be 0xFE if MAC correct)
   assign dbg_mac_data_o = txb_tvalid    ? txb_tdata         :
                           pkt_rd_valid  ? pkt_rd_data[7:0]  :
-                          8'hEE;
+                          dbg_dst_mac_w[15:8];
   assign dbg_ctrl_o = {
-    eth_txen_o,
-    meta_rd_valid,
-    pkt_rd_valid,
-    meta_wr_valid_q,
-    txb_fire_w,
-    txb_tvalid,
-    tx_meta_ready,
-    tx_meta_valid
+    latch_tx_busy_q,    // bit7
+    latch_meta_wr_q,    // bit6
+    latch_txb_fire_q,   // bit5
+    latch_tx_meta_q,    // bit4
+    latch_rx_meta_q,    // bit3
+    latch_udp_tvalid_q, // bit2 - sticky: udp_parser emitted payload byte
+    latch_udp_tlast_q,  // bit1 - sticky: udp_parser fired tlast
+    tx_meta_valid       // bit0 - live: echo_app in ST_TX_META now
   };
 
 endmodule
