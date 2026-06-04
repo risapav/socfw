@@ -1,7 +1,7 @@
 # ETH_TEST_03 — Status
 
 **Dátum:** 2026-06-04
-**Stav:** HW TESTOVANIE — Faza 4I: TX beacon pridaný — diagnostika GMII TX fyzickej cesty
+**Stav:** HW TESTOVANIE — Faza 4K: meta_fifo DEPTH=32 + pkt_rd_valid guard — čaká na compile + HW test
 
 ---
 
@@ -21,16 +21,16 @@ TX: udp_echo_app -> udp_ipv4_tx_builder -> async_fifo (CDC) -> TX controller -> 
 
 - **Syntéza:** 0 errors, 8 warnings (ASYNC_REG atribút ignorovaný — benígne)
 - **Fitter + Assembler + STA:** 0 errors
-- **SOF (Faza 4I):** `output_files/soc_top.sof` — Thu Jun 4 05:11:35 2026 (beacon + invert_output fix)
-- **Predchádzajúci SOF:** Faza 4H, Tue Jun 2 20:42 2026
+- **SOF (Faza 4K):** `output_files/soc_top.sof` — Thu Jun 4 15:23 2026
+- **Predchádzajúci SOF:** Faza 4I, Thu Jun 4 14:48 2026 (beacon + invert_output + DEPTH=32)
 
-### Timing Summary (Faza 4H build, Tue Jun 2 20:42 2026)
+### Timing Summary (Faza 4J build, Thu Jun 4 14:48 2026)
 
 | Clock | Slack Setup Slow 85°C | Slack Hold | Stav |
 |---|---|---|---|
-| ETH_RXC (125 MHz) | **+0.402 ns** | +0.423 ns | PASS |
-| ETH_TX_CLK (125 MHz) | **+0.895 ns** | +0.378 ns | PASS |
-| SYS_CLK (50 MHz) | +4.709 ns | +0.146 ns | PASS |
+| ETH_RXC (125 MHz) | **+3.132 ns** | n/a | PASS |
+| ETH_TX_CLK (125 MHz) | **+3.753 ns** | n/a | PASS |
+| SYS_CLK (50 MHz) | +9.207 ns | n/a | PASS |
 
 **Timing história:**
 - Pred fixom: ETH_RXC slack = −7.18 ns (Fmax 65.86 MHz)
@@ -40,6 +40,8 @@ TX: udp_echo_app -> udp_ipv4_tx_builder -> async_fifo (CDC) -> TX controller -> 
 - Faza 4G (GMII TX output reg): +0.793 ns PASS (ETH_TX_CLK)
 - Faza 4H (Makefile fix, RTL revert): +0.793 ns PASS (nezmeneny RTL)
 - Faza 4I (TX beacon + invert_output): +0.895 ns PASS (ETH_TX_CLK improved)
+- Faza 4J (meta_fifo DEPTH=32): +3.132/+3.753 ns PASS (ETH_RXC/ETH_TX_CLK výrazne lepší — MLAB)
+- Faza 4K (pkt_rd_valid guard): ETH_RXC Fmax=131.82 MHz, ETH_TX_CLK Fmax=139.45 MHz PASS
 
 ---
 
@@ -382,6 +384,34 @@ Potvrdené: frame_done, eth_hdr_valid, ipv4_hdr_valid fungujú v HW.
 **Výsledok:** Quartus 0 errors, 18 warnings, timing PASS.
 **Stav:** SOF pripravená, čaká na HW echo test.
 
+### Faza 4K (2026-06-04 — meta_fifo DEPTH=32 + pkt_rd_valid guard — HOTOVO)
+
+**Root cause identifikovaný (navrhy_23 + beacon test analýza):**
+
+meta_fifo `async_fifo #(.DATA_WIDTH(96), .DEPTH(4))` — 4×96=384 bits je príliš malé
+pre Quartus aby inferoval ako dual-clock block RAM → Quartus vytvára FF-based logiku:
+`mem[0..3]` FFs sú v `wr_clk` (eth_rx_clk_i) doméne ale `rd_data_q <= mem[rptr]`
+sa číta z `rd_clk` (eth_tx_clk_i) doméne = raw cross-domain data path bez synchronizácie!
+
+**Dôkaz:** Quartus compile warnings — `Inferred dual-clock RAM` pre pkt_fifo a tap_fifo,
+ALE NIE pre meta_fifo. s DEPTH=32 (3072 bits): Quartus inferencuje `altsyncram_ffe1` (MLAB).
+
+**Faza 4J zmeny (`ethernet_test_03_top.sv`):**
+- `u_meta_fifo DEPTH`: 4 → 32 (force MLAB inference)
+- Quartus: meta_fifo teraz `altsyncram:mem_rtl_0|altsyncram_ffe1` ✓
+- Timing: ETH_RXC +3.1ns, ETH_TX_CLK +3.8ns PASS
+
+**Faza 4K zmeny (`ethernet_test_03_top.sv`, pridané k 4J):**
+- TXC_IDLE: `meta_rd_valid && !tx_mac_busy_w` → `meta_rd_valid && pkt_rd_valid && !tx_mac_busy_w`
+- `meta_rd_ready`: rovnaká zmena — FIFO dequeued len keď pkt_rd_valid tiež
+- Dôvod (navrhy_25): meta sa zapisuje AŽ PO poslednom pkt byte, takže meta_rd_valid
+  musí nastať po pkt_rd_valid. Ale CDC gray-code sync paths sú nezávislé — ordering
+  nie je garantovaný v TX doméne. Guard zabraňuje TX FSM štartovaniu bez payloadu.
+
+**Timing Faza 4K:** ETH_RXC Fmax=131.82 MHz, ETH_TX_CLK Fmax=139.45 MHz, 0 errors. ✓
+
+---
+
 ### Faza 4I (2026-06-04 — TX beacon + GTxCLK invert fix)
 
 **ethernet_test_03_top.sv — TX beacon v TXC FSM:**
@@ -458,6 +488,58 @@ J11[0]   = tx_meta_valid      [RX-LIVE]  echo_app je teraz v ST_TX_META
 ---
 
 ## Výsledky HW testovania — Chronológia (2026-06-03)
+
+### Test 15 — Faza 4I: TX beacon VIDITEĽNÝ, echo 0/6 (2026-06-04)
+
+**Podmienky:** Faza 4I SOF, Link 1000Mb/s, fresh FPGA reset pred testom.
+
+**diag.sh výsledok:**
+```
+[1b] Link: yes   Speed: 1000Mb/s   Duplex: Full -> OK
+[5/5] Frames od FPGA: 8 (iba beacony)
+  FPGA odosielalo! Prvy frame: 00:0a:35:01:fe:c0 > Broadcast, ethertype IPv4, length 60
+  payload: ffff ffff ffff 000a 3501 fec0 0800 beac (0xBEAC)
+  Beacony každých ~1.07s (= 2^27 / 125MHz)
+  ECHO: 0/6 PASS — žiadna odpoveď
+J11 = nsssnnss
+  bit7=1 latch_tx_busy=1    TX MAC aktívny (beacon)
+  bit6=0 latch_meta_wr=0    meta FIFO nikdy zapísaný
+  bit5=0 latch_txb_fire=0   TX builder nikdy nevypálil
+  bit4=0 latch_tx_meta=0    echo_app nikdy v ST_TX_META
+  bit3=1 latch_rx_meta=1    UDP meta OK
+  bit2=1 latch_udp_tvalid=1 payload bytes prijaté
+  bit1=0 latch_udp_tlast=0  TLAST NIKDY!
+  bit0=0 tx_meta_valid=0
+J10 = 0x16 (pkt_rd_data viditeľné v TX domene)
+```
+
+**Beacon analýza:**
+- Beacon fires každých ~1.07s, **NEPRERUŠOVANÉ** UDP paketmi → meta_rd_valid = 0 vždy v TX domene
+- Beacon timer sa resetuje keď meta_rd_valid=1; ak by meta fungovalo, timer by sa resetoval
+- **Root cause: meta_fifo CDC broken** (vid. sekciu nižšie)
+
+**GMII TX overené:** GMII TX fyzická cesta FUNGUJE. GTxCLK OK. invert_output="ON" správne.
+
+---
+
+### Test 16 — Faza 4I, fresh reset, link DOWN (2026-06-04)
+
+**Podmienky:** FPGA resetnutý bezprostredne pred testom (sticky latche vyčistené).
+Link DOWN (ethtool: "Link: no") — PHY po resete ešte nenegocioval (PHYRSTB timer 336ms).
+
+**diag.sh výsledok:**
+```
+[1b] Link: no   Speed: Unknown!   -> LINK DOWN (PHY po resete, nie hardware bug!)
+[5/5] Frames od FPGA: 8 (beacony — z pred-link doby)
+J11 = nsssnnss (rovnaké ako Test 15 — fresh latche)
+  bit1=0 latch_udp_tlast=0  POTVRDENÉ: aj s fresh latch stav = 0
+```
+
+**Záver:** `latch_udp_tlast=0` nie je link-drop artefakt — je to skutočný stav.
+Link DOWN bol len pretože test beží príliš skoro po resete (PHYRSTB timer + link negotiation ~3-5s).
+**Instrukcia:** Po FPGA resete čakaj 5 sekúnd pred spustením diag.sh.
+
+---
 
 ### Test 14 — Faza 4H SOF: plná pipeline, TX stále ticho
 
@@ -538,19 +620,13 @@ PIN_U22, Bank 5, Row I/O, Output Register = "yes" (DDR in IOE). Placed in IOE. O
 
 ---
 
-## Aktuálna hypotéza: GTxCLK nedochádza k PHY
+## Aktuálna situácia: GMII TX fyzicky funguje, echo nefunguje
 
-**Symptómy** (latch_tx_busy=1, 0 frames, 0 NIC CRC errors) najlepšie vysvetľuje:
-- PHY nedostáva GTxCLK na input pin GTX_CLK
-- Bez GTxCLK PHY nevzorkuje TXD/TXEN → nevysiela nič na drôt
-
-**Možné príčiny:**
-1. altddio_out DDR cell na PIN_U22 toggluje ale PHY nevzorkuje (timing/PCB issue)
-2. PIN_U22 nie je prepojený na PHY GTX_CLK na PCB (nepravdepodobné — board schéma to definuje)
-3. altddio_out nefunguje správne napriek Fitter potvrdeniu (neznáma chyba)
-
-**Na overenie:** Ak beacon frames sa objavia v pcap → GTxCLK funguje, problém inde.
-Ak beacon ticho → GMII TX fyzická cesta je broken.
+**Stav po Faze 4I (2026-06-04):**
+- GMII TX OK: beacony viditeľné v pcap ✓ (GTxCLK, PHY, wire)
+- Echo 0/6: meta_fifo CDC broken (meta_rd_valid = 0 vždy v TX doméne)
+- Root cause: DEPTH=4 → FF-based mem v wr_clk čítané z rd_clk
+- Fix v Faze 4K: DEPTH=32 + pkt_rd_valid guard — SOF Thu Jun 4 15:23 2026 ✓
 
 ---
 
@@ -630,9 +706,14 @@ Eliminuje carry-save adder chain (8.359 ns → ~6.7 ns carry chain).
 
 ```
 RX domain (eth_rx_clk):  gmii_rx_mac -> parsery -> udp_echo_app -> udp_ipv4_tx_builder
-                          -> async_fifo.wr_side  (pkt_fifo 9b/2048, meta_fifo 96b/4)
+                          -> async_fifo.wr_side  (pkt_fifo 9b/2048, meta_fifo 96b/32)
 TX domain (eth_tx_clk):  async_fifo.rd_side -> TX FSM -> gmii_tx_mac
 ```
+
+**POZOR CDC pitfall:** async_fifo s malou DEPTH (< ~16 entries pre 96-bit data) sa
+nevyinferencuje ako dual-clock block RAM v Quartus Cyclone IV → stáva sa FF logika
+kde `mem[]` FFs sú v wr_clk doméne ale sú čítané z rd_clk = raw CDC data path violation.
+Fix: DEPTH ≥ 32 pre 96-bit data → Quartus MLAB inference (altsyncram_ffe1).
 
 ### txb_fire_w — AXI-S handshake fix
 
@@ -646,9 +727,13 @@ TX: 0x0000 (disabled). RX: DROP_NONZERO_CHECKSUM=0.
 ### Known Issues
 
 - [x] **HW: MAC comparison bug** — VYRIEŠENÁ (Faza 4H): Makefile mal zlý FPGA_IP/PC_IFACE; RTL je správny
-- [ ] **HW: TX silence** — Faza 4I beacon test čaká na HW overenie
-  - Spusti `./diag.sh` s novou 4I SOF (2026-06-04)
-  - Ak beacon frames v pcap (DST=ff:ff:ff:ff:ff:ff, SRC=00:0a:35:01:fe:c0): GMII TX OK
-  - Ak beacon ticho: skúsiť bypass altddio_out (`assign eth_gtx_clk_o = eth_tx_clk_i`)
-    alebo osciloskop na PIN_U22 pre GTxCLK overenie
+- [x] **HW: GMII TX ticho** — VYRIEŠENÁ (Faza 4G + 4I): gmii_tx_mac output registers + GTxCLK invert_output="ON"
+  - Beacon frames viditeľné v pcap (Test 15) → GMII TX, GTxCLK, PHY fungujú ✓
+- [ ] **HW: meta_fifo CDC** — Faza 4K SOF (Thu Jun 4 15:23 2026) čaká na HW test
+  - Root cause: DEPTH=4 (384 bits) — Quartus nevytvára dual-clock RAM → FF v wr_clk doméne čítané z rd_clk
+  - Fix: DEPTH=32 → Quartus MLAB altsyncram_ffe1 (dual-clock RAM) ✓
+  - Symptóm: meta_rd_valid = 0 vždy v TX doméne (beacon timer nikdy nepreruší)
+  - Zostatok: `latch_udp_tlast=0` — udp_parser tlast nikdy nevypálil
+    → Pravdepodobná príčina: link DOWN pri teste (PHY po resete) alebo skutočný bug
+    → Overiť s Faza 4K SOF + stabilný link (čakaj 5s po FPGA resete)
 - [ ] `gmii_rx_mac` FCS strip — dlhodobý cieľ

@@ -7,7 +7,7 @@
  *                                     -> udp_ipv4_tx_builder -> async FIFO write
  *   TX domain   (eth_tx_clk_i)     : TX controller FSM -> gmii_tx_mac
  *   CDC         :  pkt_fifo  async_fifo #(.DATA_WIDTH(9),  .DEPTH(2048))
- *                  meta_fifo async_fifo #(.DATA_WIDTH(96), .DEPTH(4))
+ *                  meta_fifo async_fifo #(.DATA_WIDTH(96), .DEPTH(32))
  *
  *   PHY reset: eth_phyrstb_o held low for ~335 ms after rst_ni, then released.
  *   MDIO/MDC:  stub only (strapped high through pull-ups on board).
@@ -410,7 +410,7 @@ module ethernet_test_03_top #(
 
   async_fifo #(
     .DATA_WIDTH(96),
-    .DEPTH     (4)
+    .DEPTH     (32)
   ) u_meta_fifo (
     .wr_clk_i  (eth_rx_clk_i),
     .wr_rst_ni (rst_w),
@@ -480,7 +480,7 @@ module ethernet_test_03_top #(
       case (txc_state_q)
         TXC_IDLE: begin
           bcn_byte_q <= 1'b0;
-          if (meta_rd_valid && !tx_mac_busy_w) begin
+          if (meta_rd_valid && pkt_rd_valid && !tx_mac_busy_w) begin
             txc_dst_mac_q <= meta_rd_data[95:48];
             txc_src_mac_q <= meta_rd_data[47:0];
             bcn_mode_q    <= 1'b0;
@@ -511,7 +511,7 @@ module ethernet_test_03_top #(
     end
   end
 
-  assign meta_rd_ready = (txc_state_q == TXC_IDLE) && meta_rd_valid && !tx_mac_busy_w;
+  assign meta_rd_ready = (txc_state_q == TXC_IDLE) && meta_rd_valid && pkt_rd_valid && !tx_mac_busy_w;
   assign pkt_rd_ready  = (txc_state_q == TXC_DATA) && txmac_s_tready && !bcn_mode_q;
 
   logic [7:0] txmac_s_tdata;
