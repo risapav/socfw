@@ -138,6 +138,31 @@ module ethernet_test_03_top #(
   logic [7:0]  mac_tdata;
   logic        mac_tvalid, mac_tready, mac_tlast, mac_tuser;
 
+  // Raw SRC MAC extractor: captures stream positions 5-10 = ETH[6:11] = PC SRC MAC.
+  // Bypasses eth_header_parser field extraction which is 1 byte off due to GMII offset.
+  // Valid by the time udp_hdr_pre_valid fires (position ~40 >> 10).
+  logic [47:0] raw_src_mac_q;
+  logic [3:0]  raw_mac_cnt_q;
+  always_ff @(posedge eth_rx_clk_i or negedge rst_w) begin
+    if (!rst_w) begin
+      raw_mac_cnt_q <= '0;
+      raw_src_mac_q <= '0;
+    end else if (mac_tvalid && mac_tlast) begin
+      raw_mac_cnt_q <= '0;
+    end else if (mac_tvalid) begin
+      raw_mac_cnt_q <= raw_mac_cnt_q + 4'd1;
+      case (raw_mac_cnt_q)
+        4'd5:  raw_src_mac_q[47:40] <= mac_tdata;
+        4'd6:  raw_src_mac_q[39:32] <= mac_tdata;
+        4'd7:  raw_src_mac_q[31:24] <= mac_tdata;
+        4'd8:  raw_src_mac_q[23:16] <= mac_tdata;
+        4'd9:  raw_src_mac_q[15:8]  <= mac_tdata;
+        4'd10: raw_src_mac_q[7:0]   <= mac_tdata;
+        default: ;
+      endcase
+    end
+  end
+
   // L2 -> L3
   logic [7:0]  eth_tdata;
   logic        eth_tvalid, eth_tready, eth_tlast;
@@ -186,7 +211,9 @@ module ethernet_test_03_top #(
   );
 
   // --- Ethernet Header Parser (L2) ---
-  eth_header_parser u_eth (
+  eth_header_parser #(
+    .HDR_STRIP(13)  // compensate 1-byte GMII RX offset on QMTech EP4CE55 + RTL8211EG
+  ) u_eth (
     .clk_i             (eth_rx_clk_i),
     .rst_ni            (rst_w),
     .local_mac_i       (LOCAL_MAC),
@@ -265,11 +292,13 @@ module ethernet_test_03_top #(
   );
 
   // --- RX Metadata Assembler ---
+  // eth_src_mac_i: use raw extractor (bypasses 1-byte-offset eth_header_parser fields).
+  // eth_dst_mac_i: FPGA is always dst; parser's dst_mac is 1 byte off.
   udp_rx_meta_assembler u_meta (
     .clk_i              (eth_rx_clk_i),
     .rst_ni             (rst_w),
-    .eth_src_mac_i      (eth_src_mac),
-    .eth_dst_mac_i      (eth_dst_mac),
+    .eth_src_mac_i      (raw_src_mac_q),
+    .eth_dst_mac_i      (LOCAL_MAC),
     .ip_src_i           (ip_src),
     .ip_dst_i           (ip_dst),
     .udp_src_port_i     (udp_src_port_pre),

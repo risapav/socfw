@@ -1,8 +1,13 @@
 /**
  * @file eth_header_parser.sv
  * @brief Parses Ethernet header, filters by MAC, forwards payload via AXI-Stream.
+ * @param HDR_STRIP  Number of header bytes to strip before forwarding payload.
+ *   Default 14 = standard Ethernet (DST_MAC + SRC_MAC + EtherType).
+ *   Use 13 on QMTech EP4CE55 + RTL8211EG hardware where gmii_rx_mac outputs
+ *   ETH[1..N] instead of ETH[0..N] (1-byte offset), so stripping 13 aligns
+ *   the downstream to IP byte 0.
  * @details FSM states:
- *   ST_HEADER  -- collects 14 header bytes (s_axis_tready=1, no downstream stall).
+ *   ST_HEADER  -- collects HDR_STRIP header bytes (s_axis_tready=1, no downstream stall).
  *   ST_PAYLOAD -- forwards payload bytes with backpressure (s_axis_tready=m_axis_tready).
  *   ST_DROP    -- consumes frame bytes without forwarding (s_axis_tready=1).
  * MAC accept decision uses a byte-by-byte running match pipeline (mac_match_q /
@@ -22,7 +27,9 @@
 
 import eth_pkg::*;
 
-module eth_header_parser (
+module eth_header_parser #(
+  parameter int HDR_STRIP = 14
+) (
   input  wire logic        clk_i,
   input  wire logic        rst_ni,
 
@@ -80,6 +87,8 @@ module eth_header_parser (
   logic bcast_match_q;
 
   logic dbg_locked_q;
+
+  localparam logic [3:0] LP_TRANS_BYTE = HDR_STRIP[3:0] - 4'd1;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
@@ -155,18 +164,34 @@ module eth_header_parser (
                 4'd9:  src_b3_q <= s_axis_tdata;
                 4'd10: src_b4_q <= s_axis_tdata;
                 4'd11: src_b5_q <= s_axis_tdata;
-                4'd12: eth_b0_q <= s_axis_tdata;
+                4'd12: begin
+                  eth_b0_q <= s_axis_tdata;
+                  if (LP_TRANS_BYTE == 4'd12) begin
+                    hdr_done_pulse_o   <= 1'b1;
+                    hdr_accept_pulse_o <= mac_accept_q;
+                    hdr_drop_pulse_o   <= !mac_accept_q;
+                    state_q            <= mac_accept_q ? ST_PAYLOAD : ST_DROP;
+                    if (!dbg_locked_q) begin
+                      dbg_locked_q     <= 1'b1;
+                      dbg_dst_mac_o    <= {dst_b0_q, dst_b1_q, dst_b2_q,
+                                           dst_b3_q, dst_b4_q, dst_b5_q};
+                      dbg_mac_accept_o <= mac_accept_q;
+                    end
+                  end
+                end
                 4'd13: begin
-                  eth_b1_q           <= s_axis_tdata;
-                  hdr_done_pulse_o   <= 1'b1;
-                  hdr_accept_pulse_o <= mac_accept_q;
-                  hdr_drop_pulse_o   <= !mac_accept_q;
-                  state_q            <= mac_accept_q ? ST_PAYLOAD : ST_DROP;
-                  if (!dbg_locked_q) begin
-                    dbg_locked_q     <= 1'b1;
-                    dbg_dst_mac_o    <= {dst_b0_q, dst_b1_q, dst_b2_q,
-                                         dst_b3_q, dst_b4_q, dst_b5_q};
-                    dbg_mac_accept_o <= mac_accept_q;
+                  eth_b1_q <= s_axis_tdata;
+                  if (LP_TRANS_BYTE == 4'd13) begin
+                    hdr_done_pulse_o   <= 1'b1;
+                    hdr_accept_pulse_o <= mac_accept_q;
+                    hdr_drop_pulse_o   <= !mac_accept_q;
+                    state_q            <= mac_accept_q ? ST_PAYLOAD : ST_DROP;
+                    if (!dbg_locked_q) begin
+                      dbg_locked_q     <= 1'b1;
+                      dbg_dst_mac_o    <= {dst_b0_q, dst_b1_q, dst_b2_q,
+                                           dst_b3_q, dst_b4_q, dst_b5_q};
+                      dbg_mac_accept_o <= mac_accept_q;
+                    end
                   end
                 end
                 default: ;
