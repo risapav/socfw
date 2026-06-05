@@ -1,7 +1,7 @@
 # ETH_TEST_03 — Status
 
-**Dátum:** 2026-06-04
-**Stav:** HW TESTOVANIE — Faza 4K: meta_fifo DEPTH=32 + pkt_rd_valid guard — čaká na compile + HW test
+**Dátum:** 2026-06-05
+**Stav:** HW TESTOVANIE — Faza 5A: raw RX trigger → BEACON odpoveď (bypass UDP parserov)
 
 ---
 
@@ -21,8 +21,8 @@ TX: udp_echo_app -> udp_ipv4_tx_builder -> async_fifo (CDC) -> TX controller -> 
 
 - **Syntéza:** 0 errors, 8 warnings (ASYNC_REG atribút ignorovaný — benígne)
 - **Fitter + Assembler + STA:** 0 errors
-- **SOF (Faza 4K):** `output_files/soc_top.sof` — Thu Jun 4 15:23 2026
-- **Predchádzajúci SOF:** Faza 4I, Thu Jun 4 14:48 2026 (beacon + invert_output + DEPTH=32)
+- **SOF (Faza 5A):** `output_files/soc_top.sof` — Fri Jun 5 05:23 2026
+- **Predchádzajúci SOF:** Faza 4K, Thu Jun 4 15:23 2026 (pkt_rd_valid guard)
 
 ### Timing Summary (Faza 4J build, Thu Jun 4 14:48 2026)
 
@@ -383,6 +383,58 @@ Potvrdené: frame_done, eth_hdr_valid, ipv4_hdr_valid fungujú v HW.
 
 **Výsledok:** Quartus 0 errors, 18 warnings, timing PASS.
 **Stav:** SOF pripravená, čaká na HW echo test.
+
+### Faza 5A (2026-06-05 — raw RX trigger + UART tap 50B + root cause analýza)
+
+**UART tap rozšírenie (CAPTURE_BYTES: 20 → 50):**
+- `ethernet_test_03_top.sv`: `CAPTURE_BYTES(50)` (bol 20)
+- `Makefile`: `TAP_BYTES := 50`
+- `tools/read_tap.py`: pridaná dekódovacia funkcia pre UDP hlavičku (sport/dport/len)
+- Výstup `make tap-test`: viditeľný Frame 1, UDP length=13 (HELLO), "HELLO" payload potvrdený
+
+**UART tap analýza — 1-bajt offset potvrdený:**
+```
+Frame 1 raw bytes (50):
+  0a 25 01 ee de 98 fa 9b 3a bf 1c 08 00 45 00 00 21 a7 dd 42
+  00 40 11 01 99 c0 a8 00 03 c0 a8 00 02 b3 e5 1f 9f 00 0d c7
+  76 48 45 4c 4c 4f 0e 00 00 00
+
+Interpretácia (s 1-bajt offsetom — bajt[0] = ETH[1]):
+  SRC MAC [5:10]  = 98:fa:9b:3a:bf:1c (PC MAC — presná zhoda!)
+  EtherType [11:12] = 08 00 = IPv4
+  IP SRC [25:28]  = c0 a8 00 03 = 192.168.0.3
+  IP DST [29:32]  = c0 a8 00 02 = 192.168.0.2
+  UDP sport [33:34] = b3 e5 = 46053
+  UDP dport [35:36] = 1f 9f ≈ 8080 (mierna korupcia)
+  UDP len  [37:38] = 00 0d = 13 (8+5 = HELLO) ✓
+  Payload  [41:45] = 48 45 4c 4c 4f = "HELLO" ✓
+```
+
+**Root cause: 1-bajt offset v gmii_rx_mac výstupe → wrong payload_len_q**
+
+Parsery dostávajú stream posunutý o 1 bajt (ETH DST MAC[0]=0x00 sa neprenesie):
+- `eth_header_parser` strip 14B → IP parseru: bajty od ETH[15] (nie ETH[14])
+- `ipv4_header_parser` strip 20B → UDP parseru: bajty od ETH[35] (nie ETH[34])
+- `udp_header_parser` číta UDP dĺžku z ETH[39:40]:
+  - `len_b0_q` ← ETH[39] = 0x0d (UDP length low byte)
+  - `len_b1_q` ← ETH[40] = 0xc7 (UDP checksum high byte — NESPRÁVNE!)
+  - `payload_len_q = {0x0d, 0xc7} - 8 = 0x0DC7 - 8 = 3519`
+
+FPGA čaká 3519 payload bajtov, rámec skončí po 5 → tlast NIKDY → `latch_udp_tlast=0`.
+
+**Prečo 1-bajt offset?**
+RTL analýza `gmii_rx_mac` hovorí: DST_MAC[0]=0x00 SA MÁ objaviť ako prvý bajt.
+HW ukazuje 0x0a (DST_MAC[1]). Príčina: pravdepodobne timing GMII IOE, reset CDC
+alebo niečo iné v `eth_stream_tap` FIFO. Vyžaduje ďalšiu analýzu.
+
+**Faza 5A — raw RX trigger (bypass UDP parserov):**
+- `ethernet_test_03_top.sv`: toggle-CDC `mac_tvalid && mac_tlast` → eth_tx_clk edge detect
+- Keď `raw_rx_pulse_w` fires v TXC_IDLE: okamžite `bcn_pending_q = 1'b1`
+- FPGA odošle BEACON (broadcast, 0xBEAC) na KAŽDÝ prijatý Ethernet rámec
+- Účel: verify že RX detekcia → TX triggering funguje BEZ parserov
+- Ak BEACON viditeľný v pcap po odoslaní UDP paketu → potvrdzuje že TX chain OK
+
+**Timing Faza 5A:** ETH_RXC Fmax ≈131 MHz, 55 CDC chains, 0 errors. ✓
 
 ### Faza 4K (2026-06-04 — meta_fifo DEPTH=32 + pkt_rd_valid guard — HOTOVO)
 

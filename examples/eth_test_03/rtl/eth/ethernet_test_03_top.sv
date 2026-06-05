@@ -441,11 +441,33 @@ module ethernet_test_03_top #(
   );
 
   // ===========================================================================
+  // RAW RX TRIGGER: toggle-CDC from eth_rx_clk -> eth_tx_clk.
+  // Fires bcn_pending immediately when any Ethernet frame is fully received,
+  // bypassing the full UDP parser chain. This tests the RX-detect -> TX-send
+  // path independent of L2/L3/L4 parsing. Faza 5A diagnostic.
+  // ===========================================================================
+  logic raw_rx_toggle_q;
+  always_ff @(posedge eth_rx_clk_i or negedge rst_w) begin
+    if (!rst_w)
+      raw_rx_toggle_q <= 1'b0;
+    else if (mac_tvalid && mac_tlast)
+      raw_rx_toggle_q <= ~raw_rx_toggle_q;
+  end
+
+  logic raw_s1_q, raw_s2_q, raw_s3_q;
+  always_ff @(posedge eth_tx_clk_i or negedge rst_w) begin
+    if (!rst_w)
+      {raw_s1_q, raw_s2_q, raw_s3_q} <= 3'b0;
+    else
+      {raw_s1_q, raw_s2_q, raw_s3_q} <= {raw_rx_toggle_q, raw_s1_q, raw_s2_q};
+  end
+  wire raw_rx_pulse_w = raw_s2_q ^ raw_s3_q;
+
+  // ===========================================================================
   // TX CLOCK DOMAIN — TX controller FSM + gmii_tx_mac
   // Beacon: if idle >~1 s with no echo pending, transmit a 2-byte broadcast
   // frame (src=LOCAL_MAC, dst=FF:FF:FF:FF:FF:FF, payload 0xBE 0xAC).
-  // If beacon appears in pcap -> GMII TX physical path works.
-  // If beacon invisible      -> GTxCLK/PHY/PCB issue.
+  // Also fires immediately on raw_rx_pulse_w (Faza 5A raw RX trigger).
   // ===========================================================================
   typedef enum logic [1:0] {
     TXC_IDLE  = 2'd0,
@@ -473,6 +495,10 @@ module ethernet_test_03_top #(
     end else if (bcn_fire_w) begin
       bcn_cnt_q     <= '0;
       bcn_pending_q <= 1'b0;
+    end else if (raw_rx_pulse_w) begin
+      // Raw RX trigger: fire beacon immediately on any received Ethernet frame.
+      bcn_cnt_q     <= '0;
+      bcn_pending_q <= 1'b1;
     end else if (txc_state_q == TXC_IDLE && !meta_rd_valid) begin
       if (&bcn_cnt_q) begin
         bcn_cnt_q     <= '0;
@@ -567,7 +593,7 @@ module ethernet_test_03_top #(
   // UART stream tap: captures first 20 bytes of each RX frame -> J11[0] (M2)
   // ===========================================================================
   eth_stream_tap #(
-    .CAPTURE_BYTES(20),
+    .CAPTURE_BYTES(50),
     .SYS_CLK_HZ  (SYS_CLK_HZ),
     .BAUD_RATE   (115200)
   ) u_tap (
