@@ -1,0 +1,117 @@
+version: 2
+kind: ip
+
+ip:
+  name: ethernet_test_04_top
+  module: ethernet_test_04_top
+  category: debug
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: eth_rx_clk_i
+  additional_input_ports: [sys_clk_i, eth_tx_clk_i]
+  outputs:
+    - port: eth_gtx_clk_o
+      kind: generated_clock
+      domain: eth_gtx_clk
+
+ports:
+  - name: rst_ni
+    direction: input
+    width: 1
+
+  - name: eth_phyrstb_o
+    direction: output
+    width: 1
+
+  - name: eth_mdc_o
+    direction: output
+    width: 1
+
+  - name: eth_mdio_io
+    direction: inout
+    width: 1
+
+  - name: eth_rx_clk_i
+    direction: input
+    width: 1
+
+  - name: sys_clk_i
+    direction: input
+    width: 1
+
+  - name: eth_rxdv_i
+    direction: input
+    width: 1
+
+  - name: eth_rxd_i
+    direction: input
+    width: 8
+
+  - name: eth_rxer_i
+    direction: input
+    width: 1
+
+  - name: eth_tx_clk_i
+    direction: input
+    width: 1
+
+  - name: eth_gtx_clk_o
+    direction: output
+    width: 1
+
+  - name: eth_txen_o
+    direction: output
+    width: 1
+
+  - name: eth_txer_o
+    direction: output
+    width: 1
+
+  - name: eth_txd_o
+    direction: output
+    width: 8
+
+  - name: led_o
+    direction: output
+    width: 6
+
+  - name: dbg_mac_data_o
+    direction: output
+    width: 8
+
+  - name: dbg_ctrl_o
+    direction: output
+    width: 8
+
+  - name: uart_tap_tx_o
+    direction: output
+    width: 1
+
+  - name: btn_i
+    direction: input
+    width: 4
+
+artifacts:
+  synthesis:
+    - ../rtl/eth/ethernet_test_04_top.sv
+
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - ethernet_test_04_top

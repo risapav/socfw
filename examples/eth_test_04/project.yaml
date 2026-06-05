@@ -1,0 +1,104 @@
+version: 2
+kind: project
+
+project:
+  name: eth_test_04
+  mode: standalone
+  board: qmtech_ep4ce55
+  debug: true
+
+timing:
+  file: timing_config.yaml
+
+registries:
+  packs:
+    - ../../packs/builtin
+  ip:
+    - ip
+    - cores/clkpll
+  cpu: []
+
+features:
+  use:
+    - board:onboard.eth
+    - board:onboard.leds
+    - board:onboard.buttons
+    - board:onboard.uart
+    - board:external.pmod.j10_led8
+    - board:external.pmod.j11_led8
+
+board_overrides:
+  board:onboard.eth.rxc_0:
+    emit:
+      pin_assignment: false
+      io_assignments: false
+
+clocks:
+  primary:
+    domain: eth_rx_clk
+    source: board:onboard.eth.rxc
+    frequency_hz: 125000000
+  generated:
+    - domain: eth_tx_clk
+      source:
+        instance: clkpll
+        output: c0
+      frequency_hz: 125000000
+      reset:
+        none: true
+
+modules:
+  - instance: clkpll
+    type: clkpll
+    clocks:
+      inclk0:
+        domain: sys_clk
+        no_reset: true
+    reset: "~RESET_N"
+
+  - instance: ethernet_test_04_top
+    type: ethernet_test_04_top
+    params:
+      EXPECT_PREAMBLE: true
+    clocks:
+      eth_rx_clk_i: eth_rx_clk
+      sys_clk_i: sys_clk
+      eth_tx_clk_i: eth_tx_clk
+
+    bind:
+      ports:
+        eth_mdc_o:
+          target: board:onboard.eth.mdc
+        eth_mdio_io:
+          target: board:onboard.eth.mdio
+        eth_rx_clk_i:
+          target: board:onboard.eth.rxc
+        eth_rxdv_i:
+          target: board:onboard.eth.rxdv
+        eth_rxer_i:
+          target: board:onboard.eth.rxer
+        eth_txen_o:
+          target: board:onboard.eth.txen
+        eth_txer_o:
+          target: board:onboard.eth.txer
+        eth_gtx_clk_o:
+          target: board:onboard.eth.gtx_clk
+        eth_phyrstb_o:
+          target: board:onboard.eth.phyrstb
+        eth_rxd_i:
+          target: board:onboard.eth.rxd
+        eth_txd_o:
+          target: board:onboard.eth.txd
+        led_o:
+          target: board:onboard.leds
+        dbg_mac_data_o:
+          target: board:external.pmod.j10_led8
+        dbg_ctrl_o:
+          target: board:external.pmod.j11_led8
+        uart_tap_tx_o:
+          target: board:onboard.uart.tx
+        btn_i:
+          target: board:onboard.buttons
+
+artifacts:
+  emit: [rtl, board, timing]
