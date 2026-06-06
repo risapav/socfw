@@ -1,7 +1,7 @@
 # ETH_TEST_04 — Status
 
-**Dátum:** 2026-06-05
-**Stav:** ACTIVE — Faza 2 RTL hotová, čaká na Quartus build + HW overenie
+**Dátum:** 2026-06-06
+**Stav:** UZAVRETY — altddio_in fix, loopback 10/10 PASS, HW potvrdený
 
 ---
 
@@ -27,104 +27,145 @@ ARP:   ip neigh replace 192.168.0.2 lladdr 00:0a:35:01:fe:c0 nud permanent dev e
 
 ---
 
-## Quartus Build Status
+## Root Cause: GMII RXD[3:0] timing violation
 
-- **Stav:** BUILD OK — async_fifo.sv + gmii_tx_mac.sv (ST_PREAMBLE fix) skompilované
+### Diagnostika (gmii_raw_tap + UART)
+
+Implementovaný `gmii_raw_tap.sv` — tapuje RAW GMII za SFD, odosiela N_BYTES=32 cez UART
+8N1 (115200 baud). `tools/read_tap.py` prijíma + porovnáva po-bajte s pcap referenciou
+(subprocess tcpdump -r, binárne XOR s názvami polí).
+
+**1. run (bez altddio_in):** 6/6 ramcov zachytených, SYSTEMATICKÉ chyby iba v bitoch 0–3:
+
+| Pole      | uart  | ref   | xor  | bity  |
+|-----------|-------|-------|------|-------|
+| DST[5]    | `c8`  | `c0`  | 0x08 | bit 3 |
+| SRC[1..5] | rôzne | rôzne | 0x01..0x05 | bity 0,2 |
+| ETH[1]    | `05`  | `00`  | 0x05 | bity 0,2 |
+| PAY[0]    | `40`  | `45`  | 0x05 | bity 0,2 |
+
+Všetky chyby v RXD[3:0] (dolná nibble). RXD[7:4] vždy správny.
+
+**Príčina:** PCB trace delay + crosstalk spôsobuje glitche na RXD[3:0] pri nabehovej hrane
+RX_CLK (125 MHz = 8 ns perioda). PHY drive z nabehovej hrany, FPGA vzorkuje na nabehovej
+hrane → tesnésní setup time pre dolnú nibble. Riešenie: vzorkovanie na zostupnej hrane (4 ns
+neskôr = stred dátového okna).
+
+**Dôsledok:** DST MAC corrupted → mac_match=0 → 0/6 echo.
+
+---
+
+## Fix: altddio_in (invert_input_clocks="ON")
+
+Tri instancie v `rtl/eth/ethernet_test_04_top.sv`:
+
+```systemverilog
+`ifdef SYNTHESIS
+  altddio_in #(
+    .intended_device_family ("Cyclone IV E"),
+    .invert_input_clocks    ("ON"),
+    .lpm_hint               ("UNUSED"),
+    .lpm_type               ("altddio_in"),
+    .width                  (8)
+  ) u_rxd_ddr (
+    .datain    (eth_rxd_i),
+    .inclock   (eth_rx_clk_i),
+    .dataout_h (rxd_s_w),   // falling-edge capture
+    ...
+  );
+  // analogicky u_rxdv_ddr (width=1), u_rxer_ddr (width=1)
+`else
+  assign rxd_s_w  = eth_rxd_i;   // sim fallback
+  assign rxdv_s_w = eth_rxdv_i;
+  assign rxer_s_w = eth_rxer_i;
+`endif
+```
+
+`u_rx_mac` a `u_gmii_raw_tap` prepojené na `rxd_s_w`/`rxdv_s_w`/`rxer_s_w`.
+
+**Latencia:** altddio_in přidáva 1 cycle (eth_rx_mac má vlastný 1-cycle pipeline → celkom 2).
+Uniformné oneskorenie všetkých signálov, logika je korektná.
+
+**Sim 5/5 PASS** (nezmenené — fallback assign v else vetve).
+
+**2. run (s altddio_in):** DST MAC `00:0a:35:01:fe:c0` — perfektný na všetkých 6 ramcoch.
 
 ---
 
 ## Výsledky testov
 
-### HW loopback (test_loopback.py) — 2026-06-05
+### HW loopback (test_loopback.py) — 2026-06-06
 
-| Test | Výsledok |
-|---|---|
-| make loopback-test (unicast) | 0/10 PASS (timeout 2s) |
-| make loopback-test-bcast (broadcast) | 0/10 PASS (timeout 2s) |
+```
+make loopback-test → 10/10 PASS
+  offset=14 (correct): 10x
 
-**Potvrdené (neopakovať):**
-- `ethtool enp0s31f6`: Speed=**1000Mb/s**, Duplex=Full, Link=**yes** — PHY link je UP
-- Preamble fix (ST_PREAMBLE v gmii_tx_mac.sv) aplikovaný, ale nezmenil výsledok
-- PACKET_OUTGOING filter v test_loopback.py funguje, nie je zdrojom false FAIL
+  PASS  min-pad  60B frame      60B   [offset=14 OK]  body OK
+  PASS  64B  data               84B   [offset=14 OK]  body OK
+  PASS  128B data               148B  [offset=14 OK]  body OK
+  PASS  256B data               276B  [offset=14 OK]  body OK
+  PASS  512B data               532B  [offset=14 OK]  body OK
+  PASS  1000B data              1020B [offset=14 OK]  body OK
+  PASS  1492B data (near max)   1512B [offset=14 OK]  body OK
+  PASS  all-0x00  200B          220B  [offset=14 OK]  body OK
+  PASS  all-0xFF  200B          220B  [offset=14 OK]  body OK
+  PASS  alternating  200B       220B  [offset=14 OK]  body OK
+```
 
-**Root cause:** 1-byte RX offset (z eth_test_03) pravdepodobne spôsobuje, že prvý
-byte v CDC FIFO je DST_MAC[0] namiesto SFD (0xD5). TX potom vysiela:
-  preamble(7×0x55) + DST_MAC[0]=0xFF — bez SFD → PHY frame zahodí.
-  
-**Riešenie:** Faza 2 — clean MAC architektúra (RX MAC explicitne stripuje preamble/SFD,
-TX MAC rebuiluje kompletný frame vrátane SFD+FCS).
+Cela cesta GMII RX → eth_rx_mac → async FIFOs (CDC) → eth_echo_app → eth_tx_mac → GMII TX
+funguje pre všetky veľkosti rámcov (60B–1512B) a všetky dátové vzory.
+
+### Poznámka k test_fpga.py (UDP socket)
+
+`test_fpga.py` používa štandardný `AF_INET/SOCK_DGRAM` socket. `eth_echo_app` je Layer-2
+MAC-swap echo (IP DST/UDP DST sa nemení). Linux kernel zahodí echovaný rámec (IP DST ≠ PC IP).
+**test_fpga.py vždy 0/6 s týmto dizajnom — nie je HW bug, ale protocol mismatch.**
+Pre UDP test treba v echo_app vymeniť IP SRC↔DST + UDP SRC↔DST + prepočítať checksums.
+
+---
+
+## Quartus Build Status
+
+- **Stav:** BUILD OK — kompilovaný s altddio_in, naprogramovaný, HW overený
+
+---
+
+## Finálna architektúra
+
+```
+eth_rxdv/rxd/rxer (FPGA vstup, 125 MHz)
+  → altddio_in (invert_input_clocks="ON") → rxdv_s_w, rxd_s_w, rxer_s_w
+      ├→ eth_rx_mac (eth_rx_clk_i)
+      │    ├→ payload_fifo (DATA_WIDTH=10, DEPTH=2048) [CDC]
+      │    └→ meta_fifo (DATA_WIDTH=113, DEPTH=8) [CDC]
+      │         → eth_echo_app (eth_tx_clk_i)
+      │              → eth_tx_mac → eth_txen/txd/txer
+      └→ gmii_raw_tap (N_BYTES=32) → uart_tap_tx_o (J11)
+
+GTX_CLK: altddio_out (invert_output="ON") na eth_tx_clk_i (PLL 125 MHz)
+```
 
 ---
 
 ## Kontextuálne poznatky z eth_test_03
 
-### Dokazané fakty o HW (neopakovať investigácie)
+### Dokazané fakty o HW (neopakovať)
 
 1. **GMII TX fyzicky funguje** — beacony viditeľné v pcap, GTxCLK OK, PHY OK
 2. **altddio_out invert_output="ON"** — GTxCLK výstup musí byť invertovaný (setup 4 ns vs. spec 2 ns)
 3. **meta_fifo DEPTH ≥ 32** — Quartus Cyclone IV E: dual-clock BRAM inference vyžaduje ≥ 3072 bits
-4. **GMII RX 1-byte offset** — gmii_rx_mac stream začína na ETH[1], nie ETH[0]
-   - RTL analýza: `m_axis_tdata = rxd_q` — prvý výstup by mal byť DST_MAC[0]=0x00
-   - HW realita: prvý byte = DST_MAC[1]=0x0a
-   - Príčina: NEZNÁMA — možnosti: IOE vstupný pipeline register, reset CDC, tap FIFO
-5. **PHY preamble**: RTL8211EG RXDV sa asertuje od SFD (0xD5), nie od preamble
-   - gmii_rx_mac musí akceptovať `RXDV && rxd==0xD5` priamo z RX_IDLE stavu
-
-### Dokazané fakty o timing
-
-| Clock | Slack Setup Slow 85°C | Pozn. |
-|---|---|---|
-| ETH_RXC (125 MHz) | > +1 ns | Po GLOBAL_SIGNAL false path pre hold |
-| ETH_TX_CLK (125 MHz) | > +0.3 ns | Po altddio_out output FF |
-| SYS_CLK (50 MHz) | > +4 ns | Bez problémov |
-
-### Kľúčové RTL rozhodnutia prenesené z eth_test_03
-
-- `crc32_eth`: LSB-first, poly 0xEDB88320, init 0xFFFFFFFF, fcs_o = ~crc_reg
-- `gmii_tx_mac`: output registers na txd_o/tx_en_o; IFG_BYTES=13 (kompenzácia output FF)
-- `txb_fire_w = txb_tvalid && txb_tready` (AXI-S handshake, nie len tvalid)
-- `eth_header_parser`: HDR_STRIP parameter (14=sim, 13=HW kvôli offsetu)
+4. **PHY preamble**: RTL8211EG RXDV sa asertuje od SFD (0xD5), nie od preamble
+5. **altddio_in pattern** — template pre každý ďalší GMII 1G dizajn na tejto karte
 
 ---
 
-## Vykonne prikazy
+## Vykonné príkazy
 
-- Build:   `make compile` z `examples/eth_test_04/`
-- Program: `make program` z `examples/eth_test_04/`
-- HW test: `make tap-test` z `examples/eth_test_04/` (po 5s od programovania)
-- Sim:     `make regression` z `examples/eth_test_04/sim/`
-
----
-
-## Implementované zmeny (chronologicky)
-
-1. **gmii_tx_mac.sv** — pridaný stav ST_PREAMBLE (7×0x55 pred SFD); PHY vyžaduje preamble
-2. **test_loopback.py** — PACKET_OUTGOING filter; `--broadcast` flag; sniff mode pkttype labels
-3. **Makefile** — pridané targety `loopback-test`, `loopback-test-bcast`, `loopback-sniff`
-
-### Faza 2 — clean MAC architektúra (2026-06-05)
-
-4. **rtl/eth/mac/taxi_lfsr.sv** — Alex Forencich LFSR/CRC engine (CERN-OHL-S-2.0)
-5. **rtl/eth/mac/eth_crc32_8.sv** — kombinatorický CRC32 wrapper (Galois, poly=0x04c11db7, REVERSE=1)
-6. **rtl/eth/mac/eth_rx_mac.sv** — clean RX MAC: GMII → AXI-S payload + metadata
-   - Explicitný strip preamble/SFD/header/FCS; 5-byte shift window pre FCS
-   - Kombinatorický FCS check; meta emitovaný pri tlast (cut-through)
-   - LOCAL_MAC filter + broadcast akceptácia
-7. **rtl/eth/mac/eth_tx_mac.sv** — clean TX MAC: metadata + AXI-S payload → GMII
-   - Generuje: preamble(7×0x55), SFD(0xD5), header(14B), payload, padding, CRC32 FCS
-   - Registered GMII výstupy; underflow handling; IFG=12 cyklov
-8. **rtl/eth/eth_echo_app.sv** — echo aplikácia v eth_tx_clk doméne
-   - MAC swap: tx_dst=rx_src, tx_src=LOCAL_MAC; frame discard pri fcs_ok=0
-   - FSM: ST_IDLE → ST_TX_META → ST_FORWARD/ST_DISCARD
-9. **rtl/eth/ethernet_test_04_top.sv** — nový top modul
-   - Payload async FIFO (DATA_WIDTH=10, DEPTH=2048); meta async FIFO (DATA_WIDTH=113, DEPTH=8)
-   - LOCAL_MAC=00:0a:35:01:fe:c0; sticky overflow flag
-10. **ip/ethernet_test_04_top.ip.yaml** — aktualizovaný zoznam artefaktov
-11. **test_loopback.py** — pridaný `--mode clean/raw`; clean: offset==14, src==FPGA_MAC
-12. **Makefile** — pridaný target `loopback-test-raw`
-
-### Očakávané výsledky HW po Faza 2
-
-- `make loopback-test`: 10/10 PASS; marker na offset=14; recv_src=00:0a:35:01:fe:c0
-- LED[4]=rx_activity bliká, LED[5]=tx_activity bliká pri prenosoch
-- Ak FAIL: skontrolovať `make loopback-sniff` pre raw frame analýzu
+```
+make sim            # regression sim (5/5 PASS)
+make compile        # Quartus build
+make program        # JTAG programming
+make tap-test       # GMII raw tap + pcap comparison
+make loopback-test  # L2 echo test (10/10 PASS)
+make loopback-sniff # raw frame sniffer
+```

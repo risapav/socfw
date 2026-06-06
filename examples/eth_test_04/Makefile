@@ -9,7 +9,8 @@ PC_IFACE := enp0s31f6
 # UART tap config (CP2102N on board)
 TAP_PORT  := /dev/ttyUSB0
 TAP_BAUD  := 115200
-TAP_BYTES := 20
+TAP_BYTES := 32
+TAP_PCAP  := /tmp/eth_test_04_tap.pcapng
 
 .PHONY: sim sim-unit sim-integration sim-regression sim-clean
 .PHONY: arp-setup arp-show udp-send udp-test tcpdump hw-test fpga-test tap-test wire-test
@@ -74,17 +75,22 @@ wire-test: arp-setup
 
 tap-test: arp-setup
 	@echo ""
-	@echo "=== UART tap ($(TAP_PORT) @ $(TAP_BAUD)) + UDP echo test ==="
+	@echo "=== raw GMII tap + pcap comparison ==="
+	@echo "    pcap -> $(TAP_PCAP)"
 	@echo ""
-	@python3 tools/read_tap.py \
-	     --port $(TAP_PORT) --baud $(TAP_BAUD) --count $(TAP_BYTES) --frames 0 & \
-	 TAP_PID=$$!; \
+	@sudo tcpdump -i $(PC_IFACE) -w $(TAP_PCAP) -q \
+	     'ether dst $(FPGA_MAC) and udp' 2>/dev/null & DUMP_PID=$$!; \
+	 sleep 0.3; \
+	 python3 tools/read_tap.py \
+	     --port $(TAP_PORT) --baud $(TAP_BAUD) --count $(TAP_BYTES) \
+	     --frames 0 --timeout 3 \
+	     --pcap $(TAP_PCAP) --fpga-mac $(FPGA_MAC) & TAP_PID=$$!; \
 	 sleep 0.5; \
 	 python3 test_fpga.py --ip $(FPGA_IP) --port $(FPGA_UDP_PORT) \
 	                      --mac $(FPGA_MAC) --iface $(PC_IFACE) --no-arp; \
-	 sleep 2; \
-	 kill $$TAP_PID 2>/dev/null; \
-	 wait $$TAP_PID 2>/dev/null; \
+	 sleep 0.5; \
+	 sudo kill $$DUMP_PID 2>/dev/null; wait $$DUMP_PID 2>/dev/null; \
+	 wait $$TAP_PID; \
 	 true
 
 loopback-test:

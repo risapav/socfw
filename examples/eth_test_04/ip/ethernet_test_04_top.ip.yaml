@@ -114,7 +114,7 @@ artifacts:
     - ../rtl/eth/eth_echo_app.sv
     - ../rtl/cdc/async_fifo.sv
     - ../rtl/eth/util/uart_tx.sv
-    - ../rtl/eth/util/rx_uart_debug.sv
+    - ../rtl/eth/util/gmii_raw_tap.sv
     - ../rtl/eth/ethernet_test_04_top.sv
 
   simulation: []

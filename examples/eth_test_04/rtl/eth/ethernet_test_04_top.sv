@@ -108,6 +108,74 @@ module ethernet_test_04_top #(
 `endif
 
   // -------------------------------------------------------------------------
+  // GMII RX input sampling: altddio_in with invert_input_clocks="ON"
+  // captures on falling edge of eth_rx_clk_i to meet RXD[3:0] setup time.
+  // -------------------------------------------------------------------------
+  logic [7:0] rxd_s_w;
+  logic       rxdv_s_w;
+  logic       rxer_s_w;
+
+`ifdef SYNTHESIS
+  altddio_in #(
+    .intended_device_family ("Cyclone IV E"),
+    .invert_input_clocks    ("ON"),
+    .lpm_hint               ("UNUSED"),
+    .lpm_type               ("altddio_in"),
+    .width                  (8)
+  ) u_rxd_ddr (
+    .datain    (eth_rxd_i),
+    .inclock   (eth_rx_clk_i),
+    .dataout_h (rxd_s_w),
+    .dataout_l (),
+    .aclr      (1'b0),
+    .aset      (1'b0),
+    .inclocken (1'b1),
+    .sclr      (1'b0),
+    .sset      (1'b0)
+  );
+
+  altddio_in #(
+    .intended_device_family ("Cyclone IV E"),
+    .invert_input_clocks    ("ON"),
+    .lpm_hint               ("UNUSED"),
+    .lpm_type               ("altddio_in"),
+    .width                  (1)
+  ) u_rxdv_ddr (
+    .datain    (eth_rxdv_i),
+    .inclock   (eth_rx_clk_i),
+    .dataout_h (rxdv_s_w),
+    .dataout_l (),
+    .aclr      (1'b0),
+    .aset      (1'b0),
+    .inclocken (1'b1),
+    .sclr      (1'b0),
+    .sset      (1'b0)
+  );
+
+  altddio_in #(
+    .intended_device_family ("Cyclone IV E"),
+    .invert_input_clocks    ("ON"),
+    .lpm_hint               ("UNUSED"),
+    .lpm_type               ("altddio_in"),
+    .width                  (1)
+  ) u_rxer_ddr (
+    .datain    (eth_rxer_i),
+    .inclock   (eth_rx_clk_i),
+    .dataout_h (rxer_s_w),
+    .dataout_l (),
+    .aclr      (1'b0),
+    .aset      (1'b0),
+    .inclocken (1'b1),
+    .sclr      (1'b0),
+    .sset      (1'b0)
+  );
+`else
+  assign rxd_s_w  = eth_rxd_i;
+  assign rxdv_s_w = eth_rxdv_i;
+  assign rxer_s_w = eth_rxer_i;
+`endif
+
+  // -------------------------------------------------------------------------
   // eth_rx_mac outputs (eth_rx_clk_i domain)
   // -------------------------------------------------------------------------
   logic [7:0]  rx_tdata_w;
@@ -212,9 +280,9 @@ module ethernet_test_04_top #(
   ) u_rx_mac (
     .clk_i          (eth_rx_clk_i),
     .rst_ni         (rst_w),
-    .gmii_rx_dv_i   (eth_rxdv_i),
-    .gmii_rx_er_i   (eth_rxer_i),
-    .gmii_rxd_i     (eth_rxd_i),
+    .gmii_rx_dv_i   (rxdv_s_w),
+    .gmii_rx_er_i   (rxer_s_w),
+    .gmii_rxd_i     (rxd_s_w),
     .m_axis_tdata   (rx_tdata_w),
     .m_axis_tvalid  (rx_tvalid_w),
     .m_axis_tready  (rx_tready_w),
@@ -329,22 +397,19 @@ module ethernet_test_04_top #(
   );
 
   // -------------------------------------------------------------------------
-  // UART debug tap (eth_rx_clk_i domain): sends 20-byte record per RX frame
+  // Raw GMII tap (eth_rx_clk_i domain): captures 32 bytes after SFD for
+  // direct comparison with Wireshark to isolate PHY vs RTL data corruption.
   // -------------------------------------------------------------------------
-  rx_uart_debug #(
+  gmii_raw_tap #(
     .CLK_HZ  (125_000_000),
     .BAUD    (115_200),
-    .N_BYTES (20)
-  ) u_rx_uart_debug (
-    .clk_i            (eth_rx_clk_i),
-    .rst_ni           (rst_w),
-    .m_meta_valid_i   (rx_meta_valid_w),
-    .m_meta_dst_mac_i (rx_meta_dst_mac_w),
-    .m_meta_src_mac_i (rx_meta_src_mac_w),
-    .m_meta_eth_type_i(rx_meta_eth_type_w),
-    .m_meta_fcs_ok_i  (rx_meta_fcs_ok_w),
-    .m_meta_mac_ok_i  (rx_meta_mac_ok_w),
-    .uart_tx_o        (uart_tap_tx_o)
+    .N_BYTES (32)
+  ) u_gmii_raw_tap (
+    .clk_i        (eth_rx_clk_i),
+    .rst_ni       (rst_w),
+    .gmii_rx_dv_i (rxdv_s_w),
+    .gmii_rxd_i   (rxd_s_w),
+    .uart_tx_o    (uart_tap_tx_o)
   );
 
   // -------------------------------------------------------------------------

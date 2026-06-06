@@ -1,6 +1,6 @@
 # ** Note: (vsim-220) '/home/palo/altera_lite/25.1std/questa_fse/linux_x86_64/../modelsim.ini' is used as the ini file.
 # vsim -c -do "run -all; quit" tb_rx_tx_loopback 
-# Start time: 07:08:13 on Jun 06,2026
+# Start time: 09:04:29 on Jun 06,2026
 # ** Note: (vsim-3812) Design is being optimized...
 # ** Note: (vopt-220) '/home/palo/altera_lite/25.1std/questa_fse/linux_x86_64/../modelsim.ini' is used as the ini file.
 # //  Questa Altera Starter FPGA Edition-64
@@ -32,5 +32,5 @@
 # tb_rx_tx_loopback: ALL PASS
 # ** Note: $finish    : integration/tb_rx_tx_loopback.sv(458)
 #    Time: 6837 ns  Iteration: 0  Instance: /tb_rx_tx_loopback
-# End time: 07:08:15 on Jun 06,2026, Elapsed time: 0:00:02
+# End time: 09:04:30 on Jun 06,2026, Elapsed time: 0:00:01
 # Errors: 0, Warnings: 0, Suppressed Errors: 4, Suppressed Warnings: 8
