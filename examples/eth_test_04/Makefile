@@ -9,7 +9,7 @@ PC_IFACE := enp0s31f6
 # UART tap config (CP2102N on board)
 TAP_PORT  := /dev/ttyUSB0
 TAP_BAUD  := 115200
-TAP_BYTES := 50
+TAP_BYTES := 20
 
 .PHONY: sim sim-unit sim-integration sim-regression sim-clean
 .PHONY: arp-setup arp-show udp-send udp-test tcpdump hw-test fpga-test tap-test wire-test

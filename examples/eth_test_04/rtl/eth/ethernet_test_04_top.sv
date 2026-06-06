@@ -42,7 +42,9 @@ module ethernet_test_04_top #(
 
   // Onboard
   output      logic [5:0]  led_o,
+  //J10
   output      logic [7:0]  dbg_mac_data_o,
+  //J11
   output      logic [7:0]  dbg_ctrl_o,
   output      logic        uart_tap_tx_o,
   input  wire logic [3:0]  btn_i
@@ -74,9 +76,6 @@ module ethernet_test_04_top #(
   // MDC/MDIO idle
   assign eth_mdc_o   = 1'b0;
   assign eth_mdio_io = 1'bz;
-
-  // UART idle
-  assign uart_tap_tx_o = 1'b1;
 
   // -------------------------------------------------------------------------
   // GTX_CLK: altddio_out, invert_output="ON" -> 125 MHz shifted by T/2
@@ -327,6 +326,25 @@ module ethernet_test_04_top #(
     .gmii_tx_er_o      (eth_txer_o),
     .stat_tx_frames    (tx_stat_frames_w),
     .stat_tx_underflow (tx_stat_underflow_w)
+  );
+
+  // -------------------------------------------------------------------------
+  // UART debug tap (eth_rx_clk_i domain): sends 20-byte record per RX frame
+  // -------------------------------------------------------------------------
+  rx_uart_debug #(
+    .CLK_HZ  (125_000_000),
+    .BAUD    (115_200),
+    .N_BYTES (20)
+  ) u_rx_uart_debug (
+    .clk_i            (eth_rx_clk_i),
+    .rst_ni           (rst_w),
+    .m_meta_valid_i   (rx_meta_valid_w),
+    .m_meta_dst_mac_i (rx_meta_dst_mac_w),
+    .m_meta_src_mac_i (rx_meta_src_mac_w),
+    .m_meta_eth_type_i(rx_meta_eth_type_w),
+    .m_meta_fcs_ok_i  (rx_meta_fcs_ok_w),
+    .m_meta_mac_ok_i  (rx_meta_mac_ok_w),
+    .uart_tx_o        (uart_tap_tx_o)
   );
 
   // -------------------------------------------------------------------------
