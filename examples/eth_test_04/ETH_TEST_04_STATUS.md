@@ -1,7 +1,7 @@
 # ETH_TEST_04 — Status
 
 **Dátum:** 2026-06-05
-**Stav:** NASTAVENIE — scaffold vytvorený, čaká na zadanie RTL cieľa
+**Stav:** ACTIVE — Faza 2 RTL hotová, čaká na Quartus build + HW overenie
 
 ---
 
@@ -29,13 +29,30 @@ ARP:   ip neigh replace 192.168.0.2 lladdr 00:0a:35:01:fe:c0 nud permanent dev e
 
 ## Quartus Build Status
 
-- **Stav:** —  (RTL zatiaľ neimplementovaný)
+- **Stav:** BUILD OK — async_fifo.sv + gmii_tx_mac.sv (ST_PREAMBLE fix) skompilované
 
 ---
 
 ## Výsledky testov
 
-- **Stav:** —
+### HW loopback (test_loopback.py) — 2026-06-05
+
+| Test | Výsledok |
+|---|---|
+| make loopback-test (unicast) | 0/10 PASS (timeout 2s) |
+| make loopback-test-bcast (broadcast) | 0/10 PASS (timeout 2s) |
+
+**Potvrdené (neopakovať):**
+- `ethtool enp0s31f6`: Speed=**1000Mb/s**, Duplex=Full, Link=**yes** — PHY link je UP
+- Preamble fix (ST_PREAMBLE v gmii_tx_mac.sv) aplikovaný, ale nezmenil výsledok
+- PACKET_OUTGOING filter v test_loopback.py funguje, nie je zdrojom false FAIL
+
+**Root cause:** 1-byte RX offset (z eth_test_03) pravdepodobne spôsobuje, že prvý
+byte v CDC FIFO je DST_MAC[0] namiesto SFD (0xD5). TX potom vysiela:
+  preamble(7×0x55) + DST_MAC[0]=0xFF — bez SFD → PHY frame zahodí.
+  
+**Riešenie:** Faza 2 — clean MAC architektúra (RX MAC explicitne stripuje preamble/SFD,
+TX MAC rebuiluje kompletný frame vrátane SFD+FCS).
 
 ---
 
@@ -81,4 +98,33 @@ ARP:   ip neigh replace 192.168.0.2 lladdr 00:0a:35:01:fe:c0 nud permanent dev e
 
 ## Implementované zmeny (chronologicky)
 
-*(zatiaľ žiadne — čaká na zadanie)*
+1. **gmii_tx_mac.sv** — pridaný stav ST_PREAMBLE (7×0x55 pred SFD); PHY vyžaduje preamble
+2. **test_loopback.py** — PACKET_OUTGOING filter; `--broadcast` flag; sniff mode pkttype labels
+3. **Makefile** — pridané targety `loopback-test`, `loopback-test-bcast`, `loopback-sniff`
+
+### Faza 2 — clean MAC architektúra (2026-06-05)
+
+4. **rtl/eth/mac/taxi_lfsr.sv** — Alex Forencich LFSR/CRC engine (CERN-OHL-S-2.0)
+5. **rtl/eth/mac/eth_crc32_8.sv** — kombinatorický CRC32 wrapper (Galois, poly=0x04c11db7, REVERSE=1)
+6. **rtl/eth/mac/eth_rx_mac.sv** — clean RX MAC: GMII → AXI-S payload + metadata
+   - Explicitný strip preamble/SFD/header/FCS; 5-byte shift window pre FCS
+   - Kombinatorický FCS check; meta emitovaný pri tlast (cut-through)
+   - LOCAL_MAC filter + broadcast akceptácia
+7. **rtl/eth/mac/eth_tx_mac.sv** — clean TX MAC: metadata + AXI-S payload → GMII
+   - Generuje: preamble(7×0x55), SFD(0xD5), header(14B), payload, padding, CRC32 FCS
+   - Registered GMII výstupy; underflow handling; IFG=12 cyklov
+8. **rtl/eth/eth_echo_app.sv** — echo aplikácia v eth_tx_clk doméne
+   - MAC swap: tx_dst=rx_src, tx_src=LOCAL_MAC; frame discard pri fcs_ok=0
+   - FSM: ST_IDLE → ST_TX_META → ST_FORWARD/ST_DISCARD
+9. **rtl/eth/ethernet_test_04_top.sv** — nový top modul
+   - Payload async FIFO (DATA_WIDTH=10, DEPTH=2048); meta async FIFO (DATA_WIDTH=113, DEPTH=8)
+   - LOCAL_MAC=00:0a:35:01:fe:c0; sticky overflow flag
+10. **ip/ethernet_test_04_top.ip.yaml** — aktualizovaný zoznam artefaktov
+11. **test_loopback.py** — pridaný `--mode clean/raw`; clean: offset==14, src==FPGA_MAC
+12. **Makefile** — pridaný target `loopback-test-raw`
+
+### Očakávané výsledky HW po Faza 2
+
+- `make loopback-test`: 10/10 PASS; marker na offset=14; recv_src=00:0a:35:01:fe:c0
+- LED[4]=rx_activity bliká, LED[5]=tx_activity bliká pri prenosoch
+- Ak FAIL: skontrolovať `make loopback-sniff` pre raw frame analýzu

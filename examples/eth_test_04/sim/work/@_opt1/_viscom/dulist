@@ -1,0 +1,9 @@
+1 10 tb_eth_pkg 4 fast 55 /home/palo/Projekty/socfw/examples/eth_test_04/sim/work 0 0 0 0 225 0
+1 9 taxi_lfsr 4 fast 55 /home/palo/Projekty/socfw/examples/eth_test_04/sim/work 0 0 262144 0 2367 0
+1 11 eth_crc32_8 4 fast 55 /home/palo/Projekty/socfw/examples/eth_test_04/sim/work 0 0 262144 0 2377 0
+1 10 eth_rx_mac 4 fast 55 /home/palo/Projekty/socfw/examples/eth_test_04/sim/work 0 0 393216 0 3079 0
+1 10 async_fifo 4 fast 55 /home/palo/Projekty/socfw/examples/eth_test_04/sim/work 0 0 0 0 248 0
+1 10 async_fifo 7 fast__1 55 /home/palo/Projekty/socfw/examples/eth_test_04/sim/work 0 0 0 0 248 0
+1 12 eth_echo_app 4 fast 55 /home/palo/Projekty/socfw/examples/eth_test_04/sim/work 0 0 0 0 191 0
+1 10 eth_tx_mac 4 fast 55 /home/palo/Projekty/socfw/examples/eth_test_04/sim/work 0 0 393216 0 2766 0
+1 17 tb_rx_tx_loopback 4 fast 55 /home/palo/Projekty/socfw/examples/eth_test_04/sim/work 0 0 917504 0 7511 0

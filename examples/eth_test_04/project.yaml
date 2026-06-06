@@ -58,8 +58,6 @@ modules:
 
   - instance: ethernet_test_04_top
     type: ethernet_test_04_top
-    params:
-      EXPECT_PREAMBLE: true
     clocks:
       eth_rx_clk_i: eth_rx_clk
       sys_clk_i: sys_clk

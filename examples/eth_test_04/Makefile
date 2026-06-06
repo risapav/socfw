@@ -13,6 +13,7 @@ TAP_BYTES := 50
 
 .PHONY: sim sim-unit sim-integration sim-regression sim-clean
 .PHONY: arp-setup arp-show udp-send udp-test tcpdump hw-test fpga-test tap-test wire-test
+.PHONY: loopback-test loopback-test-bcast loopback-sniff
 
 # --- Simulation ---
 
@@ -85,6 +86,18 @@ tap-test: arp-setup
 	 kill $$TAP_PID 2>/dev/null; \
 	 wait $$TAP_PID 2>/dev/null; \
 	 true
+
+loopback-test:
+	sudo python3 test_loopback.py --iface $(PC_IFACE) --fpga-mac $(FPGA_MAC) --mode clean
+
+loopback-test-bcast:
+	sudo python3 test_loopback.py --iface $(PC_IFACE) --fpga-mac $(FPGA_MAC) --mode clean --broadcast
+
+loopback-test-raw:
+	sudo python3 test_loopback.py --iface $(PC_IFACE) --fpga-mac $(FPGA_MAC) --mode raw
+
+loopback-sniff:
+	sudo python3 test_loopback.py --iface $(PC_IFACE) --sniff
 
 hw-test: arp-setup
 	@echo "Starting tcpdump in background (log: /tmp/eth_test_04_capture.pcap) ..."
