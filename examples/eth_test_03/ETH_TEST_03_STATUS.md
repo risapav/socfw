@@ -1,7 +1,7 @@
 # ETH_TEST_03 — Status
 
-**Dátum:** 2026-06-05
-**Stav:** HW TESTOVANIE — Faza 5A: raw RX trigger → BEACON odpoveď (bypass UDP parserov)
+**Dátum:** 2026-06-06
+**Stav:** UZAVRETY — 6/6 PASS, sim 16/16 PASS, HW UDP echo overený
 
 ---
 
@@ -781,11 +781,69 @@ TX: 0x0000 (disabled). RX: DROP_NONZERO_CHECKSUM=0.
 - [x] **HW: MAC comparison bug** — VYRIEŠENÁ (Faza 4H): Makefile mal zlý FPGA_IP/PC_IFACE; RTL je správny
 - [x] **HW: GMII TX ticho** — VYRIEŠENÁ (Faza 4G + 4I): gmii_tx_mac output registers + GTxCLK invert_output="ON"
   - Beacon frames viditeľné v pcap (Test 15) → GMII TX, GTxCLK, PHY fungujú ✓
-- [ ] **HW: meta_fifo CDC** — Faza 4K SOF (Thu Jun 4 15:23 2026) čaká na HW test
-  - Root cause: DEPTH=4 (384 bits) — Quartus nevytvára dual-clock RAM → FF v wr_clk doméne čítané z rd_clk
-  - Fix: DEPTH=32 → Quartus MLAB altsyncram_ffe1 (dual-clock RAM) ✓
-  - Symptóm: meta_rd_valid = 0 vždy v TX doméne (beacon timer nikdy nepreruší)
-  - Zostatok: `latch_udp_tlast=0` — udp_parser tlast nikdy nevypálil
-    → Pravdepodobná príčina: link DOWN pri teste (PHY po resete) alebo skutočný bug
-    → Overiť s Faza 4K SOF + stabilný link (čakaj 5s po FPGA resete)
+- [x] **HW: meta_fifo CDC** — VYRIEŠENÁ (Faza 4K): DEPTH=32 → Quartus MLAB inference
+- [x] **HW: 1-byte GMII RX offset** — VYRIEŠENÁ (Faza 5C): altddio_in (invert_input_clocks="ON") + HDR_STRIP=14
+  - Root cause: RXD[3:0] PCB timing violation, vzorkovanie na zostupnej hrane (eth_test_04 diagnóza)
+- [x] **HW: 1-frame metadata lag** — VYRIEŠENÁ (Faza 5C): promiscuous_i=1'b0 pre všetky parsery
+  - Root cause: background UDP traffic (mDNS, SSDP) s promiscuous_i=1'b1 vytváralo phantom rámce
 - [ ] `gmii_rx_mac` FCS strip — dlhodobý cieľ
+
+---
+
+### Faza 5C (2026-06-06 — altddio_in + promiscuous fix, UZAVRETY)
+
+**Root cause 1-frame metadata lag (VYRIEŠENÝ):**
+
+Všetky tri parsery mali `promiscuous_i=1'b1` v hardware (debug artefakt z Fazy 4B).
+To spôsobilo, že FPGA echo-ovalo VŠETKU UDP komunikáciu (mDNS port 5353, SSDP port 1900,
+iné multicast/broadcast UDP z PC). Tieto "phantom" rámce vstúpili do pipeline PRED prvým
+test paketom a vytvorili 1-frame lag: `echo(testN)` mal `payload_len` a payload z `test(N-1)`.
+Simulation používala `promiscuous_i=1'b0` → v sime sa bug neprejavil.
+
+**Fix:**
+- `ethernet_test_03_top.sv`: všetky tri parsery: `promiscuous_i = 1'b0`
+- `eth_header_parser.promiscuous_i`: `1'b1` → `1'b0`
+- `ipv4_header_parser.promiscuous_i`: `1'b1` → `1'b0`
+- `udp_header_parser.promiscuous_i`: `1'b1` → `1'b0`
+
+**Root cause 1-byte GMII RX offset (VYRIEŠENÝ — altddio_in, preniesené z eth_test_04):**
+
+GMII RXD[3:0] (dolná nibble) mala kritické setup/hold time narušenie pri 125 MHz.
+RTL8211EG vydriaval dáta od nábehovej hrany RX_CLK; PCB crosstalk spôsoboval glitche
+pri vzorkovaní dolnej nibble. Fix: `altddio_in (invert_input_clocks="ON")` vzorkuje
+na zostupnej hrane (4 ns po nábehovej = stred dátového okna).
+
+**HDR_STRIP=14** (14B Ethernet header strip; +1 oproti 13 kvôli altddio_in 1-cycle laten).
+
+**Sim:** 16/16 ALL PASS (altddio_in má sim fallback: `assign rxd_s_w = eth_rxd_i`).
+**HW:** 6/6 PASS (2026-06-06).
+
+```
+eth_test_03 UDP echo test  ->  192.168.0.2:8080
+  PASS  '2B minimal'            2B echoed correctly
+  PASS  '5B ascii'              5B echoed correctly
+  PASS  '16B hex'               16B echoed correctly
+  PASS  '64B boundary'          64B echoed correctly
+  PASS  '100B medium'           100B echoed correctly
+  PASS  '1472B max-udp'         1472B echoed correctly
+Result: 6/6 PASS
+```
+
+---
+
+### Faza 5B (2026-06-05 — HDR_STRIP parameter, commit 7ebd829)
+
+**eth_header_parser.sv:**
+- Pridaný `parameter int HDR_STRIP = 14` (default = sim-correctný 14B strip)
+- `localparam logic [3:0] LP_TRANS_BYTE = HDR_STRIP[3:0] - 4'd1`
+- Byte-12 a byte-13 case entries s podmieneným prechodom podľa LP_TRANS_BYTE
+- Quartus: dead branch eliminovaný pri elaboration
+
+**ethernet_test_03_top.sv:**
+- `eth_header_parser #(.HDR_STRIP(13)) u_eth` — hardware 13B strip
+- `raw_src_mac_q` extractor: zachytáva stream pozície 5-10 = ETH[6:11] = PC SRC MAC
+  (obchádza 1-byte-off eth_header_parser polia)
+- Assembler dostáva `raw_src_mac_q` a `LOCAL_MAC` ako dst_mac
+
+**Výsledky:** sim 16/16 ALL PASS, Quartus 0 errors, ETH_TX_CLK slack 0.386 ns
+**HW test (2026-06-05):** 0/6 PASS, UART tap 0/50 bytes (PHY link neoverený pri teste)

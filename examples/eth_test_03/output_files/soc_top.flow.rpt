@@ -1,5 +1,5 @@
 Flow report for soc_top
-Fri Jun  5 05:23:42 2026
+Sat Jun  6 14:43:58 2026
 Quartus Prime Version 25.1std.0 Build 1129 10/21/2025 SC Lite Edition
 
 
@@ -41,20 +41,20 @@ on the Quartus Prime software download page.
 +--------------------------------------------------------------------------------------+
 ; Flow Summary                                                                         ;
 +------------------------------------+-------------------------------------------------+
-; Flow Status                        ; Successful - Fri Jun  5 05:23:38 2026           ;
+; Flow Status                        ; Successful - Sat Jun  6 14:43:51 2026           ;
 ; Quartus Prime Version              ; 25.1std.0 Build 1129 10/21/2025 SC Lite Edition ;
 ; Revision Name                      ; soc_top                                         ;
 ; Top-level Entity Name              ; soc_top                                         ;
 ; Family                             ; Cyclone IV E                                    ;
 ; Device                             ; EP4CE55F23C8                                    ;
 ; Timing Models                      ; Final                                           ;
-; Total logic elements               ; 2,882 / 55,856 ( 5 % )                          ;
-;     Total combinational functions  ; 1,754 / 55,856 ( 3 % )                          ;
-;     Dedicated logic registers      ; 2,158 / 55,856 ( 4 % )                          ;
-; Total registers                    ; 2178                                            ;
+; Total logic elements               ; 2,680 / 55,856 ( 5 % )                          ;
+;     Total combinational functions  ; 1,733 / 55,856 ( 3 % )                          ;
+;     Dedicated logic registers      ; 1,913 / 55,856 ( 3 % )                          ;
+; Total registers                    ; 1925                                            ;
 ; Total pins                         ; 54 / 325 ( 17 % )                               ;
 ; Total virtual pins                 ; 0                                               ;
-; Total memory bits                  ; 34,016 / 2,396,160 ( 1 % )                      ;
+; Total memory bits                  ; 32,992 / 2,396,160 ( 1 % )                      ;
 ; Embedded Multiplier 9-bit elements ; 0 / 308 ( 0 % )                                 ;
 ; Total PLLs                         ; 1 / 4 ( 25 % )                                  ;
 +------------------------------------+-------------------------------------------------+
@@ -65,7 +65,7 @@ on the Quartus Prime software download page.
 +-------------------+---------------------+
 ; Option            ; Setting             ;
 +-------------------+---------------------+
-; Start date & time ; 06/05/2026 05:22:57 ;
+; Start date & time ; 06/06/2026 14:42:37 ;
 ; Main task         ; Compilation         ;
 ; Revision Name     ; soc_top             ;
 +-------------------+---------------------+
@@ -76,7 +76,7 @@ on the Quartus Prime software download page.
 +-------------------------------------+----------------------------------------+---------------+-------------+------------+
 ; Assignment Name                     ; Value                                  ; Default Value ; Entity Name ; Section Id ;
 +-------------------------------------+----------------------------------------+---------------+-------------+------------+
-; COMPILER_SIGNATURE_ID               ; 138627575272380.178062977723297        ; --            ; --          ; --         ;
+; COMPILER_SIGNATURE_ID               ; 178837573731967.178074975735772        ; --            ; --          ; --         ;
 ; MAX_CORE_JUNCTION_TEMP              ; 85                                     ; --            ; --          ; --         ;
 ; MIN_CORE_JUNCTION_TEMP              ; 0                                      ; --            ; --          ; --         ;
 ; MISC_FILE                           ; cores/clkpll/clkpll_bb.v               ; --            ; --          ; --         ;
@@ -98,11 +98,11 @@ on the Quartus Prime software download page.
 +----------------------+--------------+-------------------------+---------------------+------------------------------------+
 ; Module Name          ; Elapsed Time ; Average Processors Used ; Peak Virtual Memory ; Total CPU Time (on all processors) ;
 +----------------------+--------------+-------------------------+---------------------+------------------------------------+
-; Analysis & Synthesis ; 00:00:15     ; 1.0                     ; 670 MB              ; 00:00:28                           ;
-; Fitter               ; 00:00:23     ; 1.1                     ; 1283 MB             ; 00:00:35                           ;
-; Assembler            ; 00:00:02     ; 1.0                     ; 595 MB              ; 00:00:02                           ;
-; Timing Analyzer      ; 00:00:03     ; 1.2                     ; 755 MB              ; 00:00:04                           ;
-; Total                ; 00:00:43     ; --                      ; --                  ; 00:01:09                           ;
+; Analysis & Synthesis ; 00:00:23     ; 1.0                     ; 667 MB              ; 00:00:42                           ;
+; Fitter               ; 00:00:42     ; 1.1                     ; 1309 MB             ; 00:01:00                           ;
+; Assembler            ; 00:00:04     ; 1.0                     ; 594 MB              ; 00:00:04                           ;
+; Timing Analyzer      ; 00:00:06     ; 1.2                     ; 769 MB              ; 00:00:07                           ;
+; Total                ; 00:01:15     ; --                      ; --                  ; 00:01:53                           ;
 +----------------------+--------------+-------------------------+---------------------+------------------------------------+
 
 

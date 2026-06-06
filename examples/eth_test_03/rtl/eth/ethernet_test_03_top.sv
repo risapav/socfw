@@ -116,6 +116,56 @@ module ethernet_test_03_top #(
   assign eth_gtx_clk_o = eth_tx_clk_i;
 `endif
 
+  // GMII RX input sampling: altddio_in with invert_input_clocks="ON"
+  // captures on falling edge of eth_rx_clk_i to meet RXD[3:0] setup time.
+  logic [7:0] rxd_s_w;
+  logic       rxdv_s_w;
+  logic       rxer_s_w;
+
+`ifdef SYNTHESIS
+  altddio_in #(
+    .intended_device_family ("Cyclone IV E"),
+    .invert_input_clocks    ("ON"),
+    .lpm_hint               ("UNUSED"),
+    .lpm_type               ("altddio_in"),
+    .width                  (8)
+  ) u_rxd_ddr (
+    .datain    (eth_rxd_i),
+    .inclock   (eth_rx_clk_i),
+    .dataout_h (rxd_s_w),
+    .dataout_l (),
+    .aclr (1'b0), .aset (1'b0), .inclocken (1'b1), .sclr (1'b0), .sset (1'b0)
+  );
+
+  altddio_in #(
+    .intended_device_family ("Cyclone IV E"),
+    .invert_input_clocks    ("ON"),
+    .lpm_hint               ("UNUSED"),
+    .lpm_type               ("altddio_in"),
+    .width                  (1)
+  ) u_rxdv_ddr (
+    .datain    (eth_rxdv_i),  .inclock (eth_rx_clk_i),
+    .dataout_h (rxdv_s_w),   .dataout_l (),
+    .aclr (1'b0), .aset (1'b0), .inclocken (1'b1), .sclr (1'b0), .sset (1'b0)
+  );
+
+  altddio_in #(
+    .intended_device_family ("Cyclone IV E"),
+    .invert_input_clocks    ("ON"),
+    .lpm_hint               ("UNUSED"),
+    .lpm_type               ("altddio_in"),
+    .width                  (1)
+  ) u_rxer_ddr (
+    .datain    (eth_rxer_i),  .inclock (eth_rx_clk_i),
+    .dataout_h (rxer_s_w),   .dataout_l (),
+    .aclr (1'b0), .aset (1'b0), .inclocken (1'b1), .sclr (1'b0), .sset (1'b0)
+  );
+`else
+  assign rxd_s_w  = eth_rxd_i;
+  assign rxdv_s_w = eth_rxdv_i;
+  assign rxer_s_w = eth_rxer_i;
+`endif
+
   // ===========================================================================
   // RX CLOCK DOMAIN
   // ===========================================================================
@@ -138,30 +188,6 @@ module ethernet_test_03_top #(
   logic [7:0]  mac_tdata;
   logic        mac_tvalid, mac_tready, mac_tlast, mac_tuser;
 
-  // Raw SRC MAC extractor: captures stream positions 5-10 = ETH[6:11] = PC SRC MAC.
-  // Bypasses eth_header_parser field extraction which is 1 byte off due to GMII offset.
-  // Valid by the time udp_hdr_pre_valid fires (position ~40 >> 10).
-  logic [47:0] raw_src_mac_q;
-  logic [3:0]  raw_mac_cnt_q;
-  always_ff @(posedge eth_rx_clk_i or negedge rst_w) begin
-    if (!rst_w) begin
-      raw_mac_cnt_q <= '0;
-      raw_src_mac_q <= '0;
-    end else if (mac_tvalid && mac_tlast) begin
-      raw_mac_cnt_q <= '0;
-    end else if (mac_tvalid) begin
-      raw_mac_cnt_q <= raw_mac_cnt_q + 4'd1;
-      case (raw_mac_cnt_q)
-        4'd5:  raw_src_mac_q[47:40] <= mac_tdata;
-        4'd6:  raw_src_mac_q[39:32] <= mac_tdata;
-        4'd7:  raw_src_mac_q[31:24] <= mac_tdata;
-        4'd8:  raw_src_mac_q[23:16] <= mac_tdata;
-        4'd9:  raw_src_mac_q[15:8]  <= mac_tdata;
-        4'd10: raw_src_mac_q[7:0]   <= mac_tdata;
-        default: ;
-      endcase
-    end
-  end
 
   // L2 -> L3
   logic [7:0]  eth_tdata;
@@ -199,9 +225,9 @@ module ethernet_test_03_top #(
   ) u_mac (
     .clk_i        (eth_rx_clk_i),
     .rst_ni       (rst_w),
-    .gmii_rxd_i   (eth_rxd_i),
-    .gmii_rx_dv_i (eth_rxdv_i),
-    .gmii_rx_er_i (eth_rxer_i),
+    .gmii_rxd_i   (rxd_s_w),
+    .gmii_rx_dv_i (rxdv_s_w),
+    .gmii_rx_er_i (rxer_s_w),
     .m_axis_tdata (mac_tdata),
     .m_axis_tvalid(mac_tvalid),
     .m_axis_tready(mac_tready),
@@ -212,13 +238,13 @@ module ethernet_test_03_top #(
 
   // --- Ethernet Header Parser (L2) ---
   eth_header_parser #(
-    .HDR_STRIP(13)  // compensate 1-byte GMII RX offset on QMTech EP4CE55 + RTL8211EG
+    .HDR_STRIP(14)
   ) u_eth (
     .clk_i             (eth_rx_clk_i),
     .rst_ni            (rst_w),
     .local_mac_i       (LOCAL_MAC),
     .accept_broadcast_i(1'b1),
-    .promiscuous_i     (1'b1),  // L2: accept all; L3+L4 still strict
+    .promiscuous_i     (1'b0),
     .s_axis_tdata      (mac_tdata),
     .s_axis_tvalid     (mac_tvalid),
     .s_axis_tready     (mac_tready),
@@ -246,7 +272,7 @@ module ethernet_test_03_top #(
     .clk_i        (eth_rx_clk_i),
     .rst_ni       (rst_w),
     .local_ip_i   (LOCAL_IP),
-    .promiscuous_i(1'b1),  // L3: accept all; L4 still strict
+    .promiscuous_i(1'b0),
     .s_axis_tdata (eth_tdata),
     .s_axis_tvalid(eth_tvalid),
     .s_axis_tready(eth_tready),
@@ -266,7 +292,7 @@ module ethernet_test_03_top #(
     .clk_i                   (eth_rx_clk_i),
     .rst_ni                  (rst_w),
     .local_port_i            (UDP_PORT),
-    .promiscuous_i           (1'b1),  // L4: accept all; isolate upstream
+    .promiscuous_i           (1'b0),
     .s_axis_tdata            (ip_tdata),
     .s_axis_tvalid           (ip_tvalid),
     .s_axis_tready           (ip_tready),
@@ -292,12 +318,10 @@ module ethernet_test_03_top #(
   );
 
   // --- RX Metadata Assembler ---
-  // eth_src_mac_i: use raw extractor (bypasses 1-byte-offset eth_header_parser fields).
-  // eth_dst_mac_i: FPGA is always dst; parser's dst_mac is 1 byte off.
   udp_rx_meta_assembler u_meta (
     .clk_i              (eth_rx_clk_i),
     .rst_ni             (rst_w),
-    .eth_src_mac_i      (raw_src_mac_q),
+    .eth_src_mac_i      (eth_src_mac),
     .eth_dst_mac_i      (LOCAL_MAC),
     .ip_src_i           (ip_src),
     .ip_dst_i           (ip_dst),
