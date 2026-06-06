@@ -101,7 +101,7 @@ module rx_uart_debug #(
           if (idx_q == IDX_W'(IDX_LAST)) begin
             busy_q <= 1'b0;
           end else begin
-            idx_q <= idx_q + 1;
+            idx_q <= idx_q + IDX_W'(1);
           end
         end
       end

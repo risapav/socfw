@@ -61,7 +61,7 @@ module uart_tx #(
             bit_cnt_q <= bit_cnt_q + 4'd1;
           end
         end else begin
-          baud_cnt_q <= baud_cnt_q + 1;
+          baud_cnt_q <= baud_cnt_q + CNT_W'(1);
         end
       end
     end
