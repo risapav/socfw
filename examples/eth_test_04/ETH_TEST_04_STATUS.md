@@ -1,17 +1,18 @@
 # ETH_TEST_04 — Status
 
 **Dátum:** 2026-06-06
-**Stav:** UZAVRETY — altddio_in fix, loopback 10/10 PASS, HW potvrdený
+**Stav:** UZAVRETY — ARP/ICMP/UDP stack, timing clean, HW 10/10 PASS
 
 ---
 
 ## Cieľ projektu
 
 IEEE 802.3 GMII rozhranie na QMTech EP4CE55 + RTL8211EG PHY.
+Plný L2/L3/L4 Ethernet stack s ARP echo, ICMP echo a UDP echo.
 
 Kontext: eth_test_03 odhalil 1-byte offset v gmii_rx_mac výstupe — DST_MAC[0]=0x00
-sa neobjaví ako prvý AXI-Stream byte. Fyzická príčina neznáma (IOE pipeline, CDC,
-PHY behavior). Cieľom eth_test_04 je preskúmať a opraviť GMII RX cestu.
+sa neobjaví ako prvý AXI-Stream byte. Fyzická príčina: IOE timing violation na
+RXD[3:0] (dolná nibble). Fix: altddio_in s `invert_input_clocks="ON"`.
 
 ---
 
@@ -21,51 +22,34 @@ PHY behavior). Cieľom eth_test_04 je preskúmať a opraviť GMII RX cestu.
 Board: QMTech EP4CE55F23C8 (Cyclone IV E)
 PHY:   RTL8211EG (GMII 1 Gbps, 125 MHz)
 PC:    192.168.0.3  na  enp0s31f6 (priame spojenie, 1000Mb/s)
-FPGA:  LOCAL_IP=192.168.0.2, LOCAL_MAC=00:0a:35:01:fe:c0, UDP_PORT=8080
+FPGA:  LOCAL_IP=192.168.0.2, LOCAL_MAC=00:0a:35:01:fe:c0, UDP_PORT=7 (RFC 862)
 ARP:   ip neigh replace 192.168.0.2 lladdr 00:0a:35:01:fe:c0 nud permanent dev enp0s31f6
 ```
 
 ---
 
-## Root Cause: GMII RXD[3:0] timing violation
+## Fáza A: MAC/L2 loopback (uzavretá, commit 2c66355)
 
-### Diagnostika (gmii_raw_tap + UART)
+### Root Cause: GMII RXD[3:0] timing violation
 
-Implementovaný `gmii_raw_tap.sv` — tapuje RAW GMII za SFD, odosiela N_BYTES=32 cez UART
-8N1 (115200 baud). `tools/read_tap.py` prijíma + porovnáva po-bajte s pcap referenciou
-(subprocess tcpdump -r, binárne XOR s názvami polí).
-
-**1. run (bez altddio_in):** 6/6 ramcov zachytených, SYSTEMATICKÉ chyby iba v bitoch 0–3:
+**Diagnostika (gmii_raw_tap + UART):** Implementovaný `gmii_raw_tap.sv` — tapuje RAW GMII
+za SFD, odosiela N_BYTES=32 cez UART 8N1 (115200 baud). Systematické chyby iba v bitoch 0–3.
 
 | Pole      | uart  | ref   | xor  | bity  |
 |-----------|-------|-------|------|-------|
 | DST[5]    | `c8`  | `c0`  | 0x08 | bit 3 |
 | SRC[1..5] | rôzne | rôzne | 0x01..0x05 | bity 0,2 |
-| ETH[1]    | `05`  | `00`  | 0x05 | bity 0,2 |
-| PAY[0]    | `40`  | `45`  | 0x05 | bity 0,2 |
 
-Všetky chyby v RXD[3:0] (dolná nibble). RXD[7:4] vždy správny.
+Príčina: PCB trace delay + crosstalk na RXD[3:0] pri nabehovej hrane RX_CLK.
+Riešenie: vzorkovanie na zostupnej hrane (4 ns neskôr = stred dátového okna).
 
-**Príčina:** PCB trace delay + crosstalk spôsobuje glitche na RXD[3:0] pri nabehovej hrane
-RX_CLK (125 MHz = 8 ns perioda). PHY drive z nabehovej hrany, FPGA vzorkuje na nabehovej
-hrane → tesnésní setup time pre dolnú nibble. Riešenie: vzorkovanie na zostupnej hrane (4 ns
-neskôr = stred dátového okna).
-
-**Dôsledok:** DST MAC corrupted → mac_match=0 → 0/6 echo.
-
----
-
-## Fix: altddio_in (invert_input_clocks="ON")
-
-Tri instancie v `rtl/eth/ethernet_test_04_top.sv`:
+### Fix: altddio_in (invert_input_clocks="ON")
 
 ```systemverilog
 `ifdef SYNTHESIS
   altddio_in #(
     .intended_device_family ("Cyclone IV E"),
     .invert_input_clocks    ("ON"),
-    .lpm_hint               ("UNUSED"),
-    .lpm_type               ("altddio_in"),
     .width                  (8)
   ) u_rxd_ddr (
     .datain    (eth_rxd_i),
@@ -73,99 +57,110 @@ Tri instancie v `rtl/eth/ethernet_test_04_top.sv`:
     .dataout_h (rxd_s_w),   // falling-edge capture
     ...
   );
-  // analogicky u_rxdv_ddr (width=1), u_rxer_ddr (width=1)
 `else
   assign rxd_s_w  = eth_rxd_i;   // sim fallback
-  assign rxdv_s_w = eth_rxdv_i;
-  assign rxer_s_w = eth_rxer_i;
 `endif
 ```
 
-`u_rx_mac` a `u_gmii_raw_tap` prepojené na `rxd_s_w`/`rxdv_s_w`/`rxer_s_w`.
-
-**Latencia:** altddio_in přidáva 1 cycle (eth_rx_mac má vlastný 1-cycle pipeline → celkom 2).
-Uniformné oneskorenie všetkých signálov, logika je korektná.
-
-**Sim 5/5 PASS** (nezmenené — fallback assign v else vetve).
-
-**2. run (s altddio_in):** DST MAC `00:0a:35:01:fe:c0` — perfektný na všetkých 6 ramcoch.
-
----
-
-## Výsledky testov
-
-### HW loopback (test_loopback.py) — 2026-06-06
+### Výsledky: L2 loopback 10/10 PASS
 
 ```
 make loopback-test → 10/10 PASS
-  offset=14 (correct): 10x
-
-  PASS  min-pad  60B frame      60B   [offset=14 OK]  body OK
-  PASS  64B  data               84B   [offset=14 OK]  body OK
-  PASS  128B data               148B  [offset=14 OK]  body OK
-  PASS  256B data               276B  [offset=14 OK]  body OK
-  PASS  512B data               532B  [offset=14 OK]  body OK
-  PASS  1000B data              1020B [offset=14 OK]  body OK
-  PASS  1492B data (near max)   1512B [offset=14 OK]  body OK
-  PASS  all-0x00  200B          220B  [offset=14 OK]  body OK
-  PASS  all-0xFF  200B          220B  [offset=14 OK]  body OK
-  PASS  alternating  200B       220B  [offset=14 OK]  body OK
-```
-
-Cela cesta GMII RX → eth_rx_mac → async FIFOs (CDC) → eth_echo_app → eth_tx_mac → GMII TX
-funguje pre všetky veľkosti rámcov (60B–1512B) a všetky dátové vzory.
-
-### Poznámka k test_fpga.py (UDP socket)
-
-`test_fpga.py` používa štandardný `AF_INET/SOCK_DGRAM` socket. `eth_echo_app` je Layer-2
-MAC-swap echo (IP DST/UDP DST sa nemení). Linux kernel zahodí echovaný rámec (IP DST ≠ PC IP).
-**test_fpga.py vždy 0/6 s týmto dizajnom — nie je HW bug, ale protocol mismatch.**
-Pre UDP test treba v echo_app vymeniť IP SRC↔DST + UDP SRC↔DST + prepočítať checksums.
-
----
-
-## Quartus Build Status
-
-- **Stav:** BUILD OK — kompilovaný s altddio_in, naprogramovaný, HW overený
-
----
-
-## Finálna architektúra
-
-```
-eth_rxdv/rxd/rxer (FPGA vstup, 125 MHz)
-  → altddio_in (invert_input_clocks="ON") → rxdv_s_w, rxd_s_w, rxer_s_w
-      ├→ eth_rx_mac (eth_rx_clk_i)
-      │    ├→ payload_fifo (DATA_WIDTH=10, DEPTH=2048) [CDC]
-      │    └→ meta_fifo (DATA_WIDTH=113, DEPTH=8) [CDC]
-      │         → eth_echo_app (eth_tx_clk_i)
-      │              → eth_tx_mac → eth_txen/txd/txer
-      └→ gmii_raw_tap (N_BYTES=32) → uart_tap_tx_o (J11)
-
-GTX_CLK: altddio_out (invert_output="ON") na eth_tx_clk_i (PLL 125 MHz)
+  PASS  60B min-pad, 64B, 128B, 256B, 512B, 1000B, 1492B
+  PASS  all-0x00, all-0xFF, alternating 200B
+  offset=14 correct: 10x
 ```
 
 ---
 
-## Kontextuálne poznatky z eth_test_03
+## Fáza B: ARP/ICMP/UDP stack (uzavretá, commit 6ada345)
+
+### Architektúra
+
+```
+eth_rx_mac
+  -> eth_type_demux
+      -> ARP path:  arp_rx -> arp_tx
+      -> IPv4 path: ipv4_rx -> icmp_echo
+                             -> udp_echo (port 7, RFC 862)
+  -> ipv4_tx
+  -> eth_tx_arb (3-to-1 fixed-priority: ARP > ICMP > UDP)
+  -> eth_tx_mac -> GMII TX
+```
+
+### Timing closure (Faza 5)
+
+**Problém:** ETH_TX_CLK setup slack −3.562 ns (Fmax 86 MHz vs 125 MHz).
+Root cause: M9K `portb_address_reg0` → mux → eth_tx_mac (~11 ns kombinačná cesta).
+
+**Tri fixes:**
+
+1. **eth_tx_arb**: Registrovaný payload output (skid buffer). `m_tdata_q` FF preruší
+   cestu z RAM cez arbiter do eth_tx_mac.
+
+2. **icmp_echo + udp_echo**: Zmena z `assign q = mem[addr]` na `always_ff q <= mem[addr]`.
+   Quartus inferuje M9K s `outdata_reg` — eliminuje `portb_address_reg0` z kritickej cesty.
+
+3. **FSM read-ahead**: `tx_rd_addr_q` (read pointer, 1 cyklus napred) + `tx_out_cnt_q`
+   (output counter pre tlast). Na TX_HDR→TX_DATA prechode: `tx_rd_addr_q <= 1`, always_ff
+   číta mem[0] na rovnakom hrane → mem[0] pripravený v TX_DATA cykle 0.
+
+**Výsledky timing (soc_top.sta.summary):**
+
+```
+Slow 85C Setup ETH_TX_CLK: +0.327 ns  (TNS=0, CLEAN)
+Slow  0C Setup ETH_TX_CLK: +0.814 ns
+Fast  0C Setup ETH_TX_CLK: +4.651 ns
+```
+
+### Výsledky: HW PASS (2026-06-06)
+
+```
+make test-stack
+
+--- ARP ---
+arping 192.168.0.2 → Received 4 response(s)  RTT ~0.6 ms
+
+--- ICMP ---
+6 packets transmitted, 6 received, 0% packet loss
+rtt min/avg/max/mdev = 0.084/0.087/0.090/0.002 ms
+
+--- UDP echo port 7 ---
+Result: 10/10 PASS  (0 FAIL)
+
+--- UDP echo large 1464B ---
+Result: 5/5 PASS  (0 FAIL)
+```
+
+**Regression: 8/8 ALL PASS** (tb_eth_crc32_8, tb_eth_rx_mac, tb_eth_tx_mac,
+tb_eth_echo_app, tb_rx_tx_loopback, tb_arp, tb_icmp_echo, tb_udp_echo)
+
+---
+
+## Kontextuálne poznatky
 
 ### Dokazané fakty o HW (neopakovať)
 
-1. **GMII TX fyzicky funguje** — beacony viditeľné v pcap, GTxCLK OK, PHY OK
-2. **altddio_out invert_output="ON"** — GTxCLK výstup musí byť invertovaný (setup 4 ns vs. spec 2 ns)
-3. **meta_fifo DEPTH ≥ 32** — Quartus Cyclone IV E: dual-clock BRAM inference vyžaduje ≥ 3072 bits
+1. **GMII TX fyzicky funguje** — GTxCLK OK, PHY OK, RTT ~0.09 ms
+2. **altddio_out invert_output="ON"** — GTxCLK výstup musí byť invertovaný
+3. **meta_fifo DEPTH ≥ 32** — Cyclone IV E dual-clock BRAM inference vyžaduje ≥ 3072 bits
 4. **PHY preamble**: RTL8211EG RXDV sa asertuje od SFD (0xD5), nie od preamble
 5. **altddio_in pattern** — template pre každý ďalší GMII 1G dizajn na tejto karte
+6. **M9K timing pattern** — pre M9K RAM feedujúci streaming TX: vždy `always_ff` read +
+   FSM read-ahead pattern. `assign q = mem[addr]` → portb_address_reg0 v kritickej ceste.
 
 ---
 
-## Vykonné príkazy
+## Príkazy
 
-```
-make sim            # regression sim (5/5 PASS)
-make compile        # Quartus build
-make program        # JTAG programming
-make tap-test       # GMII raw tap + pcap comparison
-make loopback-test  # L2 echo test (10/10 PASS)
-make loopback-sniff # raw frame sniffer
+```bash
+make sim              # regression sim (8/8 PASS)
+make compile          # Quartus build
+make program          # JTAG programming
+make test-arp         # arping 4 pakety
+make test-icmp        # ping 6 paketov
+make test-udp-echo    # UDP echo 10 paketov
+make test-stack       # ARP + ICMP + UDP + UDP large
+make trace-stack      # tcpdump capture počas test-stack
+make loopback-test    # L2 echo test (historický, Faza A)
 ```

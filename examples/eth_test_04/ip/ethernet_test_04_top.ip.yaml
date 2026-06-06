@@ -107,11 +107,19 @@ ports:
 
 artifacts:
   synthesis:
+    - ../rtl/pkg/eth_pkg.sv
     - ../rtl/eth/mac/taxi_lfsr.sv
     - ../rtl/eth/mac/eth_crc32_8.sv
     - ../rtl/eth/mac/eth_rx_mac.sv
     - ../rtl/eth/mac/eth_tx_mac.sv
-    - ../rtl/eth/eth_echo_app.sv
+    - ../rtl/eth/util/eth_type_demux.sv
+    - ../rtl/eth/util/eth_tx_arb.sv
+    - ../rtl/eth/l2/arp_rx.sv
+    - ../rtl/eth/l2/arp_tx.sv
+    - ../rtl/eth/l3/ipv4_rx.sv
+    - ../rtl/eth/l3/ipv4_tx.sv
+    - ../rtl/eth/l3/icmp_echo.sv
+    - ../rtl/eth/l4/udp_echo.sv
     - ../rtl/cdc/async_fifo.sv
     - ../rtl/eth/util/uart_tx.sv
     - ../rtl/eth/util/gmii_raw_tap.sv
