@@ -193,6 +193,12 @@ module xfcp_arbiter_2to1 #(
     end
   end
 
+  // SOP validation for Port 0 (UART): only grant on a valid request SOP.
+  // In ARB_IDLE, any byte that is not XFCP_SOP_REQ is silently consumed from
+  // the UART FIFO without creating an order FIFO entry. This prevents garbled
+  // or residual bytes from corrupting the order FIFO state.
+  wire p0_sop_ok_w = (s0_data_i == XFCP_SOP_REQ);
+
   // =========================================================================
   // Arbiter FSM
   // =========================================================================
@@ -200,7 +206,7 @@ module xfcp_arbiter_2to1 #(
     arb_d = arb_q;
     case (arb_q)
       ARB_IDLE: begin
-        if (s0_valid_i && !ord_full_w)
+        if (s0_valid_i && !ord_full_w && p0_sop_ok_w)
           arb_d = ARB_GRANT0;
         else if (s1_valid_i && !ord_full_w)
           arb_d = ARB_GRANT1;
@@ -253,7 +259,11 @@ module xfcp_arbiter_2to1 #(
         m_last_o   = s1_last_i;
         s1_ready_o = m_ready_i;
       end
-      default: ;
+      default: begin
+        // ARB_IDLE: consume invalid SOP bytes from UART FIFO without forwarding.
+        if (s0_valid_i && !p0_sop_ok_w)
+          s0_ready_o = 1'b1;
+      end
     endcase
   end
 

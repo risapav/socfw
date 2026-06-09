@@ -8,6 +8,8 @@
 //   T3: UART WRITE -- synthetic TLAST after byte 11 (CNT=2 payload bytes)
 //   T4: Priority   -- UART (s0) wins when both s0+s1 pending at ARB_IDLE
 //   T5: Order FIFO -- UART response routed to m0, ETH response to m1
+//   T6: SOP filter -- invalid UART bytes silently dropped, valid packet follows
+//   T7: SOP filter -- ETH granted when UART port has only invalid SOP bytes
 //
 // Run: vsim -c -do "run -all; quit" tb_xfcp_arbiter_2to1
 
@@ -280,6 +282,42 @@ module tb_xfcp_arbiter_2to1;
     @(negedge clk);
     chk(m1_cnt      == 3,    "T5 resp2 m1_cnt=3");
     chk(m1_got_last == 1'b1, "T5 resp2 m1 TLAST");
+
+    // -- T6: SOP filter -- invalid UART bytes dropped, valid READ accepted ----
+    do_reset();
+    // Two consecutive non-SOP bytes must be consumed from UART FIFO without
+    // being forwarded to the fabric endpoint and without pushing order FIFO.
+    @(negedge clk); s0_valid = 1'b1; s0_data = 8'hAB;  // bad byte 1
+    @(posedge clk); while (!s0_ready) @(posedge clk);
+    @(negedge clk); s0_valid = 1'b1; s0_data = 8'h00;  // bad byte 2
+    @(posedge clk); while (!s0_ready) @(posedge clk);
+    @(negedge clk); s0_valid = 1'b0;
+    chk(ep_cnt == 0, "T6 bad bytes not forwarded to endpoint");
+    // A valid UART READ after the noise must work normally.
+    p0_read(8'h05, 32'hFF02_0000);
+    @(negedge clk);
+    chk(ep_cnt      == 9,    "T6 valid READ ep_cnt=9");
+    chk(ep_last_saw == 1'b1, "T6 valid READ TLAST on ADDR3");
+
+    // -- T7: SOP filter -- ETH granted when UART has bad byte ----------------
+    // At ARB_IDLE, if UART has an invalid SOP but ETH is valid, ETH is granted.
+    // arb_q is registered so ETH byte appears on m_valid one cycle AFTER
+    // arb_d=GRANT1 is computed (two posedges after stimulus).
+    do_reset();
+    @(negedge clk);
+    s0_valid = 1'b1; s0_data = 8'hBB;             // bad UART byte (persists)
+    s1_valid = 1'b1; s1_data = 8'hAA; s1_last = 1'b1;  // ETH single byte
+    @(posedge clk);  // posedge_0: arb_q: IDLE -> GRANT1 (latched)
+    @(posedge clk);  // posedge_1: arb_q=GRANT1 active; ETH byte forwarded
+    @(negedge clk);
+    chk(ep_cnt      == 1,    "T7 ETH byte forwarded ep_cnt=1");
+    chk(ep_last_saw == 1'b1, "T7 ETH TLAST forwarded");
+    s1_valid = 1'b0; s1_last = 1'b0;
+    // posedge_2: arb_q: GRANT1 -> IDLE; bad UART byte consumed (s0_ready=1).
+    @(posedge clk);
+    @(negedge clk);
+    chk(ep_cnt == 1, "T7 bad UART byte not forwarded (ep_cnt stays 1)");
+    s0_valid = 1'b0;
 
     // ======================================================================
     $display("");
