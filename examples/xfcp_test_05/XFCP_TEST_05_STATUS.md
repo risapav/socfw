@@ -64,7 +64,7 @@ eth_rx_clk (125 MHz z PHY, async)
 - [x] `tb_xfcp_test_05_top.sv` — T11 (ETH READ), T12 (ETH WRITE) — 12/12 PASS
 - [x] `sim/common/tb_eth_pkg.sv` — CRC32 + Ethernet frame helper
 - [x] Simulacia regression PASSED
-- [ ] HW test: XFCP cez UDP
+- [x] HW test: XFCP cez UDP — 7/7 PASS (2026-06-09)
 
 ### Faza C — Python tools [UZAVRETA 2026-06-09]
 - [x] `tools/main.py` — dual-transport menu (UART + UDP, transport switch pri beh)
@@ -73,7 +73,9 @@ eth_rx_clk (125 MHz z PHY, async)
 - [x] `tools/xfcp/timeouts.py` — XfcpTimeouts s udp_s polom
 - [x] `tools/modules/diag_ctrl.py` — DiagCtrl (axil_diag_ctrl, 17 registrov, snapshot/reset)
 - [x] `tools/core/scanner.py` — DynamicScanner num_slots=7, DIAG v CLASS_MAP
-- [ ] HW test: XFCP cez UDP (TODO)
+- [x] `tools/test_hw.py` — skriptovany HW test (--uart/--udp, --repeat, --rw, --diag)
+- [x] `Makefile` test-uart / test-udp / test-rw / hw-test targety
+- [x] HW test UDP: 7/7 slotov PASS, DIAG bez chyb (2026-06-09)
 
 ---
 
@@ -112,3 +114,10 @@ Paket format:
 - unit udp_xfcp_server: 27/27 PASS
 - integration 12/12 PASS (T1-T10 UART, T11 ETH READ, T12 ETH WRITE)
 - regression PASSED
+
+### Faza C HW test (2026-06-09) — make test-udp
+- ping: PASS
+- 7/7 slotov × 3 opakovania: PASS (SYSC, UART, OUT_, OUT_, OUT_, SEG7, DIAG)
+- DIAG snapshot: rx_sop=23, rx_hdr=23, fab_req=23, fab_resp=22, tx_pkt=22
+- Chybove registre: 0 (rx_lost=0, rx_frame=0, rx_overrun=0, rx_bad_hdr=0, rx_drop=0)
+- **PROJEKT UZAVRETY — vsetky fazy PASS**

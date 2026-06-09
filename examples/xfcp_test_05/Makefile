@@ -32,13 +32,14 @@ PC_IP          ?= 192.168.0.3
 UART_PORT ?= /dev/ttyUSB0
 UART_BAUD ?= 115200
 
-TOOLS_DIR := tools
+TOOLS_DIR    := tools
+TEST_REPEAT  ?= 3
 
 .PHONY: sim sim-unit sim-integration sim-regression sim-clean
 .PHONY: compile-baud
 .PHONY: arp-setup arp-show tcpdump
 .PHONY: xfcp-uart xfcp-udp
-.PHONY: test-arp test-icmp hw-test
+.PHONY: test-arp test-icmp test-uart test-udp test-rw hw-test
 .PHONY: vars
 
 # -----------------------------------------------------------------------------
@@ -115,10 +116,27 @@ test-icmp:
 	ping -I $(PC_IFACE) -c 6 $(FPGA_IP)
 	@echo "=== ICMP: OK ==="
 
+test-uart:
+	@echo "=== XFCP HW test cez UART: $(UART_PORT) @ $(UART_BAUD) ==="
+	cd $(TOOLS_DIR) && python3 test_hw.py --uart $(UART_PORT) --baud $(UART_BAUD) \
+	  --repeat $(TEST_REPEAT) --diag
+
+test-udp: arp-setup
+	@echo "=== XFCP HW test cez UDP: $(FPGA_IP):$(XFCP_UDP_PORT) ==="
+	cd $(TOOLS_DIR) && python3 test_hw.py --udp $(FPGA_IP):$(XFCP_UDP_PORT) \
+	  --repeat $(TEST_REPEAT) --diag
+
+test-rw: arp-setup
+	@echo "=== XFCP R/W test (UART + UDP) ==="
+	cd $(TOOLS_DIR) && python3 test_hw.py --uart $(UART_PORT) --baud $(UART_BAUD) \
+	  --repeat $(TEST_REPEAT) --rw --diag
+	cd $(TOOLS_DIR) && python3 test_hw.py --udp $(FPGA_IP):$(XFCP_UDP_PORT) \
+	  --repeat $(TEST_REPEAT) --rw --diag
+
 hw-test: arp-setup
 	@echo ""
 	@echo "======================================="
-	@echo "  xfcp_test_05 HW test"
+	@echo "  xfcp_test_05 HW test (full)"
 	@echo "======================================="
 	@echo ""
 	@echo "--- ARP ---"
@@ -127,14 +145,16 @@ hw-test: arp-setup
 	@echo "--- ICMP ---"
 	ping -I $(PC_IFACE) -c 4 $(FPGA_IP)
 	@echo ""
-	@echo "--- XFCP over UART (interaktivny) ---"
-	@echo "Spusti manualne: make xfcp-uart"
+	@echo "--- XFCP over UART ---"
+	cd $(TOOLS_DIR) && python3 test_hw.py --uart $(UART_PORT) --baud $(UART_BAUD) \
+	  --repeat $(TEST_REPEAT) --diag
 	@echo ""
-	@echo "--- XFCP over UDP (interaktivny) ---"
-	@echo "Spusti manualne: make xfcp-udp"
+	@echo "--- XFCP over UDP ---"
+	cd $(TOOLS_DIR) && python3 test_hw.py --udp $(FPGA_IP):$(XFCP_UDP_PORT) \
+	  --repeat $(TEST_REPEAT) --diag
 	@echo ""
 	@echo "======================================="
-	@echo "  hw-test network checks COMPLETE"
+	@echo "  hw-test COMPLETE"
 	@echo "======================================="
 
 # -----------------------------------------------------------------------------
