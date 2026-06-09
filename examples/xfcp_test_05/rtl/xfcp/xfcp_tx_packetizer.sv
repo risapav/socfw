@@ -68,7 +68,7 @@ module xfcp_tx_packetizer #(
 
   // Riadiace signály od arbitera
   input  wire           resp_start,    // 1-takt pulz: začni odosielať paket
-  input  wire xfcp_op_e resp_type,     // typ response (xfcp_op_e: READ/WRITE)
+  input  wire [7:0]     resp_type,     // typ response (xfcp_op_e: READ/WRITE)
   input  wire [7:0]     resp_seq,      // SEQ z requestu (vrátiť v response)
 
   // Dátový kanál z engine read_buffer FIFO

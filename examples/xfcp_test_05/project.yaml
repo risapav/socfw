@@ -15,6 +15,7 @@ registries:
     - ../../packs/builtin
   ip:
     - cores/clkpll
+    - ip
   cpu: []
 
 features:

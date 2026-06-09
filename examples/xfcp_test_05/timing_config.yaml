@@ -56,6 +56,8 @@ timing:
     - from_port: ETH_RXER
       hold_only: true
       comment: "GLOBAL_SIGNAL na ETH_RXC"
+    - to_port: UART_TX
+      comment: "UART TX: async serial output, nie source-synchronous"
 
   io_delays:
     auto: true
@@ -92,10 +94,3 @@ timing:
         max_ns: 3.0
         min_ns: 0.0
         comment: "XFCP UART RX"
-
-      - port: UART_TX
-        direction: output
-        clock: CLK125
-        max_ns: 3.0
-        min_ns: 0.0
-        comment: "XFCP UART TX"

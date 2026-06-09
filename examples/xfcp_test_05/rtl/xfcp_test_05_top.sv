@@ -508,9 +508,13 @@ module xfcp_test_05_top #(
   //   ipv4_rx L4 stream -> udp_xfcp_server -> arbiter.s1
   //   arbiter.m1 -> udp_xfcp_server -> ipv4_tx_udp -> eth_tx_arb port 2
   // =========================================================================
-  logic        xfcp_eth_rx_valid_w, xfcp_eth_rx_ready_w;
+  logic        xfcp_eth_rx_valid_w,  xfcp_eth_rx_ready_w;
   logic [7:0]  xfcp_eth_rx_data_w;
   logic        xfcp_eth_rx_last_w;
+  // Pipeline register: breaks udp_xfcp_server -> arbiter timing path
+  logic        xfcp_eth_rx_valid_r, xfcp_eth_rx_ready_r;
+  logic [7:0]  xfcp_eth_rx_data_r;
+  logic        xfcp_eth_rx_last_r;
 
   logic        udp_meta_valid_w, udp_meta_ready_w;
   logic [7:0]  udp_meta_proto_w;
@@ -767,6 +771,21 @@ module xfcp_test_05_top #(
   logic [7:0] xfcp_fab_tx_data_w;
   logic       xfcp_fab_tx_last_w;
 
+  axis_skid_buffer #(.DATA_WIDTH(8)) u_eth_xfcp_skid (
+    .clk_i     (clk_i),
+    .rst_ni    (rst_ni),
+    .s_valid_i (xfcp_eth_rx_valid_w),
+    .s_ready_o (xfcp_eth_rx_ready_w),
+    .s_data_i  (xfcp_eth_rx_data_w),
+    .s_last_i  (xfcp_eth_rx_last_w),
+    .s_user_i  (1'b0),
+    .m_valid_o (xfcp_eth_rx_valid_r),
+    .m_ready_i (xfcp_eth_rx_ready_r),
+    .m_data_o  (xfcp_eth_rx_data_r),
+    .m_last_o  (xfcp_eth_rx_last_r),
+    .m_user_o  ()
+  );
+
   xfcp_arbiter_2to1 #(.ORD_FIFO_DEPTH(8)) u_arbiter (
     .clk_i          (clk_i),
     .rst_ni         (rst_ni),
@@ -774,11 +793,11 @@ module xfcp_test_05_top #(
     .s0_valid_i     (rx_fifo_rvalid_w),
     .s0_ready_o     (arb_uart_ready_w),
     .s0_data_i      (rx_fifo_rdata_w),
-    // Port 1: ETH-UDP
-    .s1_valid_i     (xfcp_eth_rx_valid_w),
-    .s1_ready_o     (xfcp_eth_rx_ready_w),
-    .s1_data_i      (xfcp_eth_rx_data_w),
-    .s1_last_i      (xfcp_eth_rx_last_w),
+    // Port 1: ETH-UDP (cez skid buffer pre timing closure)
+    .s1_valid_i     (xfcp_eth_rx_valid_r),
+    .s1_ready_o     (xfcp_eth_rx_ready_r),
+    .s1_data_i      (xfcp_eth_rx_data_r),
+    .s1_last_i      (xfcp_eth_rx_last_r),
     // To XFCP fabric endpoint
     .m_valid_o      (xfcp_fab_rx_valid_w),
     .m_ready_i      (xfcp_fab_rx_ready_w),
