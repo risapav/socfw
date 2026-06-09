@@ -66,9 +66,14 @@ eth_rx_clk (125 MHz z PHY, async)
 - [x] Simulacia regression PASSED
 - [ ] HW test: XFCP cez UDP
 
-### Faza C — Python tools [TODO]
-- [ ] Aktualizovat tools/main.py pre dual-transport (UART + UDP)
-- [ ] Test XFCP cez UART aj UDP simultanne
+### Faza C — Python tools [UZAVRETA 2026-06-09]
+- [x] `tools/main.py` — dual-transport menu (UART + UDP, transport switch pri beh)
+- [x] `tools/xfcp/transport.py` — SerialTransport + UdpTransport
+- [x] `tools/xfcp/bus.py` — XfcpBus(transport injection), .uart() + .udp() factory
+- [x] `tools/xfcp/timeouts.py` — XfcpTimeouts s udp_s polom
+- [x] `tools/modules/diag_ctrl.py` — DiagCtrl (axil_diag_ctrl, 17 registrov, snapshot/reset)
+- [x] `tools/core/scanner.py` — DynamicScanner num_slots=7, DIAG v CLASS_MAP
+- [ ] HW test: XFCP cez UDP (TODO)
 
 ---
 
