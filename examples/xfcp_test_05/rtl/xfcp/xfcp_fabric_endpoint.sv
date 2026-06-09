@@ -272,6 +272,32 @@ module xfcp_fabric_endpoint #(
   // Hold resp_done for 2 cycles so packetizer's done_latch_q is always set.
   logic                      resp_done_held_q;
 
+  // Pipeline register (skid buffer) between engine FIFO MUX output and packetizer.
+  // Breaks the critical timing path: eng_rdata[arb_sel_q] -> packetizer/slot0_q.
+  // rdata_ready_int: pop from engine FIFO when packetizer is consuming (rdata_ready=1)
+  // OR when the register is empty (!rdata_valid_r=1) and we are in ARB_WAIT_PKT.
+  // The arb_q == ARB_WAIT_PKT guard in the engine's read_data_ready prevents premature
+  // FIFO pops outside the response transmission window.
+  logic [AXI_DATA_WIDTH-1:0] rdata_r;
+  logic                      rdata_valid_r;
+  wire                       rdata_ready_int = rdata_ready || !rdata_valid_r;
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      rdata_r       <= '0;
+      rdata_valid_r <= 1'b0;
+    end else if (rdata_ready_int) begin
+      rdata_r       <= rdata;
+      // Guard with arb_q==ARB_WAIT_PKT: prevents false pre-load in the cycle
+      // where resp_start_pulse fires but arb_q has not yet registered to
+      // ARB_WAIT_PKT (rdata_ready_int=1 because !rdata_valid_r, but the
+      // engine FIFO pop guard blocks the actual pop — without this guard
+      // rdata_valid_r would latch 1 without a pop, producing a ghost-valid
+      // that fills slot1 with stale data on the first ST_PAYLOAD cycle).
+      rdata_valid_r <= rdata_valid && (arb_q == ARB_WAIT_PKT);
+    end
+  end
+
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n)
       resp_done_held_q <= 1'b0;
@@ -445,7 +471,7 @@ module xfcp_fabric_endpoint #(
         .write_data_ready (eng_wdata_ready[gi]),
         .read_data       (eng_rdata[gi]),
         .read_data_valid (eng_rdata_valid[gi]),
-        .read_data_ready (rdata_ready && (arb_sel_q == SEL_W'(gi))
+        .read_data_ready (rdata_ready_int && (arb_sel_q == SEL_W'(gi))
                           && (arb_q == ARB_WAIT_PKT)),
         .resp_start        (),
         .resp_type         (eng_resp_type[gi]),
@@ -467,8 +493,8 @@ module xfcp_fabric_endpoint #(
     .resp_start      (resp_start_q),
     .resp_type       (resp_type),
     .resp_seq        (resp_seq_q),
-    .read_data       (rdata),
-    .read_data_valid (rdata_valid),
+    .read_data       (rdata_r),
+    .read_data_valid (rdata_valid_r),
     .read_data_ready (rdata_ready),
     .resp_done_i     (resp_done_mux),
     .packetizer_idle (packetizer_idle),
