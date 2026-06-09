@@ -846,6 +846,23 @@ module xfcp_test_05_top #(
   logic endpoint_busy_w;
   logic dbg_sop_w, dbg_hdr_w, dbg_drop_w, dbg_req_w, dbg_resp_w;
   logic dbg_bad_hdr_w, dbg_recovery_w;
+  // Registered debug pulses: break the long combinational path from
+  // xfcp_rx_parser/header_fifo/rd_ptr_q -> axil_diag_ctrl counters.
+  logic dbg_sop_r, dbg_hdr_r, dbg_drop_r, dbg_req_r, dbg_resp_r;
+  logic dbg_bad_hdr_r, dbg_recovery_r;
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      dbg_sop_r     <= 1'b0; dbg_hdr_r     <= 1'b0;
+      dbg_drop_r    <= 1'b0; dbg_req_r     <= 1'b0;
+      dbg_resp_r    <= 1'b0; dbg_bad_hdr_r <= 1'b0;
+      dbg_recovery_r<= 1'b0;
+    end else begin
+      dbg_sop_r     <= dbg_sop_w;     dbg_hdr_r     <= dbg_hdr_w;
+      dbg_drop_r    <= dbg_drop_w;    dbg_req_r     <= dbg_req_w;
+      dbg_resp_r    <= dbg_resp_w;    dbg_bad_hdr_r <= dbg_bad_hdr_w;
+      dbg_recovery_r<= dbg_recovery_w;
+    end
+  end
 
   xfcp_fabric_endpoint #(
     .NUM_SLAVES     (NUM_SLAVES),
@@ -963,15 +980,15 @@ module xfcp_test_05_top #(
     .rx_lost_i    (rx_lost_pulse_w),
     .rx_frame_i   (rx_frame_pulse_w),
     .rx_overrun_i (rx_overrun_pulse_w),
-    .rx_sop_i     (dbg_sop_w),
-    .rx_hdr_i     (dbg_hdr_w),
-    .rx_bad_hdr_i (dbg_bad_hdr_w),
-    .rx_recovery_i(dbg_recovery_w),
-    .rx_drop_i    (dbg_drop_w),
-    .fab_req_i    (dbg_req_w),
-    .fab_resp_i   (dbg_resp_w),
+    .rx_sop_i     (dbg_sop_r),
+    .rx_hdr_i     (dbg_hdr_r),
+    .rx_bad_hdr_i (dbg_bad_hdr_r),
+    .rx_recovery_i(dbg_recovery_r),
+    .rx_drop_i    (dbg_drop_r),
+    .fab_req_i    (dbg_req_r),
+    .fab_resp_i   (dbg_resp_r),
     .tx_byte_i    (tx_byte_pulse_w),
-    .tx_pkt_i     (dbg_resp_w)
+    .tx_pkt_i     (dbg_resp_r)
   );
 
   // =========================================================================
