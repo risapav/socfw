@@ -6,8 +6,9 @@
 //   F03  read one byte back: data correct, level=0, empty=1
 //   F04  write until full: level=DEPTH, full=1, wr_ready=0
 //   F05  simultaneous write+read does not change level
-//   F06  drain full FIFO: data correct in order
-//   F07  overflow attempt when full: wr_ready=0, level unchanged
+//   F06  drain full FIFO: empty after drain
+//   F07  overflow attempt: overflow_o set, level unchanged, no corruption
+//   F08  err_clear clears overflow_o; underflow attempt sets underflow_o
 //
 // Run: vsim -c -do "run -all; quit" tb_sync_fifo
 
@@ -16,10 +17,11 @@
 module tb_sync_fifo;
 
   localparam int DATA_WIDTH = 8;
-  localparam int DEPTH      = 8; // small depth for fast sim
+  localparam int DEPTH      = 8;
 
-  logic clk  = 1'b0;
-  logic rstn = 1'b0;
+  logic clk       = 1'b0;
+  logic rstn      = 1'b0;
+  logic err_clear = 1'b0;
 
   always #5 clk = ~clk;
 
@@ -32,22 +34,27 @@ module tb_sync_fifo;
   logic [$clog2(DEPTH):0] level;
   logic                  full;
   logic                  empty;
+  logic                  overflow;
+  logic                  underflow;
 
   sync_fifo #(
     .DATA_WIDTH (DATA_WIDTH),
     .DEPTH      (DEPTH)
   ) dut (
-    .clk       (clk),
-    .rstn      (rstn),
-    .wr_data_i (wr_data),
-    .wr_valid_i(wr_valid),
-    .wr_ready_o(wr_ready),
-    .rd_data_o (rd_data),
-    .rd_valid_o(rd_valid),
-    .rd_ready_i(rd_ready),
-    .level_o   (level),
-    .full_o    (full),
-    .empty_o   (empty)
+    .clk        (clk),
+    .rstn       (rstn),
+    .wr_data_i  (wr_data),
+    .wr_valid_i (wr_valid),
+    .wr_ready_o (wr_ready),
+    .rd_data_o  (rd_data),
+    .rd_valid_o (rd_valid),
+    .rd_ready_i (rd_ready),
+    .err_clear_i(err_clear),
+    .level_o    (level),
+    .full_o     (full),
+    .empty_o    (empty),
+    .overflow_o (overflow),
+    .underflow_o(underflow)
   );
 
   int fails = 0;
@@ -81,17 +88,19 @@ module tb_sync_fifo;
     // ------------------------------------------------------------------
     // F01: empty after reset
     // ------------------------------------------------------------------
-    chk(rd_valid === 1'b0, "F01 rd_valid=0 after reset");
-    chk(level   === '0,    "F01 level=0 after reset");
-    chk(full    === 1'b0,  "F01 full=0 after reset");
-    chk(empty   === 1'b1,  "F01 empty=1 after reset");
-    chk(wr_ready === 1'b1, "F01 wr_ready=1 after reset");
+    chk(rd_valid  === 1'b0, "F01 rd_valid=0 after reset");
+    chk(level     === '0,   "F01 level=0 after reset");
+    chk(full      === 1'b0, "F01 full=0 after reset");
+    chk(empty     === 1'b1, "F01 empty=1 after reset");
+    chk(wr_ready  === 1'b1, "F01 wr_ready=1 after reset");
+    chk(overflow  === 1'b0, "F01 overflow=0 after reset");
+    chk(underflow === 1'b0, "F01 underflow=0 after reset");
 
     // ------------------------------------------------------------------
     // F02: write one byte
     // ------------------------------------------------------------------
     fifo_write(8'hA5);
-    @(posedge clk); // let combinational outputs settle after clocked write
+    @(posedge clk);
     chk(rd_valid === 1'b1,  "F02 rd_valid=1 after write");
     chk(level    === 4'(1), "F02 level=1 after write");
     chk(empty    === 1'b0,  "F02 empty=0 after write");
@@ -114,23 +123,20 @@ module tb_sync_fifo;
       fifo_write(8'(i));
     end
     @(posedge clk);
-    chk(full     === 1'b1,       "F04 full=1 after DEPTH writes");
+    chk(full     === 1'b1,                      "F04 full=1 after DEPTH writes");
     chk(level    === ($clog2(DEPTH)+1)'(DEPTH),
         $sformatf("F04 level=%0d after DEPTH writes", DEPTH));
-    chk(wr_ready === 1'b0,       "F04 wr_ready=0 when full");
+    chk(wr_ready === 1'b0,                      "F04 wr_ready=0 when full");
 
     // ------------------------------------------------------------------
     // F05: simultaneous write+read does not change level
-    //   FIFO is full after F04; drain one slot first so wr_ready=1,
-    //   then assert wr_valid+rd_ready together and verify level is stable.
+    //   FIFO full after F04; drain one slot first (wr_ready=1), then fire.
     // ------------------------------------------------------------------
     begin
-      // Drain one entry to make space (level: DEPTH -> DEPTH-1)
       rd_ready = 1'b1;
       @(posedge clk);
       rd_ready = 1'b0;
       @(posedge clk);
-      // Now level = DEPTH-1 and wr_ready = 1; simultaneous fire
       begin : blk_f05
         automatic int lvl_before = int'(level);
         wr_data  = 8'hFF;
@@ -149,8 +155,6 @@ module tb_sync_fifo;
     // F06: drain remaining entries; FIFO empty after drain
     // ------------------------------------------------------------------
     begin : blk_f06
-      // After F05: level = DEPTH-1 (drained 1 in F05 setup, wr+rd net 0)
-      // Drain everything
       repeat(DEPTH) begin
         rd_ready = 1'b1;
         @(posedge clk);
@@ -161,25 +165,51 @@ module tb_sync_fifo;
     end
 
     // ------------------------------------------------------------------
-    // F07: overflow attempt when full -- wr_ready=0, level unchanged
+    // F07: overflow attempt when full -- overflow_o set, level unchanged
     // ------------------------------------------------------------------
-    // Fill FIFO to capacity
     for (int i = 0; i < DEPTH; i++) begin
       fifo_write(8'(i + 8'h10));
     end
     @(posedge clk);
     chk(full === 1'b1, "F07 full before overflow attempt");
-    // Attempt write to full FIFO
     wr_data  = 8'hEE;
     wr_valid = 1'b1;
     @(posedge clk);
     wr_valid = 1'b0;
     @(posedge clk);
-    chk(level === ($clog2(DEPTH)+1)'(DEPTH),
-        "F07 level unchanged after overflow attempt");
-    chk(full === 1'b1, "F07 still full after overflow attempt");
-    // Verify first byte is still correct (not overwritten)
-    chk(rd_data === 8'h10, "F07 first byte not corrupted");
+    chk(level    === ($clog2(DEPTH)+1)'(DEPTH), "F07 level unchanged");
+    chk(full     === 1'b1,                      "F07 still full");
+    chk(rd_data  === 8'h10,                     "F07 first byte not corrupted");
+    chk(overflow === 1'b1,                      "F07 overflow_o set");
+
+    // ------------------------------------------------------------------
+    // F08: err_clear clears overflow_o; underflow attempt sets underflow_o
+    // ------------------------------------------------------------------
+    // Clear overflow
+    err_clear = 1'b1;
+    @(posedge clk);
+    err_clear = 1'b0;
+    @(posedge clk);
+    chk(overflow === 1'b0, "F08 overflow cleared by err_clear");
+    // Drain FIFO fully then attempt read from empty
+    repeat(DEPTH) begin
+      rd_ready = 1'b1;
+      @(posedge clk);
+      rd_ready = 1'b0;
+      @(posedge clk);
+    end
+    chk(empty === 1'b1, "F08 FIFO empty before underflow attempt");
+    rd_ready = 1'b1;
+    @(posedge clk);
+    rd_ready = 1'b0;
+    @(posedge clk);
+    chk(underflow === 1'b1, "F08 underflow_o set after read from empty");
+    // Clear both
+    err_clear = 1'b1;
+    @(posedge clk);
+    err_clear = 1'b0;
+    @(posedge clk);
+    chk(underflow === 1'b0, "F08 underflow cleared by err_clear");
 
     // ------------------------------------------------------------------
     // Summary

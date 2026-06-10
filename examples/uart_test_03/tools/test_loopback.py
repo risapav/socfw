@@ -38,26 +38,40 @@ def open_port(port, baud):
     return ser
 
 
-def loopback_bulk(ser, data, label, verbose):
-    """Bulk send + bulk receive.
+def loopback_bulk(ser, data, label, verbose, chunksize=None):
+    """Send data in chunks and collect echoed bytes.
 
-    Works correctly with uart_test_03 because the FPGA has a 64-byte FIFO
-    that absorbs the burst and echoes at line rate.
+    chunksize=None (default): single bulk write of entire payload.
+    chunksize=N: split into N-byte writes with read after each chunk.
+      chunksize=1 reproduces the uart_test_02 sequential mode.
+      chunksize=64 exercises FIFO boundaries.
     """
-    ser.write(bytes(data))
-    received = ser.read(len(data))
+    if chunksize is None:
+        chunksize = len(data)
+
+    received = []
+    offset = 0
+    while offset < len(data):
+        chunk = data[offset:offset + chunksize]
+        ser.write(bytes(chunk))
+        got = ser.read(len(chunk))
+        received.extend(got)
+        if len(got) < len(chunk):
+            missing = len(chunk) - len(got)
+            print(f"  FAIL {label}: timeout at offset {offset}, missing {missing} bytes")
+            received.extend([None] * missing)
+        offset += chunksize
+
     fails = 0
     for i, (s, g) in enumerate(zip(data, received)):
-        if s == g:
+        if g is None:
+            fails += 1
+        elif s == g:
             if verbose:
                 print(f"  PASS [{i:3d}] sent=0x{s:02X} got=0x{g:02X}")
         else:
             print(f"  FAIL [{i:3d}] sent=0x{s:02X} got=0x{g:02X}")
             fails += 1
-    if len(received) < len(data):
-        missing = len(data) - len(received)
-        print(f"  FAIL {label}: timeout, missing {missing} bytes")
-        fails += missing
     return fails
 
 
@@ -75,7 +89,9 @@ def main():
     ap.add_argument("--baud",    type=int, default=115200)
     ap.add_argument("--count",   type=int, default=256,
                     help="Number of random bytes in T3 (default 256)")
-    ap.add_argument("--seed",    type=int, default=42)
+    ap.add_argument("--seed",      type=int, default=42)
+    ap.add_argument("--chunksize", type=int, default=None,
+                    help="Bytes per write (None=full bulk, 1=sequential, 64=FIFO boundary)")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
 
@@ -88,19 +104,21 @@ def main():
     ser = open_port(args.port, args.baud)
     total_fails = 0
 
+    cs = args.chunksize
+
     # T1: single byte
-    total_fails += chk(loopback_bulk(ser, [0x55], "T1", args.verbose),
+    total_fails += chk(loopback_bulk(ser, [0x55], "T1", args.verbose, cs),
                        "T1 single byte 0x55")
 
     # T2: fixed pattern (bulk)
     pattern = [0x00, 0xFF, 0xAA, 0x55, 0x81, 0x7E, 0x01, 0xFE]
-    total_fails += chk(loopback_bulk(ser, pattern, "T2", args.verbose),
+    total_fails += chk(loopback_bulk(ser, pattern, "T2", args.verbose, cs),
                        f"T2 pattern burst {len(pattern)} bytes")
 
     # T3: random bytes bulk (no sequential workaround needed)
     payload = [random.randint(0, 255) for _ in range(args.count)]
-    total_fails += chk(loopback_bulk(ser, payload, "T3", args.verbose),
-                       f"T3 random {args.count} bytes bulk (seed={args.seed})")
+    total_fails += chk(loopback_bulk(ser, payload, "T3", args.verbose, cs),
+                       f"T3 random {args.count} bytes (chunksize={cs}, seed={args.seed})")
 
     ser.close()
     print()

@@ -1,7 +1,7 @@
 # UART_TEST_03 — Stav projektu
 
 **Posledná aktualizácia:** 2026-06-10
-**Stav:** Faza 1+2 UZAVRETA — RTL + sim PASS
+**Stav:** Faza 1–3 UZAVRETA — RTL + sim + syntéza PASS
 
 ---
 
@@ -20,7 +20,7 @@ Hardver: QMTech EP4CE55, 50 MHz board clock -> 125 MHz cez `clkpll` PLL.
 |------|--------------------------------|--------------|
 | 1    | RTL + projekt setup            | UZAVRETA     |
 | 2    | Simulacia                      | UZAVRETA     |
-| 3    | HW synteza + timing closure    | TODO         |
+| 3    | HW synteza + timing closure    | UZAVRETA     |
 | 4    | HW board test                  | TODO         |
 
 ---
@@ -62,7 +62,7 @@ error latch).
 
 ---
 
-## Faza 2 — Simulacia (PREBIEHA)
+## Faza 2 — Simulacia (UZAVRETA)
 
 ### Vysledky
 
@@ -93,6 +93,37 @@ Regression: PASS, 0 FAIL.
 | T03 | burst 64 bytes back-to-back (4x FIFO depth)              |
 | T04 | frame error recovery                                     |
 | T05 | 512-byte LFSR stream (seed=0xA5), sequential echo        |
+
+---
+
+---
+
+## Faza 3 — HW synteza (UZAVRETA)
+
+Quartus Prime 25.1 Lite. Fitter warning: `sync_fifo.mem_q` inferovany ako M9K RAM (64x8, s pass-through logikou) — ocakavane spravanie.
+
+### Timing closure
+
+| Model            | WNS setup | WNS hold | Fmax      |
+|------------------|-----------|----------|-----------|
+| Slow 85C 1200mV  | +1.568 ns | +0.429 ns| 155.47 MHz|
+| Slow  0C 1200mV  | +2.044 ns | +0.379 ns| —         |
+| Fast  0C 1200mV  | +5.279 ns | —        | 167.9 MHz |
+
+**Constraint: 125 MHz (8 ns), margin: +1.568 ns (20%)**
+
+Poznamka: WNS nizsie nez v uart_test_02 (+2.529 ns) kvoli RAM pass-through logike pridanej Quartusom pre sync_fifo. Timing stale PASS s dostatocnou rezervou.
+
+### Resource usage
+
+| Metrika               | uart_test_02 | uart_test_03 | Delta  |
+|-----------------------|--------------|--------------|--------|
+| Logic elements (est.) | 232          | 372          | +140   |
+| Registers             | 165          | 263          | +98    |
+| Memory bits           | 0            | 1024         | +1024  |
+| Pins                  | 10           | 10           | 0      |
+
+1024 memory bits = 2x sync_fifo 64x8 inferovane do M9K blokov.
 
 ---
 

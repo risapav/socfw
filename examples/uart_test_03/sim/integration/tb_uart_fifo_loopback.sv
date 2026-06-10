@@ -80,12 +80,16 @@ module tb_uart_fifo_loopback;
     .overrun_err_o (overrun_err_w),
     .frame_err_o   (frame_err_w),
     .parity_err_o  (parity_err_w),
-    .tx_fifo_level_o(),
-    .rx_fifo_level_o(),
-    .tx_fifo_full_o (),
-    .tx_fifo_empty_o(),
-    .rx_fifo_full_o (),
-    .rx_fifo_empty_o()
+    .tx_fifo_level_o    (),
+    .rx_fifo_level_o    (),
+    .tx_fifo_full_o     (),
+    .tx_fifo_empty_o    (),
+    .rx_fifo_full_o     (),
+    .rx_fifo_empty_o    (),
+    .rx_fifo_overflow_o (),
+    .tx_fifo_overflow_o (),
+    .rx_fifo_underflow_o(),
+    .tx_fifo_underflow_o()
   );
 
   // =========================================================================
