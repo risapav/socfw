@@ -1,0 +1,70 @@
+version: 2
+kind: ip
+
+ip:
+  name: uart_test_02_top
+  module: uart_test_02_top
+  category: debug
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+
+params:
+  CLK_FREQ_HZ:
+    type: int
+    default: 125000000
+  BAUD_RATE:
+    type: int
+    default: 115200
+
+ports:
+  - name: pll_locked_i
+    direction: input
+    width: 1
+  - name: uart_rx_i
+    direction: input
+    width: 1
+  - name: uart_tx_o
+    direction: output
+    width: 1
+  - name: led_o
+    direction: output
+    width: 6
+
+artifacts:
+  synthesis:
+    - ../rtl/uart/uart_pkg.sv
+    - ../rtl/uart/uart_baud_gen.sv
+    - ../rtl/uart/uart_core_rx.sv
+    - ../rtl/uart/uart_core_tx.sv
+    - ../rtl/uart/uart.sv
+    - ../rtl/uart_stream_loopback_status.sv
+    - ../rtl/uart_test_02_top.sv
+
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - uart_test_02_top
+    - uart_baud_gen
+    - uart_core_rx
+    - uart_core_tx
+    - uart
+    - uart_stream_loopback_status
+  packages:
+    - uart_pkg

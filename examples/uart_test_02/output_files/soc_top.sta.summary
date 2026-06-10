@@ -1,0 +1,77 @@
+------------------------------------------------------------
+Timing Analyzer Summary
+------------------------------------------------------------
+
+Type  : Slow 1200mV 85C Model Setup 'CLK125'
+Slack : 2.529
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Hold 'CLK125'
+Slack : 0.441
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Recovery 'CLK125'
+Slack : 4.214
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Removal 'CLK125'
+Slack : 2.626
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Minimum Pulse Width 'CLK125'
+Slack : 3.659
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Minimum Pulse Width 'SYS_CLK'
+Slack : 9.861
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Setup 'CLK125'
+Slack : 2.916
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Hold 'CLK125'
+Slack : 0.395
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Recovery 'CLK125'
+Slack : 4.551
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Removal 'CLK125'
+Slack : 2.327
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Minimum Pulse Width 'CLK125'
+Slack : 3.643
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Minimum Pulse Width 'SYS_CLK'
+Slack : 9.854
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Setup 'CLK125'
+Slack : 5.676
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Hold 'CLK125'
+Slack : 0.184
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Recovery 'CLK125'
+Slack : 6.217
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Removal 'CLK125'
+Slack : 1.244
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Minimum Pulse Width 'CLK125'
+Slack : 3.781
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Minimum Pulse Width 'SYS_CLK'
+Slack : 9.405
+TNS   : 0.000
+
+------------------------------------------------------------

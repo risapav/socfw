@@ -1,0 +1,2117 @@
+# ** Note: (vsim-220) '/home/palo/altera_lite/25.1std/questa_fse/linux_x86_64/../modelsim.ini' is used as the ini file.
+# vsim -c -do "run -all; quit" tb_uart_loopback 
+# Start time: 17:14:59 on Jun 10,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Note: (vopt-220) '/home/palo/altera_lite/25.1std/questa_fse/linux_x86_64/../modelsim.ini' is used as the ini file.
+# //  Questa Altera Starter FPGA Edition-64
+# //  Version 2025.2 linux_x86_64 May 31 2025
+# //
+# // Unpublished work. Copyright 2025 Siemens
+# //
+# // This material contains trade secrets or otherwise confidential information
+# // owned by Siemens Industry Software Inc. or its affiliates (collectively,
+# // "SISW"), or its licensors. Access to and use of this information is strictly
+# // limited as set forth in the Customer's applicable agreements with SISW.
+# //
+# // This material may not be copied, distributed, or otherwise disclosed outside
+# // of the Customer's facilities without the express written permission of SISW,
+# // and may not be used in any way not expressly authorized by SISW.
+# //
+# Loading sv_std.std
+# Loading work.uart_pkg(fast)
+# Loading work.uart_core_rx_sv_unit(fast)
+# Loading work.uart_core_tx_sv_unit(fast)
+# Loading work.uart_sv_unit(fast)
+# Loading work.tb_uart_loopback(fast)
+# run -all
+# PASS echo stop bit high
+# PASS T01 echo 0x55
+# PASS echo stop bit high
+# PASS T02 byte[0] expected=0xa0
+# PASS echo stop bit high
+# PASS T02 byte[1] expected=0xa1
+# PASS echo stop bit high
+# PASS T02 byte[2] expected=0xa2
+# PASS echo stop bit high
+# PASS T02 byte[3] expected=0xa3
+# PASS echo stop bit high
+# PASS T02 byte[4] expected=0xa4
+# PASS echo stop bit high
+# PASS T02 byte[5] expected=0xa5
+# PASS echo stop bit high
+# PASS T02 byte[6] expected=0xa6
+# PASS echo stop bit high
+# PASS T02 byte[7] expected=0xa7
+# PASS echo stop bit high
+# PASS T03 back-to-back byte[0] expected=0xb0
+# PASS echo stop bit high
+# PASS T03 back-to-back byte[1] expected=0xb1
+# PASS echo stop bit high
+# PASS T03 back-to-back byte[2] expected=0xb2
+# PASS echo stop bit high
+# PASS T03 back-to-back byte[3] expected=0xb3
+# PASS echo stop bit high
+# PASS T03 back-to-back byte[4] expected=0xb4
+# PASS echo stop bit high
+# PASS T03 back-to-back byte[5] expected=0xb5
+# PASS echo stop bit high
+# PASS T03 back-to-back byte[6] expected=0xb6
+# PASS echo stop bit high
+# PASS T03 back-to-back byte[7] expected=0xb7
+# PASS echo stop bit high
+# PASS T04 error_latch set after frame error
+# PASS echo stop bit high
+# PASS T04 recovery: echo 0xD5 after frame error
+# PASS echo stop bit high
+# PASS T05 byte[0] expected=0x3b
+# PASS echo stop bit high
+# PASS T05 byte[1] expected=0x76
+# PASS echo stop bit high
+# PASS T05 byte[2] expected=0xec
+# PASS echo stop bit high
+# PASS T05 byte[3] expected=0xa9
+# PASS echo stop bit high
+# PASS T05 byte[4] expected=0x23
+# PASS echo stop bit high
+# PASS T05 byte[5] expected=0x46
+# PASS echo stop bit high
+# PASS T05 byte[6] expected=0x8c
+# PASS echo stop bit high
+# PASS T05 byte[7] expected=0x69
+# PASS echo stop bit high
+# PASS T05 byte[8] expected=0xd2
+# PASS echo stop bit high
+# PASS T05 byte[9] expected=0xd5
+# PASS echo stop bit high
+# PASS T05 byte[10] expected=0xdb
+# PASS echo stop bit high
+# PASS T05 byte[11] expected=0xc7
+# PASS echo stop bit high
+# PASS T05 byte[12] expected=0xff
+# PASS echo stop bit high
+# PASS T05 byte[13] expected=0x8f
+# PASS echo stop bit high
+# PASS T05 byte[14] expected=0x6f
+# PASS echo stop bit high
+# PASS T05 byte[15] expected=0xde
+# PASS echo stop bit high
+# PASS T05 byte[16] expected=0xcd
+# PASS echo stop bit high
+# PASS T05 byte[17] expected=0xeb
+# PASS echo stop bit high
+# PASS T05 byte[18] expected=0xa7
+# PASS echo stop bit high
+# PASS T05 byte[19] expected=0x3f
+# PASS echo stop bit high
+# PASS T05 byte[20] expected=0x7e
+# PASS echo stop bit high
+# PASS T05 byte[21] expected=0xfc
+# PASS echo stop bit high
+# PASS T05 byte[22] expected=0x89
+# PASS echo stop bit high
+# PASS T05 byte[23] expected=0x63
+# PASS echo stop bit high
+# PASS T05 byte[24] expected=0xc6
+# PASS echo stop bit high
+# PASS T05 byte[25] expected=0xfd
+# PASS echo stop bit high
+# PASS T05 byte[26] expected=0x8b
+# PASS echo stop bit high
+# PASS T05 byte[27] expected=0x67
+# PASS echo stop bit high
+# PASS T05 byte[28] expected=0xce
+# PASS echo stop bit high
+# PASS T05 byte[29] expected=0xed
+# PASS echo stop bit high
+# PASS T05 byte[30] expected=0xab
+# PASS echo stop bit high
+# PASS T05 byte[31] expected=0x27
+# PASS echo stop bit high
+# PASS T05 byte[32] expected=0x4e
+# PASS echo stop bit high
+# PASS T05 byte[33] expected=0x9c
+# PASS echo stop bit high
+# PASS T05 byte[34] expected=0x49
+# PASS echo stop bit high
+# PASS T05 byte[35] expected=0x92
+# PASS echo stop bit high
+# PASS T05 byte[36] expected=0x55
+# PASS echo stop bit high
+# PASS T05 byte[37] expected=0xaa
+# PASS echo stop bit high
+# PASS T05 byte[38] expected=0x25
+# PASS echo stop bit high
+# PASS T05 byte[39] expected=0x4a
+# PASS echo stop bit high
+# PASS T05 byte[40] expected=0x94
+# PASS echo stop bit high
+# PASS T05 byte[41] expected=0x59
+# PASS echo stop bit high
+# PASS T05 byte[42] expected=0xb2
+# PASS echo stop bit high
+# PASS T05 byte[43] expected=0x15
+# PASS echo stop bit high
+# PASS T05 byte[44] expected=0x2a
+# PASS echo stop bit high
+# PASS T05 byte[45] expected=0x54
+# PASS echo stop bit high
+# PASS T05 byte[46] expected=0xa8
+# PASS echo stop bit high
+# PASS T05 byte[47] expected=0x21
+# PASS echo stop bit high
+# PASS T05 byte[48] expected=0x42
+# PASS echo stop bit high
+# PASS T05 byte[49] expected=0x84
+# PASS echo stop bit high
+# PASS T05 byte[50] expected=0x79
+# PASS echo stop bit high
+# PASS T05 byte[51] expected=0xf2
+# PASS echo stop bit high
+# PASS T05 byte[52] expected=0x95
+# PASS echo stop bit high
+# PASS T05 byte[53] expected=0x5b
+# PASS echo stop bit high
+# PASS T05 byte[54] expected=0xb6
+# PASS echo stop bit high
+# PASS T05 byte[55] expected=0x1d
+# PASS echo stop bit high
+# PASS T05 byte[56] expected=0x3a
+# PASS echo stop bit high
+# PASS T05 byte[57] expected=0x74
+# PASS echo stop bit high
+# PASS T05 byte[58] expected=0xe8
+# PASS echo stop bit high
+# PASS T05 byte[59] expected=0xa1
+# PASS echo stop bit high
+# PASS T05 byte[60] expected=0x33
+# PASS echo stop bit high
+# PASS T05 byte[61] expected=0x66
+# PASS echo stop bit high
+# PASS T05 byte[62] expected=0xcc
+# PASS echo stop bit high
+# PASS T05 byte[63] expected=0xe9
+# PASS echo stop bit high
+# PASS T05 byte[64] expected=0xa3
+# PASS echo stop bit high
+# PASS T05 byte[65] expected=0x37
+# PASS echo stop bit high
+# PASS T05 byte[66] expected=0x6e
+# PASS echo stop bit high
+# PASS T05 byte[67] expected=0xdc
+# PASS echo stop bit high
+# PASS T05 byte[68] expected=0xc9
+# PASS echo stop bit high
+# PASS T05 byte[69] expected=0xe3
+# PASS echo stop bit high
+# PASS T05 byte[70] expected=0xb7
+# PASS echo stop bit high
+# PASS T05 byte[71] expected=0x1f
+# PASS echo stop bit high
+# PASS T05 byte[72] expected=0x3e
+# PASS echo stop bit high
+# PASS T05 byte[73] expected=0x7c
+# PASS echo stop bit high
+# PASS T05 byte[74] expected=0xf8
+# PASS echo stop bit high
+# PASS T05 byte[75] expected=0x81
+# PASS echo stop bit high
+# PASS T05 byte[76] expected=0x73
+# PASS echo stop bit high
+# PASS T05 byte[77] expected=0xe6
+# PASS echo stop bit high
+# PASS T05 byte[78] expected=0xbd
+# PASS echo stop bit high
+# PASS T05 byte[79] expected=0x0b
+# PASS echo stop bit high
+# PASS T05 byte[80] expected=0x16
+# PASS echo stop bit high
+# PASS T05 byte[81] expected=0x2c
+# PASS echo stop bit high
+# PASS T05 byte[82] expected=0x58
+# PASS echo stop bit high
+# PASS T05 byte[83] expected=0xb0
+# PASS echo stop bit high
+# PASS T05 byte[84] expected=0x11
+# PASS echo stop bit high
+# PASS T05 byte[85] expected=0x22
+# PASS echo stop bit high
+# PASS T05 byte[86] expected=0x44
+# PASS echo stop bit high
+# PASS T05 byte[87] expected=0x88
+# PASS echo stop bit high
+# PASS T05 byte[88] expected=0x61
+# PASS echo stop bit high
+# PASS T05 byte[89] expected=0xc2
+# PASS echo stop bit high
+# PASS T05 byte[90] expected=0xf5
+# PASS echo stop bit high
+# PASS T05 byte[91] expected=0x9b
+# PASS echo stop bit high
+# PASS T05 byte[92] expected=0x47
+# PASS echo stop bit high
+# PASS T05 byte[93] expected=0x8e
+# PASS echo stop bit high
+# PASS T05 byte[94] expected=0x6d
+# PASS echo stop bit high
+# PASS T05 byte[95] expected=0xda
+# PASS echo stop bit high
+# PASS T05 byte[96] expected=0xc5
+# PASS echo stop bit high
+# PASS T05 byte[97] expected=0xfb
+# PASS echo stop bit high
+# PASS T05 byte[98] expected=0x87
+# PASS echo stop bit high
+# PASS T05 byte[99] expected=0x7f
+# PASS echo stop bit high
+# PASS T05 byte[100] expected=0xfe
+# PASS echo stop bit high
+# PASS T05 byte[101] expected=0x8d
+# PASS echo stop bit high
+# PASS T05 byte[102] expected=0x6b
+# PASS echo stop bit high
+# PASS T05 byte[103] expected=0xd6
+# PASS echo stop bit high
+# PASS T05 byte[104] expected=0xdd
+# PASS echo stop bit high
+# PASS T05 byte[105] expected=0xcb
+# PASS echo stop bit high
+# PASS T05 byte[106] expected=0xe7
+# PASS echo stop bit high
+# PASS T05 byte[107] expected=0xbf
+# PASS echo stop bit high
+# PASS T05 byte[108] expected=0x0f
+# PASS echo stop bit high
+# PASS T05 byte[109] expected=0x1e
+# PASS echo stop bit high
+# PASS T05 byte[110] expected=0x3c
+# PASS echo stop bit high
+# PASS T05 byte[111] expected=0x78
+# PASS echo stop bit high
+# PASS T05 byte[112] expected=0xf0
+# PASS echo stop bit high
+# PASS T05 byte[113] expected=0x91
+# PASS echo stop bit high
+# PASS T05 byte[114] expected=0x53
+# PASS echo stop bit high
+# PASS T05 byte[115] expected=0xa6
+# PASS echo stop bit high
+# PASS T05 byte[116] expected=0x3d
+# PASS echo stop bit high
+# PASS T05 byte[117] expected=0x7a
+# PASS echo stop bit high
+# PASS T05 byte[118] expected=0xf4
+# PASS echo stop bit high
+# PASS T05 byte[119] expected=0x99
+# PASS echo stop bit high
+# PASS T05 byte[120] expected=0x43
+# PASS echo stop bit high
+# PASS T05 byte[121] expected=0x86
+# PASS echo stop bit high
+# PASS T05 byte[122] expected=0x7d
+# PASS echo stop bit high
+# PASS T05 byte[123] expected=0xfa
+# PASS echo stop bit high
+# PASS T05 byte[124] expected=0x85
+# PASS echo stop bit high
+# PASS T05 byte[125] expected=0x7b
+# PASS echo stop bit high
+# PASS T05 byte[126] expected=0xf6
+# PASS echo stop bit high
+# PASS T05 byte[127] expected=0x9d
+# PASS echo stop bit high
+# PASS T05 byte[128] expected=0x4b
+# PASS echo stop bit high
+# PASS T05 byte[129] expected=0x96
+# PASS echo stop bit high
+# PASS T05 byte[130] expected=0x5d
+# PASS echo stop bit high
+# PASS T05 byte[131] expected=0xba
+# PASS echo stop bit high
+# PASS T05 byte[132] expected=0x05
+# PASS echo stop bit high
+# PASS T05 byte[133] expected=0x0a
+# PASS echo stop bit high
+# PASS T05 byte[134] expected=0x14
+# PASS echo stop bit high
+# PASS T05 byte[135] expected=0x28
+# PASS echo stop bit high
+# PASS T05 byte[136] expected=0x50
+# PASS echo stop bit high
+# PASS T05 byte[137] expected=0xa0
+# PASS echo stop bit high
+# PASS T05 byte[138] expected=0x31
+# PASS echo stop bit high
+# PASS T05 byte[139] expected=0x62
+# PASS echo stop bit high
+# PASS T05 byte[140] expected=0xc4
+# PASS echo stop bit high
+# PASS T05 byte[141] expected=0xf9
+# PASS echo stop bit high
+# PASS T05 byte[142] expected=0x83
+# PASS echo stop bit high
+# PASS T05 byte[143] expected=0x77
+# PASS echo stop bit high
+# PASS T05 byte[144] expected=0xee
+# PASS echo stop bit high
+# PASS T05 byte[145] expected=0xad
+# PASS echo stop bit high
+# PASS T05 byte[146] expected=0x2b
+# PASS echo stop bit high
+# PASS T05 byte[147] expected=0x56
+# PASS echo stop bit high
+# PASS T05 byte[148] expected=0xac
+# PASS echo stop bit high
+# PASS T05 byte[149] expected=0x29
+# PASS echo stop bit high
+# PASS T05 byte[150] expected=0x52
+# PASS echo stop bit high
+# PASS T05 byte[151] expected=0xa4
+# PASS echo stop bit high
+# PASS T05 byte[152] expected=0x39
+# PASS echo stop bit high
+# PASS T05 byte[153] expected=0x72
+# PASS echo stop bit high
+# PASS T05 byte[154] expected=0xe4
+# PASS echo stop bit high
+# PASS T05 byte[155] expected=0xb9
+# PASS echo stop bit high
+# PASS T05 byte[156] expected=0x03
+# PASS echo stop bit high
+# PASS T05 byte[157] expected=0x06
+# PASS echo stop bit high
+# PASS T05 byte[158] expected=0x0c
+# PASS echo stop bit high
+# PASS T05 byte[159] expected=0x18
+# PASS echo stop bit high
+# PASS T05 byte[160] expected=0x30
+# PASS echo stop bit high
+# PASS T05 byte[161] expected=0x60
+# PASS echo stop bit high
+# PASS T05 byte[162] expected=0xc0
+# PASS echo stop bit high
+# PASS T05 byte[163] expected=0xf1
+# PASS echo stop bit high
+# PASS T05 byte[164] expected=0x93
+# PASS echo stop bit high
+# PASS T05 byte[165] expected=0x57
+# PASS echo stop bit high
+# PASS T05 byte[166] expected=0xae
+# PASS echo stop bit high
+# PASS T05 byte[167] expected=0x2d
+# PASS echo stop bit high
+# PASS T05 byte[168] expected=0x5a
+# PASS echo stop bit high
+# PASS T05 byte[169] expected=0xb4
+# PASS echo stop bit high
+# PASS T05 byte[170] expected=0x19
+# PASS echo stop bit high
+# PASS T05 byte[171] expected=0x32
+# PASS echo stop bit high
+# PASS T05 byte[172] expected=0x64
+# PASS echo stop bit high
+# PASS T05 byte[173] expected=0xc8
+# PASS echo stop bit high
+# PASS T05 byte[174] expected=0xe1
+# PASS echo stop bit high
+# PASS T05 byte[175] expected=0xb3
+# PASS echo stop bit high
+# PASS T05 byte[176] expected=0x17
+# PASS echo stop bit high
+# PASS T05 byte[177] expected=0x2e
+# PASS echo stop bit high
+# PASS T05 byte[178] expected=0x5c
+# PASS echo stop bit high
+# PASS T05 byte[179] expected=0xb8
+# PASS echo stop bit high
+# PASS T05 byte[180] expected=0x01
+# PASS echo stop bit high
+# PASS T05 byte[181] expected=0x02
+# PASS echo stop bit high
+# PASS T05 byte[182] expected=0x04
+# PASS echo stop bit high
+# PASS T05 byte[183] expected=0x08
+# PASS echo stop bit high
+# PASS T05 byte[184] expected=0x10
+# PASS echo stop bit high
+# PASS T05 byte[185] expected=0x20
+# PASS echo stop bit high
+# PASS T05 byte[186] expected=0x40
+# PASS echo stop bit high
+# PASS T05 byte[187] expected=0x80
+# PASS echo stop bit high
+# PASS T05 byte[188] expected=0x71
+# PASS echo stop bit high
+# PASS T05 byte[189] expected=0xe2
+# PASS echo stop bit high
+# PASS T05 byte[190] expected=0xb5
+# PASS echo stop bit high
+# PASS T05 byte[191] expected=0x1b
+# PASS echo stop bit high
+# PASS T05 byte[192] expected=0x36
+# PASS echo stop bit high
+# PASS T05 byte[193] expected=0x6c
+# PASS echo stop bit high
+# PASS T05 byte[194] expected=0xd8
+# PASS echo stop bit high
+# PASS T05 byte[195] expected=0xc1
+# PASS echo stop bit high
+# PASS T05 byte[196] expected=0xf3
+# PASS echo stop bit high
+# PASS T05 byte[197] expected=0x97
+# PASS echo stop bit high
+# PASS T05 byte[198] expected=0x5f
+# PASS echo stop bit high
+# PASS T05 byte[199] expected=0xbe
+# PASS echo stop bit high
+# PASS T05 byte[200] expected=0x0d
+# PASS echo stop bit high
+# PASS T05 byte[201] expected=0x1a
+# PASS echo stop bit high
+# PASS T05 byte[202] expected=0x34
+# PASS echo stop bit high
+# PASS T05 byte[203] expected=0x68
+# PASS echo stop bit high
+# PASS T05 byte[204] expected=0xd0
+# PASS echo stop bit high
+# PASS T05 byte[205] expected=0xd1
+# PASS echo stop bit high
+# PASS T05 byte[206] expected=0xd3
+# PASS echo stop bit high
+# PASS T05 byte[207] expected=0xd7
+# PASS echo stop bit high
+# PASS T05 byte[208] expected=0xdf
+# PASS echo stop bit high
+# PASS T05 byte[209] expected=0xcf
+# PASS echo stop bit high
+# PASS T05 byte[210] expected=0xef
+# PASS echo stop bit high
+# PASS T05 byte[211] expected=0xaf
+# PASS echo stop bit high
+# PASS T05 byte[212] expected=0x2f
+# PASS echo stop bit high
+# PASS T05 byte[213] expected=0x5e
+# PASS echo stop bit high
+# PASS T05 byte[214] expected=0xbc
+# PASS echo stop bit high
+# PASS T05 byte[215] expected=0x09
+# PASS echo stop bit high
+# PASS T05 byte[216] expected=0x12
+# PASS echo stop bit high
+# PASS T05 byte[217] expected=0x24
+# PASS echo stop bit high
+# PASS T05 byte[218] expected=0x48
+# PASS echo stop bit high
+# PASS T05 byte[219] expected=0x90
+# PASS echo stop bit high
+# PASS T05 byte[220] expected=0x51
+# PASS echo stop bit high
+# PASS T05 byte[221] expected=0xa2
+# PASS echo stop bit high
+# PASS T05 byte[222] expected=0x35
+# PASS echo stop bit high
+# PASS T05 byte[223] expected=0x6a
+# PASS echo stop bit high
+# PASS T05 byte[224] expected=0xd4
+# PASS echo stop bit high
+# PASS T05 byte[225] expected=0xd9
+# PASS echo stop bit high
+# PASS T05 byte[226] expected=0xc3
+# PASS echo stop bit high
+# PASS T05 byte[227] expected=0xf7
+# PASS echo stop bit high
+# PASS T05 byte[228] expected=0x9f
+# PASS echo stop bit high
+# PASS T05 byte[229] expected=0x4f
+# PASS echo stop bit high
+# PASS T05 byte[230] expected=0x9e
+# PASS echo stop bit high
+# PASS T05 byte[231] expected=0x4d
+# PASS echo stop bit high
+# PASS T05 byte[232] expected=0x9a
+# PASS echo stop bit high
+# PASS T05 byte[233] expected=0x45
+# PASS echo stop bit high
+# PASS T05 byte[234] expected=0x8a
+# PASS echo stop bit high
+# PASS T05 byte[235] expected=0x65
+# PASS echo stop bit high
+# PASS T05 byte[236] expected=0xca
+# PASS echo stop bit high
+# PASS T05 byte[237] expected=0xe5
+# PASS echo stop bit high
+# PASS T05 byte[238] expected=0xbb
+# PASS echo stop bit high
+# PASS T05 byte[239] expected=0x07
+# PASS echo stop bit high
+# PASS T05 byte[240] expected=0x0e
+# PASS echo stop bit high
+# PASS T05 byte[241] expected=0x1c
+# PASS echo stop bit high
+# PASS T05 byte[242] expected=0x38
+# PASS echo stop bit high
+# PASS T05 byte[243] expected=0x70
+# PASS echo stop bit high
+# PASS T05 byte[244] expected=0xe0
+# PASS echo stop bit high
+# PASS T05 byte[245] expected=0xb1
+# PASS echo stop bit high
+# PASS T05 byte[246] expected=0x13
+# PASS echo stop bit high
+# PASS T05 byte[247] expected=0x26
+# PASS echo stop bit high
+# PASS T05 byte[248] expected=0x4c
+# PASS echo stop bit high
+# PASS T05 byte[249] expected=0x98
+# PASS echo stop bit high
+# PASS T05 byte[250] expected=0x41
+# PASS echo stop bit high
+# PASS T05 byte[251] expected=0x82
+# PASS echo stop bit high
+# PASS T05 byte[252] expected=0x75
+# PASS echo stop bit high
+# PASS T05 byte[253] expected=0xea
+# PASS echo stop bit high
+# PASS T05 byte[254] expected=0xa5
+# PASS echo stop bit high
+# PASS T05 byte[255] expected=0x3b
+# PASS echo stop bit high
+# PASS T05 byte[256] expected=0x76
+# PASS echo stop bit high
+# PASS T05 byte[257] expected=0xec
+# PASS echo stop bit high
+# PASS T05 byte[258] expected=0xa9
+# PASS echo stop bit high
+# PASS T05 byte[259] expected=0x23
+# PASS echo stop bit high
+# PASS T05 byte[260] expected=0x46
+# PASS echo stop bit high
+# PASS T05 byte[261] expected=0x8c
+# PASS echo stop bit high
+# PASS T05 byte[262] expected=0x69
+# PASS echo stop bit high
+# PASS T05 byte[263] expected=0xd2
+# PASS echo stop bit high
+# PASS T05 byte[264] expected=0xd5
+# PASS echo stop bit high
+# PASS T05 byte[265] expected=0xdb
+# PASS echo stop bit high
+# PASS T05 byte[266] expected=0xc7
+# PASS echo stop bit high
+# PASS T05 byte[267] expected=0xff
+# PASS echo stop bit high
+# PASS T05 byte[268] expected=0x8f
+# PASS echo stop bit high
+# PASS T05 byte[269] expected=0x6f
+# PASS echo stop bit high
+# PASS T05 byte[270] expected=0xde
+# PASS echo stop bit high
+# PASS T05 byte[271] expected=0xcd
+# PASS echo stop bit high
+# PASS T05 byte[272] expected=0xeb
+# PASS echo stop bit high
+# PASS T05 byte[273] expected=0xa7
+# PASS echo stop bit high
+# PASS T05 byte[274] expected=0x3f
+# PASS echo stop bit high
+# PASS T05 byte[275] expected=0x7e
+# PASS echo stop bit high
+# PASS T05 byte[276] expected=0xfc
+# PASS echo stop bit high
+# PASS T05 byte[277] expected=0x89
+# PASS echo stop bit high
+# PASS T05 byte[278] expected=0x63
+# PASS echo stop bit high
+# PASS T05 byte[279] expected=0xc6
+# PASS echo stop bit high
+# PASS T05 byte[280] expected=0xfd
+# PASS echo stop bit high
+# PASS T05 byte[281] expected=0x8b
+# PASS echo stop bit high
+# PASS T05 byte[282] expected=0x67
+# PASS echo stop bit high
+# PASS T05 byte[283] expected=0xce
+# PASS echo stop bit high
+# PASS T05 byte[284] expected=0xed
+# PASS echo stop bit high
+# PASS T05 byte[285] expected=0xab
+# PASS echo stop bit high
+# PASS T05 byte[286] expected=0x27
+# PASS echo stop bit high
+# PASS T05 byte[287] expected=0x4e
+# PASS echo stop bit high
+# PASS T05 byte[288] expected=0x9c
+# PASS echo stop bit high
+# PASS T05 byte[289] expected=0x49
+# PASS echo stop bit high
+# PASS T05 byte[290] expected=0x92
+# PASS echo stop bit high
+# PASS T05 byte[291] expected=0x55
+# PASS echo stop bit high
+# PASS T05 byte[292] expected=0xaa
+# PASS echo stop bit high
+# PASS T05 byte[293] expected=0x25
+# PASS echo stop bit high
+# PASS T05 byte[294] expected=0x4a
+# PASS echo stop bit high
+# PASS T05 byte[295] expected=0x94
+# PASS echo stop bit high
+# PASS T05 byte[296] expected=0x59
+# PASS echo stop bit high
+# PASS T05 byte[297] expected=0xb2
+# PASS echo stop bit high
+# PASS T05 byte[298] expected=0x15
+# PASS echo stop bit high
+# PASS T05 byte[299] expected=0x2a
+# PASS echo stop bit high
+# PASS T05 byte[300] expected=0x54
+# PASS echo stop bit high
+# PASS T05 byte[301] expected=0xa8
+# PASS echo stop bit high
+# PASS T05 byte[302] expected=0x21
+# PASS echo stop bit high
+# PASS T05 byte[303] expected=0x42
+# PASS echo stop bit high
+# PASS T05 byte[304] expected=0x84
+# PASS echo stop bit high
+# PASS T05 byte[305] expected=0x79
+# PASS echo stop bit high
+# PASS T05 byte[306] expected=0xf2
+# PASS echo stop bit high
+# PASS T05 byte[307] expected=0x95
+# PASS echo stop bit high
+# PASS T05 byte[308] expected=0x5b
+# PASS echo stop bit high
+# PASS T05 byte[309] expected=0xb6
+# PASS echo stop bit high
+# PASS T05 byte[310] expected=0x1d
+# PASS echo stop bit high
+# PASS T05 byte[311] expected=0x3a
+# PASS echo stop bit high
+# PASS T05 byte[312] expected=0x74
+# PASS echo stop bit high
+# PASS T05 byte[313] expected=0xe8
+# PASS echo stop bit high
+# PASS T05 byte[314] expected=0xa1
+# PASS echo stop bit high
+# PASS T05 byte[315] expected=0x33
+# PASS echo stop bit high
+# PASS T05 byte[316] expected=0x66
+# PASS echo stop bit high
+# PASS T05 byte[317] expected=0xcc
+# PASS echo stop bit high
+# PASS T05 byte[318] expected=0xe9
+# PASS echo stop bit high
+# PASS T05 byte[319] expected=0xa3
+# PASS echo stop bit high
+# PASS T05 byte[320] expected=0x37
+# PASS echo stop bit high
+# PASS T05 byte[321] expected=0x6e
+# PASS echo stop bit high
+# PASS T05 byte[322] expected=0xdc
+# PASS echo stop bit high
+# PASS T05 byte[323] expected=0xc9
+# PASS echo stop bit high
+# PASS T05 byte[324] expected=0xe3
+# PASS echo stop bit high
+# PASS T05 byte[325] expected=0xb7
+# PASS echo stop bit high
+# PASS T05 byte[326] expected=0x1f
+# PASS echo stop bit high
+# PASS T05 byte[327] expected=0x3e
+# PASS echo stop bit high
+# PASS T05 byte[328] expected=0x7c
+# PASS echo stop bit high
+# PASS T05 byte[329] expected=0xf8
+# PASS echo stop bit high
+# PASS T05 byte[330] expected=0x81
+# PASS echo stop bit high
+# PASS T05 byte[331] expected=0x73
+# PASS echo stop bit high
+# PASS T05 byte[332] expected=0xe6
+# PASS echo stop bit high
+# PASS T05 byte[333] expected=0xbd
+# PASS echo stop bit high
+# PASS T05 byte[334] expected=0x0b
+# PASS echo stop bit high
+# PASS T05 byte[335] expected=0x16
+# PASS echo stop bit high
+# PASS T05 byte[336] expected=0x2c
+# PASS echo stop bit high
+# PASS T05 byte[337] expected=0x58
+# PASS echo stop bit high
+# PASS T05 byte[338] expected=0xb0
+# PASS echo stop bit high
+# PASS T05 byte[339] expected=0x11
+# PASS echo stop bit high
+# PASS T05 byte[340] expected=0x22
+# PASS echo stop bit high
+# PASS T05 byte[341] expected=0x44
+# PASS echo stop bit high
+# PASS T05 byte[342] expected=0x88
+# PASS echo stop bit high
+# PASS T05 byte[343] expected=0x61
+# PASS echo stop bit high
+# PASS T05 byte[344] expected=0xc2
+# PASS echo stop bit high
+# PASS T05 byte[345] expected=0xf5
+# PASS echo stop bit high
+# PASS T05 byte[346] expected=0x9b
+# PASS echo stop bit high
+# PASS T05 byte[347] expected=0x47
+# PASS echo stop bit high
+# PASS T05 byte[348] expected=0x8e
+# PASS echo stop bit high
+# PASS T05 byte[349] expected=0x6d
+# PASS echo stop bit high
+# PASS T05 byte[350] expected=0xda
+# PASS echo stop bit high
+# PASS T05 byte[351] expected=0xc5
+# PASS echo stop bit high
+# PASS T05 byte[352] expected=0xfb
+# PASS echo stop bit high
+# PASS T05 byte[353] expected=0x87
+# PASS echo stop bit high
+# PASS T05 byte[354] expected=0x7f
+# PASS echo stop bit high
+# PASS T05 byte[355] expected=0xfe
+# PASS echo stop bit high
+# PASS T05 byte[356] expected=0x8d
+# PASS echo stop bit high
+# PASS T05 byte[357] expected=0x6b
+# PASS echo stop bit high
+# PASS T05 byte[358] expected=0xd6
+# PASS echo stop bit high
+# PASS T05 byte[359] expected=0xdd
+# PASS echo stop bit high
+# PASS T05 byte[360] expected=0xcb
+# PASS echo stop bit high
+# PASS T05 byte[361] expected=0xe7
+# PASS echo stop bit high
+# PASS T05 byte[362] expected=0xbf
+# PASS echo stop bit high
+# PASS T05 byte[363] expected=0x0f
+# PASS echo stop bit high
+# PASS T05 byte[364] expected=0x1e
+# PASS echo stop bit high
+# PASS T05 byte[365] expected=0x3c
+# PASS echo stop bit high
+# PASS T05 byte[366] expected=0x78
+# PASS echo stop bit high
+# PASS T05 byte[367] expected=0xf0
+# PASS echo stop bit high
+# PASS T05 byte[368] expected=0x91
+# PASS echo stop bit high
+# PASS T05 byte[369] expected=0x53
+# PASS echo stop bit high
+# PASS T05 byte[370] expected=0xa6
+# PASS echo stop bit high
+# PASS T05 byte[371] expected=0x3d
+# PASS echo stop bit high
+# PASS T05 byte[372] expected=0x7a
+# PASS echo stop bit high
+# PASS T05 byte[373] expected=0xf4
+# PASS echo stop bit high
+# PASS T05 byte[374] expected=0x99
+# PASS echo stop bit high
+# PASS T05 byte[375] expected=0x43
+# PASS echo stop bit high
+# PASS T05 byte[376] expected=0x86
+# PASS echo stop bit high
+# PASS T05 byte[377] expected=0x7d
+# PASS echo stop bit high
+# PASS T05 byte[378] expected=0xfa
+# PASS echo stop bit high
+# PASS T05 byte[379] expected=0x85
+# PASS echo stop bit high
+# PASS T05 byte[380] expected=0x7b
+# PASS echo stop bit high
+# PASS T05 byte[381] expected=0xf6
+# PASS echo stop bit high
+# PASS T05 byte[382] expected=0x9d
+# PASS echo stop bit high
+# PASS T05 byte[383] expected=0x4b
+# PASS echo stop bit high
+# PASS T05 byte[384] expected=0x96
+# PASS echo stop bit high
+# PASS T05 byte[385] expected=0x5d
+# PASS echo stop bit high
+# PASS T05 byte[386] expected=0xba
+# PASS echo stop bit high
+# PASS T05 byte[387] expected=0x05
+# PASS echo stop bit high
+# PASS T05 byte[388] expected=0x0a
+# PASS echo stop bit high
+# PASS T05 byte[389] expected=0x14
+# PASS echo stop bit high
+# PASS T05 byte[390] expected=0x28
+# PASS echo stop bit high
+# PASS T05 byte[391] expected=0x50
+# PASS echo stop bit high
+# PASS T05 byte[392] expected=0xa0
+# PASS echo stop bit high
+# PASS T05 byte[393] expected=0x31
+# PASS echo stop bit high
+# PASS T05 byte[394] expected=0x62
+# PASS echo stop bit high
+# PASS T05 byte[395] expected=0xc4
+# PASS echo stop bit high
+# PASS T05 byte[396] expected=0xf9
+# PASS echo stop bit high
+# PASS T05 byte[397] expected=0x83
+# PASS echo stop bit high
+# PASS T05 byte[398] expected=0x77
+# PASS echo stop bit high
+# PASS T05 byte[399] expected=0xee
+# PASS echo stop bit high
+# PASS T05 byte[400] expected=0xad
+# PASS echo stop bit high
+# PASS T05 byte[401] expected=0x2b
+# PASS echo stop bit high
+# PASS T05 byte[402] expected=0x56
+# PASS echo stop bit high
+# PASS T05 byte[403] expected=0xac
+# PASS echo stop bit high
+# PASS T05 byte[404] expected=0x29
+# PASS echo stop bit high
+# PASS T05 byte[405] expected=0x52
+# PASS echo stop bit high
+# PASS T05 byte[406] expected=0xa4
+# PASS echo stop bit high
+# PASS T05 byte[407] expected=0x39
+# PASS echo stop bit high
+# PASS T05 byte[408] expected=0x72
+# PASS echo stop bit high
+# PASS T05 byte[409] expected=0xe4
+# PASS echo stop bit high
+# PASS T05 byte[410] expected=0xb9
+# PASS echo stop bit high
+# PASS T05 byte[411] expected=0x03
+# PASS echo stop bit high
+# PASS T05 byte[412] expected=0x06
+# PASS echo stop bit high
+# PASS T05 byte[413] expected=0x0c
+# PASS echo stop bit high
+# PASS T05 byte[414] expected=0x18
+# PASS echo stop bit high
+# PASS T05 byte[415] expected=0x30
+# PASS echo stop bit high
+# PASS T05 byte[416] expected=0x60
+# PASS echo stop bit high
+# PASS T05 byte[417] expected=0xc0
+# PASS echo stop bit high
+# PASS T05 byte[418] expected=0xf1
+# PASS echo stop bit high
+# PASS T05 byte[419] expected=0x93
+# PASS echo stop bit high
+# PASS T05 byte[420] expected=0x57
+# PASS echo stop bit high
+# PASS T05 byte[421] expected=0xae
+# PASS echo stop bit high
+# PASS T05 byte[422] expected=0x2d
+# PASS echo stop bit high
+# PASS T05 byte[423] expected=0x5a
+# PASS echo stop bit high
+# PASS T05 byte[424] expected=0xb4
+# PASS echo stop bit high
+# PASS T05 byte[425] expected=0x19
+# PASS echo stop bit high
+# PASS T05 byte[426] expected=0x32
+# PASS echo stop bit high
+# PASS T05 byte[427] expected=0x64
+# PASS echo stop bit high
+# PASS T05 byte[428] expected=0xc8
+# PASS echo stop bit high
+# PASS T05 byte[429] expected=0xe1
+# PASS echo stop bit high
+# PASS T05 byte[430] expected=0xb3
+# PASS echo stop bit high
+# PASS T05 byte[431] expected=0x17
+# PASS echo stop bit high
+# PASS T05 byte[432] expected=0x2e
+# PASS echo stop bit high
+# PASS T05 byte[433] expected=0x5c
+# PASS echo stop bit high
+# PASS T05 byte[434] expected=0xb8
+# PASS echo stop bit high
+# PASS T05 byte[435] expected=0x01
+# PASS echo stop bit high
+# PASS T05 byte[436] expected=0x02
+# PASS echo stop bit high
+# PASS T05 byte[437] expected=0x04
+# PASS echo stop bit high
+# PASS T05 byte[438] expected=0x08
+# PASS echo stop bit high
+# PASS T05 byte[439] expected=0x10
+# PASS echo stop bit high
+# PASS T05 byte[440] expected=0x20
+# PASS echo stop bit high
+# PASS T05 byte[441] expected=0x40
+# PASS echo stop bit high
+# PASS T05 byte[442] expected=0x80
+# PASS echo stop bit high
+# PASS T05 byte[443] expected=0x71
+# PASS echo stop bit high
+# PASS T05 byte[444] expected=0xe2
+# PASS echo stop bit high
+# PASS T05 byte[445] expected=0xb5
+# PASS echo stop bit high
+# PASS T05 byte[446] expected=0x1b
+# PASS echo stop bit high
+# PASS T05 byte[447] expected=0x36
+# PASS echo stop bit high
+# PASS T05 byte[448] expected=0x6c
+# PASS echo stop bit high
+# PASS T05 byte[449] expected=0xd8
+# PASS echo stop bit high
+# PASS T05 byte[450] expected=0xc1
+# PASS echo stop bit high
+# PASS T05 byte[451] expected=0xf3
+# PASS echo stop bit high
+# PASS T05 byte[452] expected=0x97
+# PASS echo stop bit high
+# PASS T05 byte[453] expected=0x5f
+# PASS echo stop bit high
+# PASS T05 byte[454] expected=0xbe
+# PASS echo stop bit high
+# PASS T05 byte[455] expected=0x0d
+# PASS echo stop bit high
+# PASS T05 byte[456] expected=0x1a
+# PASS echo stop bit high
+# PASS T05 byte[457] expected=0x34
+# PASS echo stop bit high
+# PASS T05 byte[458] expected=0x68
+# PASS echo stop bit high
+# PASS T05 byte[459] expected=0xd0
+# PASS echo stop bit high
+# PASS T05 byte[460] expected=0xd1
+# PASS echo stop bit high
+# PASS T05 byte[461] expected=0xd3
+# PASS echo stop bit high
+# PASS T05 byte[462] expected=0xd7
+# PASS echo stop bit high
+# PASS T05 byte[463] expected=0xdf
+# PASS echo stop bit high
+# PASS T05 byte[464] expected=0xcf
+# PASS echo stop bit high
+# PASS T05 byte[465] expected=0xef
+# PASS echo stop bit high
+# PASS T05 byte[466] expected=0xaf
+# PASS echo stop bit high
+# PASS T05 byte[467] expected=0x2f
+# PASS echo stop bit high
+# PASS T05 byte[468] expected=0x5e
+# PASS echo stop bit high
+# PASS T05 byte[469] expected=0xbc
+# PASS echo stop bit high
+# PASS T05 byte[470] expected=0x09
+# PASS echo stop bit high
+# PASS T05 byte[471] expected=0x12
+# PASS echo stop bit high
+# PASS T05 byte[472] expected=0x24
+# PASS echo stop bit high
+# PASS T05 byte[473] expected=0x48
+# PASS echo stop bit high
+# PASS T05 byte[474] expected=0x90
+# PASS echo stop bit high
+# PASS T05 byte[475] expected=0x51
+# PASS echo stop bit high
+# PASS T05 byte[476] expected=0xa2
+# PASS echo stop bit high
+# PASS T05 byte[477] expected=0x35
+# PASS echo stop bit high
+# PASS T05 byte[478] expected=0x6a
+# PASS echo stop bit high
+# PASS T05 byte[479] expected=0xd4
+# PASS echo stop bit high
+# PASS T05 byte[480] expected=0xd9
+# PASS echo stop bit high
+# PASS T05 byte[481] expected=0xc3
+# PASS echo stop bit high
+# PASS T05 byte[482] expected=0xf7
+# PASS echo stop bit high
+# PASS T05 byte[483] expected=0x9f
+# PASS echo stop bit high
+# PASS T05 byte[484] expected=0x4f
+# PASS echo stop bit high
+# PASS T05 byte[485] expected=0x9e
+# PASS echo stop bit high
+# PASS T05 byte[486] expected=0x4d
+# PASS echo stop bit high
+# PASS T05 byte[487] expected=0x9a
+# PASS echo stop bit high
+# PASS T05 byte[488] expected=0x45
+# PASS echo stop bit high
+# PASS T05 byte[489] expected=0x8a
+# PASS echo stop bit high
+# PASS T05 byte[490] expected=0x65
+# PASS echo stop bit high
+# PASS T05 byte[491] expected=0xca
+# PASS echo stop bit high
+# PASS T05 byte[492] expected=0xe5
+# PASS echo stop bit high
+# PASS T05 byte[493] expected=0xbb
+# PASS echo stop bit high
+# PASS T05 byte[494] expected=0x07
+# PASS echo stop bit high
+# PASS T05 byte[495] expected=0x0e
+# PASS echo stop bit high
+# PASS T05 byte[496] expected=0x1c
+# PASS echo stop bit high
+# PASS T05 byte[497] expected=0x38
+# PASS echo stop bit high
+# PASS T05 byte[498] expected=0x70
+# PASS echo stop bit high
+# PASS T05 byte[499] expected=0xe0
+# PASS echo stop bit high
+# PASS T05 byte[500] expected=0xb1
+# PASS echo stop bit high
+# PASS T05 byte[501] expected=0x13
+# PASS echo stop bit high
+# PASS T05 byte[502] expected=0x26
+# PASS echo stop bit high
+# PASS T05 byte[503] expected=0x4c
+# PASS echo stop bit high
+# PASS T05 byte[504] expected=0x98
+# PASS echo stop bit high
+# PASS T05 byte[505] expected=0x41
+# PASS echo stop bit high
+# PASS T05 byte[506] expected=0x82
+# PASS echo stop bit high
+# PASS T05 byte[507] expected=0x75
+# PASS echo stop bit high
+# PASS T05 byte[508] expected=0xea
+# PASS echo stop bit high
+# PASS T05 byte[509] expected=0xa5
+# PASS echo stop bit high
+# PASS T05 byte[510] expected=0x3b
+# PASS echo stop bit high
+# PASS T05 byte[511] expected=0x76
+# PASS echo stop bit high
+# PASS T05 byte[512] expected=0xec
+# PASS echo stop bit high
+# PASS T05 byte[513] expected=0xa9
+# PASS echo stop bit high
+# PASS T05 byte[514] expected=0x23
+# PASS echo stop bit high
+# PASS T05 byte[515] expected=0x46
+# PASS echo stop bit high
+# PASS T05 byte[516] expected=0x8c
+# PASS echo stop bit high
+# PASS T05 byte[517] expected=0x69
+# PASS echo stop bit high
+# PASS T05 byte[518] expected=0xd2
+# PASS echo stop bit high
+# PASS T05 byte[519] expected=0xd5
+# PASS echo stop bit high
+# PASS T05 byte[520] expected=0xdb
+# PASS echo stop bit high
+# PASS T05 byte[521] expected=0xc7
+# PASS echo stop bit high
+# PASS T05 byte[522] expected=0xff
+# PASS echo stop bit high
+# PASS T05 byte[523] expected=0x8f
+# PASS echo stop bit high
+# PASS T05 byte[524] expected=0x6f
+# PASS echo stop bit high
+# PASS T05 byte[525] expected=0xde
+# PASS echo stop bit high
+# PASS T05 byte[526] expected=0xcd
+# PASS echo stop bit high
+# PASS T05 byte[527] expected=0xeb
+# PASS echo stop bit high
+# PASS T05 byte[528] expected=0xa7
+# PASS echo stop bit high
+# PASS T05 byte[529] expected=0x3f
+# PASS echo stop bit high
+# PASS T05 byte[530] expected=0x7e
+# PASS echo stop bit high
+# PASS T05 byte[531] expected=0xfc
+# PASS echo stop bit high
+# PASS T05 byte[532] expected=0x89
+# PASS echo stop bit high
+# PASS T05 byte[533] expected=0x63
+# PASS echo stop bit high
+# PASS T05 byte[534] expected=0xc6
+# PASS echo stop bit high
+# PASS T05 byte[535] expected=0xfd
+# PASS echo stop bit high
+# PASS T05 byte[536] expected=0x8b
+# PASS echo stop bit high
+# PASS T05 byte[537] expected=0x67
+# PASS echo stop bit high
+# PASS T05 byte[538] expected=0xce
+# PASS echo stop bit high
+# PASS T05 byte[539] expected=0xed
+# PASS echo stop bit high
+# PASS T05 byte[540] expected=0xab
+# PASS echo stop bit high
+# PASS T05 byte[541] expected=0x27
+# PASS echo stop bit high
+# PASS T05 byte[542] expected=0x4e
+# PASS echo stop bit high
+# PASS T05 byte[543] expected=0x9c
+# PASS echo stop bit high
+# PASS T05 byte[544] expected=0x49
+# PASS echo stop bit high
+# PASS T05 byte[545] expected=0x92
+# PASS echo stop bit high
+# PASS T05 byte[546] expected=0x55
+# PASS echo stop bit high
+# PASS T05 byte[547] expected=0xaa
+# PASS echo stop bit high
+# PASS T05 byte[548] expected=0x25
+# PASS echo stop bit high
+# PASS T05 byte[549] expected=0x4a
+# PASS echo stop bit high
+# PASS T05 byte[550] expected=0x94
+# PASS echo stop bit high
+# PASS T05 byte[551] expected=0x59
+# PASS echo stop bit high
+# PASS T05 byte[552] expected=0xb2
+# PASS echo stop bit high
+# PASS T05 byte[553] expected=0x15
+# PASS echo stop bit high
+# PASS T05 byte[554] expected=0x2a
+# PASS echo stop bit high
+# PASS T05 byte[555] expected=0x54
+# PASS echo stop bit high
+# PASS T05 byte[556] expected=0xa8
+# PASS echo stop bit high
+# PASS T05 byte[557] expected=0x21
+# PASS echo stop bit high
+# PASS T05 byte[558] expected=0x42
+# PASS echo stop bit high
+# PASS T05 byte[559] expected=0x84
+# PASS echo stop bit high
+# PASS T05 byte[560] expected=0x79
+# PASS echo stop bit high
+# PASS T05 byte[561] expected=0xf2
+# PASS echo stop bit high
+# PASS T05 byte[562] expected=0x95
+# PASS echo stop bit high
+# PASS T05 byte[563] expected=0x5b
+# PASS echo stop bit high
+# PASS T05 byte[564] expected=0xb6
+# PASS echo stop bit high
+# PASS T05 byte[565] expected=0x1d
+# PASS echo stop bit high
+# PASS T05 byte[566] expected=0x3a
+# PASS echo stop bit high
+# PASS T05 byte[567] expected=0x74
+# PASS echo stop bit high
+# PASS T05 byte[568] expected=0xe8
+# PASS echo stop bit high
+# PASS T05 byte[569] expected=0xa1
+# PASS echo stop bit high
+# PASS T05 byte[570] expected=0x33
+# PASS echo stop bit high
+# PASS T05 byte[571] expected=0x66
+# PASS echo stop bit high
+# PASS T05 byte[572] expected=0xcc
+# PASS echo stop bit high
+# PASS T05 byte[573] expected=0xe9
+# PASS echo stop bit high
+# PASS T05 byte[574] expected=0xa3
+# PASS echo stop bit high
+# PASS T05 byte[575] expected=0x37
+# PASS echo stop bit high
+# PASS T05 byte[576] expected=0x6e
+# PASS echo stop bit high
+# PASS T05 byte[577] expected=0xdc
+# PASS echo stop bit high
+# PASS T05 byte[578] expected=0xc9
+# PASS echo stop bit high
+# PASS T05 byte[579] expected=0xe3
+# PASS echo stop bit high
+# PASS T05 byte[580] expected=0xb7
+# PASS echo stop bit high
+# PASS T05 byte[581] expected=0x1f
+# PASS echo stop bit high
+# PASS T05 byte[582] expected=0x3e
+# PASS echo stop bit high
+# PASS T05 byte[583] expected=0x7c
+# PASS echo stop bit high
+# PASS T05 byte[584] expected=0xf8
+# PASS echo stop bit high
+# PASS T05 byte[585] expected=0x81
+# PASS echo stop bit high
+# PASS T05 byte[586] expected=0x73
+# PASS echo stop bit high
+# PASS T05 byte[587] expected=0xe6
+# PASS echo stop bit high
+# PASS T05 byte[588] expected=0xbd
+# PASS echo stop bit high
+# PASS T05 byte[589] expected=0x0b
+# PASS echo stop bit high
+# PASS T05 byte[590] expected=0x16
+# PASS echo stop bit high
+# PASS T05 byte[591] expected=0x2c
+# PASS echo stop bit high
+# PASS T05 byte[592] expected=0x58
+# PASS echo stop bit high
+# PASS T05 byte[593] expected=0xb0
+# PASS echo stop bit high
+# PASS T05 byte[594] expected=0x11
+# PASS echo stop bit high
+# PASS T05 byte[595] expected=0x22
+# PASS echo stop bit high
+# PASS T05 byte[596] expected=0x44
+# PASS echo stop bit high
+# PASS T05 byte[597] expected=0x88
+# PASS echo stop bit high
+# PASS T05 byte[598] expected=0x61
+# PASS echo stop bit high
+# PASS T05 byte[599] expected=0xc2
+# PASS echo stop bit high
+# PASS T05 byte[600] expected=0xf5
+# PASS echo stop bit high
+# PASS T05 byte[601] expected=0x9b
+# PASS echo stop bit high
+# PASS T05 byte[602] expected=0x47
+# PASS echo stop bit high
+# PASS T05 byte[603] expected=0x8e
+# PASS echo stop bit high
+# PASS T05 byte[604] expected=0x6d
+# PASS echo stop bit high
+# PASS T05 byte[605] expected=0xda
+# PASS echo stop bit high
+# PASS T05 byte[606] expected=0xc5
+# PASS echo stop bit high
+# PASS T05 byte[607] expected=0xfb
+# PASS echo stop bit high
+# PASS T05 byte[608] expected=0x87
+# PASS echo stop bit high
+# PASS T05 byte[609] expected=0x7f
+# PASS echo stop bit high
+# PASS T05 byte[610] expected=0xfe
+# PASS echo stop bit high
+# PASS T05 byte[611] expected=0x8d
+# PASS echo stop bit high
+# PASS T05 byte[612] expected=0x6b
+# PASS echo stop bit high
+# PASS T05 byte[613] expected=0xd6
+# PASS echo stop bit high
+# PASS T05 byte[614] expected=0xdd
+# PASS echo stop bit high
+# PASS T05 byte[615] expected=0xcb
+# PASS echo stop bit high
+# PASS T05 byte[616] expected=0xe7
+# PASS echo stop bit high
+# PASS T05 byte[617] expected=0xbf
+# PASS echo stop bit high
+# PASS T05 byte[618] expected=0x0f
+# PASS echo stop bit high
+# PASS T05 byte[619] expected=0x1e
+# PASS echo stop bit high
+# PASS T05 byte[620] expected=0x3c
+# PASS echo stop bit high
+# PASS T05 byte[621] expected=0x78
+# PASS echo stop bit high
+# PASS T05 byte[622] expected=0xf0
+# PASS echo stop bit high
+# PASS T05 byte[623] expected=0x91
+# PASS echo stop bit high
+# PASS T05 byte[624] expected=0x53
+# PASS echo stop bit high
+# PASS T05 byte[625] expected=0xa6
+# PASS echo stop bit high
+# PASS T05 byte[626] expected=0x3d
+# PASS echo stop bit high
+# PASS T05 byte[627] expected=0x7a
+# PASS echo stop bit high
+# PASS T05 byte[628] expected=0xf4
+# PASS echo stop bit high
+# PASS T05 byte[629] expected=0x99
+# PASS echo stop bit high
+# PASS T05 byte[630] expected=0x43
+# PASS echo stop bit high
+# PASS T05 byte[631] expected=0x86
+# PASS echo stop bit high
+# PASS T05 byte[632] expected=0x7d
+# PASS echo stop bit high
+# PASS T05 byte[633] expected=0xfa
+# PASS echo stop bit high
+# PASS T05 byte[634] expected=0x85
+# PASS echo stop bit high
+# PASS T05 byte[635] expected=0x7b
+# PASS echo stop bit high
+# PASS T05 byte[636] expected=0xf6
+# PASS echo stop bit high
+# PASS T05 byte[637] expected=0x9d
+# PASS echo stop bit high
+# PASS T05 byte[638] expected=0x4b
+# PASS echo stop bit high
+# PASS T05 byte[639] expected=0x96
+# PASS echo stop bit high
+# PASS T05 byte[640] expected=0x5d
+# PASS echo stop bit high
+# PASS T05 byte[641] expected=0xba
+# PASS echo stop bit high
+# PASS T05 byte[642] expected=0x05
+# PASS echo stop bit high
+# PASS T05 byte[643] expected=0x0a
+# PASS echo stop bit high
+# PASS T05 byte[644] expected=0x14
+# PASS echo stop bit high
+# PASS T05 byte[645] expected=0x28
+# PASS echo stop bit high
+# PASS T05 byte[646] expected=0x50
+# PASS echo stop bit high
+# PASS T05 byte[647] expected=0xa0
+# PASS echo stop bit high
+# PASS T05 byte[648] expected=0x31
+# PASS echo stop bit high
+# PASS T05 byte[649] expected=0x62
+# PASS echo stop bit high
+# PASS T05 byte[650] expected=0xc4
+# PASS echo stop bit high
+# PASS T05 byte[651] expected=0xf9
+# PASS echo stop bit high
+# PASS T05 byte[652] expected=0x83
+# PASS echo stop bit high
+# PASS T05 byte[653] expected=0x77
+# PASS echo stop bit high
+# PASS T05 byte[654] expected=0xee
+# PASS echo stop bit high
+# PASS T05 byte[655] expected=0xad
+# PASS echo stop bit high
+# PASS T05 byte[656] expected=0x2b
+# PASS echo stop bit high
+# PASS T05 byte[657] expected=0x56
+# PASS echo stop bit high
+# PASS T05 byte[658] expected=0xac
+# PASS echo stop bit high
+# PASS T05 byte[659] expected=0x29
+# PASS echo stop bit high
+# PASS T05 byte[660] expected=0x52
+# PASS echo stop bit high
+# PASS T05 byte[661] expected=0xa4
+# PASS echo stop bit high
+# PASS T05 byte[662] expected=0x39
+# PASS echo stop bit high
+# PASS T05 byte[663] expected=0x72
+# PASS echo stop bit high
+# PASS T05 byte[664] expected=0xe4
+# PASS echo stop bit high
+# PASS T05 byte[665] expected=0xb9
+# PASS echo stop bit high
+# PASS T05 byte[666] expected=0x03
+# PASS echo stop bit high
+# PASS T05 byte[667] expected=0x06
+# PASS echo stop bit high
+# PASS T05 byte[668] expected=0x0c
+# PASS echo stop bit high
+# PASS T05 byte[669] expected=0x18
+# PASS echo stop bit high
+# PASS T05 byte[670] expected=0x30
+# PASS echo stop bit high
+# PASS T05 byte[671] expected=0x60
+# PASS echo stop bit high
+# PASS T05 byte[672] expected=0xc0
+# PASS echo stop bit high
+# PASS T05 byte[673] expected=0xf1
+# PASS echo stop bit high
+# PASS T05 byte[674] expected=0x93
+# PASS echo stop bit high
+# PASS T05 byte[675] expected=0x57
+# PASS echo stop bit high
+# PASS T05 byte[676] expected=0xae
+# PASS echo stop bit high
+# PASS T05 byte[677] expected=0x2d
+# PASS echo stop bit high
+# PASS T05 byte[678] expected=0x5a
+# PASS echo stop bit high
+# PASS T05 byte[679] expected=0xb4
+# PASS echo stop bit high
+# PASS T05 byte[680] expected=0x19
+# PASS echo stop bit high
+# PASS T05 byte[681] expected=0x32
+# PASS echo stop bit high
+# PASS T05 byte[682] expected=0x64
+# PASS echo stop bit high
+# PASS T05 byte[683] expected=0xc8
+# PASS echo stop bit high
+# PASS T05 byte[684] expected=0xe1
+# PASS echo stop bit high
+# PASS T05 byte[685] expected=0xb3
+# PASS echo stop bit high
+# PASS T05 byte[686] expected=0x17
+# PASS echo stop bit high
+# PASS T05 byte[687] expected=0x2e
+# PASS echo stop bit high
+# PASS T05 byte[688] expected=0x5c
+# PASS echo stop bit high
+# PASS T05 byte[689] expected=0xb8
+# PASS echo stop bit high
+# PASS T05 byte[690] expected=0x01
+# PASS echo stop bit high
+# PASS T05 byte[691] expected=0x02
+# PASS echo stop bit high
+# PASS T05 byte[692] expected=0x04
+# PASS echo stop bit high
+# PASS T05 byte[693] expected=0x08
+# PASS echo stop bit high
+# PASS T05 byte[694] expected=0x10
+# PASS echo stop bit high
+# PASS T05 byte[695] expected=0x20
+# PASS echo stop bit high
+# PASS T05 byte[696] expected=0x40
+# PASS echo stop bit high
+# PASS T05 byte[697] expected=0x80
+# PASS echo stop bit high
+# PASS T05 byte[698] expected=0x71
+# PASS echo stop bit high
+# PASS T05 byte[699] expected=0xe2
+# PASS echo stop bit high
+# PASS T05 byte[700] expected=0xb5
+# PASS echo stop bit high
+# PASS T05 byte[701] expected=0x1b
+# PASS echo stop bit high
+# PASS T05 byte[702] expected=0x36
+# PASS echo stop bit high
+# PASS T05 byte[703] expected=0x6c
+# PASS echo stop bit high
+# PASS T05 byte[704] expected=0xd8
+# PASS echo stop bit high
+# PASS T05 byte[705] expected=0xc1
+# PASS echo stop bit high
+# PASS T05 byte[706] expected=0xf3
+# PASS echo stop bit high
+# PASS T05 byte[707] expected=0x97
+# PASS echo stop bit high
+# PASS T05 byte[708] expected=0x5f
+# PASS echo stop bit high
+# PASS T05 byte[709] expected=0xbe
+# PASS echo stop bit high
+# PASS T05 byte[710] expected=0x0d
+# PASS echo stop bit high
+# PASS T05 byte[711] expected=0x1a
+# PASS echo stop bit high
+# PASS T05 byte[712] expected=0x34
+# PASS echo stop bit high
+# PASS T05 byte[713] expected=0x68
+# PASS echo stop bit high
+# PASS T05 byte[714] expected=0xd0
+# PASS echo stop bit high
+# PASS T05 byte[715] expected=0xd1
+# PASS echo stop bit high
+# PASS T05 byte[716] expected=0xd3
+# PASS echo stop bit high
+# PASS T05 byte[717] expected=0xd7
+# PASS echo stop bit high
+# PASS T05 byte[718] expected=0xdf
+# PASS echo stop bit high
+# PASS T05 byte[719] expected=0xcf
+# PASS echo stop bit high
+# PASS T05 byte[720] expected=0xef
+# PASS echo stop bit high
+# PASS T05 byte[721] expected=0xaf
+# PASS echo stop bit high
+# PASS T05 byte[722] expected=0x2f
+# PASS echo stop bit high
+# PASS T05 byte[723] expected=0x5e
+# PASS echo stop bit high
+# PASS T05 byte[724] expected=0xbc
+# PASS echo stop bit high
+# PASS T05 byte[725] expected=0x09
+# PASS echo stop bit high
+# PASS T05 byte[726] expected=0x12
+# PASS echo stop bit high
+# PASS T05 byte[727] expected=0x24
+# PASS echo stop bit high
+# PASS T05 byte[728] expected=0x48
+# PASS echo stop bit high
+# PASS T05 byte[729] expected=0x90
+# PASS echo stop bit high
+# PASS T05 byte[730] expected=0x51
+# PASS echo stop bit high
+# PASS T05 byte[731] expected=0xa2
+# PASS echo stop bit high
+# PASS T05 byte[732] expected=0x35
+# PASS echo stop bit high
+# PASS T05 byte[733] expected=0x6a
+# PASS echo stop bit high
+# PASS T05 byte[734] expected=0xd4
+# PASS echo stop bit high
+# PASS T05 byte[735] expected=0xd9
+# PASS echo stop bit high
+# PASS T05 byte[736] expected=0xc3
+# PASS echo stop bit high
+# PASS T05 byte[737] expected=0xf7
+# PASS echo stop bit high
+# PASS T05 byte[738] expected=0x9f
+# PASS echo stop bit high
+# PASS T05 byte[739] expected=0x4f
+# PASS echo stop bit high
+# PASS T05 byte[740] expected=0x9e
+# PASS echo stop bit high
+# PASS T05 byte[741] expected=0x4d
+# PASS echo stop bit high
+# PASS T05 byte[742] expected=0x9a
+# PASS echo stop bit high
+# PASS T05 byte[743] expected=0x45
+# PASS echo stop bit high
+# PASS T05 byte[744] expected=0x8a
+# PASS echo stop bit high
+# PASS T05 byte[745] expected=0x65
+# PASS echo stop bit high
+# PASS T05 byte[746] expected=0xca
+# PASS echo stop bit high
+# PASS T05 byte[747] expected=0xe5
+# PASS echo stop bit high
+# PASS T05 byte[748] expected=0xbb
+# PASS echo stop bit high
+# PASS T05 byte[749] expected=0x07
+# PASS echo stop bit high
+# PASS T05 byte[750] expected=0x0e
+# PASS echo stop bit high
+# PASS T05 byte[751] expected=0x1c
+# PASS echo stop bit high
+# PASS T05 byte[752] expected=0x38
+# PASS echo stop bit high
+# PASS T05 byte[753] expected=0x70
+# PASS echo stop bit high
+# PASS T05 byte[754] expected=0xe0
+# PASS echo stop bit high
+# PASS T05 byte[755] expected=0xb1
+# PASS echo stop bit high
+# PASS T05 byte[756] expected=0x13
+# PASS echo stop bit high
+# PASS T05 byte[757] expected=0x26
+# PASS echo stop bit high
+# PASS T05 byte[758] expected=0x4c
+# PASS echo stop bit high
+# PASS T05 byte[759] expected=0x98
+# PASS echo stop bit high
+# PASS T05 byte[760] expected=0x41
+# PASS echo stop bit high
+# PASS T05 byte[761] expected=0x82
+# PASS echo stop bit high
+# PASS T05 byte[762] expected=0x75
+# PASS echo stop bit high
+# PASS T05 byte[763] expected=0xea
+# PASS echo stop bit high
+# PASS T05 byte[764] expected=0xa5
+# PASS echo stop bit high
+# PASS T05 byte[765] expected=0x3b
+# PASS echo stop bit high
+# PASS T05 byte[766] expected=0x76
+# PASS echo stop bit high
+# PASS T05 byte[767] expected=0xec
+# PASS echo stop bit high
+# PASS T05 byte[768] expected=0xa9
+# PASS echo stop bit high
+# PASS T05 byte[769] expected=0x23
+# PASS echo stop bit high
+# PASS T05 byte[770] expected=0x46
+# PASS echo stop bit high
+# PASS T05 byte[771] expected=0x8c
+# PASS echo stop bit high
+# PASS T05 byte[772] expected=0x69
+# PASS echo stop bit high
+# PASS T05 byte[773] expected=0xd2
+# PASS echo stop bit high
+# PASS T05 byte[774] expected=0xd5
+# PASS echo stop bit high
+# PASS T05 byte[775] expected=0xdb
+# PASS echo stop bit high
+# PASS T05 byte[776] expected=0xc7
+# PASS echo stop bit high
+# PASS T05 byte[777] expected=0xff
+# PASS echo stop bit high
+# PASS T05 byte[778] expected=0x8f
+# PASS echo stop bit high
+# PASS T05 byte[779] expected=0x6f
+# PASS echo stop bit high
+# PASS T05 byte[780] expected=0xde
+# PASS echo stop bit high
+# PASS T05 byte[781] expected=0xcd
+# PASS echo stop bit high
+# PASS T05 byte[782] expected=0xeb
+# PASS echo stop bit high
+# PASS T05 byte[783] expected=0xa7
+# PASS echo stop bit high
+# PASS T05 byte[784] expected=0x3f
+# PASS echo stop bit high
+# PASS T05 byte[785] expected=0x7e
+# PASS echo stop bit high
+# PASS T05 byte[786] expected=0xfc
+# PASS echo stop bit high
+# PASS T05 byte[787] expected=0x89
+# PASS echo stop bit high
+# PASS T05 byte[788] expected=0x63
+# PASS echo stop bit high
+# PASS T05 byte[789] expected=0xc6
+# PASS echo stop bit high
+# PASS T05 byte[790] expected=0xfd
+# PASS echo stop bit high
+# PASS T05 byte[791] expected=0x8b
+# PASS echo stop bit high
+# PASS T05 byte[792] expected=0x67
+# PASS echo stop bit high
+# PASS T05 byte[793] expected=0xce
+# PASS echo stop bit high
+# PASS T05 byte[794] expected=0xed
+# PASS echo stop bit high
+# PASS T05 byte[795] expected=0xab
+# PASS echo stop bit high
+# PASS T05 byte[796] expected=0x27
+# PASS echo stop bit high
+# PASS T05 byte[797] expected=0x4e
+# PASS echo stop bit high
+# PASS T05 byte[798] expected=0x9c
+# PASS echo stop bit high
+# PASS T05 byte[799] expected=0x49
+# PASS echo stop bit high
+# PASS T05 byte[800] expected=0x92
+# PASS echo stop bit high
+# PASS T05 byte[801] expected=0x55
+# PASS echo stop bit high
+# PASS T05 byte[802] expected=0xaa
+# PASS echo stop bit high
+# PASS T05 byte[803] expected=0x25
+# PASS echo stop bit high
+# PASS T05 byte[804] expected=0x4a
+# PASS echo stop bit high
+# PASS T05 byte[805] expected=0x94
+# PASS echo stop bit high
+# PASS T05 byte[806] expected=0x59
+# PASS echo stop bit high
+# PASS T05 byte[807] expected=0xb2
+# PASS echo stop bit high
+# PASS T05 byte[808] expected=0x15
+# PASS echo stop bit high
+# PASS T05 byte[809] expected=0x2a
+# PASS echo stop bit high
+# PASS T05 byte[810] expected=0x54
+# PASS echo stop bit high
+# PASS T05 byte[811] expected=0xa8
+# PASS echo stop bit high
+# PASS T05 byte[812] expected=0x21
+# PASS echo stop bit high
+# PASS T05 byte[813] expected=0x42
+# PASS echo stop bit high
+# PASS T05 byte[814] expected=0x84
+# PASS echo stop bit high
+# PASS T05 byte[815] expected=0x79
+# PASS echo stop bit high
+# PASS T05 byte[816] expected=0xf2
+# PASS echo stop bit high
+# PASS T05 byte[817] expected=0x95
+# PASS echo stop bit high
+# PASS T05 byte[818] expected=0x5b
+# PASS echo stop bit high
+# PASS T05 byte[819] expected=0xb6
+# PASS echo stop bit high
+# PASS T05 byte[820] expected=0x1d
+# PASS echo stop bit high
+# PASS T05 byte[821] expected=0x3a
+# PASS echo stop bit high
+# PASS T05 byte[822] expected=0x74
+# PASS echo stop bit high
+# PASS T05 byte[823] expected=0xe8
+# PASS echo stop bit high
+# PASS T05 byte[824] expected=0xa1
+# PASS echo stop bit high
+# PASS T05 byte[825] expected=0x33
+# PASS echo stop bit high
+# PASS T05 byte[826] expected=0x66
+# PASS echo stop bit high
+# PASS T05 byte[827] expected=0xcc
+# PASS echo stop bit high
+# PASS T05 byte[828] expected=0xe9
+# PASS echo stop bit high
+# PASS T05 byte[829] expected=0xa3
+# PASS echo stop bit high
+# PASS T05 byte[830] expected=0x37
+# PASS echo stop bit high
+# PASS T05 byte[831] expected=0x6e
+# PASS echo stop bit high
+# PASS T05 byte[832] expected=0xdc
+# PASS echo stop bit high
+# PASS T05 byte[833] expected=0xc9
+# PASS echo stop bit high
+# PASS T05 byte[834] expected=0xe3
+# PASS echo stop bit high
+# PASS T05 byte[835] expected=0xb7
+# PASS echo stop bit high
+# PASS T05 byte[836] expected=0x1f
+# PASS echo stop bit high
+# PASS T05 byte[837] expected=0x3e
+# PASS echo stop bit high
+# PASS T05 byte[838] expected=0x7c
+# PASS echo stop bit high
+# PASS T05 byte[839] expected=0xf8
+# PASS echo stop bit high
+# PASS T05 byte[840] expected=0x81
+# PASS echo stop bit high
+# PASS T05 byte[841] expected=0x73
+# PASS echo stop bit high
+# PASS T05 byte[842] expected=0xe6
+# PASS echo stop bit high
+# PASS T05 byte[843] expected=0xbd
+# PASS echo stop bit high
+# PASS T05 byte[844] expected=0x0b
+# PASS echo stop bit high
+# PASS T05 byte[845] expected=0x16
+# PASS echo stop bit high
+# PASS T05 byte[846] expected=0x2c
+# PASS echo stop bit high
+# PASS T05 byte[847] expected=0x58
+# PASS echo stop bit high
+# PASS T05 byte[848] expected=0xb0
+# PASS echo stop bit high
+# PASS T05 byte[849] expected=0x11
+# PASS echo stop bit high
+# PASS T05 byte[850] expected=0x22
+# PASS echo stop bit high
+# PASS T05 byte[851] expected=0x44
+# PASS echo stop bit high
+# PASS T05 byte[852] expected=0x88
+# PASS echo stop bit high
+# PASS T05 byte[853] expected=0x61
+# PASS echo stop bit high
+# PASS T05 byte[854] expected=0xc2
+# PASS echo stop bit high
+# PASS T05 byte[855] expected=0xf5
+# PASS echo stop bit high
+# PASS T05 byte[856] expected=0x9b
+# PASS echo stop bit high
+# PASS T05 byte[857] expected=0x47
+# PASS echo stop bit high
+# PASS T05 byte[858] expected=0x8e
+# PASS echo stop bit high
+# PASS T05 byte[859] expected=0x6d
+# PASS echo stop bit high
+# PASS T05 byte[860] expected=0xda
+# PASS echo stop bit high
+# PASS T05 byte[861] expected=0xc5
+# PASS echo stop bit high
+# PASS T05 byte[862] expected=0xfb
+# PASS echo stop bit high
+# PASS T05 byte[863] expected=0x87
+# PASS echo stop bit high
+# PASS T05 byte[864] expected=0x7f
+# PASS echo stop bit high
+# PASS T05 byte[865] expected=0xfe
+# PASS echo stop bit high
+# PASS T05 byte[866] expected=0x8d
+# PASS echo stop bit high
+# PASS T05 byte[867] expected=0x6b
+# PASS echo stop bit high
+# PASS T05 byte[868] expected=0xd6
+# PASS echo stop bit high
+# PASS T05 byte[869] expected=0xdd
+# PASS echo stop bit high
+# PASS T05 byte[870] expected=0xcb
+# PASS echo stop bit high
+# PASS T05 byte[871] expected=0xe7
+# PASS echo stop bit high
+# PASS T05 byte[872] expected=0xbf
+# PASS echo stop bit high
+# PASS T05 byte[873] expected=0x0f
+# PASS echo stop bit high
+# PASS T05 byte[874] expected=0x1e
+# PASS echo stop bit high
+# PASS T05 byte[875] expected=0x3c
+# PASS echo stop bit high
+# PASS T05 byte[876] expected=0x78
+# PASS echo stop bit high
+# PASS T05 byte[877] expected=0xf0
+# PASS echo stop bit high
+# PASS T05 byte[878] expected=0x91
+# PASS echo stop bit high
+# PASS T05 byte[879] expected=0x53
+# PASS echo stop bit high
+# PASS T05 byte[880] expected=0xa6
+# PASS echo stop bit high
+# PASS T05 byte[881] expected=0x3d
+# PASS echo stop bit high
+# PASS T05 byte[882] expected=0x7a
+# PASS echo stop bit high
+# PASS T05 byte[883] expected=0xf4
+# PASS echo stop bit high
+# PASS T05 byte[884] expected=0x99
+# PASS echo stop bit high
+# PASS T05 byte[885] expected=0x43
+# PASS echo stop bit high
+# PASS T05 byte[886] expected=0x86
+# PASS echo stop bit high
+# PASS T05 byte[887] expected=0x7d
+# PASS echo stop bit high
+# PASS T05 byte[888] expected=0xfa
+# PASS echo stop bit high
+# PASS T05 byte[889] expected=0x85
+# PASS echo stop bit high
+# PASS T05 byte[890] expected=0x7b
+# PASS echo stop bit high
+# PASS T05 byte[891] expected=0xf6
+# PASS echo stop bit high
+# PASS T05 byte[892] expected=0x9d
+# PASS echo stop bit high
+# PASS T05 byte[893] expected=0x4b
+# PASS echo stop bit high
+# PASS T05 byte[894] expected=0x96
+# PASS echo stop bit high
+# PASS T05 byte[895] expected=0x5d
+# PASS echo stop bit high
+# PASS T05 byte[896] expected=0xba
+# PASS echo stop bit high
+# PASS T05 byte[897] expected=0x05
+# PASS echo stop bit high
+# PASS T05 byte[898] expected=0x0a
+# PASS echo stop bit high
+# PASS T05 byte[899] expected=0x14
+# PASS echo stop bit high
+# PASS T05 byte[900] expected=0x28
+# PASS echo stop bit high
+# PASS T05 byte[901] expected=0x50
+# PASS echo stop bit high
+# PASS T05 byte[902] expected=0xa0
+# PASS echo stop bit high
+# PASS T05 byte[903] expected=0x31
+# PASS echo stop bit high
+# PASS T05 byte[904] expected=0x62
+# PASS echo stop bit high
+# PASS T05 byte[905] expected=0xc4
+# PASS echo stop bit high
+# PASS T05 byte[906] expected=0xf9
+# PASS echo stop bit high
+# PASS T05 byte[907] expected=0x83
+# PASS echo stop bit high
+# PASS T05 byte[908] expected=0x77
+# PASS echo stop bit high
+# PASS T05 byte[909] expected=0xee
+# PASS echo stop bit high
+# PASS T05 byte[910] expected=0xad
+# PASS echo stop bit high
+# PASS T05 byte[911] expected=0x2b
+# PASS echo stop bit high
+# PASS T05 byte[912] expected=0x56
+# PASS echo stop bit high
+# PASS T05 byte[913] expected=0xac
+# PASS echo stop bit high
+# PASS T05 byte[914] expected=0x29
+# PASS echo stop bit high
+# PASS T05 byte[915] expected=0x52
+# PASS echo stop bit high
+# PASS T05 byte[916] expected=0xa4
+# PASS echo stop bit high
+# PASS T05 byte[917] expected=0x39
+# PASS echo stop bit high
+# PASS T05 byte[918] expected=0x72
+# PASS echo stop bit high
+# PASS T05 byte[919] expected=0xe4
+# PASS echo stop bit high
+# PASS T05 byte[920] expected=0xb9
+# PASS echo stop bit high
+# PASS T05 byte[921] expected=0x03
+# PASS echo stop bit high
+# PASS T05 byte[922] expected=0x06
+# PASS echo stop bit high
+# PASS T05 byte[923] expected=0x0c
+# PASS echo stop bit high
+# PASS T05 byte[924] expected=0x18
+# PASS echo stop bit high
+# PASS T05 byte[925] expected=0x30
+# PASS echo stop bit high
+# PASS T05 byte[926] expected=0x60
+# PASS echo stop bit high
+# PASS T05 byte[927] expected=0xc0
+# PASS echo stop bit high
+# PASS T05 byte[928] expected=0xf1
+# PASS echo stop bit high
+# PASS T05 byte[929] expected=0x93
+# PASS echo stop bit high
+# PASS T05 byte[930] expected=0x57
+# PASS echo stop bit high
+# PASS T05 byte[931] expected=0xae
+# PASS echo stop bit high
+# PASS T05 byte[932] expected=0x2d
+# PASS echo stop bit high
+# PASS T05 byte[933] expected=0x5a
+# PASS echo stop bit high
+# PASS T05 byte[934] expected=0xb4
+# PASS echo stop bit high
+# PASS T05 byte[935] expected=0x19
+# PASS echo stop bit high
+# PASS T05 byte[936] expected=0x32
+# PASS echo stop bit high
+# PASS T05 byte[937] expected=0x64
+# PASS echo stop bit high
+# PASS T05 byte[938] expected=0xc8
+# PASS echo stop bit high
+# PASS T05 byte[939] expected=0xe1
+# PASS echo stop bit high
+# PASS T05 byte[940] expected=0xb3
+# PASS echo stop bit high
+# PASS T05 byte[941] expected=0x17
+# PASS echo stop bit high
+# PASS T05 byte[942] expected=0x2e
+# PASS echo stop bit high
+# PASS T05 byte[943] expected=0x5c
+# PASS echo stop bit high
+# PASS T05 byte[944] expected=0xb8
+# PASS echo stop bit high
+# PASS T05 byte[945] expected=0x01
+# PASS echo stop bit high
+# PASS T05 byte[946] expected=0x02
+# PASS echo stop bit high
+# PASS T05 byte[947] expected=0x04
+# PASS echo stop bit high
+# PASS T05 byte[948] expected=0x08
+# PASS echo stop bit high
+# PASS T05 byte[949] expected=0x10
+# PASS echo stop bit high
+# PASS T05 byte[950] expected=0x20
+# PASS echo stop bit high
+# PASS T05 byte[951] expected=0x40
+# PASS echo stop bit high
+# PASS T05 byte[952] expected=0x80
+# PASS echo stop bit high
+# PASS T05 byte[953] expected=0x71
+# PASS echo stop bit high
+# PASS T05 byte[954] expected=0xe2
+# PASS echo stop bit high
+# PASS T05 byte[955] expected=0xb5
+# PASS echo stop bit high
+# PASS T05 byte[956] expected=0x1b
+# PASS echo stop bit high
+# PASS T05 byte[957] expected=0x36
+# PASS echo stop bit high
+# PASS T05 byte[958] expected=0x6c
+# PASS echo stop bit high
+# PASS T05 byte[959] expected=0xd8
+# PASS echo stop bit high
+# PASS T05 byte[960] expected=0xc1
+# PASS echo stop bit high
+# PASS T05 byte[961] expected=0xf3
+# PASS echo stop bit high
+# PASS T05 byte[962] expected=0x97
+# PASS echo stop bit high
+# PASS T05 byte[963] expected=0x5f
+# PASS echo stop bit high
+# PASS T05 byte[964] expected=0xbe
+# PASS echo stop bit high
+# PASS T05 byte[965] expected=0x0d
+# PASS echo stop bit high
+# PASS T05 byte[966] expected=0x1a
+# PASS echo stop bit high
+# PASS T05 byte[967] expected=0x34
+# PASS echo stop bit high
+# PASS T05 byte[968] expected=0x68
+# PASS echo stop bit high
+# PASS T05 byte[969] expected=0xd0
+# PASS echo stop bit high
+# PASS T05 byte[970] expected=0xd1
+# PASS echo stop bit high
+# PASS T05 byte[971] expected=0xd3
+# PASS echo stop bit high
+# PASS T05 byte[972] expected=0xd7
+# PASS echo stop bit high
+# PASS T05 byte[973] expected=0xdf
+# PASS echo stop bit high
+# PASS T05 byte[974] expected=0xcf
+# PASS echo stop bit high
+# PASS T05 byte[975] expected=0xef
+# PASS echo stop bit high
+# PASS T05 byte[976] expected=0xaf
+# PASS echo stop bit high
+# PASS T05 byte[977] expected=0x2f
+# PASS echo stop bit high
+# PASS T05 byte[978] expected=0x5e
+# PASS echo stop bit high
+# PASS T05 byte[979] expected=0xbc
+# PASS echo stop bit high
+# PASS T05 byte[980] expected=0x09
+# PASS echo stop bit high
+# PASS T05 byte[981] expected=0x12
+# PASS echo stop bit high
+# PASS T05 byte[982] expected=0x24
+# PASS echo stop bit high
+# PASS T05 byte[983] expected=0x48
+# PASS echo stop bit high
+# PASS T05 byte[984] expected=0x90
+# PASS echo stop bit high
+# PASS T05 byte[985] expected=0x51
+# PASS echo stop bit high
+# PASS T05 byte[986] expected=0xa2
+# PASS echo stop bit high
+# PASS T05 byte[987] expected=0x35
+# PASS echo stop bit high
+# PASS T05 byte[988] expected=0x6a
+# PASS echo stop bit high
+# PASS T05 byte[989] expected=0xd4
+# PASS echo stop bit high
+# PASS T05 byte[990] expected=0xd9
+# PASS echo stop bit high
+# PASS T05 byte[991] expected=0xc3
+# PASS echo stop bit high
+# PASS T05 byte[992] expected=0xf7
+# PASS echo stop bit high
+# PASS T05 byte[993] expected=0x9f
+# PASS echo stop bit high
+# PASS T05 byte[994] expected=0x4f
+# PASS echo stop bit high
+# PASS T05 byte[995] expected=0x9e
+# PASS echo stop bit high
+# PASS T05 byte[996] expected=0x4d
+# PASS echo stop bit high
+# PASS T05 byte[997] expected=0x9a
+# PASS echo stop bit high
+# PASS T05 byte[998] expected=0x45
+# PASS echo stop bit high
+# PASS T05 byte[999] expected=0x8a
+# PASS echo stop bit high
+# PASS T05 byte[1000] expected=0x65
+# PASS echo stop bit high
+# PASS T05 byte[1001] expected=0xca
+# PASS echo stop bit high
+# PASS T05 byte[1002] expected=0xe5
+# PASS echo stop bit high
+# PASS T05 byte[1003] expected=0xbb
+# PASS echo stop bit high
+# PASS T05 byte[1004] expected=0x07
+# PASS echo stop bit high
+# PASS T05 byte[1005] expected=0x0e
+# PASS echo stop bit high
+# PASS T05 byte[1006] expected=0x1c
+# PASS echo stop bit high
+# PASS T05 byte[1007] expected=0x38
+# PASS echo stop bit high
+# PASS T05 byte[1008] expected=0x70
+# PASS echo stop bit high
+# PASS T05 byte[1009] expected=0xe0
+# PASS echo stop bit high
+# PASS T05 byte[1010] expected=0xb1
+# PASS echo stop bit high
+# PASS T05 byte[1011] expected=0x13
+# PASS echo stop bit high
+# PASS T05 byte[1012] expected=0x26
+# PASS echo stop bit high
+# PASS T05 byte[1013] expected=0x4c
+# PASS echo stop bit high
+# PASS T05 byte[1014] expected=0x98
+# PASS echo stop bit high
+# PASS T05 byte[1015] expected=0x41
+# PASS echo stop bit high
+# PASS T05 byte[1016] expected=0x82
+# PASS echo stop bit high
+# PASS T05 byte[1017] expected=0x75
+# PASS echo stop bit high
+# PASS T05 byte[1018] expected=0xea
+# PASS echo stop bit high
+# PASS T05 byte[1019] expected=0xa5
+# PASS echo stop bit high
+# PASS T05 byte[1020] expected=0x3b
+# PASS echo stop bit high
+# PASS T05 byte[1021] expected=0x76
+# PASS echo stop bit high
+# PASS T05 byte[1022] expected=0xec
+# PASS echo stop bit high
+# PASS T05 byte[1023] expected=0xa9
+# PASS tb_uart_loopback: all tests passed
+# ** Note: $finish    : integration/tb_uart_loopback.sv(267)
+#    Time: 3284975 ns  Iteration: 1  Instance: /tb_uart_loopback
+# End time: 17:15:01 on Jun 10,2026, Elapsed time: 0:00:02
+# Errors: 0, Warnings: 0

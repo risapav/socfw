@@ -1,0 +1,1 @@
+Info (10281): Verilog HDL Declaration information at soc_top.sv(9): object "RESET_N" differs only in case from object "reset_n" in the same scope File: /home/palo/Projekty/socfw/examples/uart_test_02/build/rtl/soc_top.sv Line: 9

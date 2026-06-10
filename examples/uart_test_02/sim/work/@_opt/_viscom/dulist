@@ -1,0 +1,13 @@
+1 8 uart_pkg 4 fast 56 /home/palo/Projekty/socfw/examples/uart_test_02/sim/work 0 0 0 0 96 0
+1 12 uart_sv_unit 4 fast 56 /home/palo/Projekty/socfw/examples/uart_test_02/sim/work 0 0 0 0 0 0
+1 20 uart_core_tx_sv_unit 4 fast 56 /home/palo/Projekty/socfw/examples/uart_test_02/sim/work 0 0 0 0 0 0
+1 20 uart_core_rx_sv_unit 4 fast 56 /home/palo/Projekty/socfw/examples/uart_test_02/sim/work 0 0 0 0 0 0
+1 13 uart_baud_gen 4 fast 56 /home/palo/Projekty/socfw/examples/uart_test_02/sim/work 0 0 0 0 126 0
+1 12 uart_core_tx 4 fast 56 /home/palo/Projekty/socfw/examples/uart_test_02/sim/work 0 0 0 0 284 0
+1 12 uart_core_rx 4 fast 56 /home/palo/Projekty/socfw/examples/uart_test_02/sim/work 0 0 0 0 438 0
+1 4 uart 4 fast 56 /home/palo/Projekty/socfw/examples/uart_test_02/sim/work 0 0 0 0 1174 0
+1 4 uart 7 fast__1 56 /home/palo/Projekty/socfw/examples/uart_test_02/sim/work 0 0 0 0 1174 0
+1 4 uart 7 fast__2 56 /home/palo/Projekty/socfw/examples/uart_test_02/sim/work 0 0 0 0 1174 0
+1 4 uart 7 fast__3 56 /home/palo/Projekty/socfw/examples/uart_test_02/sim/work 0 0 0 0 1174 0
+1 4 uart 7 fast__4 56 /home/palo/Projekty/socfw/examples/uart_test_02/sim/work 0 0 0 0 1174 0
+1 15 tb_uart_core_tx 4 fast 56 /home/palo/Projekty/socfw/examples/uart_test_02/sim/work 0 0 131072 0 6820 0

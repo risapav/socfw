@@ -1,0 +1,448 @@
+m255
+K4
+z2
+Z0 !s12c _opt2
+Z1 !s99 nomlopt
+Z2 !s12c _opt1
+R1
+Z3 !s12c _opt
+R1
+R0
+R1
+R2
+R1
+R3
+R1
+R0
+R1
+R2
+R1
+R3
+R1
+R0
+R1
+R2
+R1
+R3
+R1
+R0
+R1
+R2
+R1
+R3
+R1
+R2
+R1
+R3
+R1
+R2
+R1
+R3
+R1
+R0
+R1
+R2
+R1
+R3
+R1
+!s11f MIXED_VERSIONS
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z4 d/home/palo/Projekty/socfw/examples/uart_test_02/sim
+T_opt
+!i145 1
+!i144 0
+Z5 !s110 1781104497
+VRA>Cf49XUBzzP]j9ZafHU0
+04 15 4 work tb_uart_core_tx fast 0
+=1-268362406f4d-6a297f71-2089c-30eaa
+R1
+Z6 !s12f OEM100
+Z7 !s12b OEM100
+Z8 !s124 OEM10U26 
+Z9 !s135 nogc
+Z10 o-quiet -auto_acc_if_foreign -work work
+Z11 tCvgOpt 0
+n@_opt
+Z12 OL;O;2025.2;82
+R4
+T_opt1
+!i145 1
+!i144 0
+!s110 1781104498
+Vd4dMfd^k4LE3AdR6bz@Xe1
+04 15 4 work tb_uart_core_rx fast 0
+=1-268362406f4d-6a297f72-83d7a-30ef2
+R1
+R6
+R7
+R8
+R9
+R10
+R11
+n@_opt1
+R12
+R4
+T_opt2
+!i145 1
+!i144 0
+!s110 1781104500
+Vf2aAJo;gb^Jdg^YF<<gB:0
+04 16 4 work tb_uart_loopback fast 0
+=1-268362406f4d-6a297f73-d6361-30f3a
+R1
+R6
+R7
+!s124 OEM10U7 
+R9
+R10
+R11
+n@_opt2
+R12
+vtb_uart_baud_gen
+2../rtl/uart/uart_baud_gen.sv|unit/tb_uart_baud_gen.sv
+Z13 DXx6 sv_std 3 std 0 22 @5XbY]_OacJl=`ToSm<M^0
+!s110 1781104495
+!i10b 1
+!s100 lg>Bn:kW7ZJ7aS@mf6TZX1
+I2RnK5^6>R?m<iCS>W8:770
+S1
+R4
+w1781104465
+8unit/tb_uart_baud_gen.sv
+Funit/tb_uart_baud_gen.sv
+!i122 30
+L0 15 158
+Z14 VDg1SIo80bB@j0V0VzS_@n1
+Z15 OL;L;2025.2;82
+r1
+!s85 0
+31
+!s108 1781104495.000000
+!s107 unit/tb_uart_baud_gen.sv|../rtl/uart/uart_baud_gen.sv|
+!s90 -sv|-suppress|2892|../rtl/uart/uart_baud_gen.sv|unit/tb_uart_baud_gen.sv|
+!i113 0
+Z16 o-suppress 2892 -sv -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R11
+vtb_uart_core_rx
+2../rtl/uart/uart_pkg.sv|../rtl/uart/uart_baud_gen.sv|../rtl/uart/uart_core_rx.sv|../rtl/uart/uart_core_tx.sv|../rtl/uart/uart.sv|unit/tb_uart_core_rx.sv
+R13
+Z17 DXx4 work 8 uart_pkg 0 22 iVDRgBPZbbA=T;2lo_aTC2
+R5
+!i10b 1
+!s100 3OD:fKCB1>g@MAfL[ZKJb3
+IQ>2OSE3MU:Nz@zZ@^`68e0
+S1
+R4
+w1781104194
+8unit/tb_uart_core_rx.sv
+Funit/tb_uart_core_rx.sv
+!i122 32
+L0 26 604
+R14
+R15
+r1
+!s85 0
+31
+!s108 1781104497.000000
+!s107 unit/tb_uart_core_rx.sv|../rtl/uart/uart.sv|../rtl/uart/uart_core_tx.sv|../rtl/uart/uart_core_rx.sv|../rtl/uart/uart_baud_gen.sv|../rtl/uart/uart_pkg.sv|
+!s90 -sv|-suppress|2892|../rtl/uart/uart_pkg.sv|../rtl/uart/uart_baud_gen.sv|../rtl/uart/uart_core_rx.sv|../rtl/uart/uart_core_tx.sv|../rtl/uart/uart.sv|unit/tb_uart_core_rx.sv|
+!i113 0
+R16
+R11
+vtb_uart_core_tx
+2../rtl/uart/uart_pkg.sv|../rtl/uart/uart_baud_gen.sv|../rtl/uart/uart_core_rx.sv|../rtl/uart/uart_core_tx.sv|../rtl/uart/uart.sv|unit/tb_uart_core_tx.sv
+R13
+R17
+!s110 1781104496
+!i10b 1
+!s100 9?Jo;WN?ST^Q]H;OEl8Zn1
+IzMg`Z^LNUfeDNz^8^d7UR1
+S1
+R4
+w1781104134
+8unit/tb_uart_core_tx.sv
+Funit/tb_uart_core_tx.sv
+!i122 31
+L0 22 494
+R14
+R15
+r1
+!s85 0
+31
+!s108 1781104496.000000
+!s107 unit/tb_uart_core_tx.sv|../rtl/uart/uart.sv|../rtl/uart/uart_core_tx.sv|../rtl/uart/uart_core_rx.sv|../rtl/uart/uart_baud_gen.sv|../rtl/uart/uart_pkg.sv|
+!s90 -sv|-suppress|2892|../rtl/uart/uart_pkg.sv|../rtl/uart/uart_baud_gen.sv|../rtl/uart/uart_core_rx.sv|../rtl/uart/uart_core_tx.sv|../rtl/uart/uart.sv|unit/tb_uart_core_tx.sv|
+!i113 0
+R16
+R11
+vtb_uart_loopback
+Z18 2../rtl/uart/uart_pkg.sv|../rtl/uart/uart_baud_gen.sv|../rtl/uart/uart_core_rx.sv|../rtl/uart/uart_core_tx.sv|../rtl/uart/uart.sv|../rtl/uart_stream_loopback_status.sv|integration/tb_uart_loopback.sv
+R13
+R17
+Z19 !s110 1781104499
+!i10b 1
+!s100 z0IL>WJCAa;_mKDll4:Ai0
+I_;DFk>XO=`]eT^jeOOcl72
+S1
+R4
+w1781104236
+8integration/tb_uart_loopback.sv
+Fintegration/tb_uart_loopback.sv
+!i122 33
+L0 17 261
+R14
+R15
+r1
+!s85 0
+31
+Z20 !s108 1781104499.000000
+Z21 !s107 integration/tb_uart_loopback.sv|../rtl/uart_stream_loopback_status.sv|../rtl/uart/uart.sv|../rtl/uart/uart_core_tx.sv|../rtl/uart/uart_core_rx.sv|../rtl/uart/uart_baud_gen.sv|../rtl/uart/uart_pkg.sv|
+Z22 !s90 -sv|-suppress|2892|../rtl/uart/uart_pkg.sv|../rtl/uart/uart_baud_gen.sv|../rtl/uart/uart_core_rx.sv|../rtl/uart/uart_core_tx.sv|../rtl/uart/uart.sv|../rtl/uart_stream_loopback_status.sv|integration/tb_uart_loopback.sv|
+!i113 0
+R16
+R11
+vuart
+R18
+R13
+R17
+DXx4 work 12 uart_sv_unit 0 22 j8l39jnfCk=Q>OA2YiEf60
+R19
+R14
+r1
+!s85 0
+!i10b 1
+!s100 IU=zo[Kk?ogI2;OE;VF@31
+I1>^6Iif_d8Q>VnibCS6EZ0
+!s105 uart_sv_unit
+S1
+R4
+Z23 w1781104032
+Z24 8../rtl/uart/uart.sv
+Z25 F../rtl/uart/uart.sv
+!i122 33
+L0 26 144
+R15
+31
+R20
+R21
+R22
+!i113 0
+R16
+R11
+vuart_baud_gen
+R18
+R13
+R19
+!i10b 1
+!s100 e[KW;QFzniCHn[NSjEhW?3
+I1fmenBT4CaFL96R7FW?KC0
+S1
+R4
+w1781098823
+8../rtl/uart/uart_baud_gen.sv
+F../rtl/uart/uart_baud_gen.sv
+!i122 33
+L0 24 55
+R14
+R15
+r1
+!s85 0
+31
+R20
+R21
+R22
+!i113 0
+R16
+R11
+vuart_core_rx
+R18
+R13
+R17
+DXx4 work 20 uart_core_rx_sv_unit 0 22 `HmCMPO`DLgo>aIm1KZGK3
+R19
+R14
+r1
+!s85 0
+!i10b 1
+!s100 @5>Y^fjAzTX4GA8Bk[94h3
+I?<VP4mVL2RBT:V8;zZ2ZZ0
+!s105 uart_core_rx_sv_unit
+S1
+R4
+Z26 w1781103991
+Z27 8../rtl/uart/uart_core_rx.sv
+Z28 F../rtl/uart/uart_core_rx.sv
+!i122 33
+L0 29 226
+R15
+31
+R20
+R21
+R22
+!i113 0
+R16
+R11
+Xuart_core_rx_sv_unit
+R18
+R13
+R17
+R19
+V`HmCMPO`DLgo>aIm1KZGK3
+r1
+!s85 0
+!i10b 1
+!s100 iAhd0BQF]Oj0D_D9z5NBK1
+I`HmCMPO`DLgo>aIm1KZGK3
+!i103 1
+S1
+R4
+R26
+R27
+R28
+!i122 33
+L0 27 0
+R15
+31
+R20
+R21
+R22
+!i113 0
+R16
+R11
+vuart_core_tx
+R18
+R13
+R17
+DXx4 work 20 uart_core_tx_sv_unit 0 22 dbkmaMDz1GLB>OD0B6[Ll3
+R19
+R14
+r1
+!s85 0
+!i10b 1
+!s100 F:2RX?nOQn?b7d=PE8`M61
+IAK?c9HjcM2Mnl@GBQ9?@R3
+!s105 uart_core_tx_sv_unit
+S1
+R4
+Z29 w1781103977
+Z30 8../rtl/uart/uart_core_tx.sv
+Z31 F../rtl/uart/uart_core_tx.sv
+!i122 33
+L0 25 168
+R15
+31
+R20
+R21
+R22
+!i113 0
+R16
+R11
+Xuart_core_tx_sv_unit
+R18
+R13
+R17
+R19
+VdbkmaMDz1GLB>OD0B6[Ll3
+r1
+!s85 0
+!i10b 1
+!s100 RAAfWc4UXZGO683UebRb>1
+IdbkmaMDz1GLB>OD0B6[Ll3
+!i103 1
+S1
+R4
+R29
+R30
+R31
+!i122 33
+L0 23 0
+R15
+31
+R20
+R21
+R22
+!i113 0
+R16
+R11
+Xuart_pkg
+R18
+R13
+R19
+!i10b 1
+!s100 VPnL10Q2N=35XdLFTn>5Q2
+IiVDRgBPZbbA=T;2lo_aTC2
+S1
+R4
+w1781104047
+8../rtl/uart/uart_pkg.sv
+F../rtl/uart/uart_pkg.sv
+!i122 33
+L0 16 0
+ViVDRgBPZbbA=T;2lo_aTC2
+R15
+r1
+!s85 0
+31
+R20
+R21
+R22
+!i113 0
+R16
+R11
+vuart_stream_loopback_status
+R18
+R13
+R19
+!i10b 1
+!s100 <dk<JUz]^fJlYdQ5?_XhS1
+INKf^?6XYP<<Ve?h5;3<EU0
+S1
+R4
+w1781098828
+8../rtl/uart_stream_loopback_status.sv
+F../rtl/uart_stream_loopback_status.sv
+!i122 33
+L0 29 110
+R14
+R15
+r1
+!s85 0
+31
+R20
+R21
+R22
+!i113 0
+R16
+R11
+Xuart_sv_unit
+R18
+R13
+R17
+R19
+Vj8l39jnfCk=Q>OA2YiEf60
+r1
+!s85 0
+!i10b 1
+!s100 oCIc2Jk9A`hQWhbb^d4MH2
+Ij8l39jnfCk=Q>OA2YiEf60
+!i103 1
+S1
+R4
+R23
+R24
+R25
+!i122 33
+L0 24 0
+R15
+31
+R20
+R21
+R22
+!i113 0
+R16
+R11
