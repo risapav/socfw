@@ -3,6 +3,7 @@
  * @brief   Generic synchronous FIFO with AXI-Stream-compatible ports.
  * @param   DATA_WIDTH  Width of each entry in bits (default 8).
  * @param   DEPTH       FIFO capacity in entries; must be a power of 2.
+ * @param   RAM_STYLE   Quartus ramstyle hint: "logic", "M9K", "MLAB", or "AUTO" (default "logic").
  * @details
  *  Write port is an AXI-Stream slave (wr_valid_i / wr_ready_o).
  *  Read port is an AXI-Stream master with held-valid semantics:
@@ -26,8 +27,9 @@
 `default_nettype none
 
 module sync_fifo #(
-  parameter int DATA_WIDTH = 8,
-  parameter int DEPTH      = 64
+  parameter int    DATA_WIDTH = 8,
+  parameter int    DEPTH      = 64,
+  parameter string RAM_STYLE  = "logic"
 )(
   input  wire clk,
   input  wire rstn,
@@ -63,7 +65,7 @@ module sync_fifo #(
   end
   // synthesis translate_on
 
-  logic [DATA_WIDTH-1:0] mem_q [DEPTH];
+  (* ramstyle = RAM_STYLE *) logic [DATA_WIDTH-1:0] mem_q [DEPTH];
   logic [PTR_W-1:0]      head_q;
   logic [PTR_W-1:0]      tail_q;
   logic [LVL_W-1:0]      level_q;

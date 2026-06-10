@@ -20,7 +20,7 @@ UART_BAUD ?= 115200
 HW_COUNT  ?= 256
 
 .PHONY: sim sim-unit sim-integration sim-regression sim-clean
-.PHONY: hw-test hw-test-quick
+.PHONY: hw-test hw-test-quick hw-sweep
 
 # -----------------------------------------------------------------------------
 # Simulation
@@ -54,6 +54,12 @@ hw-test-quick:
 	@echo "[HW] UART FIFO loopback quick test -- $(UART_PORT) @ $(UART_BAUD) baud"
 	python3 tools/test_loopback.py \
 	    --port $(UART_PORT) --baud $(UART_BAUD) --count 8 --verbose
+
+hw-sweep:
+	@echo "[HW] UART FIFO sweep test -- cs=1,8,16,24,25,26,32 x5 -- $(UART_PORT)"
+	python3 tools/test_loopback.py \
+	    --port $(UART_PORT) --baud $(UART_BAUD) --count $(HW_COUNT) \
+	    --sweep-chunks 1,8,16,24,25,26,32 --repeat 5
 
 # -----------------------------------------------------------------------------
 # Help
