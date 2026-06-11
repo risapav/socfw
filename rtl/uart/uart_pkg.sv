@@ -54,6 +54,8 @@ package uart_pkg;
 
   // ============================================================================
   // REGISTER OFFSETS (AXI-Lite)
+  //   ABI pripravene pre buduci uart_axil.sv wrapper.
+  //   Aktualny uart.sv wrapper AXI-Lite registre nema.
   // ============================================================================
   localparam logic [7:0] UART_REG_ID      = 8'h00;
   localparam logic [7:0] UART_REG_BAUD    = 8'h04;
@@ -71,9 +73,7 @@ package uart_pkg;
     UART_START,
     UART_DATA,
     UART_PARITY,
-    UART_STOP,
-    UART_POSTSTOP,
-    UART_VALIDATE   // RX-only, TX ho nepoužíva
+    UART_STOP
   } uart_state_e;
 
   // ----------------------------

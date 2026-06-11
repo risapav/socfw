@@ -1,6 +1,6 @@
 /**
- * @file    uart.sv
- * @brief   UART wrapper -- RX + TX cores with independent baud generators
+ * @file    uart_os.sv
+ * @brief   UART wrapper with 16x oversampled RX and standard TX.
  * @param   CLK_FREQ_HZ  System clock frequency in Hz (default 125 MHz).
  * @param   BAUD_RATE    Desired baud rate (default 115200).
  * @param   DATA_WIDTH   Data width; must be 8.
@@ -8,22 +8,27 @@
  * @param   PARITY       2'b00 none, 2'b01 odd, 2'b10 even.
  * @param   DBITS        2'b00=8, 2'b01=7, 2'b10=6, 2'b11=5 data bits.
  * @details
- *  PRESCALE_VALUE is computed with rounding to minimise baud rate error:
- *    PRESCALE = (CLK_FREQ_HZ + BAUD_RATE/2) / BAUD_RATE
- *  At 125 MHz / 115200: PRESCALE = 1085, error = +0.006 %.
+ *  Drop-in replacement for uart.sv.  RX path uses uart_core_rx_os (16x
+ *  oversampled) instead of uart_core_rx (1x sampler).
  *
- *  RX output is a true AXI-Stream source (held valid, see uart_core_rx).
- *  TX input is a ready/valid handshake -- ready_o is high only when idle.
+ *  RX baud generator runs at 16x baud rate:
+ *    PRESCALE_OS = floor(CLK_FREQ_HZ / (BAUD_RATE * 16))
+ *  At 125 MHz / 115200: PRESCALE_OS = 67, error = -1.2% (FPGA runs faster).
+ *  Floor (not round) is critical: FPGA must be faster than the sender so the
+ *  DUT returns to IDLE between back-to-back bytes and pending_start_q does
+ *  not accumulate per-frame phase drift.
+ *
+ *  TX path is unchanged from uart.sv.
  */
 
-`ifndef UART_SV
-`define UART_SV
+`ifndef UART_OS_SV
+`define UART_OS_SV
 
 `default_nettype none
 
 import uart_pkg::*;
 
-module uart #(
+module uart_os #(
   parameter int          CLK_FREQ_HZ = 125_000_000,
   parameter int          BAUD_RATE   = 115_200,
   parameter int          DATA_WIDTH  = 8,
@@ -60,20 +65,22 @@ module uart #(
   output wire parity_err_o
 );
 
-  // Rounded baud divisor: nearest integer to CLK_FREQ_HZ / BAUD_RATE
-  localparam int PRESCALE_VALUE =
-    (CLK_FREQ_HZ + BAUD_RATE / 2) / BAUD_RATE;
-  localparam int PRESCALE_WIDTH = $clog2(PRESCALE_VALUE + 1);
+  // TX: 1x baud divisor (rounded)
+  localparam int PRESCALE_TX    = (CLK_FREQ_HZ + BAUD_RATE / 2) / BAUD_RATE;
+  // RX: 16x baud divisor (floor — FPGA must run faster to avoid phase accumulation)
+  localparam int PRESCALE_RX_OS = CLK_FREQ_HZ / (BAUD_RATE * 16);
+  localparam int PRESCALE_TX_W  = $clog2(PRESCALE_TX + 1);
+  localparam int PRESCALE_OS_W  = $clog2(PRESCALE_RX_OS + 1);
 
+  // synthesis translate_off
   initial begin
     assert(CLK_FREQ_HZ > 0);
     assert(BAUD_RATE > 0);
-    assert(PRESCALE_VALUE >= 8);
+    assert(PRESCALE_TX    >= 8);
+    assert(PRESCALE_RX_OS >= 2);
     assert(DATA_WIDTH == 8);
   end
-
-  wire [PRESCALE_WIDTH-1:0] prescale_w;
-  assign prescale_w = PRESCALE_WIDTH'(PRESCALE_VALUE);
+  // synthesis translate_on
 
   uart_conf_t cfg_w;
   assign cfg_w.reserved = '0;
@@ -82,43 +89,43 @@ module uart #(
   assign cfg_w.dbits    = DBITS;
 
   // ------------------------------------------------------------------
-  // TX baud generator
+  // TX baud generator (1x)
   // ------------------------------------------------------------------
   wire tx_end_tick_w;
   wire tx_start_pulse_w;
   uart_status_t tx_status_w;
 
   uart_baud_gen #(
-    .PRESCALE_WIDTH (PRESCALE_WIDTH)
+    .PRESCALE_WIDTH (PRESCALE_TX_W)
   ) u_tx_baud (
     .clk         (clk),
     .rstn        (rstn),
     .start_i     (tx_start_pulse_w),
     .enable_i    (tx_status_w.tx_busy),
-    .prescale_i  (prescale_w),
+    .prescale_i  (PRESCALE_TX_W'(PRESCALE_TX)),
     .start_tick_o(),
     .half_tick_o (),
     .end_tick_o  (tx_end_tick_w)
   );
 
   // ------------------------------------------------------------------
-  // RX baud generator
+  // RX baud generator (16x OS)
   // ------------------------------------------------------------------
-  wire rx_half_tick_w, rx_end_tick_w;
+  wire os_tick_w;
   wire rx_start_pulse_w;
   uart_status_t rx_status_w;
 
   uart_baud_gen #(
-    .PRESCALE_WIDTH (PRESCALE_WIDTH)
+    .PRESCALE_WIDTH (PRESCALE_OS_W)
   ) u_rx_baud (
     .clk         (clk),
     .rstn        (rstn),
     .start_i     (rx_start_pulse_w),
     .enable_i    (rx_status_w.rx_busy),
-    .prescale_i  (prescale_w),
+    .prescale_i  (PRESCALE_OS_W'(PRESCALE_RX_OS)),
     .start_tick_o(),
-    .half_tick_o (rx_half_tick_w),
-    .end_tick_o  (rx_end_tick_w)
+    .half_tick_o (),
+    .end_tick_o  (os_tick_w)
   );
 
   // ------------------------------------------------------------------
@@ -127,37 +134,36 @@ module uart #(
   uart_core_tx #(
     .DATA_WIDTH (DATA_WIDTH)
   ) u_tx (
-    .clk             (clk),
-    .rstn            (rstn),
-    .end_tick_i      (tx_end_tick_w),
-    .cfg_i           (cfg_w),
-    .data_i          (tx_data_i),
-    .valid_i         (tx_valid_i),
-    .ready_o         (tx_ready_o),
-    .txd_o           (tx_o),
-    .status_o        (tx_status_w),
-    .tx_done_pulse_o (tx_done_o),
-    .tx_start_pulse_o(tx_start_pulse_w)
+    .clk              (clk),
+    .rstn             (rstn),
+    .end_tick_i       (tx_end_tick_w),
+    .cfg_i            (cfg_w),
+    .data_i           (tx_data_i),
+    .valid_i          (tx_valid_i),
+    .ready_o          (tx_ready_o),
+    .txd_o            (tx_o),
+    .status_o         (tx_status_w),
+    .tx_done_pulse_o  (tx_done_o),
+    .tx_start_pulse_o (tx_start_pulse_w)
   );
 
   // ------------------------------------------------------------------
-  // RX core
+  // RX core (16x oversampled)
   // ------------------------------------------------------------------
-  uart_core_rx #(
+  uart_core_rx_os #(
     .DATA_WIDTH (DATA_WIDTH)
   ) u_rx (
-    .clk             (clk),
-    .rstn            (rstn),
-    .rxd_i           (rx_i),
-    .half_tick_i     (rx_half_tick_w),
-    .end_tick_i      (rx_end_tick_w),
-    .cfg_i           (cfg_w),
-    .data_o          (rx_data_o),
-    .valid_o         (rx_valid_o),
-    .ready_i         (rx_ready_i),
-    .status_o        (rx_status_w),
-    .rx_start_pulse_o(rx_start_pulse_w),
-    .err_clear_i     (err_clear_i)
+    .clk              (clk),
+    .rstn             (rstn),
+    .rxd_i            (rx_i),
+    .os_tick_i        (os_tick_w),
+    .cfg_i            (cfg_w),
+    .data_o           (rx_data_o),
+    .valid_o          (rx_valid_o),
+    .ready_i          (rx_ready_i),
+    .status_o         (rx_status_w),
+    .rx_start_pulse_o (rx_start_pulse_w),
+    .err_clear_i      (err_clear_i)
   );
 
   assign tx_busy_o     = tx_status_w.tx_busy;
@@ -170,4 +176,4 @@ endmodule
 
 `default_nettype wire
 
-`endif // UART_SV
+`endif // UART_OS_SV
