@@ -78,7 +78,7 @@ eth_rx_clk (125 MHz z PHY, async)
 - [x] TB (`tb_xfcp_test_05_top.sv`): BAUD_DIV 16→32 (PRESCALE_RX_OS>=2), param na UART_BAUD_RATE
 - [x] Simulácia regression PASSED 12/12 (2026-06-11)
 
-**Stav Faza D:** UZAVRETA (2026-06-11) — sim PASS, HW test pending
+**Stav Faza D:** UZAVRETA (2026-06-11) — sim PASS, HW 21/21 PASS
 
 ### Faza C — Python tools [UZAVRETA 2026-06-09]
 - [x] `tools/main.py` — dual-transport menu (UART + UDP, transport switch pri beh)
@@ -134,9 +134,12 @@ Paket format:
 - 7/7 slotov × 3 opakovania: PASS (SYSC, UART, OUT_, OUT_, OUT_, SEG7, DIAG)
 - DIAG snapshot: rx_sop=23, rx_hdr=23, fab_req=23, fab_resp=22, tx_pkt=22
 - Chybove registre: 0 (rx_lost=0, rx_frame=0, rx_overrun=0, rx_bad_hdr=0, rx_drop=0)
-### Faza D (2026-06-11) — uart_lib_v1_0 integrácia
+### Faza D (2026-06-11) — uart_lib_v1_0 integrácia + timing fixes
 - uart_fifo_os (16x OS, FIFO=64) nahradzuje axis_uart_rx+xfcp_fifo(8)
-- sim regression PASSED 12/12 (arbiter 19 + udp_server 27 + integration 12)
-- HW test: pending (Quartus recompile potrebny)
+- 2x pipeline register: arb_s0 (UART→arbiter) + dec_sel_r (header_fifo→wdata_sel)
+- WNS -2.459 ns → -2.099 ns (85°C slow); Fmax 99.02 MHz
+- sim regression PASSED 12/12
+- HW UART test 21/21 PASS (root cause potvrdený: non-OS RX)
+- DIAG: rx_lost=0, rx_frame=0, rx_overrun=0, rx_bad_hdr=0
 
-- **PROJEKT UZAVRETY — A/B/C PASS; D sim PASS, HW pending**
+- **PROJEKT UZAVRETY — A/B/C/D PASS**
