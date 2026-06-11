@@ -36,7 +36,7 @@ module axis_uart_rx #(
   input  var uart_conf_t   cfg_i,
 
   // Status rozhranie
-  output uart_status_t status_o,
+  output uart_core_status_t status_o,
 
   input  wire         err_clear_i // resetovanie poruch komunikacie
 );
@@ -49,7 +49,7 @@ module axis_uart_rx #(
   logic         core_valid;
   logic [DATA_WIDTH-1:0]   core_data;
 
-  uart_status_t core_status;
+  uart_core_status_t core_status;
 
   // Prepojenie statusu smerom von
   assign status_o = core_status;

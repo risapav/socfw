@@ -33,7 +33,7 @@ module axis_uart_tx #(
   input  var uart_conf_t   cfg_i,
 
   // Status rozhranie
-  output uart_status_t status_o,
+  output uart_core_status_t status_o,
 
   // Udalosti (Pulzy)
   output logic         tx_done_pulse_o // 🔴 Pulz generovaný po dokončení vysielania
@@ -43,7 +43,7 @@ module axis_uart_tx #(
   logic         tx_s_tick, tx_h_tick, tx_e_tick;
   logic         tx_start_pulse;
 
-  uart_status_t core_status;
+  uart_core_status_t core_status;
 
   // Prepojenie statusu smerom von
   assign status_o = core_status;

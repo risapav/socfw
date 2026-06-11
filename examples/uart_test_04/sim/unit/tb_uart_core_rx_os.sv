@@ -49,7 +49,7 @@ module tb_uart_core_rx_os;
   uart_conf_t cfg;
   wire [7:0]       rx_data;
   wire             rx_valid;
-  uart_status_t    rx_status;
+  uart_core_status_t    rx_status;
   wire             rx_start_pulse;
 
   initial begin

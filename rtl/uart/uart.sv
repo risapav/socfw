@@ -86,7 +86,7 @@ module uart #(
   // ------------------------------------------------------------------
   wire tx_end_tick_w;
   wire tx_start_pulse_w;
-  uart_status_t tx_status_w;
+  uart_core_status_t tx_status_w;
 
   uart_baud_gen #(
     .PRESCALE_WIDTH (PRESCALE_WIDTH)
@@ -106,7 +106,7 @@ module uart #(
   // ------------------------------------------------------------------
   wire rx_half_tick_w, rx_end_tick_w;
   wire rx_start_pulse_w;
-  uart_status_t rx_status_w;
+  uart_core_status_t rx_status_w;
 
   uart_baud_gen #(
     .PRESCALE_WIDTH (PRESCALE_WIDTH)

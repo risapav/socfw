@@ -7,6 +7,9 @@
 //   T04  RX_DATA read pops FIFO: read 0x55, verify valid=1, verify FIFO empty after
 //   T05  IRQ: enable rx_not_empty, send byte, verify irq_o goes high, clear IRQ_STATUS
 //   T06  TX full write: fill TX FIFO, write one more, verify ERROR_STATUS[3] + IRQ_STATUS[5]
+//   T07  WSTRB[0]=0: TX_DATA write with WSTRB=4'hE must not push byte to TX FIFO
+//   T08  RX_DATA read when FIFO empty: valid=0, no side effect
+//   T09  FIFO_LEVEL: write 3 bytes, verify tx_level=3, read them back, verify rx_level
 //
 // Sim parameters: SIM_CLK=1_600_000, SIM_BAUD=12_500
 //   PRESCALE_TX    = round(1_600_000 / 12_500) = 128  (1x)
@@ -95,6 +98,25 @@ module tb_uart_axil;
   // AXI-Lite master tasks
   // =========================================================================
   logic [31:0] rd_data;
+
+  task automatic axil_write_strb(input [7:0] addr, input [31:0] data, input [3:0] strb);
+    @(posedge clk_i);
+    m_awaddr  = addr;
+    m_awvalid = 1'b1;
+    m_wdata   = data;
+    m_wstrb   = strb;
+    m_wvalid  = 1'b1;
+    m_bready  = 1'b1;
+    while (!axil_bus.AWREADY) @(posedge clk_i);
+    @(posedge clk_i);
+    m_awvalid = 1'b0;
+    while (!axil_bus.WREADY) @(posedge clk_i);
+    m_wvalid  = 1'b0;
+    while (!axil_bus.BVALID) @(posedge clk_i);
+    @(posedge clk_i);
+    m_bready  = 1'b0;
+    @(posedge clk_i);
+  endtask
 
   task automatic axil_write(input [7:0] addr, input [31:0] data);
     @(posedge clk_i);
@@ -316,6 +338,88 @@ module tb_uart_axil;
     check("T06 IRQ_STATUS[5] cleared by ERROR W1C", !rd_data[5]);
 
     check("T06 irq_o deasserted", !irq_w);
+
+    // ------------------------------------------------------------------
+    // T07: WSTRB[0]=0 -- TX_DATA write must be silently ignored
+    // ------------------------------------------------------------------
+    // Drain ERROR_STATUS/IRQ_ENABLE state from T06
+    axil_write(8'h24, 32'h00);  // IRQ_ENABLE = 0
+    axil_write(8'h2C, 32'h0F);  // clear all ERROR bits
+
+    // Wait for TX FIFO empty AND TX core idle (all T06 bytes still in flight)
+    begin : blk_t07_drain_tx
+      automatic int t = 0;
+      do begin
+        axil_read(8'h14, rd_data);
+        t++;
+      end while ((!rd_data[2] || rd_data[0]) && t < (FIFO_DEPTH + 2) * FRAME_CLKS);
+    end
+    // Allow last loopback byte to fully arrive at RX FIFO
+    repeat(FRAME_CLKS) @(posedge clk_i);
+    // Drain RX FIFO (loopback bytes from T06)
+    begin : blk_t07_drain_rx
+      automatic logic [31:0] dummy;
+      axil_read(8'h14, rd_data);
+      while (rd_data[6]) begin
+        axil_read(8'h1C, dummy);
+        axil_read(8'h14, rd_data);
+      end
+    end
+
+    // Write TX_DATA with WSTRB=4'hE (bit 0 = 0) -> should NOT push byte
+    axil_write_strb(8'h20, 32'hBB, 4'hE);
+    repeat(2) @(posedge clk_i);
+
+    // STATUS: tx_fifo_empty must still be 1 (no byte was pushed)
+    axil_read(8'h14, rd_data);
+    check("T07 tx_fifo_empty after WSTRB[0]=0 write", rd_data[2]);
+
+    // ERROR_STATUS must not have tx_write_full set
+    axil_read(8'h2C, rd_data);
+    check("T07 ERROR_STATUS clear after WSTRB[0]=0", !rd_data[3]);
+
+    // ------------------------------------------------------------------
+    // T08: RX_DATA read when RX FIFO empty -> valid=0
+    // ------------------------------------------------------------------
+    // Verify FIFO is empty (T07 drained nothing from TX, no loopback yet)
+    axil_read(8'h14, rd_data);
+    check("T08 rx_fifo_empty before read", rd_data[4]);
+
+    axil_read(8'h1C, rd_data);
+    check("T08 RX_DATA valid=0 when empty", !rd_data[8]);
+
+    // RX FIFO_LEVEL must still be 0 (no pop occurred)
+    axil_read(8'h18, rd_data);
+    check_eq("T08 FIFO_LEVEL rx=0 after empty read", {20'h0, rd_data[23:12]}, 32'h0);
+
+    // ------------------------------------------------------------------
+    // T09: FIFO_LEVEL -- write 3 bytes, verify tx_level=3, receive and verify rx_level
+    // ------------------------------------------------------------------
+    axil_write(8'h20, 32'hC1);
+    axil_write(8'h20, 32'hC2);
+    axil_write(8'h20, 32'hC3);
+
+    // TX FIFO: at least 2 bytes queued (first was grabbed by TX core)
+    axil_read(8'h18, rd_data);
+    check("T09 tx_level >= 2", rd_data[11:0] >= 12'd2);
+
+    // Wait for all 3 bytes to arrive via loopback
+    begin : blk_t09_wait
+      automatic int timeout = 0;
+      do begin
+        axil_read(8'h18, rd_data);
+        timeout++;
+      end while (rd_data[23:12] < 3 && timeout < 10 * FRAME_CLKS);
+    end
+    check("T09 rx_level=3 after loopback", rd_data[23:12] == 12'd3);
+
+    // Read all 3 back
+    axil_read(8'h1C, rd_data); check_eq("T09 rx[0]=0xC1", {24'h0, rd_data[7:0]}, 32'hC1);
+    axil_read(8'h1C, rd_data); check_eq("T09 rx[1]=0xC2", {24'h0, rd_data[7:0]}, 32'hC2);
+    axil_read(8'h1C, rd_data); check_eq("T09 rx[2]=0xC3", {24'h0, rd_data[7:0]}, 32'hC3);
+
+    axil_read(8'h14, rd_data);
+    check("T09 rx_fifo_empty after drain", rd_data[4]);
 
     // ------------------------------------------------------------------
     // Summary

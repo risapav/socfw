@@ -43,7 +43,7 @@ module uart_core_tx #(
   output logic txd_o,
 
   // Status
-  output uart_status_t status_o,
+  output uart_core_status_t status_o,
 
   // Baud-gen control
   output logic tx_done_pulse_o,

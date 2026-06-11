@@ -8,9 +8,12 @@
  *    2. Writes TX_DATA (UART_REG_TX_DATA)  -- pushes byte to TX FIFO.
  *
  *  AXI-Lite outputs are combinatorial (always_comb driven from state_r).
- *  State transitions are registered (always_ff).  This ensures that the slave
- *  sees ARVALID=1 in the same cycle that ARREADY is checked, so the AR
- *  handshake completes in 1 cycle and RVALID appears in the next cycle.
+ *  State transitions are registered (always_ff).
+ *
+ *  Note: a registered AXI-Lite master is also valid, provided it holds VALID
+ *  asserted until the corresponding READY handshake completes.  The combinatorial
+ *  approach here is simpler for a demo FSM: the slave sees ARVALID=1 already in
+ *  the first cycle of each state, so the AR handshake completes in 1 cycle.
  *
  *  Latency per byte: ~7 clock cycles (2 STATUS read + 2 RX_DATA read + 3 TX write).
  *  At 125 MHz this is <<1 us -- far faster than the 8.7 us UART bit period.

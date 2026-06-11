@@ -48,7 +48,7 @@ module uart_core_rx #(
   input  wire                   ready_i,
 
   // Status
-  output uart_status_t status_o,
+  output uart_core_status_t status_o,
 
   // Phase-align pulse to uart_baud_gen.start_i
   output logic rx_start_pulse_o,
