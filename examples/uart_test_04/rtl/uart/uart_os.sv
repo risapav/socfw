@@ -12,8 +12,11 @@
  *  oversampled) instead of uart_core_rx (1x sampler).
  *
  *  RX baud generator runs at 16x baud rate:
- *    PRESCALE_OS = round(CLK_FREQ_HZ / (BAUD_RATE * 16))
- *  At 125 MHz / 115200: PRESCALE_OS = 68, error = +0.33%.
+ *    PRESCALE_OS = floor(CLK_FREQ_HZ / (BAUD_RATE * 16))
+ *  At 125 MHz / 115200: PRESCALE_OS = 67, error = -1.2% (FPGA runs faster).
+ *  Floor (not round) is critical: FPGA must be faster than the sender so the
+ *  DUT returns to IDLE between back-to-back bytes and pending_start_q does
+ *  not accumulate per-frame phase drift.
  *
  *  TX path is unchanged from uart.sv.
  */
@@ -64,8 +67,8 @@ module uart_os #(
 
   // TX: 1x baud divisor (rounded)
   localparam int PRESCALE_TX    = (CLK_FREQ_HZ + BAUD_RATE / 2) / BAUD_RATE;
-  // RX: 16x baud divisor (rounded)
-  localparam int PRESCALE_RX_OS = (CLK_FREQ_HZ + BAUD_RATE * 8) / (BAUD_RATE * 16);
+  // RX: 16x baud divisor (floor — FPGA must run faster to avoid phase accumulation)
+  localparam int PRESCALE_RX_OS = CLK_FREQ_HZ / (BAUD_RATE * 16);
   localparam int PRESCALE_TX_W  = $clog2(PRESCALE_TX + 1);
   localparam int PRESCALE_OS_W  = $clog2(PRESCALE_RX_OS + 1);
 
