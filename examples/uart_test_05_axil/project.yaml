@@ -1,0 +1,69 @@
+version: 2
+kind: project
+
+project:
+  name: uart_test_05_axil
+  mode: standalone
+  board: qmtech_ep4ce55
+  debug: true
+
+timing:
+  file: timing_config.yaml
+
+registries:
+  packs:
+    - ../../packs/builtin
+  ip:
+    - cores/clkpll
+    - ip
+  cpu: []
+
+features:
+  use:
+    - board:onboard.uart
+    - board:onboard.leds
+
+clocks:
+  primary:
+    domain: sys_clk
+    source: board:sys_clk
+    frequency_hz: 50000000
+  generated:
+    - domain: clk125
+      source:
+        instance: clkpll
+        output: c0
+      frequency_hz: 125000000
+      reset:
+        none: true
+
+modules:
+  - instance: clkpll
+    type: clkpll
+    clocks:
+      inclk0:
+        domain: sys_clk
+        no_reset: true
+    reset: "~RESET_N"
+
+  - instance: uart_test_05_axil_top
+    type: uart_test_05_axil_top
+    clocks:
+      clk_i: clk125
+    bind:
+      ports:
+        rst_ni:
+          target: "RESET_N"
+        uart_rx_i:
+          target: board:onboard.uart.rx
+        uart_tx_o:
+          target: board:onboard.uart.tx
+        led_o:
+          target: board:onboard.leds
+
+connections:
+  - from: clkpll.locked
+    to: uart_test_05_axil_top.pll_locked_i
+
+artifacts:
+  emit: [rtl, board, timing]

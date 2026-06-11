@@ -1,0 +1,46 @@
+version: 2
+kind: timing
+
+timing:
+  derive_uncertainty: true
+
+  clocks:
+    - name: SYS_CLK
+      source: SYS_CLK
+      period_ns: 20.0
+      reset:
+        source: RESET_N
+        active_low: true
+        sync_stages: 2
+
+  generated_clocks:
+    - name: CLK125
+      source:
+        instance: clkpll
+        output: c0
+      multiply_by: 5
+      divide_by: 2
+
+  clock_groups:
+    - type: asynchronous
+      groups:
+        - [CLK125]
+        - [SYS_CLK]
+
+  false_paths:
+    - from_port: RESET_N
+      comment: "Async reset, sync deassert inside top"
+    - to_port: UART_TX
+      comment: "UART TX: async serial output"
+    - from_port: UART_RX
+      comment: "UART RX: async serial input, 2-FF sync inside core"
+    - to_port: "ONB_LEDS[*]"
+      comment: "LEDs: async display output"
+
+  io_delays:
+    auto: true
+    default_clock: CLK125
+    default_input_max_ns: 3.0
+    default_input_min_ns: 0.0
+    default_output_max_ns: 3.0
+    default_output_min_ns: 0.0
