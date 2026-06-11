@@ -1,7 +1,7 @@
 # UART_TEST_05_AXIL -- Stav projektu
 
 **Posledna aktualizacia:** 2026-06-11
-**Stav:** Faza 1 UZAVRETA (sim), Faza 2 UZAVRETA (Quartus compile + timing), Faza 3 TODO (HW)
+**Stav:** UZAVRETY -- sim 1186/1186 PASS, Fmax ~140.3 MHz, HW 256/256 PASS
 
 ---
 
@@ -65,7 +65,7 @@ ARREADY, pretoze master by uz preskocil do ST_R_STAT.
 |------|-----------------------------------|-------------------|
 | 1    | RTL + sim                         | UZAVRETA          |
 | 2    | Quartus compile + timing          | UZAVRETA          |
-| 3    | HW board test                     | TODO              |
+| 3    | HW board test                     | UZAVRETA          |
 
 ---
 
@@ -131,6 +131,17 @@ ARREADY, pretoze master by uz preskocil do ST_R_STAT.
 Opravene v `uart_axil.sv`: `~3'(...)` -> `~(...)`, `~5'(...)` -> `~(...)`, `5'(...)` -> `(...)`.
 
 **Bitfile:** `output_files/soc_top.sof`
+
+---
+
+## Faza 3 -- HW board test (UZAVRETA)
+
+| Test             | Bajty | Vysledok        |
+|------------------|-------|-----------------|
+| hw-test-quick    | 8     | **8/8 PASS**    |
+| hw-test (bulk)   | 256   | **256/256 PASS**|
+
+Port: `/dev/ttyUSB0`, 115200 8N1. Ziadne chyby ani timeouty.
 
 ---
 
