@@ -17,8 +17,10 @@
  *  while wr_ready_o is low.  Underflow guard: rd_valid_o is deasserted when
  *  empty; rd_ready_i has no effect when rd_valid_o is low.
  *
- *  Sticky error flags (overflow_o, underflow_o) record any attempt to write
- *  while full or read while empty.  Assert err_clear_i for one cycle to clear.
+ *  Sticky overflow_o records any attempt to write while full.
+ *  underflow_o is always 0: in AXI-Stream a sink may hold ready=1 while
+ *  valid=0, which is legal and not an error.  Assert err_clear_i to clear
+ *  overflow_o.
  */
 
 `ifndef SYNC_FIFO_SV
@@ -75,7 +77,7 @@ module sync_fifo #(
   wire wr_fire_w    = wr_valid_i && wr_ready_o;
   wire rd_fire_w    = rd_valid_o && rd_ready_i;
   wire wr_drop_w    = wr_valid_i && !wr_ready_o;
-  wire rd_drop_w    = rd_ready_i && !rd_valid_o;
+  wire rd_drop_w    = 1'b0;  // ready=1 with valid=0 is legal in AXI-Stream
 
   assign full_o      = (level_q == LVL_W'(DEPTH));
   assign empty_o     = (level_q == '0);

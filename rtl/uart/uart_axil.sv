@@ -47,6 +47,7 @@
 `default_nettype none
 
 import axi_pkg::*;
+import uart_pkg::*;
 
 module uart_axil #(
   parameter int          CLK_FREQ_HZ       = 125_000_000,
@@ -74,6 +75,13 @@ module uart_axil #(
   localparam int PRESCALE_TX    = (CLK_FREQ_HZ + BAUD_RATE / 2) / BAUD_RATE;
   localparam int PRESCALE_RX_OS = CLK_FREQ_HZ / (BAUD_RATE * 16);
 
+  // Register indices (addr[5:2]) derived from uart_pkg byte offsets
+  localparam logic [3:0] IDX_RX_DATA      = UART_REG_RX_DATA[5:2];      // 4'd7
+  localparam logic [3:0] IDX_TX_DATA      = UART_REG_TX_DATA[5:2];      // 4'd8
+  localparam logic [3:0] IDX_IRQ_ENABLE   = UART_REG_IRQ_ENABLE[5:2];   // 4'd9
+  localparam logic [3:0] IDX_IRQ_STATUS   = UART_REG_IRQ_STATUS[5:2];   // 4'd10
+  localparam logic [3:0] IDX_ERROR_STATUS = UART_REG_ERROR_STATUS[5:2]; // 4'd11
+
   // --------------------------------------------------------------------------
   // uart_fifo_os wires
   // --------------------------------------------------------------------------
@@ -82,6 +90,7 @@ module uart_axil #(
   wire       rx_ready_w;
   wire [7:0] tx_data_w;
   wire       tx_valid_w;
+  wire       tx_ready_w;
   wire       err_clear_w;
   wire       tx_busy_w,     rx_busy_w;
   wire       tx_fifo_full_w, tx_fifo_empty_w;
@@ -108,7 +117,7 @@ module uart_axil #(
     .tx_o             (tx_o),
     .tx_data_i        (tx_data_w),
     .tx_valid_i       (tx_valid_w),
-    .tx_ready_o       (),
+    .tx_ready_o       (tx_ready_w),
     .rx_data_o        (rx_data_w),
     .rx_valid_o       (rx_valid_w),
     .rx_ready_i       (rx_ready_w),
@@ -209,15 +218,15 @@ module uart_axil #(
   // irq_o: combinatorial from registered state
   assign irq_o = |(irq_enable_q & irq_status_q);
 
-  // TX push: one-cycle pulse on TX_DATA write
-  assign tx_valid_w = wr_fire_w & (wr_idx_w == 4'd8);
+  // TX push: gated on FIFO ready + WSTRB[0]; silent drop if FIFO full
+  assign tx_valid_w = wr_fire_w & (wr_idx_w == IDX_TX_DATA) & wstrb_r[0] & tx_ready_w;
   assign tx_data_w  = wdata_r[7:0];
 
   // RX pop: consume FIFO when RX_DATA register is read (if FIFO has data)
-  assign rx_ready_w = ar_fire_w & (ar_idx_w == 4'd7) & rx_valid_w;
+  assign rx_ready_w = ar_fire_w & (ar_idx_w == IDX_RX_DATA) & rx_valid_w;
 
   // err_clear_i: pulsed when ERROR_STATUS W1C write clears any bit
-  assign err_clear_w = wr_fire_w & (wr_idx_w == 4'd11) & |(wdata_r[2:0]);
+  assign err_clear_w = wr_fire_w & (wr_idx_w == IDX_ERROR_STATUS) & |(wdata_r[2:0]);
 
   // --------------------------------------------------------------------------
   // irq_enable_q (RW)
@@ -225,7 +234,7 @@ module uart_axil #(
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni)
       irq_enable_q <= 5'h0;
-    else if (wr_fire_w && wr_idx_w == 4'd9 && wstrb_r[0])
+    else if (wr_fire_w && wr_idx_w == IDX_IRQ_ENABLE && wstrb_r[0])
       irq_enable_q <= 5'(wdata_r[4:0]);
   end
 
@@ -235,12 +244,13 @@ module uart_axil #(
   // --------------------------------------------------------------------------
   logic [2:0] error_next_w;
   always_comb begin
-    error_next_w    = error_status_q;
+    error_next_w = error_status_q;
+    // W1C clear first, then HW set -- new error in same cycle is not lost
+    if (wr_fire_w && wr_idx_w == IDX_ERROR_STATUS)
+      error_next_w = error_next_w & ~3'(wdata_r[2:0]);
     if (overrun_err_w) error_next_w[0] = 1'b1;
     if (frame_err_w)   error_next_w[1] = 1'b1;
     if (parity_err_w)  error_next_w[2] = 1'b1;
-    if (wr_fire_w && wr_idx_w == 4'd11)
-      error_next_w = error_next_w & ~3'(wdata_r[2:0]);
   end
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
@@ -255,10 +265,10 @@ module uart_axil #(
   logic [4:0] irq_stat_next_w;
   always_comb begin
     irq_stat_next_w = irq_status_q | irq_cond_w;
-    if (wr_fire_w && wr_idx_w == 4'd10)
+    if (wr_fire_w && wr_idx_w == IDX_IRQ_STATUS)
       irq_stat_next_w = irq_stat_next_w & ~5'(wdata_r[4:0]);
     // ERROR_STATUS clear also clears the error IRQ bits
-    if (wr_fire_w && wr_idx_w == 4'd11)
+    if (wr_fire_w && wr_idx_w == IDX_ERROR_STATUS)
       irq_stat_next_w[4:2] = irq_stat_next_w[4:2] & ~3'(wdata_r[2:0]);
   end
 
@@ -293,19 +303,19 @@ module uart_axil #(
     end else if (ar_fire_w) begin
       r_valid_r <= 1'b1;
       case (ar_idx_w)
-        4'd0:    rdata_r <= 32'h5541_5254;           // ID
-        4'd1:    rdata_r <= 32'h0001_0400;           // VERSION
-        4'd2:    rdata_r <= 32'(PRESCALE_TX);        // BAUD_DIV_TX
-        4'd3:    rdata_r <= 32'(PRESCALE_RX_OS);     // BAUD_DIV_RX
-        4'd4:    rdata_r <= {27'h0, STOP2, PARITY, DBITS}; // CONF
-        4'd5:    rdata_r <= status_w;                // STATUS
-        4'd6:    rdata_r <= fifo_level_w;            // FIFO_LEVEL
-        4'd7:    rdata_r <= {23'h0, rx_valid_w, rx_data_w}; // RX_DATA
-        4'd8:    rdata_r <= '0;                      // TX_DATA (write-only)
-        4'd9:    rdata_r <= {27'h0, irq_enable_q};  // IRQ_ENABLE
-        4'd10:   rdata_r <= {27'h0, irq_status_q};  // IRQ_STATUS
-        4'd11:   rdata_r <= {29'h0, error_status_q}; // ERROR_STATUS
-        default: rdata_r <= '0;
+        UART_REG_ID[5:2]:           rdata_r <= 32'h5541_5254;
+        UART_REG_VERSION[5:2]:      rdata_r <= 32'h0001_0400;
+        UART_REG_BAUD_DIV_TX[5:2]:  rdata_r <= 32'(PRESCALE_TX);
+        UART_REG_BAUD_DIV_RX[5:2]:  rdata_r <= 32'(PRESCALE_RX_OS);
+        UART_REG_CONF[5:2]:         rdata_r <= {27'h0, STOP2, PARITY, DBITS};
+        UART_REG_STATUS[5:2]:       rdata_r <= status_w;
+        UART_REG_FIFO_LEVEL[5:2]:   rdata_r <= fifo_level_w;
+        IDX_RX_DATA:                rdata_r <= {23'h0, rx_valid_w, rx_data_w};
+        IDX_TX_DATA:                rdata_r <= '0;  // write-only
+        IDX_IRQ_ENABLE:             rdata_r <= {27'h0, irq_enable_q};
+        IDX_IRQ_STATUS:             rdata_r <= {27'h0, irq_status_q};
+        IDX_ERROR_STATUS:           rdata_r <= {29'h0, error_status_q};
+        default:                    rdata_r <= '0;
       endcase
     end else if (r_valid_r && s_axil.RREADY) begin
       r_valid_r <= 1'b0;

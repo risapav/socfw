@@ -53,17 +53,22 @@ package uart_pkg;
   } uart_conf_t;
 
   // ============================================================================
-  // REGISTER OFFSETS (AXI-Lite)
-  //   ABI pripravene pre buduci uart_axil.sv wrapper.
-  //   Aktualny uart.sv wrapper AXI-Lite registre nema.
+  // REGISTER OFFSETS (AXI-Lite) -- uart_axil.sv register map
+  //   Toto je jediný zdroj pravdy pre UART AXI-Lite ABI.
+  //   NEMENIT bez bump verzie.
   // ============================================================================
-  localparam logic [7:0] UART_REG_ID      = 8'h00;
-  localparam logic [7:0] UART_REG_BAUD    = 8'h04;
-  localparam logic [7:0] UART_REG_CONF    = 8'h08;
-  localparam logic [7:0] UART_REG_ERRCLR  = 8'h0C;
-  localparam logic [7:0] UART_REG_STATUS  = 8'h10;
-  localparam logic [7:0] UART_REG_TX_CNT  = 8'h14;
-  localparam logic [7:0] UART_REG_RX_CNT  = 8'h18;
+  localparam logic [7:0] UART_REG_ID           = 8'h00; // RO  ID = 0x55415254
+  localparam logic [7:0] UART_REG_VERSION      = 8'h04; // RO  VERSION
+  localparam logic [7:0] UART_REG_BAUD_DIV_TX  = 8'h08; // RO  prescale TX
+  localparam logic [7:0] UART_REG_BAUD_DIV_RX  = 8'h0C; // RO  prescale RX OS
+  localparam logic [7:0] UART_REG_CONF         = 8'h10; // RO  [4]=stop2,[3:2]=parity,[1:0]=dbits
+  localparam logic [7:0] UART_REG_STATUS       = 8'h14; // RO  FIFO + busy status
+  localparam logic [7:0] UART_REG_FIFO_LEVEL   = 8'h18; // RO  [23:12]=rx_level,[11:0]=tx_level
+  localparam logic [7:0] UART_REG_RX_DATA      = 8'h1C; // RO* [8]=valid,[7:0]=data; READ POPS FIFO
+  localparam logic [7:0] UART_REG_TX_DATA      = 8'h20; // WO  [7:0]=data
+  localparam logic [7:0] UART_REG_IRQ_ENABLE   = 8'h24; // RW  [4:0] per-source enable
+  localparam logic [7:0] UART_REG_IRQ_STATUS   = 8'h28; // W1C [4:0] pending
+  localparam logic [7:0] UART_REG_ERROR_STATUS = 8'h2C; // W1C [2]=parity,[1]=frame,[0]=overrun
 
   // ----------------------------
   // UART FSM states (RX aj TX)

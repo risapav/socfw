@@ -69,8 +69,8 @@ OS ticks: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15
                                center sample (os_cnt_q==7)
 
 Parametre (125 MHz / 115200 Bd):
-  PRESCALE_OS  = round(125_000_000 / (115200 * 16)) = 68
-  BIT_CLKS     = 68 * 16 = 1088  (~0.87% chyba oproti idealu 1085)
+  PRESCALE_OS  = floor(125_000_000 / (115200 * 16)) = 67
+  BIT_CLKS     = 67 * 16 = 1072  (RX baud +1.22% faster than nominal)
 ```
 
 ### Klucove technicky poznamky
@@ -86,16 +86,16 @@ Parametre (125 MHz / 115200 Bd):
 - DUT vystavuje aj frame-error bajty s `rx_valid=1` (spotrebitel kontroluje
   status flaky); testovacie prostredie musi po frame error vycistit buffer
 
-### Baud generátor — timing (PRESCALE=68)
+### Baud generátor — timing (PRESCALE=67)
 
 ```
 start_i fires at E:
-  E+0  : count_q = 67 (reset), start_tick_o = 1
-  E+34 : half_tick_o = 1  (center)
-  E+67 : end_tick_o  = 1  (pre-end)
-  E+68 : start_tick (reload) -- perioda = 68 clk
+  E+0  : count_q = 66 (reset), start_tick_o = 1
+  E+33 : half_tick_o = 1  (center)
+  E+66 : end_tick_o  = 1  (pre-end)
+  E+67 : start_tick (reload) -- perioda = 67 clk
 
-Pre OS (16x): perioda = 68 clk → 16 * 68 = 1088 clk/bit
+Pre OS (16x): perioda = 67 clk → 16 * 67 = 1072 clk/bit
 ```
 
 ### Simulacia — vysledky
