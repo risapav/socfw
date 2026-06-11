@@ -1,7 +1,7 @@
 # UART_TEST_05_AXIL -- Stav projektu
 
 **Posledna aktualizacia:** 2026-06-11
-**Stav:** UZAVRETY -- sim 1186/1186 PASS, Fmax ~140.3 MHz, HW 256/256 PASS
+**Stav:** UZAVRETY -- sim 1186/1186 PASS, Fmax ~140.3 MHz, HW soak PASS (40960 B)
 
 ---
 
@@ -42,9 +42,11 @@ Pri 125 MHz = 56 ns << 8.7 us (UART bit period). Bottleneck je UART, nie FSM.
 
 ### AXI-Lite handshake
 
-Vystupy su **kombinacne** (`always_comb` z `state_r`). Registrovane vystupy
-by sposobili deadlock: slave by nikdy nevidel ARVALID=1 v rovnakom cykle ako
-ARREADY, pretoze master by uz preskocil do ST_R_STAT.
+Vystupy su **kombinacne** (`always_comb` z `state_r`). Slave vidi ARVALID=1
+uz v prvom cykle stavu, takze AR handshake prebehne v 1 cykle.
+Registrovany AXI-Lite master je tiez platny, ale musi drzat VALID aktivne
+az kym READY nepotvrdil handshake. Tento demo FSM pouziva kombinacne vystupy
+pre jednoduchost.
 
 ### LED mapovanie
 
@@ -136,10 +138,12 @@ Opravene v `uart_axil.sv`: `~3'(...)` -> `~(...)`, `~5'(...)` -> `~(...)`, `5'(.
 
 ## Faza 3 -- HW board test (UZAVRETA)
 
-| Test             | Bajty | Vysledok        |
-|------------------|-------|-----------------|
-| hw-test-quick    | 8     | **8/8 PASS**    |
-| hw-test (bulk)   | 256   | **256/256 PASS**|
+| Test                                     | Bajty   | Vysledok           |
+|------------------------------------------|---------|--------------------|
+| hw-test-quick                            | 8       | **8/8 PASS**       |
+| hw-test (bulk)                           | 256     | **256/256 PASS**   |
+| Soak: sweep cs=1,8,16,24,25,26,32,64     | 1024 ea | **8/8 cs PASS**    |
+| Soak: cs=64 x 4096B x 10 repeats        | 40960   | **10/10 PASS**     |
 
 Port: `/dev/ttyUSB0`, 115200 8N1. Ziadne chyby ani timeouty.
 
@@ -159,10 +163,11 @@ Port: `/dev/ttyUSB0`, 115200 8N1. Ziadne chyby ani timeouty.
 
 ## Zname problemy a poznamky
 
-- `axil_uart_loopback.sv` musi pouzivat kombinacne vystupy (`always_comb`).
-  Registrovane vystupy sposobia deadlock (ARVALID nikdy neaktivne pri ARREADY
-  kontrole -- viz commit sprava 79d62f2).
-
 - `IRQ_STATUS` level bity ([0]=rx_not_empty, [1]=tx_not_full) sa znova nastavia
   kazdy cyklus pokial podmienka trva. SW musi vedome cistit po spracovani.
   Pre tento demo bez IRQ_ENABLE, irq_o=0 pocas normalnej prevadzky.
+
+- Zapis do plnej TX FIFO: bajt sa zahodí, BRESP=OKAY, ERROR_STATUS[3] sa nastavi.
+  SW musi kontrolovat STATUS[7] (tx_ready) pred kazdym zapisom do TX_DATA.
+
+- Viz `docs/uart/known_limits.md` pre uplny zoznam.
