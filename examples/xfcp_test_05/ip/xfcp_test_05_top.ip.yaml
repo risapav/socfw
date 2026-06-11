@@ -41,9 +41,9 @@ params:
   CLOCK_HZ:
     type: int
     default: 125000000
-  UART_DEFAULT_BAUD_DIV:
+  UART_BAUD_RATE:
     type: int
-    default: 1085
+    default: 115200
 
 ports:
   - name: eth_rx_clk_i
@@ -115,15 +115,17 @@ artifacts:
     - ../../../rtl/stream/stream_skid_buffer.sv
     - ../../../rtl/stream/axis_reg_slice.sv
     - ../../../rtl/stream/axis_skid_buffer.sv
-    # UART core
+    # UART library (uart_lib_v1_0)
     - ../../../rtl/uart/uart_pkg.sv
     - ../../../rtl/uart/uart_baud_gen.sv
     - ../../../rtl/uart/uart_core_rx.sv
+    - ../../../rtl/uart/uart_core_rx_os.sv
     - ../../../rtl/uart/uart_core_tx.sv
     - ../../../rtl/uart/uart.sv
-    # AXI-Stream UART
-    - ../../../rtl/axis/axis_uart_rx.sv
-    - ../../../rtl/axis/axis_uart_tx.sv
+    - ../../../rtl/uart/uart_os.sv
+    - ../../../rtl/uart/sync_fifo.sv
+    - ../../../rtl/uart/uart_fifo.sv
+    - ../../../rtl/uart/uart_fifo_os.sv
     # AXI-Lite peripherals
     - ../../../rtl/axil/axil_regfile.sv
     - ../../../rtl/axil/axil_regs.sv
@@ -175,8 +177,6 @@ provides:
     - xfcp_axi_engine
     - xfcp_fifo
     - async_fifo
-    - axis_uart_rx
-    - axis_uart_tx
     - axil_uart_adapter
     - axil_regs
     - axil_regfile
@@ -185,10 +185,15 @@ provides:
     - axil_diag_ctrl
     - seven_seg_mux
     - seven_seg_mux_packed
+    - uart_fifo_os
+    - uart_fifo
+    - uart_os
+    - uart
+    - sync_fifo
     - uart_baud_gen
+    - uart_core_rx_os
     - uart_core_rx
     - uart_core_tx
-    - uart
   packages:
     - axi_pkg
     - uart_pkg

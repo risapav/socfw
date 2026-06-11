@@ -23,7 +23,7 @@ eth_rx_clk (125 MHz z PHY, async)
     IPv4: ipv4_rx -> icmp_echo -> ipv4_tx -> arb port 1
                   -> udp_xfcp (Faza B) -> arb port 2
 
-  UART: axis_uart_rx -> xfcp_fifo(8) -> xfcp_arbiter_2to1.s0
+  UART: uart_fifo_os (16x OS RX, FIFO depth=64) -> xfcp_arbiter_2to1.s0
   ETH-UDP XFCP: (Faza B) -> xfcp_arbiter_2to1.s1
 
   xfcp_arbiter_2to1 (2->1, fixed priority UART>ETH):
@@ -66,6 +66,20 @@ eth_rx_clk (125 MHz z PHY, async)
 - [x] Simulacia regression PASSED
 - [x] HW test: XFCP cez UDP — 7/7 PASS (2026-06-09)
 
+### Faza D — uart_lib_v1_0 integrácia [UZAVRETA 2026-06-11]
+- [x] Nahradenie `axis_uart_rx + xfcp_fifo(8) + axis_skid + axis_uart_tx` za `uart_fifo_os`
+  - 16x oversampled RX (`uart_core_rx_os`) — fix instability z Fazy C
+  - Integrovaný RX+TX FIFO hĺbky 64 (vs pôvodný depth=8)
+  - Parametre `UART_BAUD_RATE` (Hz) namiesto `UART_DEFAULT_BAUD_DIV`
+- [x] `axil_uart_adapter` ponechaný (Slot 1) — `baud_div_o`/`config_o` → NC
+- [x] DIAG pulzy predrôtované na `uart_fifo_os` status výstupy
+- [x] `ip/xfcp_test_05_top.ip.yaml` — súbory a parametre aktualizované
+- [x] `sim/Makefile` — UART_COMMON aktualizovaný (uart_fifo_os chain)
+- [x] TB (`tb_xfcp_test_05_top.sv`): BAUD_DIV 16→32 (PRESCALE_RX_OS>=2), param na UART_BAUD_RATE
+- [x] Simulácia regression PASSED 12/12 (2026-06-11)
+
+**Stav Faza D:** UZAVRETA (2026-06-11) — sim PASS, HW test pending
+
 ### Faza C — Python tools [UZAVRETA 2026-06-09]
 - [x] `tools/main.py` — dual-transport menu (UART + UDP, transport switch pri beh)
 - [x] `tools/xfcp/transport.py` — SerialTransport + UdpTransport
@@ -101,7 +115,7 @@ Paket format:
 | XFCP transport  | UART only           | UART + ETH-UDP      |
 | Arbiter         | N/A                 | xfcp_arbiter_2to1   |
 | ETH stack       | N/A                 | ARP+ICMP+UDP-XFCP   |
-| BAUD_DIV 115200 | 434 (50 MHz)        | 1085 (125 MHz)      |
+| UART             | axis_uart_rx (1x)   | uart_fifo_os (16x OS)|
 
 ---
 
@@ -120,4 +134,9 @@ Paket format:
 - 7/7 slotov × 3 opakovania: PASS (SYSC, UART, OUT_, OUT_, OUT_, SEG7, DIAG)
 - DIAG snapshot: rx_sop=23, rx_hdr=23, fab_req=23, fab_resp=22, tx_pkt=22
 - Chybove registre: 0 (rx_lost=0, rx_frame=0, rx_overrun=0, rx_bad_hdr=0, rx_drop=0)
-- **PROJEKT UZAVRETY — vsetky fazy PASS**
+### Faza D (2026-06-11) — uart_lib_v1_0 integrácia
+- uart_fifo_os (16x OS, FIFO=64) nahradzuje axis_uart_rx+xfcp_fifo(8)
+- sim regression PASSED 12/12 (arbiter 19 + udp_server 27 + integration 12)
+- HW test: pending (Quartus recompile potrebny)
+
+- **PROJEKT UZAVRETY — A/B/C PASS; D sim PASS, HW pending**

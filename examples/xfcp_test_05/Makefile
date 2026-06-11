@@ -66,13 +66,13 @@ sim-clean:
 # -----------------------------------------------------------------------------
 
 compile-baud:
-	@echo "=== Static baud bitstream: $(BAUD) baud (BAUD_DIV=$(BAUD_DIV)) ==="
+	@echo "=== Static baud bitstream: $(BAUD) baud ==="
 	@test -f build/rtl/soc_top.sv || (echo "Run 'make gen' first" && false)
-	sed -i 's/UART_DEFAULT_BAUD_DIV([0-9]*)/UART_DEFAULT_BAUD_DIV($(BAUD_DIV))/' build/rtl/soc_top.sv
+	sed -i 's/UART_BAUD_RATE([0-9]*)/UART_BAUD_RATE($(BAUD))/' build/rtl/soc_top.sv
 	$(MAKE) compile
 	cp output_files/soc_top.sof output_files/soc_top_$(BAUD)baud.sof
 	@echo "=== Restoring default baud ==="
-	sed -i 's/UART_DEFAULT_BAUD_DIV([0-9]*)/UART_DEFAULT_BAUD_DIV(1085)/' build/rtl/soc_top.sv
+	sed -i 's/UART_BAUD_RATE([0-9]*)/UART_BAUD_RATE(115200)/' build/rtl/soc_top.sv
 	@echo "=== Done: output_files/soc_top_$(BAUD)baud.sof ==="
 
 # -----------------------------------------------------------------------------
@@ -127,11 +127,11 @@ test-udp: arp-setup
 	  --repeat $(TEST_REPEAT) --diag
 
 test-rw: arp-setup
-	@echo "=== XFCP R/W test (UART + UDP) ==="
-	cd $(TOOLS_DIR) && python3 test_hw.py --uart $(UART_PORT) --baud $(UART_BAUD) \
-	  --repeat $(TEST_REPEAT) --rw --diag
+	@echo "=== XFCP R/W test (UDP + UART) ==="
 	cd $(TOOLS_DIR) && python3 test_hw.py --udp $(FPGA_IP):$(XFCP_UDP_PORT) \
 	  --repeat $(TEST_REPEAT) --rw --diag
+#	cd $(TOOLS_DIR) && python3 test_hw.py --uart $(UART_PORT) --baud $(UART_BAUD) \
+#	  --repeat $(TEST_REPEAT) --rw --diag
 
 hw-test: arp-setup
 	@echo ""

@@ -37,8 +37,8 @@
 module tb_xfcp_test_05_top;
   import tb_eth_pkg::*;
 
-  // BAUD_DIV=16 => fast sim; CLOCK_HZ>=250 satisfies seven_seg TicksPerDigit
-  localparam int BAUD_DIV    = 16;
+  // BAUD_DIV=32: uart_fifo_os needs PRESCALE_RX_OS>=2 -> min BAUD_DIV=32 at CLOCK_HZ=1000
+  localparam int BAUD_DIV    = 32;
   localparam int CLOCK_HZ    = 1000;
 
   // ETH test parameters
@@ -84,8 +84,8 @@ module tb_xfcp_test_05_top;
   // DUT
   // =========================================================================
   xfcp_test_05_top #(
-    .CLOCK_HZ              (CLOCK_HZ),
-    .UART_DEFAULT_BAUD_DIV (BAUD_DIV)
+    .CLOCK_HZ       (CLOCK_HZ),
+    .UART_BAUD_RATE (CLOCK_HZ / BAUD_DIV)
   ) dut (
     .clk_i         (clk_i),
     .rst_ni        (rst_ni),

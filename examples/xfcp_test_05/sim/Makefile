@@ -31,12 +31,13 @@ UART_COMMON = \
 	$(RTL_UART)/uart_pkg.sv \
 	$(RTL_UART)/uart_baud_gen.sv \
 	$(RTL_UART)/uart_core_rx.sv \
+	$(RTL_UART)/uart_core_rx_os.sv \
 	$(RTL_UART)/uart_core_tx.sv \
-	$(RTL_UART)/uart.sv
-
-AXIS_UART = \
-	$(RTL_AXIS)/axis_uart_rx.sv \
-	$(RTL_AXIS)/axis_uart_tx.sv
+	$(RTL_UART)/uart.sv \
+	$(RTL_UART)/uart_os.sv \
+	$(RTL_UART)/sync_fifo.sv \
+	$(RTL_UART)/uart_fifo.sv \
+	$(RTL_UART)/uart_fifo_os.sv
 
 XFCP_COMMON = \
 	$(RTL_XFCP)/xfcp_pkg.sv \
@@ -112,7 +113,6 @@ udp_xfcp_server: $(LOGDIR)
 xfcp_test_05_top: $(LOGDIR)
 	$(VLOG) $(AXI_COMMON) \
 	        $(UART_COMMON) \
-	        $(AXIS_UART) \
 	        $(AXIL_COMMON) \
 	        $(RTL_AXIL)/axil_sys_ctrl.sv \
 	        $(RTL_AXIL)/axil_uart_adapter.sv \

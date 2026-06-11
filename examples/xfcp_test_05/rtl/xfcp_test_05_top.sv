@@ -5,7 +5,7 @@
  * @param LOCAL_IP   32-bit FPGA IP adresa.
  * @param XFCP_PORT  UDP port pre XFCP komunikaciu (default 50000).
  * @param CLOCK_HZ   Frekvencia systemoveho taktu clk_i (125 MHz).
- * @param UART_DEFAULT_BAUD_DIV  Predvolena hodnota baud prescalera.
+ * @param UART_BAUD_RATE  Baud rate pre uart_fifo_os (default 115200).
  * @details
  *   Systemovy takt: clk_i = 125 MHz (z PLL, inclk0=50MHz, c0=125MHz).
  *   ETH RX domena: eth_rx_clk_i (125 MHz z PHY, asynchronna k clk_i).
@@ -19,8 +19,8 @@
  *          IPv4: ipv4_rx -> icmp_echo -> ipv4_tx -> arb1 -> eth_tx_mac
  *                        -> udp_xfcp (Faza B) -> arb2 -> eth_tx_mac
  *     UART (clk_i):
- *       axis_uart_rx -> xfcp_fifo -> xfcp_arbiter_2to1.s0
- *       xfcp_arbiter_2to1.m0 -> axis_skid -> axis_uart_tx
+ *       uart_fifo_os (16x OS-RX, FIFO=64) -> xfcp_arbiter_2to1.s0
+ *       xfcp_arbiter_2to1.m0 -> uart_fifo_os TX
  *     ETH-UDP XFCP (clk_i, Faza B):
  *       udp_xfcp_server -> xfcp_arbiter_2to1.s1
  *       xfcp_arbiter_2to1.m1 -> udp_tx -> ipv4_tx
@@ -51,7 +51,7 @@ module xfcp_test_05_top #(
   parameter logic [31:0] LOCAL_IP              = 32'hC0A8_0005,
   parameter logic [15:0] XFCP_PORT             = 16'd50000,
   parameter int          CLOCK_HZ              = 125_000_000,
-  parameter int          UART_DEFAULT_BAUD_DIV = 1085  // 125 MHz / 115200
+  parameter int          UART_BAUD_RATE        = 115200
 )(
   input  wire logic        clk_i,         // 125 MHz z PLL
   input  wire logic        rst_ni,
@@ -682,83 +682,57 @@ module xfcp_test_05_top #(
   // =========================================================================
   localparam int NUM_SLAVES = 7;
 
-  // UART config z axil_uart_adapter
-  logic [31:0]  baud_div_w;
-  logic [4:0]   config_w;
-  logic         err_clr_w;
-  uart_conf_t   uart_cfg_w;
-  uart_status_t rx_status_w;
-  uart_status_t tx_status_w;
+  // =========================================================================
+  // UART -- uart_fifo_os (16x oversampled RX, integrated FIFO depth=64)
+  //   Nahradza: axis_uart_rx + xfcp_fifo(8) + axis_skid + axis_uart_tx
+  //   Baud rate je fixny kompilaciou (CLK_FREQ_HZ / UART_BAUD_RATE).
+  // =========================================================================
+  logic       uart_tx_busy_w, uart_rx_busy_w;
+  logic       uart_overrun_w, uart_frame_err_w, uart_parity_err_w;
+  logic       uart_rx_fifo_overflow_w;
+  logic       err_clr_w;
 
-  always_comb begin
-    uart_cfg_w.reserved = 27'h0;
-    uart_cfg_w.stop2    = config_w[4];
-    uart_cfg_w.parity   = config_w[2] ? {~config_w[3], config_w[3]} : 2'b00;
-    uart_cfg_w.dbits    = config_w[1:0];
-  end
-
-  // UART RX -> elasticky FIFO
-  axi4s_if #(.DATA_WIDTH(8)) uart_rx_raw_s (.TCLK(clk_i), .TRESETn(rst_ni));
-
-  axis_uart_rx #(.AXIS_TLAST(1'b0)) u_uart_rx (
-    .m_axis     (uart_rx_raw_s.master),
-    .rxd_i      (uart_rx_i),
-    .prescale_i (baud_div_w[15:0]),
-    .cfg_i      (uart_cfg_w),
-    .status_o   (rx_status_w),
-    .err_clear_i(err_clr_w)
-  );
-
-  // Elasticky FIFO: 8 bajtov (UART -> arbiter)
-  logic [7:0] rx_fifo_rdata_w;
-  logic       rx_fifo_rvalid_w;
+  logic [7:0] uart_rx_data_w;
+  logic       uart_rx_valid_w;
   logic       arb_uart_ready_w;
 
-  xfcp_fifo #(.DATA_WIDTH(8), .DEPTH(8)) u_rx_fifo (
-    .clk    (clk_i),
-    .rst_n  (rst_ni),
-    .flush  (1'b0),
-    .w_data (uart_rx_raw_s.TDATA),
-    .w_valid(uart_rx_raw_s.TVALID),
-    .w_ready(uart_rx_raw_s.TREADY),
-    .r_data (rx_fifo_rdata_w),
-    .r_valid(rx_fifo_rvalid_w),
-    .r_ready(arb_uart_ready_w)
-  );
-
-  // XFCP TX z arbitra -> skid buffer -> UART TX
-  axi4s_if #(.DATA_WIDTH(8)) xfcp_tx_uart_s (.TCLK(clk_i), .TRESETn(rst_ni));
   logic       arb_uart_tx_valid_w;
   logic [7:0] arb_uart_tx_data_w;
   logic       arb_uart_tx_last_w;
+  logic       arb_uart_s_ready_w;
 
-  logic arb_uart_s_ready_w;
-
-  axis_skid_buffer #(.DATA_WIDTH(8), .USER_WIDTH(1), .RESET_DATA(1'b1)) u_xfcp_tx_skid (
-    .clk_i     (clk_i),
-    .rst_ni    (rst_ni),
-    .s_valid_i (arb_uart_tx_valid_w),
-    .s_ready_o (arb_uart_s_ready_w),
-    .s_data_i  (arb_uart_tx_data_w),
-    .s_last_i  (arb_uart_tx_last_w),
-    .s_user_i  (1'b0),
-    .m_valid_o (xfcp_tx_uart_s.TVALID),
-    .m_ready_i (xfcp_tx_uart_s.TREADY),
-    .m_data_o  (xfcp_tx_uart_s.TDATA[7:0]),
-    .m_last_o  (xfcp_tx_uart_s.TLAST),
-    .m_user_o  (xfcp_tx_uart_s.TUSER)
-  );
-  assign xfcp_tx_uart_s.TKEEP = '1;
-  assign xfcp_tx_uart_s.TID   = '0;
-  assign xfcp_tx_uart_s.TDEST = '0;
-
-  axis_uart_tx u_uart_tx (
-    .s_axis     (xfcp_tx_uart_s.slave),
-    .txd_o      (uart_tx_o),
-    .prescale_i (baud_div_w[15:0]),
-    .cfg_i      (uart_cfg_w),
-    .status_o   (tx_status_w),
-    .tx_done_pulse_o()
+  uart_fifo_os #(
+    .CLK_FREQ_HZ      (CLOCK_HZ),
+    .BAUD_RATE        (UART_BAUD_RATE),
+    .RX_FIFO_DEPTH    (64),
+    .TX_FIFO_DEPTH    (64)
+  ) u_uart (
+    .clk                  (clk_i),
+    .rstn                 (rst_ni),
+    .rx_i                 (uart_rx_i),
+    .tx_o                 (uart_tx_o),
+    .tx_data_i            (arb_uart_tx_data_w),
+    .tx_valid_i           (arb_uart_tx_valid_w),
+    .tx_ready_o           (arb_uart_s_ready_w),
+    .rx_data_o            (uart_rx_data_w),
+    .rx_valid_o           (uart_rx_valid_w),
+    .rx_ready_i           (arb_uart_ready_w),
+    .err_clear_i          (err_clr_w),
+    .tx_busy_o            (uart_tx_busy_w),
+    .rx_busy_o            (uart_rx_busy_w),
+    .tx_fifo_level_o      (),
+    .rx_fifo_level_o      (),
+    .tx_fifo_full_o       (),
+    .tx_fifo_empty_o      (),
+    .rx_fifo_full_o       (),
+    .rx_fifo_empty_o      (),
+    .rx_fifo_overflow_o   (uart_rx_fifo_overflow_w),
+    .tx_fifo_overflow_o   (),
+    .rx_fifo_underflow_o  (),
+    .tx_fifo_underflow_o  (),
+    .overrun_err_o        (uart_overrun_w),
+    .frame_err_o          (uart_frame_err_w),
+    .parity_err_o         (uart_parity_err_w)
   );
 
   // =========================================================================
@@ -789,10 +763,10 @@ module xfcp_test_05_top #(
   xfcp_arbiter_2to1 #(.ORD_FIFO_DEPTH(8)) u_arbiter (
     .clk_i          (clk_i),
     .rst_ni         (rst_ni),
-    // Port 0: UART
-    .s0_valid_i     (rx_fifo_rvalid_w),
+    // Port 0: UART (uart_fifo_os RX output)
+    .s0_valid_i     (uart_rx_valid_w),
     .s0_ready_o     (arb_uart_ready_w),
-    .s0_data_i      (rx_fifo_rdata_w),
+    .s0_data_i      (uart_rx_data_w),
     // Port 1: ETH-UDP (cez skid buffer pre timing closure)
     .s1_valid_i     (xfcp_eth_rx_valid_r),
     .s1_ready_o     (xfcp_eth_rx_ready_r),
@@ -919,19 +893,19 @@ module xfcp_test_05_top #(
     .sw_reset_o    (), .clear_faults_o()
   );
 
-  // Slot 1: UART adapter
-  axil_uart_adapter #(.BAUD_DIV_DEFAULT(UART_DEFAULT_BAUD_DIV)) u_uart_adapter (
+  // Slot 1: UART adapter (status z uart_fifo_os; baud/config su compile-time)
+  axil_uart_adapter #(.BAUD_DIV_DEFAULT(CLOCK_HZ / UART_BAUD_RATE)) u_uart_adapter (
     .clk_i        (clk_i), .rst_ni(rst_ni),
     .s_axil       (axil_s[1].slave),
-    .tx_busy_i    (tx_status_w.tx_busy),
-    .rx_busy_i    (rx_status_w.rx_busy),
-    .overrun_err_i(rx_status_w.overrun_err),
-    .frame_err_i  (rx_status_w.frame_err),
-    .parity_err_i (rx_status_w.parity_err),
+    .tx_busy_i    (uart_tx_busy_w),
+    .rx_busy_i    (uart_rx_busy_w),
+    .overrun_err_i(uart_overrun_w),
+    .frame_err_i  (uart_frame_err_w),
+    .parity_err_i (uart_parity_err_w),
     .tx_fifo_cnt_i(8'h0),
     .rx_fifo_cnt_i(8'h0),
-    .baud_div_o   (baud_div_w),
-    .config_o     (config_w),
+    .baud_div_o   (),
+    .config_o     (),
     .err_clr_o    (err_clr_w)
   );
 
@@ -965,12 +939,12 @@ module xfcp_test_05_top #(
   );
 
   // Slot 6: Diagnostic counters
-  wire rx_seen_pulse_w    = uart_rx_raw_s.TVALID;
-  wire rx_accept_pulse_w  = uart_rx_raw_s.TVALID &&  uart_rx_raw_s.TREADY;
-  wire rx_lost_pulse_w    = uart_rx_raw_s.TVALID && !uart_rx_raw_s.TREADY;
-  wire rx_frame_pulse_w   = rx_status_w.frame_err;
-  wire rx_overrun_pulse_w = rx_status_w.overrun_err;
-  wire tx_byte_pulse_w    = xfcp_tx_uart_s.TVALID && xfcp_tx_uart_s.TREADY;
+  wire rx_seen_pulse_w    = uart_rx_valid_w;
+  wire rx_accept_pulse_w  = uart_rx_valid_w &&  arb_uart_ready_w;
+  wire rx_lost_pulse_w    = uart_rx_fifo_overflow_w;
+  wire rx_frame_pulse_w   = uart_frame_err_w;
+  wire rx_overrun_pulse_w = uart_overrun_w;
+  wire tx_byte_pulse_w    = arb_uart_tx_valid_w && arb_uart_s_ready_w;
 
   axil_diag_ctrl u_diag_ctrl (
     .clk_i        (clk_i), .rst_ni(rst_ni),
