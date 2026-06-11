@@ -2,6 +2,7 @@
 
 **Posledna aktualizacia:** 2026-06-11
 **Stav:** UZAVRETY -- sim 1186/1186 PASS, Fmax ~140.3 MHz, HW soak PASS (40960 B)
+**Tag:** `uart_lib_v1_0` (commit df7dcc6)
 
 ---
 
@@ -63,11 +64,13 @@ pre jednoduchost.
 
 ## Prehľad Faz
 
-| Faza | Popis                             | Stav              |
-|------|-----------------------------------|-------------------|
-| 1    | RTL + sim                         | UZAVRETA          |
-| 2    | Quartus compile + timing          | UZAVRETA          |
-| 3    | HW board test                     | UZAVRETA          |
+| Faza | Popis                                        | Stav     | Commit  |
+|------|----------------------------------------------|----------|---------|
+| 1    | RTL + sim (1186/1186 PASS)                   | UZAVRETA | 79d62f2 |
+| 2    | Quartus compile + timing (Fmax ~140.3 MHz)   | UZAVRETA | 7f92f42 |
+| 3    | HW board test (256B bulk)                    | UZAVRETA | 26f5400 |
+| 4    | ABI cleanup + T07-T09 + HW soak 40960B       | UZAVRETA | 0fc5780 |
+| 5    | IP YAMLs + SW header + docs/uart/            | UZAVRETA | df7dcc6 |
 
 ---
 
