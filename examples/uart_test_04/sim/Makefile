@@ -11,6 +11,10 @@ VLOG := vlog -sv -suppress 2892
 VSIM := vsim -c -do "run -all; quit"
 
 # -- Shared file groups -------------------------------------------------------
+AXI_SRCS := \
+  ../../../rtl/axi/axi_pkg.sv \
+  ../../../rtl/axi/axi_interfaces.sv
+
 UART_BASE_SRCS := \
   $(RTL_UART)/uart_pkg.sv \
   $(RTL_UART)/uart_baud_gen.sv \
@@ -29,7 +33,7 @@ FIFO_SRCS := \
 
 all: unit integration
 
-unit: uart_core_rx_os
+unit: uart_core_rx_os uart_axil
 
 integration: uart_fifo_loopback_os
 
@@ -44,6 +48,13 @@ uart_core_rx_os: $(LOGDIR)
 	        $(RTL_UART)/uart_core_rx_os.sv \
 	        unit/tb_uart_core_rx_os.sv
 	$(VSIM) tb_uart_core_rx_os | tee $(LOGDIR)/tb_uart_core_rx_os.log
+
+uart_axil: $(LOGDIR)
+	$(VLOG) $(AXI_SRCS) \
+	        $(UART_BASE_SRCS) $(FIFO_SRCS) \
+	        $(RTL_UART)/uart_axil.sv \
+	        unit/tb_uart_axil.sv
+	$(VSIM) tb_uart_axil | tee $(LOGDIR)/tb_uart_axil.log
 
 # -- Integration tests --------------------------------------------------------
 
