@@ -139,7 +139,12 @@ Paket format:
 - 2x pipeline register: arb_s0 (UART→arbiter) + dec_sel_r (header_fifo→wdata_sel)
 - WNS -2.459 ns → -2.099 ns (85°C slow); Fmax 99.02 MHz
 - sim regression PASSED 12/12
-- HW UART test 21/21 PASS (root cause potvrdený: non-OS RX)
-- DIAG: rx_lost=0, rx_frame=0, rx_overrun=0, rx_bad_hdr=0
+- HW: UART 21/21 PASS x2, UDP 21/21 PASS (root cause: non-OS axis_uart_rx)
+- DIAG: rx_lost=0, rx_frame=0, rx_overrun=0, rx_bad_hdr=0, rx_recovery=0
+
+| Transport | Behov | Výsledok |
+|-----------|-------|----------|
+| UART      | 2x 21/21 | **PASS** |
+| UDP       | 1x 21/21 | **PASS** |
 
 - **PROJEKT UZAVRETY — A/B/C/D PASS**
