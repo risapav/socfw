@@ -116,14 +116,22 @@ module xfcp_fabric_endpoint #(
 
   // ── slave_sel_q: registrovaný pri req handshake ──────────────
   // Používaný pre wdata routing počas write transakcie.
-  // POZOR: parser posiela wdata PRED req_fire → slave_sel_q by mohol
-  // byť neaktualizovaný. Preto používame kombinačný dec_sel pre routing.
   logic [SEL_W-1:0] slave_sel_q;
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) slave_sel_q <= '0;
     else if (req_valid && req_ready)
       slave_sel_q <= dec_sel;
+  end
+
+  // dec_sel_r: registered dec_sel, latched every cycle req_valid=1.
+  // Breaks i_header_fifo.rd_ptr_q -> wdata_sel -> i_write_buffer.mem
+  // combinatorial path (>10 ns). Safe because write_data_valid arrives
+  // >=3 cycles after req_valid (XFCP: 9 header bytes before payload).
+  logic [SEL_W-1:0] dec_sel_r;
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) dec_sel_r <= '0;
+    else if (req_valid) dec_sel_r <= dec_sel;
   end
 
   // ── Engine signály ───────────────────────────────────────────
@@ -221,7 +229,7 @@ module xfcp_fabric_endpoint #(
   logic [SEL_W-1:0] wdata_sel;
   wire  drain_wdata  = drop_wdata_q ||
                        (invalid_req && req_hdr.opcode == XFCP_OP_WRITE);
-  assign wdata_sel   = req_valid ? dec_sel : slave_sel_q;
+  assign wdata_sel   = req_valid ? dec_sel_r : slave_sel_q;
   assign wdata_valid = wdata_valid_raw && !drain_wdata;
   assign wdata_ready = drain_wdata ? 1'b1 : eng_wdata_ready[wdata_sel];
 

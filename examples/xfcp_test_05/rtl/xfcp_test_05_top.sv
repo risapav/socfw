@@ -696,6 +696,23 @@ module xfcp_test_05_top #(
   logic       uart_rx_valid_w;
   logic       arb_uart_ready_w;
 
+  // Pipeline register: uart_fifo_os RX -> arbiter s0.
+  // Breaks sync_fifo.tail_q -> xfcp_fifo.mem combinatorial path (~11.9 ns).
+  logic [7:0] arb_s0_data_r;
+  logic       arb_s0_valid_r;
+  logic       arb_s0_ready_w;
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      arb_s0_valid_r <= 1'b0;
+      arb_s0_data_r  <= '0;
+    end else if (!arb_s0_valid_r || arb_s0_ready_w) begin
+      arb_s0_valid_r <= uart_rx_valid_w;
+      arb_s0_data_r  <= uart_rx_data_w;
+    end
+  end
+  assign arb_uart_ready_w = !arb_s0_valid_r || arb_s0_ready_w;
+
   logic       arb_uart_tx_valid_w;
   logic [7:0] arb_uart_tx_data_w;
   logic       arb_uart_tx_last_w;
@@ -763,10 +780,10 @@ module xfcp_test_05_top #(
   xfcp_arbiter_2to1 #(.ORD_FIFO_DEPTH(8)) u_arbiter (
     .clk_i          (clk_i),
     .rst_ni         (rst_ni),
-    // Port 0: UART (uart_fifo_os RX output)
-    .s0_valid_i     (uart_rx_valid_w),
-    .s0_ready_o     (arb_uart_ready_w),
-    .s0_data_i      (uart_rx_data_w),
+    // Port 0: UART (via pipeline register)
+    .s0_valid_i     (arb_s0_valid_r),
+    .s0_ready_o     (arb_s0_ready_w),
+    .s0_data_i      (arb_s0_data_r),
     // Port 1: ETH-UDP (cez skid buffer pre timing closure)
     .s1_valid_i     (xfcp_eth_rx_valid_r),
     .s1_ready_o     (xfcp_eth_rx_ready_r),
