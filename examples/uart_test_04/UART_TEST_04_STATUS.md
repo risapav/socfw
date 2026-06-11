@@ -1,3 +1,4 @@
+
 # UART_TEST_04 — Stav projektu
 
 **Posledná aktualizácia:** 2026-06-11 (VSETKY FAZY UZAVRETE)

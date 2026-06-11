@@ -235,7 +235,7 @@ module uart_axil #(
     if (!rst_ni)
       irq_enable_q <= 5'h0;
     else if (wr_fire_w && wr_idx_w == IDX_IRQ_ENABLE && wstrb_r[0])
-      irq_enable_q <= 5'(wdata_r[4:0]);
+      irq_enable_q <= wdata_r[4:0];
   end
 
   // --------------------------------------------------------------------------
@@ -247,7 +247,7 @@ module uart_axil #(
     error_next_w = error_status_q;
     // W1C clear first, then HW set -- new error in same cycle is not lost
     if (wr_fire_w && wr_idx_w == IDX_ERROR_STATUS)
-      error_next_w = error_next_w & ~3'(wdata_r[2:0]);
+      error_next_w = error_next_w & ~wdata_r[2:0];
     if (overrun_err_w) error_next_w[0] = 1'b1;
     if (frame_err_w)   error_next_w[1] = 1'b1;
     if (parity_err_w)  error_next_w[2] = 1'b1;
@@ -266,10 +266,10 @@ module uart_axil #(
   always_comb begin
     irq_stat_next_w = irq_status_q | irq_cond_w;
     if (wr_fire_w && wr_idx_w == IDX_IRQ_STATUS)
-      irq_stat_next_w = irq_stat_next_w & ~5'(wdata_r[4:0]);
+      irq_stat_next_w = irq_stat_next_w & ~wdata_r[4:0];
     // ERROR_STATUS clear also clears the error IRQ bits
     if (wr_fire_w && wr_idx_w == IDX_ERROR_STATUS)
-      irq_stat_next_w[4:2] = irq_stat_next_w[4:2] & ~3'(wdata_r[2:0]);
+      irq_stat_next_w[4:2] = irq_stat_next_w[4:2] & ~wdata_r[2:0];
   end
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
