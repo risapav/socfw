@@ -28,6 +28,18 @@ uart_fifo_os.sv      -- uart_os (OS-RX) + RX/TX FIFOs
 uart_axil.sv         -- AXI-Lite peripheral wrapping uart_fifo_os
 ```
 
+## Odporúčané použitie
+
+| Použitie                              | Modul          | IP YAML                   |
+|---------------------------------------|----------------|---------------------------|
+| SoC periféria s AXI-Lite zbernicou   | `uart_axil`    | `ip/uart_axil.ip.yaml`    |
+| Stream UART (AXI-Stream, bez reg bus) | `uart_fifo_os` | `ip/uart_fifo_os.ip.yaml` |
+| Bare UART bez FIFO (custom wrapper)   | `uart_os`      | `ip/uart_core_os.ip.yaml` |
+| Minimálny TX/RX (bez oversamplingu)   | `uart`         | —                         |
+
+Pre nové projekty preferuj `uart_axil` (SoC integrácia) alebo `uart_fifo_os` (priamy stream).
+`uart_core_rx` bez oversamplingu je len fallback/simple variant — pre 115200 na 125 MHz preferuj `uart_core_rx_os`.
+
 For production use, instantiate **`uart_axil`** (AXI-Lite) or **`uart_fifo_os`** (AXI-Stream-like).
 
 ---

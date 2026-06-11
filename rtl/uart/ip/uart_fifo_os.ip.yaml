@@ -1,0 +1,123 @@
+version: 2
+kind: ip
+
+ip:
+  name: uart_fifo_os
+  module: uart_fifo_os
+  category: peripheral
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rstn
+  active_high: false
+
+clocking:
+  primary_input_port: clk
+
+params:
+  CLK_FREQ_HZ:
+    type: int
+    default: 125000000
+  BAUD_RATE:
+    type: int
+    default: 115200
+  STOP2:
+    type: bit
+    default: 0
+  PARITY:
+    type: logic
+    width: 2
+    default: "2'b00"
+  DBITS:
+    type: logic
+    width: 2
+    default: "2'b00"
+  RX_FIFO_DEPTH:
+    type: int
+    default: 64
+  TX_FIFO_DEPTH:
+    type: int
+    default: 64
+  RX_FIFO_RAM_STYLE:
+    type: string
+    default: '"logic"'
+  TX_FIFO_RAM_STYLE:
+    type: string
+    default: '"logic"'
+
+ports:
+  - name: clk
+    direction: input
+    width: 1
+  - name: rstn
+    direction: input
+    width: 1
+  - name: rx_i
+    direction: input
+    width: 1
+  - name: tx_o
+    direction: output
+    width: 1
+  - name: tx_data_i
+    direction: input
+    width: 8
+  - name: tx_valid_i
+    direction: input
+    width: 1
+  - name: tx_ready_o
+    direction: output
+    width: 1
+  - name: rx_data_o
+    direction: output
+    width: 8
+  - name: rx_valid_o
+    direction: output
+    width: 1
+  - name: rx_ready_i
+    direction: input
+    width: 1
+  - name: err_clear_i
+    direction: input
+    width: 1
+
+artifacts:
+  synthesis:
+    - ../../axi/axi_pkg.sv
+    - ../../axi/axi_interfaces.sv
+    - ../uart_pkg.sv
+    - ../uart_baud_gen.sv
+    - ../uart_core_rx.sv
+    - ../uart_core_rx_os.sv
+    - ../uart_core_tx.sv
+    - ../uart.sv
+    - ../uart_os.sv
+    - ../sync_fifo.sv
+    - ../uart_fifo.sv
+    - ../uart_fifo_os.sv
+
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - uart_fifo_os
+    - uart_fifo
+    - sync_fifo
+    - uart_baud_gen
+    - uart_core_rx_os
+    - uart_core_rx
+    - uart_core_tx
+    - uart_os
+    - uart
+  packages:
+    - uart_pkg
+    - axi_pkg
