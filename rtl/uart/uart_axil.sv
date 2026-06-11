@@ -16,7 +16,7 @@
  *
  *  Register map (byte offset, all 32-bit):
  *    0x00  RO    ID            0x55415254 ("UART")
- *    0x04  RO    VERSION       0x0001_0400 (major=1, minor=4, patch=0)
+ *    0x04  RO    VERSION       0x0001_0500 (major=1, minor=5, patch=0)
  *    0x08  RO    BAUD_DIV_TX   floor(CLK_FREQ_HZ / BAUD_RATE)
  *    0x0C  RO    BAUD_DIV_RX   floor(CLK_FREQ_HZ / (BAUD_RATE * 16))
  *    0x10  RO    CONF          [4]=stop2, [3:2]=parity, [1:0]=dbits
@@ -25,19 +25,27 @@
  *                              [2]=tx_fifo_empty, [1]=rx_busy, [0]=tx_busy
  *    0x18  RO    FIFO_LEVEL    [23:12]=rx_level, [11:0]=tx_level
  *    0x1C  RO*   RX_DATA       [8]=valid, [7:0]=data; READ POPS RX FIFO
- *    0x20  WO    TX_DATA       [7:0]=data; write pushes to TX FIFO (drop if full)
- *    0x24  RW    IRQ_ENABLE    [4:0] per-source enable
- *    0x28  W1C   IRQ_STATUS    [4:0] pending; write 1 to clear
- *    0x2C  W1C   ERROR_STATUS  [2]=parity,[1]=frame,[0]=overrun;
- *                              clearing also clears IRQ_STATUS[4:2] and pulses err_clear_i
+ *    0x20  WO    TX_DATA       [7:0]=data; write pushes to TX FIFO;
+ *                              sets ERROR_STATUS[3] if FIFO full (byte dropped, BRESP=OKAY)
+ *    0x24  RW    IRQ_ENABLE    [5:0] per-source enable
+ *    0x28  W1C   IRQ_STATUS    [5:0] pending; write 1 to clear
+ *    0x2C  W1C   ERROR_STATUS  [3]=tx_write_when_full, [2]=parity, [1]=frame, [0]=overrun;
+ *                              clearing also clears the corresponding IRQ_STATUS bit
+ *                              and pulses err_clear_i to UART core (bits [2:0] only)
  *
  *  IRQ_ENABLE / IRQ_STATUS bits:
- *    [4]=overrun_err, [3]=parity_err, [2]=frame_err,
- *    [1]=tx_not_full (level), [0]=rx_not_empty (level)
+ *    [5]=tx_write_when_full, [4]=overrun_err, [3]=parity_err,
+ *    [2]=frame_err, [1]=tx_not_full (level), [0]=rx_not_empty (level)
+ *
+ *  ERROR_STATUS -> IRQ_STATUS cascade (single W1C step clears both):
+ *    ERROR[0] (overrun)          -> IRQ[4]
+ *    ERROR[1] (frame)            -> IRQ[2]
+ *    ERROR[2] (parity)           -> IRQ[3]
+ *    ERROR[3] (tx_write_full)    -> IRQ[5]
  *
  *  Error clear sequence:
- *    1. Write ERROR_STATUS (W1C) -- clears error sticky, also clears IRQ_STATUS[4:2],
- *       pulses err_clear_i to UART core.
+ *    1. Write ERROR_STATUS (W1C) -- clears error sticky bits and the corresponding
+ *       IRQ_STATUS bits atomically; pulses err_clear_i for bits [2:0] (UART core).
  *    2. Write IRQ_STATUS[1:0] if level-based bits still need clearing.
  */
 
@@ -203,77 +211,86 @@ module uart_axil #(
   // --------------------------------------------------------------------------
   // RW / W1C registers (next-state computed combinatorially for clean priority)
   // --------------------------------------------------------------------------
-  logic [4:0] irq_enable_q;
-  logic [4:0] irq_status_q;
-  logic [2:0] error_status_q;
+  logic [5:0] irq_enable_q;
+  logic [5:0] irq_status_q;
+  logic [3:0] error_status_q;
 
   // IRQ conditions -- level sources re-assert every cycle; error sources sticky
-  logic [4:0] irq_cond_w;
-  assign irq_cond_w[0] = ~rx_fifo_empty_w;    // rx_not_empty
-  assign irq_cond_w[1] = ~tx_fifo_full_w;     // tx_not_full
-  assign irq_cond_w[2] = error_status_q[1];   // frame_err sticky
-  assign irq_cond_w[3] = error_status_q[2];   // parity_err sticky
-  assign irq_cond_w[4] = error_status_q[0];   // overrun_err sticky
+  logic [5:0] irq_cond_w;
+  assign irq_cond_w[0] = ~rx_fifo_empty_w;     // rx_not_empty (level)
+  assign irq_cond_w[1] = ~tx_fifo_full_w;      // tx_not_full  (level)
+  assign irq_cond_w[2] = error_status_q[1];    // frame_err sticky
+  assign irq_cond_w[3] = error_status_q[2];    // parity_err sticky
+  assign irq_cond_w[4] = error_status_q[0];    // overrun_err sticky
+  assign irq_cond_w[5] = error_status_q[3];    // tx_write_when_full sticky
 
   // irq_o: combinatorial from registered state
   assign irq_o = |(irq_enable_q & irq_status_q);
 
-  // TX push: gated on FIFO ready + WSTRB[0]; silent drop if FIFO full
+  // TX push: gated on FIFO ready + WSTRB[0]
   assign tx_valid_w = wr_fire_w & (wr_idx_w == IDX_TX_DATA) & wstrb_r[0] & tx_ready_w;
   assign tx_data_w  = wdata_r[7:0];
+
+  // TX write-when-full: byte dropped, error recorded
+  wire tx_write_full_w = wr_fire_w & (wr_idx_w == IDX_TX_DATA) & wstrb_r[0] & ~tx_ready_w;
 
   // RX pop: consume FIFO when RX_DATA register is read (if FIFO has data)
   assign rx_ready_w = ar_fire_w & (ar_idx_w == IDX_RX_DATA) & rx_valid_w;
 
-  // err_clear_i: pulsed when ERROR_STATUS W1C write clears any bit
+  // err_clear_i: pulsed when ERROR_STATUS W1C clears any UART core error bit [2:0]
   assign err_clear_w = wr_fire_w & (wr_idx_w == IDX_ERROR_STATUS) & |(wdata_r[2:0]);
 
   // --------------------------------------------------------------------------
-  // irq_enable_q (RW)
+  // irq_enable_q (RW, 6-bit)
   // --------------------------------------------------------------------------
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni)
-      irq_enable_q <= 5'h0;
+      irq_enable_q <= 6'h0;
     else if (wr_fire_w && wr_idx_w == IDX_IRQ_ENABLE && wstrb_r[0])
-      irq_enable_q <= wdata_r[4:0];
+      irq_enable_q <= wdata_r[5:0];
   end
 
   // --------------------------------------------------------------------------
-  // error_status_q (W1C): HW set by UART errors, SW clear via W1C write
-  // err_clear_w fires on the same cycle as the W1C write (wr_fire_w)
+  // error_status_q (W1C, 4-bit): HW set by errors, SW clear via W1C write
+  // Clear-first, set-wins: HW error in same cycle as W1C is not lost.
   // --------------------------------------------------------------------------
-  logic [2:0] error_next_w;
+  logic [3:0] error_next_w;
   always_comb begin
     error_next_w = error_status_q;
-    // W1C clear first, then HW set -- new error in same cycle is not lost
     if (wr_fire_w && wr_idx_w == IDX_ERROR_STATUS)
-      error_next_w = error_next_w & ~wdata_r[2:0];
-    if (overrun_err_w) error_next_w[0] = 1'b1;
-    if (frame_err_w)   error_next_w[1] = 1'b1;
-    if (parity_err_w)  error_next_w[2] = 1'b1;
+      error_next_w = error_next_w & ~wdata_r[3:0];
+    if (overrun_err_w)   error_next_w[0] = 1'b1;
+    if (frame_err_w)     error_next_w[1] = 1'b1;
+    if (parity_err_w)    error_next_w[2] = 1'b1;
+    if (tx_write_full_w) error_next_w[3] = 1'b1;
   end
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (!rst_ni) error_status_q <= 3'h0;
+    if (!rst_ni) error_status_q <= 4'h0;
     else         error_status_q <= error_next_w;
   end
 
   // --------------------------------------------------------------------------
-  // irq_status_q (W1C): OR-set by conditions each cycle, SW clear via W1C write
-  // ERROR_STATUS W1C also clears IRQ_STATUS[4:2] (single clear step for errors)
+  // irq_status_q (W1C, 6-bit): OR-set each cycle, SW clear via W1C write.
+  // ERROR_STATUS W1C atomically clears the corresponding IRQ bit:
+  //   ERROR[0]=overrun -> IRQ[4], ERROR[1]=frame -> IRQ[2],
+  //   ERROR[2]=parity  -> IRQ[3], ERROR[3]=tx_full -> IRQ[5]
   // --------------------------------------------------------------------------
-  logic [4:0] irq_stat_next_w;
+  logic [5:0] irq_stat_next_w;
   always_comb begin
     irq_stat_next_w = irq_status_q | irq_cond_w;
     if (wr_fire_w && wr_idx_w == IDX_IRQ_STATUS)
-      irq_stat_next_w = irq_stat_next_w & ~wdata_r[4:0];
-    // ERROR_STATUS clear also clears the error IRQ bits
-    if (wr_fire_w && wr_idx_w == IDX_ERROR_STATUS)
-      irq_stat_next_w[4:2] = irq_stat_next_w[4:2] & ~wdata_r[2:0];
+      irq_stat_next_w = irq_stat_next_w & ~wdata_r[5:0];
+    if (wr_fire_w && wr_idx_w == IDX_ERROR_STATUS) begin
+      if (wdata_r[0]) irq_stat_next_w[4] = 1'b0;  // overrun: ERROR[0] -> IRQ[4]
+      if (wdata_r[1]) irq_stat_next_w[2] = 1'b0;  // frame:   ERROR[1] -> IRQ[2]
+      if (wdata_r[2]) irq_stat_next_w[3] = 1'b0;  // parity:  ERROR[2] -> IRQ[3]
+      if (wdata_r[3]) irq_stat_next_w[5] = 1'b0;  // tx_full: ERROR[3] -> IRQ[5]
+    end
   end
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (!rst_ni) irq_status_q <= 5'h0;
+    if (!rst_ni) irq_status_q <= 6'h0;
     else         irq_status_q <= irq_stat_next_w;
   end
 
@@ -304,7 +321,7 @@ module uart_axil #(
       r_valid_r <= 1'b1;
       case (ar_idx_w)
         UART_REG_ID[5:2]:           rdata_r <= 32'h5541_5254;
-        UART_REG_VERSION[5:2]:      rdata_r <= 32'h0001_0400;
+        UART_REG_VERSION[5:2]:      rdata_r <= 32'h0001_0500;
         UART_REG_BAUD_DIV_TX[5:2]:  rdata_r <= 32'(PRESCALE_TX);
         UART_REG_BAUD_DIV_RX[5:2]:  rdata_r <= 32'(PRESCALE_RX_OS);
         UART_REG_CONF[5:2]:         rdata_r <= {27'h0, STOP2, PARITY, DBITS};
@@ -312,9 +329,9 @@ module uart_axil #(
         UART_REG_FIFO_LEVEL[5:2]:   rdata_r <= fifo_level_w;
         IDX_RX_DATA:                rdata_r <= {23'h0, rx_valid_w, rx_data_w};
         IDX_TX_DATA:                rdata_r <= '0;  // write-only
-        IDX_IRQ_ENABLE:             rdata_r <= {27'h0, irq_enable_q};
-        IDX_IRQ_STATUS:             rdata_r <= {27'h0, irq_status_q};
-        IDX_ERROR_STATUS:           rdata_r <= {29'h0, error_status_q};
+        IDX_IRQ_ENABLE:             rdata_r <= {26'h0, irq_enable_q};
+        IDX_IRQ_STATUS:             rdata_r <= {26'h0, irq_status_q};
+        IDX_ERROR_STATUS:           rdata_r <= {28'h0, error_status_q};
         default:                    rdata_r <= '0;
       endcase
     end else if (r_valid_r && s_axil.RREADY) begin

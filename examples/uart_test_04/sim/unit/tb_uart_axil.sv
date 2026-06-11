@@ -6,6 +6,7 @@
 //   T03  TX: write 0x55 to TX_DATA, loopback tx->rx, wait for rx_valid in STATUS
 //   T04  RX_DATA read pops FIFO: read 0x55, verify valid=1, verify FIFO empty after
 //   T05  IRQ: enable rx_not_empty, send byte, verify irq_o goes high, clear IRQ_STATUS
+//   T06  TX full write: fill TX FIFO, write one more, verify ERROR_STATUS[3] + IRQ_STATUS[5]
 //
 // Sim parameters: SIM_CLK=1_600_000, SIM_BAUD=12_500
 //   PRESCALE_TX    = round(1_600_000 / 12_500) = 128  (1x)
@@ -171,7 +172,7 @@ module tb_uart_axil;
     check_eq("T01 ID",          rd_data, 32'h5541_5254);
 
     axil_read(8'h04, rd_data);
-    check_eq("T01 VERSION",     rd_data, 32'h0001_0400);
+    check_eq("T01 VERSION",     rd_data, 32'h0001_0500);
 
     axil_read(8'h08, rd_data);
     check_eq("T01 BAUD_DIV_TX", rd_data, 32'(PRESCALE_TX));
@@ -269,6 +270,52 @@ module tb_uart_axil;
 
     repeat(2) @(posedge clk_i);
     check("T05 irq_o deasserted after clear", !irq_w);
+
+    // ------------------------------------------------------------------
+    // T06: TX write-when-full -> ERROR_STATUS[3] + IRQ_STATUS[5]
+    // ------------------------------------------------------------------
+    // Enable IRQ for tx_write_when_full (bit 5)
+    axil_write(8'h24, 32'h20);
+    // Fill TX FIFO: write FIFO_DEPTH+1 bytes because TX core pops the
+    // first byte immediately (while still idle), so we need one extra write
+    begin : blk_t06_fill
+      for (int i = 0; i < FIFO_DEPTH + 1; i++) begin
+        axil_write(8'h20, 32'hA5);
+      end
+    end
+    // Verify FIFO full in STATUS
+    axil_read(8'h14, rd_data);
+    check("T06 tx_fifo_full set", rd_data[3]);
+
+    // Write one more -- byte must be dropped, ERROR_STATUS[3] must be set
+    axil_write(8'h20, 32'hBB);
+
+    // Allow one clock for error_next_w -> error_status_q
+    repeat(2) @(posedge clk_i);
+
+    axil_read(8'h2C, rd_data);
+    check("T06 ERROR_STATUS[3] set", rd_data[3]);
+    check("T06 ERROR_STATUS[2:0] clear", !rd_data[2] && !rd_data[1] && !rd_data[0]);
+
+    // IRQ_STATUS[5] must be set (irq_cond_w[5] = error_status_q[3])
+    axil_read(8'h28, rd_data);
+    check("T06 IRQ_STATUS[5] set", rd_data[5]);
+
+    // irq_o must be asserted (IRQ_ENABLE[5]=1)
+    repeat(2) @(posedge clk_i);
+    check("T06 irq_o asserted", irq_w);
+
+    // Clear ERROR_STATUS[3] via W1C -- must also clear IRQ_STATUS[5]
+    axil_write(8'h2C, 32'h08);
+    repeat(2) @(posedge clk_i);
+
+    axil_read(8'h2C, rd_data);
+    check("T06 ERROR_STATUS[3] cleared", !rd_data[3]);
+
+    axil_read(8'h28, rd_data);
+    check("T06 IRQ_STATUS[5] cleared by ERROR W1C", !rd_data[5]);
+
+    check("T06 irq_o deasserted", !irq_w);
 
     // ------------------------------------------------------------------
     // Summary
