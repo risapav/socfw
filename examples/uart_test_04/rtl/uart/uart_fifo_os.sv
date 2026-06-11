@@ -7,8 +7,10 @@
  * @param   STOP2          True for 2 stop bits.
  * @param   PARITY         2'b00 none, 2'b01 odd, 2'b10 even.
  * @param   DBITS          2'b00=8, 2'b01=7, 2'b10=6, 2'b11=5 data bits.
- * @param   RX_FIFO_DEPTH  RX FIFO depth in bytes; must be a power of 2 > 1.
- * @param   TX_FIFO_DEPTH  TX FIFO depth in bytes; must be a power of 2 > 1.
+ * @param   RX_FIFO_DEPTH     RX FIFO depth in bytes; must be a power of 2 > 1.
+ * @param   TX_FIFO_DEPTH     TX FIFO depth in bytes; must be a power of 2 > 1.
+ * @param   RX_FIFO_RAM_STYLE Quartus RAM implementation hint for RX FIFO ("logic", "M9K", "AUTO").
+ * @param   TX_FIFO_RAM_STYLE Quartus RAM implementation hint for TX FIFO ("logic", "M9K", "AUTO").
  * @details
  *  Drop-in replacement for uart_fifo.sv.  Uses uart_os (16x oversampled RX)
  *  instead of uart.  All FIFO logic, back-pressure, and status signals are
@@ -29,8 +31,10 @@ module uart_fifo_os #(
   parameter bit         STOP2         = 1'b0,
   parameter logic [1:0] PARITY        = 2'b00,
   parameter logic [1:0] DBITS         = 2'b00,
-  parameter int         RX_FIFO_DEPTH = 64,
-  parameter int         TX_FIFO_DEPTH = 64
+  parameter int         RX_FIFO_DEPTH     = 64,
+  parameter int         TX_FIFO_DEPTH     = 64,
+  parameter string      RX_FIFO_RAM_STYLE = "logic",
+  parameter string      TX_FIFO_RAM_STYLE = "logic"
 )(
   input  wire clk,
   input  wire rstn,
@@ -127,7 +131,8 @@ module uart_fifo_os #(
   // ------------------------------------------------------------------
   sync_fifo #(
     .DATA_WIDTH (DATA_WIDTH),
-    .DEPTH      (RX_FIFO_DEPTH)
+    .DEPTH      (RX_FIFO_DEPTH),
+    .RAM_STYLE  (RX_FIFO_RAM_STYLE)
   ) u_rx_fifo (
     .clk        (clk),
     .rstn       (rstn),
@@ -150,7 +155,8 @@ module uart_fifo_os #(
   // ------------------------------------------------------------------
   sync_fifo #(
     .DATA_WIDTH (DATA_WIDTH),
-    .DEPTH      (TX_FIFO_DEPTH)
+    .DEPTH      (TX_FIFO_DEPTH),
+    .RAM_STYLE  (TX_FIFO_RAM_STYLE)
   ) u_tx_fifo (
     .clk        (clk),
     .rstn       (rstn),

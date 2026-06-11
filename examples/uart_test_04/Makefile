@@ -11,8 +11,8 @@ include ../../Makefile.common
 #   uart_os.sv         -- UART wrapper: OS RX + standard TX
 #   uart_fifo_os.sv    -- FIFO wrapper pouzivajuci uart_os
 #
-# RX baud gen: PRESCALE_OS = round(125 MHz / (115200 * 16)) = 68
-# Sample center: OS tick 8 z 16 (~544 clk po falling edge, odchylka 1.5 clk)
+# RX baud gen: PRESCALE_OS = floor(125 MHz / (115200 * 16)) = 67  [floor, nie round!]
+# Sample center: OS tick 8 z 16 (~536 clk po falling edge)
 # Glitch filter: false start odmietnuty ak RXD==1 v strede start bitu
 #
 # UART:  115200 8N1, echo loopback cez FIFO

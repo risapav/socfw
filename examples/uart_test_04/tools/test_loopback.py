@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""UART loopback hardware test for uart_test_03.
+"""UART loopback hardware test for uart_test_04.
 
 Sends bytes over UART and verifies they echo back identically.
-FPGA must be programmed with uart_test_03 bitfile.
+FPGA must be programmed with uart_test_04 bitfile (16x oversampled RX, FIFO loopback).
 
 Improvement over uart_test_02: bulk writes work without sequential workaround
 because the FPGA now has a 64-byte RX/TX FIFO.
@@ -136,7 +136,7 @@ def run_suite(ser, args, chunksize, run_idx):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="uart_test_03 HW loopback test")
+    ap = argparse.ArgumentParser(description="uart_test_04 HW loopback test")
     ap.add_argument("--port",    default="/dev/ttyUSB0", help="Serial port")
     ap.add_argument("--baud",    type=int, default=115200)
     ap.add_argument("--count",   type=int, default=256,
@@ -152,7 +152,7 @@ def main():
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
 
-    print(f"uart_test_03 HW loopback -- {args.port} @ {args.baud} 8N1")
+    print(f"uart_test_04 HW loopback -- {args.port} @ {args.baud} 8N1")
     print(f"  FIFO depth: 64 bytes  seed={args.seed}  count={args.count}")
     print()
 
@@ -183,10 +183,10 @@ def main():
     ser.close()
     print()
     if total_fails == 0:
-        print("PASS uart_test_03 HW loopback: all tests passed")
+        print("PASS uart_test_04 HW loopback: all tests passed")
         sys.exit(0)
     else:
-        print(f"FAIL uart_test_03 HW loopback: {total_fails} byte(s) wrong")
+        print(f"FAIL uart_test_04 HW loopback: {total_fails} byte(s) wrong")
         sys.exit(1)
 
 

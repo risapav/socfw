@@ -7,8 +7,10 @@
  *  Identical loopback architecture to uart_test_03_top but uses uart_fifo_os
  *  (16x oversampled RX) instead of uart_fifo (1x sampler).
  *
- *  RX baud generator runs at 16x baud rate (PRESCALE_OS=68 @ 125 MHz/115200).
- *  Majority vote on center 3 samples provides glitch rejection on UART RX.
+ *  RX baud generator uses floor division: PRESCALE_OS = floor(CLK/(BAUD*16)) = 67
+ *  at 125 MHz / 115200. Floor ensures FPGA runs faster than sender, so the DUT
+ *  returns to IDLE between back-to-back frames (no phase accumulation).
+ *  Majority vote on center 3 OS ticks (6,7,8) provides glitch rejection.
  *
  *  LED mapping (via uart_stream_loopback_status):
  *    0  RX byte accepted -- stretched pulse
