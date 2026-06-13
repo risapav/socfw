@@ -103,7 +103,7 @@ def dump_diag(bus):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="xfcp_test_05 HW test")
+    parser = argparse.ArgumentParser(description="xfcp_test_06 HW test")
     grp = parser.add_mutually_exclusive_group(required=True)
     grp.add_argument("--uart", metavar="PORT",
                      help="UART transport, napr. /dev/ttyUSB0")
@@ -128,7 +128,7 @@ def main():
         bus = XfcpBus.udp(host=host, port=port)
         label = f"UDP {host}:{port}"
 
-    print(f"\n{Fore.LIGHTWHITE_EX}=== xfcp_test_05 HW test  [{label}] ===")
+    print(f"\n{Fore.LIGHTWHITE_EX}=== xfcp_test_06 HW test  [{label}] ===")
 
     total_pass = 0
     total_fail = 0
