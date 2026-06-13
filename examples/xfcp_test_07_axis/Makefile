@@ -95,16 +95,16 @@ test-icmp:
 
 test-uart:
 	cd $(TOOLS_DIR) && python3 test_hw.py --uart $(UART_PORT) --baud $(UART_BAUD) \
-	  --repeat $(TEST_REPEAT) --diag
+	  --repeat $(TEST_REPEAT) --rw --stream --diag
 
 test-udp: arp-setup
 	cd $(TOOLS_DIR) && python3 test_hw.py --udp $(FPGA_IP):$(XFCP_UDP_PORT) \
-	  --repeat $(TEST_REPEAT) --diag
+	  --repeat $(TEST_REPEAT) --rw --stream --diag
 
 hw-test: arp-setup
 	@echo ""
 	@echo "======================================="
-	@echo "  xfcp_test_06 HW test (full)"
+	@echo "  xfcp_test_07_axis HW test (full)"
 	@echo "======================================="
 	@echo ""
 	@echo "--- ARP ---"
@@ -115,11 +115,11 @@ hw-test: arp-setup
 	@echo ""
 	@echo "--- XFCP over UART ---"
 	cd $(TOOLS_DIR) && python3 test_hw.py --uart $(UART_PORT) --baud $(UART_BAUD) \
-	  --repeat $(TEST_REPEAT) --diag
+	  --repeat $(TEST_REPEAT) --rw --stream --diag
 	@echo ""
 	@echo "--- XFCP over UDP ---"
 	cd $(TOOLS_DIR) && python3 test_hw.py --udp $(FPGA_IP):$(XFCP_UDP_PORT) \
-	  --repeat $(TEST_REPEAT) --diag
+	  --repeat $(TEST_REPEAT) --rw --stream --diag
 	@echo ""
 	@echo "======================================="
 	@echo "  hw-test COMPLETE"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# hw_regression.sh — xfcp_test_05 HW regresia: UART + UDP
+# hw_regression.sh — xfcp_test_07_axis HW regresia: UART + UDP
 #
 # Pouzitie:
 #   bash hw_regression.sh [UART_PORT] [FPGA_IP] [REPEAT]
@@ -25,7 +25,7 @@ run_test() {
     sep
     echo "  $label"
     sep
-    if python3 test_hw.py "$@" --repeat "$REPEAT" --rw --diag; then
+    if python3 test_hw.py "$@" --repeat "$REPEAT" --rw --stream --diag; then
         echo ""
         echo "  >>> $label: PASS"
         PASS=$((PASS + 1))
@@ -38,7 +38,7 @@ run_test() {
 
 echo ""
 echo "=========================================="
-echo "  xfcp_test_05 HW regresia"
+echo "  xfcp_test_07_axis HW regresia"
 echo "  UART : $UART_PORT @ $BAUD"
 echo "  UDP  : $FPGA_IP:$UDP_PORT"
 echo "  Opakovania na slot: $REPEAT"
