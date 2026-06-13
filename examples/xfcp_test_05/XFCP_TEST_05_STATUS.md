@@ -147,4 +147,61 @@ Paket format:
 | UART      | 2x 21/21 | **PASS** |
 | UDP       | 1x 21/21 | **PASS** |
 
-- **PROJEKT UZAVRETY — A/B/C/D PASS**
+- **PROJEKT UZAVRETY — A/B/C/D PASS** (funkčne; timing stále otvorený, pozri Faza E)
+
+---
+
+## Faza E — Timing Closure 125 MHz [UZAVRETA 2026-06-13]
+
+**Cieľ:** CLK125 WNS ≥ 0 ns (Slow 1200mV 85°C). **DOSIAHNUTÝ.**
+
+### Výsledok timing closure
+
+| Corner | Clock | WNS |
+|--------|-------|-----|
+| Slow 1200mV 85°C | CLK125 | **+0.018 ns** |
+| Slow 1200mV 85°C | ETH_RXC | +0.445 ns |
+| Slow 1200mV 0°C  | CLK125 | +0.574 ns |
+| Fast 1200mV 0°C  | CLK125 | +3.168 ns |
+| Hold (85°C)      | CLK125 | +0.428 ns |
+
+**Fmax = 125.28 MHz (SEED 3)**
+
+### Aplikované timing opravy
+
+| Súbor | Oprava | Odstránená cesta |
+|-------|--------|-----------------|
+| `xfcp_fabric_endpoint.sv` | `eng_req_ready_r` — registrovaný ready | `hfifo.mem → eng_req_ready` |
+| `xfcp_fabric_endpoint.sv` | `ofifo_head_r / ofifo_head_valid_r` — registrovaná hlava order FIFO | `ofifo.rd_ptr_q → ofifo.count_q` |
+| `xfcp_fabric_endpoint.sv` | `eng_done_rdy` — counter-only, bez `eng_resp_done` | `eng_resp_done → ofifo.count_q` |
+| `xfcp_fabric_endpoint.sv` | `read_data` výstupný register v engine | `i_read_buffer.rd_ptr_q → rdata_r` |
+| `xfcp_fabric_endpoint.sv` | `wdata_stage_data_r/sel_r/valid_r` — pipeline parser→engine write FIFO | `parser rd_ptr_q → engine write_buf` |
+| `xfcp_rx_parser.sv` | `hfifo_opcode_r/seq_r/count_r/addr_r` — predregistrované pri `last_hdr_byte` | `hdr_shift_q → hfifo.mem` |
+| `udp_xfcp_server.sv` | `rx_buf` M9K + `out_rx_data_r` prefetch | `out_rd_q → rx_buf (LUT) → skid` |
+| `udp_xfcp_server.sv` | `resp_buf` M9K + `tx_data_r` + `m_tready_r` | TX path timing |
+| `xfcp_arbiter_2to1.sv` | `ord_empty_r` — registrovaný empty flag | `ord_cnt_q → ord_empty → s_resp_ready_o → slot0_q` |
+| `xfcp_test_05_top.sv` | `u_udp_tx_skid` — axis_skid_buffer pred eth_tx_arb port 2 | `resp_buf → eth_tx_arb.m_tdata_q` |
+| `soc_top.qsf` | `SEED 3` | Placement optimalizácia |
+
+### Simulácia
+
+- **53/53 PASS** (po všetkých opravách, 2026-06-13)
+
+### HW regresia — make hw-regression (2026-06-13)
+
+| Transport | Sloty | R/W | DIAG | Výsledok |
+|-----------|-------|-----|------|----------|
+| UART `/dev/ttyUSB0` @ 115200 | 21/21 (3x) | 5/5 | Bez chýb | **PASS** |
+| UDP `192.168.0.5:50000` | 21/21 (3x) | 5/5 | Bez chýb | **PASS** |
+
+DIAG (oba transporty): rx_lost=0, rx_frame=0, rx_overrun=0, rx_bad_hdr=0, rx_recovery=0, rx_drop=0.
+
+### Nové nástroje
+
+- `tools/hw_regression.sh` — shell script UART + UDP regresia
+- `Makefile: hw-regression` — target s arp-setup + hw_regression.sh
+
+---
+
+**PROJEKT UZAVRETY — A/B/C/D/E PASS**
+Timing closure 125 MHz dosiahnutá. HW regresia 2/2 PASS.

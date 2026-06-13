@@ -88,7 +88,7 @@ module udp_xfcp_server #(
   logic [47:0] src_mac_q;
   logic [7:0]  dst_p_h_q;
 
-  (* ramstyle = "logic" *) logic [7:0]  rx_buf [0:MAX_PKT_BYTES-1];
+  (* ramstyle = "M9K"   *) logic [7:0]  rx_buf [0:MAX_PKT_BYTES-1];
   logic [BW:0] rx_len_q;     // bytes buffered in rx_buf
   logic        rx_complete_q;
 
@@ -99,10 +99,30 @@ module udp_xfcp_server #(
   logic [BW:0] out_rd_q;
   logic [BW:0] out_len_q;
 
+  // Pre-registered rx_buf read: breaks out_rd_q -> rx_buf (LUT_RAM) -> skid path.
+  // Prefetches the next address so out_rx_data_r is already stable when OUT_SEND fires.
+  // Mirrors the resp_buf/tx_data_r pattern used on the TX side.
+  logic [BW-1:0] out_rd_next_w;
+  always_comb begin
+    if (out_state_q == OUT_IDLE && rx_complete_q)
+      out_rd_next_w = {BW{1'b0}};
+    else if (out_state_q == OUT_SEND && xfcp_rx_ready_i &&
+             out_len_q != '0 && out_rd_q != out_len_q - 1'b1)
+      out_rd_next_w = out_rd_q[BW-1:0] + 1'b1;
+    else
+      out_rd_next_w = out_rd_q[BW-1:0];
+  end
+
+  logic [7:0] out_rx_data_r;
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) out_rx_data_r <= '0;
+    else         out_rx_data_r <= rx_buf[out_rd_next_w];
+  end
+
   // =========================================================================
   // RESP buffer: xfcp_tx_* (arbiter.m1) -> resp_buf
   // =========================================================================
-  (* ramstyle = "logic" *) logic [7:0]  resp_buf [0:MAX_PKT_BYTES-1];
+  (* ramstyle = "M9K" *)   logic [7:0]  resp_buf [0:MAX_PKT_BYTES-1];
   logic [BW:0] resp_len_q;
   logic        resp_complete_q;
 
@@ -114,7 +134,7 @@ module udp_xfcp_server #(
     TX_DATA = 3'd3
   } tx_state_e;
 
-  tx_state_e   tx_state_q;
+  tx_state_e tx_state_q;
   logic [2:0]  tx_hdr_cnt_q;
   logic [BW:0] tx_rd_q;
   logic [BW:0] tx_resp_len_q;   // snapshot of resp_len_q at TX start
@@ -140,6 +160,29 @@ module udp_xfcp_server #(
       3'd7:    tx_hdr_byte_w = 8'h00;
       default: tx_hdr_byte_w = 8'h00;
     endcase
+  end
+
+  // Register m_axis_tready_i to break the critical path:
+  //   grant_q (eth_tx_arb FF) -> arbiter logic -> tready_i -> resp_buf -> tx_data_r.
+  // Safe: eth_tx_arb uses frame-level arbitration so tready_i is held 1 continuously
+  // throughout TX_DATA (no mid-frame preemption from higher-priority ports).
+  logic m_tready_r;
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) m_tready_r <= 1'b0;
+    else         m_tready_r <= m_axis_tready_i;
+  end
+
+  // Pre-registered resp_buf read: breaks tx_rd_q -> resp_buf -> m_axis_tdata path.
+  // Uses m_tready_r (not live tready) for address pre-fetch — no long path from
+  // grant_q to resp_buf. State machine still uses tx_fire_w (live tready).
+  // resp_buf is M9K block RAM: registered read matches this always_ff pattern,
+  // reducing the critical-path data delay from ~9 ns (LUT-RAM) to ~3-4 ns.
+  wire  [BW-1:0] tx_rd_next_w = (tx_state_q == TX_DATA && m_axis_tvalid_o && m_tready_r)
+                                 ? tx_rd_q[BW-1:0] + 1'b1 : tx_rd_q[BW-1:0];
+  logic [7:0] tx_data_r;
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) tx_data_r <= '0;
+    else         tx_data_r <= resp_buf[tx_rd_next_w];
   end
 
   logic server_busy_w;
@@ -333,7 +376,7 @@ module udp_xfcp_server #(
   // =========================================================================
 
   assign xfcp_rx_valid_o = (out_state_q == OUT_SEND);
-  assign xfcp_rx_data_o  = rx_buf[out_rd_q[BW-1:0]];
+  assign xfcp_rx_data_o  = out_rx_data_r;
   assign xfcp_rx_last_o  = (out_state_q == OUT_SEND) &&
                            (out_len_q != '0) &&
                            (out_rd_q == out_len_q - 1'b1);
@@ -347,8 +390,7 @@ module udp_xfcp_server #(
   assign m_meta_payload_len_o = tx_payload_len_q;
 
   assign m_axis_tvalid_o = (tx_state_q == TX_HDR) || (tx_state_q == TX_DATA);
-  assign m_axis_tdata_o  = (tx_state_q == TX_HDR) ? tx_hdr_byte_w :
-                                                      resp_buf[tx_rd_q[BW-1:0]];
+  assign m_axis_tdata_o  = (tx_state_q == TX_HDR) ? tx_hdr_byte_w : tx_data_r;
   assign m_axis_tlast_o  = ((tx_state_q == TX_HDR) &&
                              (tx_hdr_cnt_q == 3'd7) && (tx_resp_len_q == '0)) ||
                            ((tx_state_q == TX_DATA) &&

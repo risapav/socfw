@@ -162,7 +162,15 @@ module xfcp_arbiter_2to1 #(
   logic [FIFO_AW:0]     ord_cnt_q;  // 0..ORD_FIFO_DEPTH
 
   wire ord_full_w  = (ord_cnt_q == (FIFO_AW+1)'(ORD_FIFO_DEPTH));
-  wire ord_empty_w = (ord_cnt_q == '0);
+  // ord_empty_r: registered 1-cycle-delayed empty flag.
+  // Breaks ord_cnt_q -> ord_empty -> s_resp_ready_o -> slot0_q combinatorial
+  // cross-module path and the ord_cnt_q self-loop through resp_consumed_w.
+  // Safe: responses arrive O(10+) cycles after requests so the 1-cycle lag is invisible.
+  logic ord_empty_r;
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) ord_empty_r <= 1'b1;
+    else         ord_empty_r <= (ord_cnt_q == '0);
+  end
 
   // Push on first accepted beat of each request (not at IDLE->GRANT transition)
   wire ord_push0_w = (arb_q == ARB_GRANT0) && p0_beat_w && (p0_state_q == P0_SOP);
@@ -270,7 +278,7 @@ module xfcp_arbiter_2to1 #(
   // =========================================================================
   // Response de-mux
   // =========================================================================
-  wire resp_sel_w = ord_empty_w ? 1'b0 : ord_mem_q[ord_rd_q];
+  wire resp_sel_w = ord_empty_r ? 1'b0 : ord_mem_q[ord_rd_q];
 
   always_comb begin
     m0_valid_o     = 1'b0;
@@ -281,7 +289,7 @@ module xfcp_arbiter_2to1 #(
     m1_last_o      = s_resp_last_i;
     s_resp_ready_o = 1'b0;
 
-    if (!ord_empty_w && s_resp_valid_i) begin
+    if (!ord_empty_r && s_resp_valid_i) begin
       if (!resp_sel_w) begin
         m0_valid_o     = 1'b1;
         s_resp_ready_o = m0_ready_i;

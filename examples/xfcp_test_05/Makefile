@@ -39,7 +39,7 @@ TEST_REPEAT  ?= 3
 .PHONY: compile-baud
 .PHONY: arp-setup arp-show tcpdump
 .PHONY: xfcp-uart xfcp-udp
-.PHONY: test-arp test-icmp test-uart test-udp test-rw hw-test
+.PHONY: test-arp test-icmp test-uart test-udp test-rw hw-test hw-regression
 .PHONY: vars
 
 # -----------------------------------------------------------------------------
@@ -156,6 +156,10 @@ hw-test: arp-setup
 	@echo "======================================="
 	@echo "  hw-test COMPLETE"
 	@echo "======================================="
+
+hw-regression: arp-setup
+	@bash $(TOOLS_DIR)/hw_regression.sh \
+	  $(UART_PORT) $(FPGA_IP) $(XFCP_UDP_PORT) $(TEST_REPEAT) $(UART_BAUD)
 
 # -----------------------------------------------------------------------------
 # Debug

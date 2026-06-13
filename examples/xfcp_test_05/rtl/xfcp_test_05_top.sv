@@ -530,6 +530,9 @@ module xfcp_test_05_top #(
   logic [15:0] arb2_meta_eth_type_w;
   logic [7:0]  arb2_tdata_w;
   logic        arb2_tvalid_w, arb2_tready_w, arb2_tlast_w, arb2_tuser_w;
+  // Skid buffer output: breaks resp_buf -> m_tdata_q critical path
+  logic [7:0]  arb2s_tdata_w;
+  logic        arb2s_tvalid_w, arb2s_tready_w, arb2s_tlast_w, arb2s_tuser_w;
 
   logic        arb_eth_tx_valid_w;
   logic [7:0]  arb_eth_tx_data_w;
@@ -598,6 +601,24 @@ module xfcp_test_05_top #(
     .m_axis_tuser_o       (arb2_tuser_w)
   );
 
+  // Skid buffer on UDP TX payload: cuts resp_buf -> eth_tx_arb|m_tdata_q path.
+  // Adds one register stage between ipv4_tx_udp and eth_tx_arb port 2 so the
+  // Quartus Fitter places the M9K read register here, not in m_tdata_q.
+  axis_skid_buffer #(.DATA_WIDTH(8)) u_udp_tx_skid (
+    .clk_i    (clk_i),
+    .rst_ni   (rst_tx_w),
+    .s_valid_i(arb2_tvalid_w),
+    .s_ready_o(arb2_tready_w),
+    .s_data_i (arb2_tdata_w),
+    .s_last_i (arb2_tlast_w),
+    .s_user_i (arb2_tuser_w),
+    .m_valid_o(arb2s_tvalid_w),
+    .m_ready_i(arb2s_tready_w),
+    .m_data_o (arb2s_tdata_w),
+    .m_last_o (arb2s_tlast_w),
+    .m_user_o (arb2s_tuser_w)
+  );
+
   // =========================================================================
   // TX arbiter: 3->1 (ARP, ICMP, UDP-XFCP)
   // =========================================================================
@@ -635,11 +656,11 @@ module xfcp_test_05_top #(
     .s_meta2_dst_mac_i  (arb2_meta_dst_mac_w),
     .s_meta2_src_mac_i  (arb2_meta_src_mac_w),
     .s_meta2_eth_type_i (arb2_meta_eth_type_w),
-    .s_axis2_tdata_i    (arb2_tdata_w),
-    .s_axis2_tvalid_i   (arb2_tvalid_w),
-    .s_axis2_tready_o   (arb2_tready_w),
-    .s_axis2_tlast_i    (arb2_tlast_w),
-    .s_axis2_tuser_i    (arb2_tuser_w),
+    .s_axis2_tdata_i    (arb2s_tdata_w),
+    .s_axis2_tvalid_i   (arb2s_tvalid_w),
+    .s_axis2_tready_o   (arb2s_tready_w),
+    .s_axis2_tlast_i    (arb2s_tlast_w),
+    .s_axis2_tuser_i    (arb2s_tuser_w),
     .m_meta_valid_o     (txm_meta_valid_w),
     .m_meta_ready_i     (txm_meta_ready_w),
     .m_meta_dst_mac_o   (txm_meta_dst_mac_w),

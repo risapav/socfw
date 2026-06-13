@@ -69,7 +69,8 @@ def run_rw_test(bus):
         rb = bus.read32(0xFF020004)
         match = (rb == val)
         status = PASS if (ok and match) else FAIL
-        print(f"  write 0x{val:02X} -> readback 0x{rb:02X if rb is not None else 'TIMEOUT'}  {status}")
+        rb_str = f"0x{rb:02X}" if rb is not None else "TIMEOUT"
+        print(f"  write 0x{val:02X} -> readback {rb_str}  {status}")
         results.append(ok and match)
     passed = sum(results)
     failed = len(results) - passed

@@ -163,11 +163,13 @@ module xfcp_rx_parser #(
   logic [2:0]             hdr_byte_cnt_q;  // pocita bajty 1-8 (0-based: 0..7)
   logic                   tlast_on_last_hdr_q; // TLAST prisel s poslednym header bajtom
 
-  // Kombinacne polia z shift registra (platne ked hdr_byte_cnt_q == 7)
-  wire [7:0]              dec_opcode = hdr_shift_n_comb[63:56];
-  wire [7:0]              dec_seq    = hdr_shift_n_comb[55:48];
-  wire [COUNT_WIDTH-1:0]  dec_count  = hdr_shift_n_comb[47:32];
-  wire [AXI_ADDR_WIDTH-1:0] dec_addr = hdr_shift_n_comb[31:0];
+  // Decode polia z hdr_shift_q (FF, platne v S_DECODE — shift_q je aktualizovany
+  // na konci taktovej hrany kde last_hdr_byte=1, rovnako ako state_q->S_DECODE).
+  // hdr_shift_n_comb je zachovany len pre simulacne $display v S_HDR.
+  wire [7:0]              dec_opcode = hdr_shift_q[63:56];
+  wire [7:0]              dec_seq    = hdr_shift_q[55:48];
+  wire [COUNT_WIDTH-1:0]  dec_count  = hdr_shift_q[47:32];
+  wire [AXI_ADDR_WIDTH-1:0] dec_addr = hdr_shift_q[31:0];
 
   // ============================================================
   // Opcode validačná funkcia – Quartus generuje menší decode logic
@@ -186,9 +188,12 @@ module xfcp_rx_parser #(
   // Validácia prebieha v rovnakom takte ako decode.
   // ============================================================
   wire dec_opcode_ok = opcode_valid(dec_opcode);
-  // COUNT % 4 == 0 AND within MAX_COUNT_BYTES bound (prevents huge garbage reads)
+  // COUNT % 4 == 0 AND within MAX_COUNT_BYTES bound (prevents huge garbage reads).
+  // <= 128 rewritten without carry chain (MAX_COUNT_BYTES=128=0x0080):
+  //   upper byte must be 0; lower byte <= 0x80 iff bit[7]=0 OR bits[6:0]=all-zero.
   wire dec_count_ok  = (dec_count[1:0] == 2'b00)
-                    && (dec_count <= COUNT_WIDTH'(MAX_COUNT_BYTES));
+                    && (dec_count[15:8] == 8'h00)
+                    && (~dec_count[7] | (dec_count[6:0] == 7'h00));
   wire dec_valid     = dec_opcode_ok && dec_count_ok;
 
   // Vypočítané hodnoty z decode (kombinačné)
@@ -196,6 +201,39 @@ module xfcp_rx_parser #(
   // Jednoduchý posun namiesto (count+3)>>2 – žiadny adder, menej LUT.
   wire [COUNT_WIDTH-1:0] dec_words      = COUNT_WIDTH'(dec_count >> 2);
   wire [COUNT_WIDTH-1:0] dec_bytes_left = dec_count;
+
+  // ============================================================
+  // EARLY DECODE — pre-registered 1 cycle before S_DECODE
+  //
+  // At T8 (last_hdr_byte, 7 bytes already shifted in), hdr_shift_q
+  // holds bytes 1-7 but shifted 1 position short of their final layout:
+  //   [55:48] = byte1 = OPCODE   (vs final [63:56])
+  //   [39:24] = {byte3,byte4} = COUNT  (vs final [47:32])
+  //
+  // OPCODE and COUNT are stable by T8.  ADDR[7:0] (byte8) arrives at
+  // the same T8 edge and does NOT affect opcode or count validity.
+  // Registering early_valid/words_staged/bytes_left_staged at posedge T8
+  // (enabled by last_hdr_byte) makes them available at T9 (S_DECODE).
+  // This breaks the hdr_shift_q[37] carry-chain path to words_q.
+  // ============================================================
+  wire [7:0]             early_opcode = hdr_shift_q[55:48];
+  wire [COUNT_WIDTH-1:0] early_count  = hdr_shift_q[39:24];
+
+  wire early_opcode_ok = opcode_valid(early_opcode);
+  wire early_count_ok  = (early_count[1:0] == 2'b00)
+                      && (early_count[15:8] == 8'h00)
+                      && (~early_count[7] | (early_count[6:0] == 7'h00));
+  wire early_valid     = early_opcode_ok && early_count_ok;
+
+  logic                    dec_valid_r;
+  logic [COUNT_WIDTH-1:0]  words_staged;
+  logic [COUNT_WIDTH-1:0]  bytes_left_staged;
+  // Pre-registered hfifo_in fields: captured at last_hdr_byte from hdr_shift_n_comb.
+  // Breaks hdr_shift_q -> decode logic -> hfifo_in -> i_header_fifo LUT_RAM data path.
+  logic [7:0]                hfifo_opcode_r;
+  logic [7:0]                hfifo_seq_r;
+  logic [COUNT_WIDTH-1:0]    hfifo_count_r;
+  logic [AXI_ADDR_WIDTH-1:0] hfifo_addr_r;
 
   // ============================================================
   // Payload registre (platia po S_DECODE)
@@ -216,6 +254,7 @@ module xfcp_rx_parser #(
   xfcp_req_hdr_t           hfifo_in;
   logic                    dfifo_w_ready;
   logic                    word_complete;
+  logic                    word_complete_r;
 
   xfcp_fifo #(
     .DATA_WIDTH ($bits(xfcp_req_hdr_t)),
@@ -238,7 +277,7 @@ module xfcp_rx_parser #(
   ) i_data_fifo (
     .clk     (clk),    .rst_n   (rst_n),
     .flush   (1'b0),
-    .w_valid (word_complete),    .w_data  (shift_n),          .w_ready (dfifo_w_ready),
+    .w_valid (word_complete_r),  .w_data  (shift_q),          .w_ready (dfifo_w_ready),
     .r_valid (write_data_valid), .r_data  (write_data),       .r_ready (write_data_ready)
   );
 
@@ -247,6 +286,28 @@ module xfcp_rx_parser #(
   // ============================================================
   wire axis_fire   = s_axis_tvalid && s_axis_tready;
   wire last_hdr_byte = (hdr_byte_cnt_q == 3'd7) && axis_fire; // 8. bajt (index 7)
+
+  // Early-decode register: capture valid/words/bytes at T8 (last_hdr_byte)
+  // using positions one byte short of final layout (see EARLY DECODE comment above).
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      dec_valid_r       <= 1'b0;
+      words_staged      <= '0;
+      bytes_left_staged <= '0;
+      hfifo_opcode_r    <= '0;
+      hfifo_seq_r       <= '0;
+      hfifo_count_r     <= '0;
+      hfifo_addr_r      <= '0;
+    end else if (last_hdr_byte) begin
+      dec_valid_r       <= early_valid;
+      words_staged      <= COUNT_WIDTH'(early_count >> 2);
+      bytes_left_staged <= early_count;
+      hfifo_opcode_r    <= hdr_shift_n_comb[63:56];
+      hfifo_seq_r       <= hdr_shift_n_comb[55:48];
+      hfifo_count_r     <= hdr_shift_n_comb[47:32];
+      hfifo_addr_r      <= hdr_shift_n_comb[31:0];
+    end
+  end
 
   // hdr_shift_n_comb: kombinacna hodnota shift registra vratane aktualneho bajtu.
   // V takte last_hdr_byte, hdr_shift_q este neobsahuje posledny bajt (sekvencny
@@ -278,6 +339,17 @@ module xfcp_rx_parser #(
   assign word_complete = (state_q == S_PAYLOAD) &&
                          axis_fire              &&
                          (byte_cnt_q == 2'd3 || last_byte);
+
+  // word_complete_r: registered 1-cycle delay of word_complete.
+  // Breaks arb_s0_valid_r -> axis_fire -> word_complete -> i_data_fifo.mem path.
+  // At T+1 shift_q already holds the assembled word (shift_q <= shift_n at T),
+  // so writing shift_q at T+1 is correct. FIFO readiness: dfifo_w_ready was 1 at T
+  // (because s_axis_tready=dfifo_w_ready in S_PAYLOAD) and no write happened at T,
+  // so FIFO still has space at T+1.
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) word_complete_r <= 1'b0;
+    else        word_complete_r <= word_complete;
+  end
 
   // ============================================================
   // s_axis_tready
@@ -320,8 +392,8 @@ module xfcp_rx_parser #(
     go_drop = 1'b0;
     if (watchdog_fire && state_q != S_IDLE && state_q != S_DROP)
       go_drop = 1'b1;
-    // Decode chyba (neplatny opcode alebo COUNT misalignment)
-    if (state_q == S_DECODE && !dec_valid)
+    // Decode chyba — uses pre-registered value (see early decode section)
+    if (state_q == S_DECODE && !dec_valid_r)
       go_drop = 1'b1;
     // Predcasny TLAST v S_HDR: chyba len ak pride PRED poslednym
     // header bajtom. Na poslednom bajte (last_hdr_byte) je TLAST
@@ -492,10 +564,10 @@ module xfcp_rx_parser #(
         // Toto je nevyhnutne: payload bajt 9 nesmie prist skor ako
         // decoder skoncil a nastavil words_n / bytes_left_n.
         S_DECODE: begin
-          if (dec_valid) begin
-            // Inicializacia payload registrov z decode vysledkov
-            words_n      = dec_words;
-            bytes_left_n = dec_bytes_left;
+          if (dec_valid_r) begin
+            // Inicializacia payload registrov z pre-registered decode
+            words_n      = words_staged;
+            bytes_left_n = bytes_left_staged;
             byte_cnt_n   = '0;
             shift_n      = '0;
 
@@ -503,10 +575,10 @@ module xfcp_rx_parser #(
                 dec_words != 0) begin
               // WRITE: pushni header PRED payload (header-first pipeline)
               hfifo_push      = hfifo_w_ready;  // push ak FIFO ready
-              hfifo_in.opcode = xfcp_op_e'(dec_opcode);
-              hfifo_in.seq    = dec_seq;
-              hfifo_in.addr   = dec_addr;
-              hfifo_in.count  = dec_count;
+              hfifo_in.opcode = xfcp_op_e'(hfifo_opcode_r);
+              hfifo_in.seq    = hfifo_seq_r;
+              hfifo_in.addr   = hfifo_addr_r;
+              hfifo_in.count  = hfifo_count_r;
               if (hfifo_w_ready)
                 state_n = S_PAYLOAD;
               // ak FIFO nie je ready, zostavame v S_DECODE
@@ -514,10 +586,10 @@ module xfcp_rx_parser #(
             end else begin
               // READ/ID: pushni header a chod do IDLE
               hfifo_push      = hfifo_w_ready;
-              hfifo_in.opcode = xfcp_op_e'(dec_opcode);
-              hfifo_in.seq    = dec_seq;
-              hfifo_in.addr   = dec_addr;
-              hfifo_in.count  = dec_count;
+              hfifo_in.opcode = xfcp_op_e'(hfifo_opcode_r);
+              hfifo_in.seq    = hfifo_seq_r;
+              hfifo_in.addr   = hfifo_addr_r;
+              hfifo_in.count  = hfifo_count_r;
               if (hfifo_w_ready)
                 state_n = S_IDLE;
             end
@@ -591,11 +663,11 @@ module xfcp_rx_parser #(
         else $fatal(1, "[%0t] %m: bytes_left podtecie!", $time);
   end
 
-  // SVA: payload FIFO overflow nemozny
+  // SVA: payload FIFO overflow nemozny (word_complete_r is the actual write enable)
   no_payload_fifo_overflow: assert property (
     @(posedge clk) disable iff (!rst_n)
-    word_complete |-> dfifo_w_ready
-  ) else $fatal(1, "[%0t] %m: SVA FAIL - word_complete pri plnej payload FIFO!", $time);
+    word_complete_r |-> dfifo_w_ready
+  ) else $fatal(1, "[%0t] %m: SVA FAIL - word_complete_r pri plnej payload FIFO!", $time);
 
   // SVA: header push len ked FIFO ready
   no_header_fifo_overflow: assert property (

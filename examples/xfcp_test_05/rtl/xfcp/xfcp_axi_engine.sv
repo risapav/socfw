@@ -115,6 +115,7 @@ module xfcp_axi_engine #(
   xfcp_op_e                  op_q;   // zachytená operácia
   logic [15:0]               watchdog_q;
 
+
   // ============================================================
   // Byte-swap funkcia (LE ↔ BE konverzia)
   // ============================================================
@@ -139,6 +140,10 @@ module xfcp_axi_engine #(
   logic                      wfifo_valid;
   logic                      wfifo_rd_en;
   logic                      rfifo_w_ready_w;
+  // Interne signaly read buffer FIFO (pred vystupnym registrom)
+  logic [AXI_DATA_WIDTH-1:0] rfifo_rdata_w;
+  logic                      rfifo_rvalid_w;
+  logic                      rfifo_rready_w;
 
   // Byte-swap: aplikovaný iba ak LITTLE_ENDIAN=1
   assign wfifo_swapped = LITTLE_ENDIAN ? byte_swap(wfifo_raw)    : wfifo_raw;
@@ -151,14 +156,32 @@ module xfcp_axi_engine #(
     .r_valid(wfifo_valid),      .r_data(wfifo_raw),   .r_ready(wfifo_rd_en)
   );
 
-  // Read buffer FIFO: engine → packetizer
-  // flush=0: packetizer číta asynchrónne cez arbiter;
-  // flush by mohol zmazať dáta pred ich prečítaním.
+  // Read buffer FIFO: engine -> vystupny register -> packetizer.
+  // Vystupny register (read_data FF port) lomi cestu:
+  //   rd_ptr_q -> mem[rd_ptr] -> read_data (port) -> cross-module routing
+  //   -> rdata MUX -> rdata_r.D  (-1.125 ns).
+  // Po registracii: rd_ptr_q -> mem -> rfifo_rdata_w -> read_data_r.D (kratka cesta ~4 ns)
+  // a read_data_r -> rdata_r.D (FF + routing + MUX, ~5 ns). Obe fituju do 8 ns.
   xfcp_fifo #(.DATA_WIDTH(AXI_DATA_WIDTH), .DEPTH(FIFO_DEPTH)) i_read_buffer (
     .clk(clk), .rst_n(rst_n), .flush(1'b0),
     .w_valid(m_axil.RVALID && m_axil.RREADY), .w_data(rdata_swapped), .w_ready(rfifo_w_ready_w),
-    .r_valid(read_data_valid), .r_data(read_data), .r_ready(read_data_ready)
+    .r_valid(rfifo_rvalid_w), .r_data(rfifo_rdata_w), .r_ready(rfifo_rready_w)
   );
+
+  // Vystupny pipeline register: lomi async FIFO read od module boundary.
+  // rfifo_rready_w: pop FIFO ked vystupny register moze prijat data
+  //   (prazdny alebo downstream konzumuje).
+  assign rfifo_rready_w = !read_data_valid || read_data_ready;
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      read_data       <= '0;
+      read_data_valid <= 1'b0;
+    end else if (rfifo_rready_w) begin
+      read_data       <= rfifo_rdata_w;
+      read_data_valid <= rfifo_rvalid_w;
+    end
+  end
 
   // ============================================================
   // Sekvenčná logika
@@ -191,8 +214,8 @@ module xfcp_axi_engine #(
           watchdog_q    <= '0;
           error_timeout <= 1'b0;
           if (req_valid && req_ready) begin       // ← FIX 1
-            rem_q  <= req_hdr_s.count;
-            addr_q <= req_hdr_s.addr;
+            rem_q  <= req_hdr_s.count;  // req_hdr = req_hdr_staged from endpoint (already FF-staged)
+            addr_q <= req_hdr_s.addr;   // path: req_addr_r(FF) -> req_hdr_staged(comb) -> addr_q.D
             op_q   <= req_hdr_s.opcode;
           end
         end
