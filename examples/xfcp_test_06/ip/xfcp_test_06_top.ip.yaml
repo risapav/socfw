@@ -1,0 +1,200 @@
+version: 2
+kind: ip
+
+ip:
+  name: xfcp_test_06_top
+  module: xfcp_test_06_top
+  category: debug
+
+origin:
+  kind: source
+  packaging: plain_rtl
+
+integration:
+  needs_bus: false
+  generate_registers: false
+  instantiate_directly: true
+  dependency_only: false
+
+reset:
+  port: rst_ni
+  active_high: false
+
+clocking:
+  primary_input_port: clk_i
+  additional_input_ports: [eth_rx_clk_i]
+  outputs:
+    - port: eth_gtx_clk_o
+      kind: generated_clock
+      domain: eth_gtx_clk
+
+params:
+  LOCAL_MAC:
+    type: int
+    default: 0x000A3501FEC5
+  LOCAL_IP:
+    type: int
+    default: 0xC0A80005
+  XFCP_PORT:
+    type: int
+    default: 50000
+  CLOCK_HZ:
+    type: int
+    default: 125000000
+  UART_BAUD_RATE:
+    type: int
+    default: 115200
+
+ports:
+  - name: eth_rx_clk_i
+    direction: input
+    width: 1
+  - name: eth_rxdv_i
+    direction: input
+    width: 1
+  - name: eth_rxer_i
+    direction: input
+    width: 1
+  - name: eth_rxd_i
+    direction: input
+    width: 8
+  - name: eth_gtx_clk_o
+    direction: output
+    width: 1
+  - name: eth_txen_o
+    direction: output
+    width: 1
+  - name: eth_txer_o
+    direction: output
+    width: 1
+  - name: eth_txd_o
+    direction: output
+    width: 8
+  - name: eth_phyrstb_o
+    direction: output
+    width: 1
+  - name: eth_mdc_o
+    direction: output
+    width: 1
+  - name: eth_mdio_io
+    direction: inout
+    width: 1
+  - name: uart_rx_i
+    direction: input
+    width: 1
+  - name: uart_tx_o
+    direction: output
+    width: 1
+  - name: led_o
+    direction: output
+    width: 6
+  - name: pmod_j10_o
+    direction: output
+    width: 8
+  - name: pmod_j11_o
+    direction: output
+    width: 8
+  - name: seg_o
+    direction: output
+    width: 8
+  - name: dig_o
+    direction: output
+    width: 3
+  - name: btn_i
+    direction: input
+    width: 4
+
+artifacts:
+  synthesis:
+    # AXI infrastructure
+    - ../../../rtl/axi/axi_pkg.sv
+    - ../../../rtl/axi/axi_interfaces.sv
+    # Stream buffers
+    - ../../../rtl/buffer/skid_buffer.sv
+    - ../../../rtl/stream/stream_reg_slice.sv
+    - ../../../rtl/stream/stream_skid_buffer.sv
+    - ../../../rtl/stream/axis_reg_slice.sv
+    - ../../../rtl/stream/axis_skid_buffer.sv
+    # UART library
+    - ../../../rtl/uart/uart_pkg.sv
+    - ../../../rtl/uart/uart_baud_gen.sv
+    - ../../../rtl/uart/uart_core_rx.sv
+    - ../../../rtl/uart/uart_core_rx_os.sv
+    - ../../../rtl/uart/uart_core_tx.sv
+    - ../../../rtl/uart/uart.sv
+    - ../../../rtl/uart/uart_os.sv
+    - ../../../rtl/uart/sync_fifo.sv
+    - ../../../rtl/uart/uart_fifo.sv
+    - ../../../rtl/uart/uart_fifo_os.sv
+    # AXI-Lite peripherals
+    - ../../../rtl/axil/axil_regfile.sv
+    - ../../../rtl/axil/axil_regs.sv
+    - ../../../rtl/axil/axil_sys_ctrl.sv
+    - ../../../rtl/axil/axil_uart_adapter.sv
+    - ../../../rtl/axil/axil_seven_seg_adapter.sv
+    - ../../../rtl/axil/axil_diag_ctrl.sv
+    # 7-segment
+    - ../../../rtl/segment/seven_seg_mux.sv
+    - ../../../rtl/segment/seven_seg_mux_packed.sv
+    # CDC
+    - ../../../rtl/cdc/cdc_two_flop_synchronizer.sv
+    - ../rtl/cdc/async_fifo.sv
+    # Ethernet MAC + stack
+    - ../../../rtl/eth/mac/taxi_lfsr.sv
+    - ../../../rtl/eth/mac/eth_crc32_8.sv
+    - ../../../rtl/eth/mac/eth_rx_mac.sv
+    - ../../../rtl/eth/mac/eth_tx_mac.sv
+    - ../../../rtl/eth/util/eth_tx_arb.sv
+    - ../../../rtl/eth/util/eth_type_demux.sv
+    - ../../../rtl/eth/l2/arp_rx.sv
+    - ../../../rtl/eth/l2/arp_tx.sv
+    - ../../../rtl/eth/l3/ipv4_rx.sv
+    - ../../../rtl/eth/l3/ipv4_tx.sv
+    - ../../../rtl/eth/l3/icmp_echo.sv
+    # XFCP stack v0.9+STATUS (local)
+    - ../rtl/xfcp/xfcp_pkg.sv
+    - ../rtl/xfcp/xfcp_fifo.sv
+    - ../rtl/xfcp/xfcp_rx_parser.sv
+    - ../rtl/xfcp/xfcp_tx_packetizer.sv
+    - ../rtl/xfcp/xfcp_axi_engine.sv
+    - ../rtl/xfcp/xfcp_fabric_endpoint.sv
+    - ../rtl/xfcp/xfcp_arbiter_2to1.sv
+    - ../rtl/xfcp/udp_xfcp_server.sv
+    # Top-level
+    - ../rtl/xfcp_test_06_top.sv
+
+  simulation: []
+  metadata: []
+
+provides:
+  modules:
+    - xfcp_test_06_top
+    - xfcp_arbiter_2to1
+    - udp_xfcp_server
+    - xfcp_fabric_endpoint
+    - xfcp_rx_parser
+    - xfcp_tx_packetizer
+    - xfcp_axi_engine
+    - xfcp_fifo
+    - async_fifo
+    - axil_uart_adapter
+    - axil_regs
+    - axil_regfile
+    - axil_sys_ctrl
+    - axil_seven_seg_adapter
+    - axil_diag_ctrl
+    - seven_seg_mux
+    - seven_seg_mux_packed
+    - uart_fifo_os
+    - uart_fifo
+    - uart_os
+    - uart
+    - sync_fifo
+    - uart_baud_gen
+    - uart_core_rx_os
+    - uart_core_rx
+    - uart_core_tx
+  packages:
+    - axi_pkg
+    - uart_pkg
+    - xfcp_pkg
