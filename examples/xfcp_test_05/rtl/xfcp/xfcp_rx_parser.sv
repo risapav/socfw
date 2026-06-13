@@ -167,9 +167,11 @@ module xfcp_rx_parser #(
   // na konci taktovej hrany kde last_hdr_byte=1, rovnako ako state_q->S_DECODE).
   // hdr_shift_n_comb je zachovany len pre simulacne $display v S_HDR.
   wire [7:0]              dec_opcode = hdr_shift_q[63:56];
-  wire [7:0]              dec_seq    = hdr_shift_q[55:48];
   wire [COUNT_WIDTH-1:0]  dec_count  = hdr_shift_q[47:32];
   wire [AXI_ADDR_WIDTH-1:0] dec_addr = hdr_shift_q[31:0];
+  // synthesis translate_off
+  wire [7:0]              dec_seq    = hdr_shift_q[55:48];
+  // synthesis translate_on
 
   // ============================================================
   // Opcode validačná funkcia – Quartus generuje menší decode logic
@@ -194,13 +196,10 @@ module xfcp_rx_parser #(
   wire dec_count_ok  = (dec_count[1:0] == 2'b00)
                     && (dec_count[15:8] == 8'h00)
                     && (~dec_count[7] | (dec_count[6:0] == 7'h00));
-  wire dec_valid     = dec_opcode_ok && dec_count_ok;
 
-  // Vypočítané hodnoty z decode (kombinačné)
   // dec_count je zaručene násobok 4 (COUNT alignment check).
   // Jednoduchý posun namiesto (count+3)>>2 – žiadny adder, menej LUT.
-  wire [COUNT_WIDTH-1:0] dec_words      = COUNT_WIDTH'(dec_count >> 2);
-  wire [COUNT_WIDTH-1:0] dec_bytes_left = dec_count;
+  wire [COUNT_WIDTH-1:0] dec_words = COUNT_WIDTH'(dec_count >> 2);
 
   // ============================================================
   // EARLY DECODE — pre-registered 1 cycle before S_DECODE
@@ -238,9 +237,6 @@ module xfcp_rx_parser #(
   // ============================================================
   // Payload registre (platia po S_DECODE)
   // ============================================================
-  logic [7:0]            opcode_q;
-  logic [COUNT_WIDTH-1:0] count_q;
-  logic [AXI_ADDR_WIDTH-1:0] addr_q;
   logic [COUNT_WIDTH-1:0] words_q,      words_n;
   logic [COUNT_WIDTH-1:0] bytes_left_q, bytes_left_n;
   logic [AXI_DATA_WIDTH-1:0] shift_q,  shift_n;
@@ -466,9 +462,6 @@ module xfcp_rx_parser #(
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       state_q        <= S_IDLE;
-      opcode_q       <= '0;
-      count_q        <= '0;
-      addr_q         <= '0;
       words_q        <= '0;
       bytes_left_q   <= '0;
       shift_q        <= '0;
@@ -480,13 +473,6 @@ module xfcp_rx_parser #(
       byte_cnt_q <= byte_cnt_n;
       words_q    <= words_n;
       bytes_left_q <= bytes_left_n;
-
-      // Latch decode vysledkov pri prechode S_DECODE -> S_PAYLOAD/S_DROP
-      if (state_q == S_DECODE) begin
-        opcode_q <= dec_opcode;
-        count_q  <= dec_count;
-        addr_q   <= dec_addr;
-      end
 
       // error_protocol: reset pri novom SOP, set pri chybe
       if (state_q == S_IDLE && axis_fire &&
@@ -628,9 +614,6 @@ module xfcp_rx_parser #(
   // Simulacne spravy
   // ============================================================
   // synthesis translate_off
-  xfcp_op_e dbg_opcode;
-  assign dbg_opcode = xfcp_op_e'(opcode_q);
-
   logic error_protocol_prev;
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -638,9 +621,8 @@ module xfcp_rx_parser #(
     end else begin
       error_protocol_prev <= error_protocol;
       if (hfifo_push)
-        $display("[%0t] %m: HDR push | op=0x%02h seq=0x%02h addr=0x%08h count=%0d | dec: op=0x%02h seq=0x%02h addr=0x%08h cnt=0x%04h",
-                 $time, 8'(dbg_opcode), dec_seq, addr_q, count_q,
-                 dec_opcode, dec_seq, dec_addr, dec_count);
+        $display("[%0t] %m: HDR push | op=0x%02h seq=0x%02h addr=0x%08h count=%0d",
+                 $time, hfifo_opcode_r, hfifo_seq_r, hfifo_addr_r, hfifo_count_r);
       if (word_complete)
         $display("[%0t] %m: PAYLOAD word=0x%08h words_rem=%0d",
                  $time, shift_n, words_q);
