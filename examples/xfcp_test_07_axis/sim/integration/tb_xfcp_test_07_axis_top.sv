@@ -666,6 +666,36 @@ module tb_xfcp_test_07_axis_top;
     end
 
     // ==============================================================
+    // T20: STREAM_WRITE 256 bytes, STREAM_READ 256 bytes (max payload, fills loopback FIFO)
+    // ==============================================================
+    $display("--- T20: STREAM 256-byte loopback ---");
+    begin
+      automatic logic [7:0] wr[256];
+      automatic logic [7:0] rd[256];
+      automatic logic [7:0] status;
+      for (int i = 0; i < 256; i++) wr[i] = 8'(i & 8'hFF);
+      xfcp_stream_write(8'hA0, 8'h00, 16'd256, wr);
+      drain_stream_write_resp(status);
+      chk8(status, 8'h00, "T20.stream_write_status");
+      xfcp_stream_read(8'hA1, 8'h00, 16'd256);
+      recv_stream_read(16'd256, rd, status);
+      chk8(status, 8'h00, "T20.stream_read_status");
+      begin
+        logic all_ok;
+        all_ok = 1'b1;
+        for (int i = 0; i < 256; i++) begin
+          if (rd[i] !== 8'(i & 8'hFF)) begin
+            $display("FAIL T20.byte[%0d]: got=0x%02X exp=0x%02X",
+                     i, rd[i], 8'(i & 8'hFF));
+            all_ok = 1'b0;
+            fails++;
+          end
+        end
+        if (all_ok) $display("PASS T20 256-byte payload match");
+      end
+    end
+
+    // ==============================================================
     $display("");
     $display("%s (%0d failure%s)",
       fails == 0 ? "ALL PASSED" : "FAILURES DETECTED",

@@ -106,8 +106,8 @@ module xfcp_rx_parser #(
   localparam int HDR_SHIFT_W   = 64;  // 8 bajtov x 8 bitov (SOP sa neuklada)
   localparam int PKT_LEN_W     = $clog2(MAX_PKT_BYTES + 1);
   // Hornaya hranica COUNT: zamedzuje spracovaniu paketu s obrovskym countom.
-  // Zhoduje sa s xfcp_axi_engine FIFO_DEPTH=32 slov = 128 bajtov.
-  localparam int MAX_COUNT_BYTES = 128;
+  // 256 = max STREAM_WRITE payload; xfcp_axi_engine vykoná vlastnú kontrolu (<= 128B).
+  localparam int MAX_COUNT_BYTES = 256;
 
   // ============================================================
   // ONE-HOT FSM – 5 stavov pre payload pipeline
@@ -193,11 +193,9 @@ module xfcp_rx_parser #(
   // ============================================================
   wire dec_opcode_ok = opcode_valid(dec_opcode);
   // COUNT % 4 == 0 AND within MAX_COUNT_BYTES bound (prevents huge garbage reads).
-  // <= 128 rewritten without carry chain (MAX_COUNT_BYTES=128=0x0080):
-  //   upper byte must be 0; lower byte <= 0x80 iff bit[7]=0 OR bits[6:0]=all-zero.
+  // <= 256: upper byte is 0 (COUNT 0..255) OR COUNT == 256 exactly (0x0100).
   wire dec_count_ok  = (dec_count[1:0] == 2'b00)
-                    && (dec_count[15:8] == 8'h00)
-                    && (~dec_count[7] | (dec_count[6:0] == 7'h00));
+                    && ((dec_count[15:8] == 8'h00) || (dec_count == 16'd256));
 
   // dec_count je zaručene násobok 4 (COUNT alignment check).
   // Jednoduchý posun namiesto (count+3)>>2 – žiadny adder, menej LUT.
@@ -222,8 +220,7 @@ module xfcp_rx_parser #(
 
   wire early_opcode_ok = opcode_valid(early_opcode);
   wire early_count_ok  = (early_count[1:0] == 2'b00)
-                      && (early_count[15:8] == 8'h00)
-                      && (~early_count[7] | (early_count[6:0] == 7'h00));
+                      && ((early_count[15:8] == 8'h00) || (early_count == 16'd256));
   wire early_valid     = early_opcode_ok && early_count_ok;
 
   logic                    dec_valid_r;
@@ -318,11 +315,14 @@ module xfcp_rx_parser #(
       hdr_shift_n_comb = hdr_shift_q;
   end
 
-  // SOP recovery: SOP v nečakanom stave → resync
+  // SOP recovery: SOP v nečakanom stave → resync.
+  // S_PAYLOAD vyluceny: 0xFE je platny datovy bajt v payloade (napr. byte[254]=0xFE
+  // v 256B prenose bytes(range(256))).
   wire sop_recovery = axis_fire                              &&
                       s_axis_tdata == XFCP_SOP_REQ &&
                       state_q != S_IDLE                     &&
-                      state_q != S_RPATH;
+                      state_q != S_RPATH                    &&
+                      state_q != S_PAYLOAD;
 
   // Watchdog
   logic [PKT_LEN_W-1:0] pkt_len_q;

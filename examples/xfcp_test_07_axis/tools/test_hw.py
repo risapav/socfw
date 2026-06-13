@@ -15,6 +15,8 @@ import sys
 from colorama import Fore, Style, init
 
 from xfcp.bus import XfcpBus
+from xfcp import protocol as proto
+from xfcp.errors import XfcpTimeoutError, XfcpProtocolError, XfcpStatusError
 from core.scanner import DynamicScanner
 
 init(autoreset=True)
@@ -85,14 +87,44 @@ def run_rw_test(bus):
     return passed, failed
 
 
-def run_stream_loopback_test(bus, repeat):
+def debug_stream_write(bus, data):
+    """Raw stream_write s plnym logom response bajtov — pre diagnozu HW problemov."""
+    seq = bus._next_seq()
+    pkt = proto.encode_stream_write(data, stream_id=0, seq=seq)
+    exp = proto.resp_len_stream_write()
+    print(f"  TX ({len(pkt)}B): {pkt.hex()}")
+    bus._transport.flush_rx()
+    bus._transport.write(pkt)
+    raw = bus._transport.read_packet(exp)
+    print(f"  RX ({len(raw)}B): {raw.hex() if raw else '(prazdne)'}")
+    if len(raw) != exp:
+        print(f"  -> XfcpTimeoutError: got {len(raw)}/{exp} bytes")
+        return False
+    try:
+        proto.decode_stream_write_response(raw, expected_seq=seq)
+        print(f"  -> OK")
+        return True
+    except XfcpProtocolError as e:
+        print(f"  -> XfcpProtocolError: {e}")
+    except XfcpStatusError as e:
+        print(f"  -> XfcpStatusError: {e}")
+    return False
+
+
+def run_stream_loopback_test(bus, repeat, debug=False):
     print(f"\n{Fore.CYAN}--- Stream loopback test (sid=0, {repeat}x each) ---")
     passed = 0
     failed = 0
+    first_fail_shown = False
     for name, data in STREAM_TEST_VECTORS:
         ok_count = 0
         for i in range(repeat):
-            ok_wr = bus.stream_write(data)
+            if debug and not first_fail_shown:
+                print(f"\n  [DEBUG] {name} [{i+1}] stream_write ({len(data)}B):")
+                ok_wr = debug_stream_write(bus, data)
+                first_fail_shown = not ok_wr
+            else:
+                ok_wr = bus.stream_write(data)
             if not ok_wr:
                 print(f"  [{name}] [{i+1}] stream_write: {FAIL}")
                 failed += 1
@@ -149,6 +181,8 @@ def main():
                         help="Pridaj R/W test na LED register")
     parser.add_argument("--stream", action="store_true",
                         help="Spusti stream loopback test (STREAM_WRITE/READ sid=0)")
+    parser.add_argument("--debug-stream", action="store_true",
+                        help="Pri prvom STREAM zlyhani vypis surove TX/RX bajty")
     parser.add_argument("--diag",   action="store_true",
                         help="Vypis DIAG countere na konci")
     args = parser.parse_args()
@@ -186,7 +220,8 @@ def main():
                 total_fail += f
 
             if args.stream:
-                p, f = run_stream_loopback_test(bus, args.repeat)
+                p, f = run_stream_loopback_test(bus, args.repeat,
+                                                debug=getattr(args, 'debug_stream', False))
                 total_pass += p
                 total_fail += f
 
