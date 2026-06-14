@@ -479,7 +479,7 @@ module xfcp_test_07_axis_top #(
 
   udp_xfcp_server #(
     .XFCP_PORT     (XFCP_PORT),
-    .MAX_PKT_BYTES (128)
+    .MAX_PKT_BYTES (512)  // >= 265 (STREAM_WRITE 256B request) + 261 (STREAM_READ 256B resp)
   ) u_udp_xfcp (
     .clk_i                (clk_i), .rst_ni (rst_tx_w),
     .s_ip_hdr_valid_i     (ipv4_hdr_valid_w),
@@ -797,6 +797,8 @@ module xfcp_test_07_axis_top #(
   logic [7:0] lb_s_tdata_w;
   logic       lb_s_tvalid_w, lb_s_tready_w, lb_s_tlast_w;
   logic [8:0] lb_rdata_w;
+  logic [7:0] lb_rs_tdata_w;
+  logic       lb_rs_tvalid_w, lb_rs_tready_w, lb_rs_tlast_w;
 
   xfcp_fifo #(.DATA_WIDTH(9), .DEPTH(256)) u_axis_loopback (
     .clk    (clk_i), .rst_n (rst_ni), .flush (1'b0),
@@ -808,6 +810,15 @@ module xfcp_test_07_axis_top #(
     .r_ready(lb_s_tready_w)
   );
   assign {lb_s_tlast_w, lb_s_tdata_w} = lb_rdata_w;
+
+  // Register slice breaks fall-through FIFO -> RFIFO RAM comb path (WNS fix).
+  axis_byte_register_slice u_axis_loopback_rs (
+    .clk     (clk_i),        .rst_n    (rst_ni),
+    .s_tdata (lb_s_tdata_w), .s_tvalid (lb_s_tvalid_w),
+    .s_tready(lb_s_tready_w),.s_tlast  (lb_s_tlast_w),
+    .m_tdata (lb_rs_tdata_w),.m_tvalid (lb_rs_tvalid_w),
+    .m_tready(lb_rs_tready_w),.m_tlast (lb_rs_tlast_w)
+  );
 
   // ── XFCP AXIS Adapter (stream_id=0 loopback slot) ─────────────
   xfcp_axis_adapter #(
@@ -833,11 +844,11 @@ module xfcp_test_07_axis_top #(
     .m_axis_tvalid_o (lb_m_tvalid_w),
     .m_axis_tready_i (lb_m_tready_w),
     .m_axis_tlast_o  (lb_m_tlast_w),
-    // AXI-Stream slave <- loopback FIFO output
-    .s_axis_tdata_i  (lb_s_tdata_w),
-    .s_axis_tvalid_i (lb_s_tvalid_w),
-    .s_axis_tready_o (lb_s_tready_w),
-    .s_axis_tlast_i  (lb_s_tlast_w)
+    // AXI-Stream slave <- loopback FIFO output (via register slice)
+    .s_axis_tdata_i  (lb_rs_tdata_w),
+    .s_axis_tvalid_i (lb_rs_tvalid_w),
+    .s_axis_tready_o (lb_rs_tready_w),
+    .s_axis_tlast_i  (lb_rs_tlast_w)
   );
 
   // ── AXI-Lite Slaves ───────────────────────────────────────────

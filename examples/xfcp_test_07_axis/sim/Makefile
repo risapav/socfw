@@ -46,6 +46,7 @@ XFCP_COMMON = \
 	$(RTL_XFCP)/xfcp_tx_packetizer.sv \
 	$(RTL_XFCP)/xfcp_axi_engine.sv \
 	$(RTL_XFCP)/xfcp_axis_adapter.sv \
+	$(RTL_XFCP)/axis_byte_register_slice.sv \
 	$(RTL_XFCP)/xfcp_fabric_endpoint.sv
 
 AXIL_COMMON = \

@@ -158,6 +158,7 @@ artifacts:
     - ../rtl/xfcp/xfcp_tx_packetizer.sv
     - ../rtl/xfcp/xfcp_axi_engine.sv
     - ../rtl/xfcp/xfcp_axis_adapter.sv
+    - ../rtl/xfcp/axis_byte_register_slice.sv
     - ../rtl/xfcp/xfcp_fabric_endpoint.sv
     - ../rtl/xfcp/xfcp_arbiter_2to1.sv
     - ../rtl/xfcp/udp_xfcp_server.sv

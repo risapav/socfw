@@ -696,6 +696,75 @@ module tb_xfcp_test_07_axis_top;
     end
 
     // ==============================================================
+    // T21: ETH-UDP STREAM_WRITE 256 bytes — ack must come back with status=OK
+    // T22: ETH-UDP STREAM_READ 256 bytes — verify all 256 data bytes via Ethernet
+    // (Tests MAX_PKT_BYTES >= 265 in udp_xfcp_server)
+    // ==============================================================
+    $display("--- T21: ETH-UDP STREAM_WRITE 256-byte ---");
+    begin
+      automatic logic [7:0] req[265];
+      automatic logic [7:0] cap[];
+      automatic int n;
+      automatic logic [7:0] xfcp_sop, xfcp_op, xfcp_seq, xfcp_status;
+      // Build: FE 20 seq COUNT_H COUNT_L stream_id[3:0] data[256]
+      req[0] = 8'hFE; req[1] = 8'h20; req[2] = 8'hA2;
+      req[3] = 8'h01; req[4] = 8'h00;           // COUNT = 256 (0x0100)
+      req[5] = 8'h00; req[6] = 8'h00; req[7] = 8'h00; req[8] = 8'h00; // sid=0
+      for (int i = 0; i < 256; i++) req[9+i] = 8'(i);
+      drive_xfcp_gmii(req, 265);
+      capture_gmii_tx(cap, n);
+      // STREAM_WRITE ack: preamble(8)+ETH(14)+IP(20)+UDP(8)+XFCP(5) = 55
+      chk_bool(n >= 55, "T21.frame_received");
+      if (n >= 55) begin
+        xfcp_sop    = cap[50]; xfcp_op  = cap[51];
+        xfcp_seq    = cap[52]; xfcp_status = cap[53];
+        chk_bool(xfcp_sop    == 8'hFD, "T21.xfcp_sop==0xFD");
+        chk_bool(xfcp_op     == 8'h22, "T21.xfcp_op==STREAM_WRITE_RESP");
+        chk_bool(xfcp_seq    == 8'hA2, "T21.xfcp_seq_echo");
+        chk_bool(xfcp_status == 8'h00, "T21.xfcp_status==OK");
+      end
+    end
+
+    repeat (500) @(posedge clk_i);
+    $display("--- T22: ETH-UDP STREAM_READ 256-byte ---");
+    begin
+      automatic logic [7:0] req[9];
+      automatic logic [7:0] cap[];
+      automatic int n;
+      automatic logic [7:0] xfcp_sop, xfcp_op, xfcp_seq, xfcp_status;
+      // Build: FE 21 seq COUNT_H COUNT_L stream_id[3:0]
+      req[0] = 8'hFE; req[1] = 8'h21; req[2] = 8'hA3;
+      req[3] = 8'h01; req[4] = 8'h00;           // COUNT = 256
+      req[5] = 8'h00; req[6] = 8'h00; req[7] = 8'h00; req[8] = 8'h00; // sid=0
+      drive_xfcp_gmii(req, 9);
+      capture_gmii_tx(cap, n);
+      // STREAM_READ resp: preamble(8)+ETH(14)+IP(20)+UDP(8)+XFCP(FD+op+seq+status+256data+term)
+      // = 50 + 4 + 256 + 1 = 311 bytes (no FCS in capture)
+      chk_bool(n >= 311, "T22.frame_received");
+      if (n >= 311) begin
+        xfcp_sop    = cap[50]; xfcp_op  = cap[51];
+        xfcp_seq    = cap[52]; xfcp_status = cap[53];
+        chk_bool(xfcp_sop    == 8'hFD, "T22.xfcp_sop==0xFD");
+        chk_bool(xfcp_op     == 8'h23, "T22.xfcp_op==STREAM_READ_RESP");
+        chk_bool(xfcp_seq    == 8'hA3, "T22.xfcp_seq_echo");
+        chk_bool(xfcp_status == 8'h00, "T22.xfcp_status==OK");
+        begin
+          logic all_ok;
+          all_ok = 1'b1;
+          for (int i = 0; i < 256; i++) begin
+            if (cap[54+i] !== 8'(i)) begin
+              $display("FAIL T22.byte[%0d]: got=0x%02X exp=0x%02X",
+                       i, cap[54+i], 8'(i));
+              all_ok = 1'b0;
+              fails++;
+            end
+          end
+          if (all_ok) $display("PASS T22 256-byte ETH payload match");
+        end
+      end
+    end
+
+    // ==============================================================
     $display("");
     $display("%s (%0d failure%s)",
       fails == 0 ? "ALL PASSED" : "FAILURES DETECTED",
