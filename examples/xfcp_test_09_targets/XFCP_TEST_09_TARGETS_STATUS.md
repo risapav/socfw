@@ -4,8 +4,7 @@
 **Takt:** 125 MHz (PLL: 50 MHz sys_clk → 125 MHz clk125)
 **Board:** QMTech EP4CE55
 **IP:** 192.168.0.5 | MAC: 00:0A:35:01:FE:C5
-**Stav:** Faza D UZAVRETA — HW regression PASS 132/132 (UART+UDP), tag xfcp_lib_v1_3_targets_pass
-**Poznamka:** CLK125 WNS = -0.150 ns (Fmax 122.7 MHz vs 125 MHz target); HW PASS, timing treba zlepsit v dalsom projekte
+**Stav:** Faza E UZAVRETA — timing closure SEED 12: CLK125 WNS +0.237 ns, Fmax 128.82 MHz, tag xfcp_lib_v1_3_targets_pass
 
 ---
 
@@ -154,32 +153,33 @@ RESP_GET_TARGET_INFO RESPONSE (op=0x04, status=BAD_ADDRESS, invalid index):
 
 ---
 
-### Faza C — Quartus build + timing [UZAVRETA s poznamkou]
+### Faza C — Quartus build + timing [UZAVRETA]
 
 - [x] `socfw build project.yaml` → pregenerovat build/ (files.tcl + soc_top.sv OK)
 - [x] `build/hal/files.tcl` obsahuje xfcp_target_info_adapter.sv + xfcp_test_09_targets_top.sv
 - [x] Quartus compile dokonceny
 
-**Timing (Slow 1200mV 85C, SEED 5):**
+**Timing SEED 5 (pociatocny):** CLK125 WNS = -0.150 ns — timing FAIL
+**Timing SEED 12 (po sweep):**  CLK125 WNS = +0.237 ns — timing PASS
+
 ```
+Slow 1200mV 85C, SEED 12:
 CLK125:
-  Fmax:     122.7 MHz  (target 125 MHz -> NESPLNENE)
-  Setup WNS: -0.150 ns
-  Setup TNS: -1.826 ns
+  Fmax:      128.82 MHz  (target 125 MHz -> SPLNENE)
+  Setup WNS: +0.237 ns
+  Setup TNS:  0.000 ns
   Hold  WNS: +0.428 ns
 
 ETH_RXC:
-  Fmax:     140.61 MHz
-  Setup WNS: +0.590 ns
+  Fmax:      139.72 MHz
+  Setup WNS: +0.843 ns
   Hold  WNS: +0.449 ns
 ```
 
-**Poznamka:** CLK125 WNS = -0.150 ns (marginalne precetrenie). Referencia xfcp_test_08_caps bola
-+0.355 ns (SEED 5). Pridanie TI backendu mierne predlzilo kriticku cestu. HW pracuje spravne
-(66/66 PASS), ale formalny timing closure nie je splneny. Treba riesit v dalsom projekte
-(SEED sweep alebo retiming).
+Seed sweep SEED 1-15 (okrem 5): PASS: 2,3,4,6,8,10,11,12,13,14 | FAIL: 1,7,9,15
+Najlepsi margin: SEED 12 (+0.237 ns).
 
-**Stav:** UZAVRETA (2026-06-14) — timing violation zaznamena, HW overeny
+**Stav:** UZAVRETA (2026-06-14)
 
 ---
 
@@ -250,35 +250,34 @@ caps_flags=0x0F (HAS_AXIL | HAS_STREAM | HAS_CAPS | HAS_TARGETS)
 |---------|-------|
 | 7ae6326 | Faza A+B — RTL + sim T01-T30 PASS |
 | 218c4b1 | Faza C-prep — build config + Python tools + STATUS oprava |
-| (aktualne) | Faza D — HW regression 132/132 PASS, tag + STATUS |
+| 0646e95 | Faza D — HW regression 132/132 PASS, STATUS |
+| bd455bd | navrhy_04.md (timing fix review) |
+| (aktualne) | Faza E — SEED 12 timing closure, soc_top.qsf update |
 
-**Tag:** `xfcp_lib_v1_3_targets_pass` — HW UART+UDP 132/132 PASS (2026-06-14)
+**Tag:** `xfcp_lib_v1_3_targets_pass` — timing PASS SEED 12, HW UART+UDP 132/132 PASS (2026-06-14)
 
 ---
 
-## Timing (SEED 5, Slow 1200mV 85C)
+## Timing (SEED 12, Slow 1200mV 85C)
 
 ```
 CLK125:
-  Fmax:     122.7 MHz  (target 125 MHz -> FAIL -0.150 ns)
-  Setup WNS: -0.150 ns
-  Setup TNS: -1.826 ns
+  Fmax:      128.82 MHz  (target 125 MHz -> PASS)
+  Setup WNS: +0.237 ns
+  Setup TNS:  0.000 ns
   Hold  WNS: +0.428 ns
 
 ETH_RXC:
-  Fmax:     140.61 MHz
-  Setup WNS: +0.590 ns
+  Fmax:      139.72 MHz
+  Setup WNS: +0.843 ns
   Hold  WNS: +0.449 ns
 ```
 
-CLK125 timing violation je marginalne (-0.150 ns). HW pracuje spravne, no formalny
-timing closure nebol dosiahnuty. Prvy navrh na fix: SEED sweep alebo pipeline TI rdata.
-
-Referencia xfcp_test_08_caps (SEED 5): CLK125 WNS +0.355 ns — TI backend priidal ~0.5 ns latency.
+Seed sweep SEED 1-15 (okrem 5): 10 PASS / 4 FAIL. SEED 12 najlepsi margin (+0.237 ns).
 
 ---
 
-## Resource usage (SEED 5)
+## Resource usage (SEED 12)
 
 ```
 Logic elements: 26,366 / 55,856  (47 %)
