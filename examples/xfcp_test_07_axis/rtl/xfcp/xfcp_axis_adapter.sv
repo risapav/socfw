@@ -121,41 +121,19 @@ module xfcp_axis_adapter #(
   wire        req_is_wr  = (axis_req_hdr_i.opcode == XFCP_OP_STREAM_WRITE);
 
   // ── Response FIFO (STREAM_READ response data) ─────────────────
-  // DATA_WIDTH=32, DEPTH=RFIFO_DEPTH.
-  // Output register slice breaks rfifo.rd_ptr_q -> axis_rdata_o comb path (timing).
+  // xfcp_fifo_reg: M9K registered output eliminates rd_ptr_q -> axis_rdata_o LUT path.
   logic [31:0] rfifo_wdata_w;
   logic        rfifo_wvalid_w;
   logic        rfifo_wready;
-  logic [31:0] rfifo_r_data_w;
-  logic        rfifo_r_valid_w;
-  logic        rfifo_r_ready_w;
 
-  xfcp_fifo #(
+  xfcp_fifo_reg #(
     .DATA_WIDTH (32),
     .DEPTH      (RFIFO_DEPTH)
   ) i_rfifo (
     .clk(clk), .rst_n(rst_n), .flush(1'b0),
     .w_valid(rfifo_wvalid_w), .w_data(rfifo_wdata_w), .w_ready(rfifo_wready),
-    .r_valid(rfifo_r_valid_w), .r_data(rfifo_r_data_w), .r_ready(rfifo_r_ready_w)
+    .r_valid(axis_rdata_valid_o), .r_data(axis_rdata_o), .r_ready(axis_rdata_ready_i)
   );
-
-  logic [31:0] rfifo_rs_data_r;
-  logic        rfifo_rs_valid_r;
-
-  assign rfifo_r_ready_w = !rfifo_rs_valid_r || axis_rdata_ready_i;
-
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      rfifo_rs_valid_r <= 1'b0;
-      rfifo_rs_data_r  <= '0;
-    end else if (rfifo_r_ready_w) begin
-      rfifo_rs_valid_r <= rfifo_r_valid_w;
-      if (rfifo_r_valid_w) rfifo_rs_data_r <= rfifo_r_data_w;
-    end
-  end
-
-  assign axis_rdata_o       = rfifo_rs_data_r;
-  assign axis_rdata_valid_o = rfifo_rs_valid_r;
 
   // ── WRITE byte selector (MSB-first: byte 0 = bits[31:24]) ────
   logic [7:0] wr_byte_w;

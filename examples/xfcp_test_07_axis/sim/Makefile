@@ -42,6 +42,7 @@ UART_COMMON = \
 XFCP_COMMON = \
 	$(RTL_XFCP)/xfcp_pkg.sv \
 	$(RTL_XFCP)/xfcp_fifo.sv \
+	$(RTL_XFCP)/xfcp_fifo_reg.sv \
 	$(RTL_XFCP)/xfcp_rx_parser.sv \
 	$(RTL_XFCP)/xfcp_tx_packetizer.sv \
 	$(RTL_XFCP)/xfcp_axi_engine.sv \

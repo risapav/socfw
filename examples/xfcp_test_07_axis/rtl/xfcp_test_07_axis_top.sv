@@ -14,7 +14,7 @@
  *     - xfcp_pkg: STREAM_WRITE/READ opcodes (0x20/0x21)
  *     - xfcp_fabric_endpoint: A-light AXIS routing
  *     - xfcp_axis_adapter: STREAM serialise/gather s watchdogom (1024 cyklov)
- *     - Loopback FIFO: xfcp_fifo DATA_WIDTH=9 (tlast+tdata), DEPTH=256
+ *     - Loopback FIFO: xfcp_fifo_reg DATA_WIDTH=9 (tlast+tdata), DEPTH=256 (M9K)
  *
  *   AXI-Lite mapa (stride 0x10000):
  *     Slot 0 @ 0xFF000000 : axil_sys_ctrl
@@ -26,7 +26,7 @@
  *     Slot 6 @ 0xFF060000 : axil_diag_ctrl
  *
  *   STREAM loopback slot (stream_id=0):
- *     STREAM_WRITE -> xfcp_fifo (9-bit, DEPTH=256) -> STREAM_READ
+ *     STREAM_WRITE -> xfcp_fifo_reg (9-bit M9K, DEPTH=256) -> STREAM_READ
  */
 
 `ifndef XFCP_TEST_07_AXIS_TOP_SV
@@ -790,34 +790,20 @@ module xfcp_test_07_axis_top #(
   );
 
   // ── AXI-Stream loopback FIFO (9-bit: {tlast, tdata}) ─────────
-  // STREAM_WRITE pushes bytes -> loopback FIFO -> STREAM_READ reads bytes.
-  // DATA_WIDTH=9 ({1-bit tlast, 8-bit tdata}), DEPTH=256.
+  // xfcp_fifo_reg: M9K registered output eliminates fall-through LUT read path.
   logic [7:0] lb_m_tdata_w;
   logic       lb_m_tvalid_w, lb_m_tready_w, lb_m_tlast_w;
-  logic [7:0] lb_s_tdata_w;
-  logic       lb_s_tvalid_w, lb_s_tready_w, lb_s_tlast_w;
-  logic [8:0] lb_rdata_w;
-  logic [7:0] lb_rs_tdata_w;
-  logic       lb_rs_tvalid_w, lb_rs_tready_w, lb_rs_tlast_w;
+  logic [8:0] lbr_rdata_w;
+  logic       lbr_rvalid_w, lbr_rready_w;
 
-  xfcp_fifo #(.DATA_WIDTH(9), .DEPTH(256)) u_axis_loopback (
+  xfcp_fifo_reg #(.DATA_WIDTH(9), .DEPTH(256)) u_axis_loopback (
     .clk    (clk_i), .rst_n (rst_ni), .flush (1'b0),
     .w_valid(lb_m_tvalid_w),
     .w_data ({lb_m_tlast_w, lb_m_tdata_w}),
     .w_ready(lb_m_tready_w),
-    .r_valid(lb_s_tvalid_w),
-    .r_data (lb_rdata_w),
-    .r_ready(lb_s_tready_w)
-  );
-  assign {lb_s_tlast_w, lb_s_tdata_w} = lb_rdata_w;
-
-  // Register slice breaks fall-through FIFO -> RFIFO RAM comb path (WNS fix).
-  axis_byte_register_slice u_axis_loopback_rs (
-    .clk     (clk_i),        .rst_n    (rst_ni),
-    .s_tdata (lb_s_tdata_w), .s_tvalid (lb_s_tvalid_w),
-    .s_tready(lb_s_tready_w),.s_tlast  (lb_s_tlast_w),
-    .m_tdata (lb_rs_tdata_w),.m_tvalid (lb_rs_tvalid_w),
-    .m_tready(lb_rs_tready_w),.m_tlast (lb_rs_tlast_w)
+    .r_valid(lbr_rvalid_w),
+    .r_data (lbr_rdata_w),
+    .r_ready(lbr_rready_w)
   );
 
   // ── XFCP AXIS Adapter (stream_id=0 loopback slot) ─────────────
@@ -844,11 +830,11 @@ module xfcp_test_07_axis_top #(
     .m_axis_tvalid_o (lb_m_tvalid_w),
     .m_axis_tready_i (lb_m_tready_w),
     .m_axis_tlast_o  (lb_m_tlast_w),
-    // AXI-Stream slave <- loopback FIFO output (via register slice)
-    .s_axis_tdata_i  (lb_rs_tdata_w),
-    .s_axis_tvalid_i (lb_rs_tvalid_w),
-    .s_axis_tready_o (lb_rs_tready_w),
-    .s_axis_tlast_i  (lb_rs_tlast_w)
+    // AXI-Stream slave <- loopback FIFO registered output (M9K 1-cycle latency)
+    .s_axis_tdata_i  (lbr_rdata_w[7:0]),
+    .s_axis_tvalid_i (lbr_rvalid_w),
+    .s_axis_tready_o (lbr_rready_w),
+    .s_axis_tlast_i  (lbr_rdata_w[8])
   );
 
   // ── AXI-Lite Slaves ───────────────────────────────────────────

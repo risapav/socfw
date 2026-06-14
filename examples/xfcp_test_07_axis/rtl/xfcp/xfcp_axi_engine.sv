@@ -66,6 +66,7 @@ module xfcp_axi_engine #(
   input  wire [$bits(xfcp_req_hdr_t)-1:0] req_hdr,
   input  wire                        req_valid,
   output logic                       req_ready,
+  input  wire                        req_is_write_i,  // pre-decoded FF: opcode==WRITE
 
   // Write payload FIFO (parser → engine)
   input  wire [AXI_DATA_WIDTH-1:0]   write_data,
@@ -300,7 +301,7 @@ module xfcp_axi_engine #(
     // READ:  bez podmienky na FIFO (žiadny payload).
     // Spoločne: ST_IDLE && packetizer_idle_i (engine nesmie začať
     //           kým packetizer odosiela predchádzajúcu odpoveď).
-    if (req_hdr_s.opcode == XFCP_OP_WRITE)
+    if (req_is_write_i)
       req_ready = (state_q == ST_IDLE) && packetizer_idle_i && wfifo_valid;
     else
       req_ready = (state_q == ST_IDLE) && packetizer_idle_i;
@@ -316,7 +317,7 @@ module xfcp_axi_engine #(
     end else if (state_q == ST_IDLE) begin
       if (req_valid && req_ready) begin
         resp_start = 1'b1;
-        if (req_hdr_s.opcode == XFCP_OP_WRITE)
+        if (req_is_write_i)
           state_n = ST_WR_ADDR;
         else
           state_n = ST_RD_ADDR;

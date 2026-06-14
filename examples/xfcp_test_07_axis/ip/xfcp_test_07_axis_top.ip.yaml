@@ -154,6 +154,7 @@ artifacts:
     # XFCP stack v0.9+STATUS+AXIS (local)
     - ../rtl/xfcp/xfcp_pkg.sv
     - ../rtl/xfcp/xfcp_fifo.sv
+    - ../rtl/xfcp/xfcp_fifo_reg.sv
     - ../rtl/xfcp/xfcp_rx_parser.sv
     - ../rtl/xfcp/xfcp_tx_packetizer.sv
     - ../rtl/xfcp/xfcp_axi_engine.sv
@@ -179,6 +180,7 @@ provides:
     - xfcp_tx_packetizer
     - xfcp_axi_engine
     - xfcp_fifo
+    - xfcp_fifo_reg
     - async_fifo
     - axil_uart_adapter
     - axil_regs

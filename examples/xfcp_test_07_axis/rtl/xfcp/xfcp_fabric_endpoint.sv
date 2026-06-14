@@ -152,23 +152,26 @@ module xfcp_fabric_endpoint #(
   logic [AXI_ADDR_WIDTH-1:0] req_addr_r;
   logic                      ofifo_wvalid_r;
   logic                      is_stream_r;
+  logic                      req_is_write_r;  // pre-decoded: opcode==XFCP_OP_WRITE (1-bit FF)
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      dec_sel_r     <= '0;
-      dec_valid_r   <= 1'b0;
-      req_valid_r   <= 1'b0;
-      invalid_req_r <= 1'b0;
-      req_op_r      <= xfcp_pkg::XFCP_OP_READ;
-      req_seq_r     <= '0;
-      req_count_r   <= '0;
-      req_addr_r    <= '0;
-      is_stream_r   <= 1'b0;
+      dec_sel_r      <= '0;
+      dec_valid_r    <= 1'b0;
+      req_valid_r    <= 1'b0;
+      invalid_req_r  <= 1'b0;
+      req_op_r       <= xfcp_pkg::XFCP_OP_READ;
+      req_seq_r      <= '0;
+      req_count_r    <= '0;
+      req_addr_r     <= '0;
+      is_stream_r    <= 1'b0;
+      req_is_write_r <= 1'b0;
     end else begin
-      dec_valid_r   <= req_valid && dec_valid;
-      req_valid_r   <= req_valid;
-      invalid_req_r <= req_valid && !dec_valid;
-      is_stream_r   <= req_valid && is_stream_op;
+      dec_valid_r    <= req_valid && dec_valid;
+      req_valid_r    <= req_valid;
+      invalid_req_r  <= req_valid && !dec_valid;
+      is_stream_r    <= req_valid && is_stream_op;
+      req_is_write_r <= req_valid && (req_hdr.opcode == xfcp_pkg::XFCP_OP_WRITE);
       if (req_valid) begin
         dec_sel_r   <= dec_sel;
         req_op_r    <= req_hdr.opcode;
@@ -355,8 +358,11 @@ module xfcp_fabric_endpoint #(
                            resp_op: xfcp_resp_for_op(req_op_r)};
 
   // AXIS req dispatch fires at D+1 alongside FIFO pop (same timing as AXIL engines).
-  // axis_busy_q is 0 here (set to 1 at this posedge, takes effect next cycle).
-  assign axis_req_valid_o = req_valid_r && is_stream_r && !axis_busy_q && ofifo_wready;
+  // !ofifo_wvalid_r: prevents spurious re-dispatch when adapter fast-completes (error READ/WRITE)
+  // and returns to ST_IDLE in the same cycle as req_fire -- axis_busy_q stays 0 (resp_done wins)
+  // but req_valid_r is still 1 for 1 cycle. ofifo_wvalid_r=1 exactly in that window.
+  assign axis_req_valid_o = req_valid_r && is_stream_r && !axis_busy_q
+                            && ofifo_wready && !ofifo_wvalid_r;
   assign axis_req_hdr_o   = req_hdr_staged;
 
   always_ff @(posedge clk or negedge rst_n) begin
@@ -639,10 +645,11 @@ module xfcp_fabric_endpoint #(
       ) i_engine (
         .clk   (clk), .rst_n (rst_n),
         .m_axil (m_axil[gi]),
-        .req_hdr   (req_hdr_staged),
-        .req_valid (req_valid_r && dec_valid_r && !eng_busy[gi] && !is_stream_r
-                    && dec_sel_r == SEL_W'(gi) && ofifo_wready),
-        .req_ready (eng_req_ready[gi]),
+        .req_hdr        (req_hdr_staged),
+        .req_valid      (req_valid_r && dec_valid_r && !eng_busy[gi] && !is_stream_r
+                         && dec_sel_r == SEL_W'(gi) && ofifo_wready),
+        .req_ready      (eng_req_ready[gi]),
+        .req_is_write_i (req_is_write_r),
         .write_data       (wdata_stage_data_r),
         .write_data_valid (wdata_stage_valid_r && (wdata_stage_sel_r == SEL_W'(gi))
                            && !wdata_stage_is_axis_r),
