@@ -4,7 +4,7 @@
 **Takt:** 125 MHz (PLL: 50 MHz sys_clk → 125 MHz clk125)
 **Board:** QMTech EP4CE55
 **IP:** 192.168.0.5 | MAC: 00:0A:35:01:FE:C5
-**Stav:** Faza C ciastocne — HW link PASS (ARP 4/4, ICMP 4/4), caka HW XFCP regression
+**Stav:** Faza D UZAVRETA — HW XFCP regression PASS 82/82 (UART+UDP, 2 runy), tag xfcp_lib_v1_2_caps_pass
 
 ---
 
@@ -155,30 +155,27 @@ overena, pretoze Python nastroje nie su prenesene z `xfcp_test_07_axis`.
 
 ---
 
-### Faza D — HW XFCP regression [PLANOVANA]
+### Faza D — HW XFCP regression [UZAVRETA]
 
-Podla navrh_01.md: preniest Python nastroje + implementovat `get_caps()` + rozsirit Makefile.
+`make hw-regression` — 2 kompletne runy, kazdy UART 41/41 + UDP 41/41.
 
-**Potrebne kroky:**
+- [x] Preniest `tools/` z `xfcp_test_07_axis` + pridat GET_CAPS (commit 3cd4c8a)
+- [x] `xfcp/protocol.py`: OP_GET_CAPS, encode_get_caps(), decode_get_caps_response()
+- [x] `xfcp/bus.py`: `get_caps() -> dict | None`
+- [x] `test_hw.py`: EXPECTED_CAPS dict, run_caps_test(), --caps CLI flag
+- [x] Makefile: test-uart, test-udp, hw-regression targety
+- [x] UART: GET_CAPS 3/3, AXIL 5/5, STREAM 4/4 vektory x3, DIAG bez chyb
+- [x] UDP:  GET_CAPS 3/3, AXIL 5/5, STREAM 4/4 vektory x3, DIAG bez chyb
+- [x] DIAG: rx_lost = rx_frame = rx_overrun = rx_bad_hdr = rx_recovery = rx_drop = 0
+- [x] Tag: `xfcp_lib_v1_2_caps_pass`
 
-- [ ] Preniest `tools/` z `xfcp_test_07_axis` (protocol.py, bus.py, transport_*.py, test_hw.py)
-- [ ] Pridat `bus.get_caps()` → decode 8B payload do dict
-- [ ] Rozsirit Makefile: `hw-link-test` / `test-uart` / `test-udp` / `hw-regression`
-- [ ] UART: GET_CAPS, AXIL READ/WRITE, STREAM 4/64/256B, DIAG snapshot
-- [ ] UDP:  GET_CAPS, AXIL READ/WRITE, STREAM 4/64/256B, DIAG snapshot
-- [ ] DIAG: rx_bad_hdr = rx_recovery = rx_drop = 0
-- [ ] Tag: `xfcp_lib_v1_2_caps_pass`
-
-**Ocakavane hodnoty GET_CAPS:**
+**GET_CAPS HW overenie (PASS):**
 ```
-proto_major       1
-proto_minor       1
-num_axil_slots    7
-num_stream_slots  1
-max_stream_bytes  256
-stream_align      4
-caps_flags        0x07
+caps_flags=0x07 (HAS_AXIL | HAS_STREAM | HAS_CAPS)
+proto=1.1  axil=7  stream=1  max_stream=256B  stream_align=4
 ```
+
+**Stav:** UZAVRETA (2026-06-14)
 
 ---
 
@@ -248,3 +245,7 @@ PLLs:           1 / 4
 | 238b0f8 | Pridaj Makefile + soc_top.qpf pre Quartus |
 | 42402c0 | Faza B — timing closure WNS +0.355 ns (read_data_ready_r) |
 | 3724b8e | Pridaj XFCP_TEST_08_CAPS_STATUS.md |
+| 0dc7a2b | Faza C — HW link PASS (ARP 4/4, ICMP 4/4), navrhy_01.md |
+| 3cd4c8a | Faza D — Python tools + GET_CAPS, hw-regression targets |
+
+**Tag:** `xfcp_lib_v1_2_caps_pass` — HW UART+UDP 82/82 PASS (2026-06-14)
