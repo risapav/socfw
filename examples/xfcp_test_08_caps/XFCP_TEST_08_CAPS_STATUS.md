@@ -4,7 +4,7 @@
 **Takt:** 125 MHz (PLL: 50 MHz sys_clk → 125 MHz clk125)
 **Board:** QMTech EP4CE55
 **IP:** 192.168.0.5 | MAC: 00:0A:35:01:FE:C5
-**Stav:** Faza B UZAVRETA — sim T01-T25 PASS, timing WNS +0.355 ns, CAKA HW TEST
+**Stav:** Faza C ciastocne — HW link PASS (ARP 4/4, ICMP 4/4), caka HW XFCP regression
 
 ---
 
@@ -138,15 +138,47 @@ RESP_GET_CAPS RESPONSE (op=0x02):
 
 ---
 
-### Faza C — HW test [PLANOVANA]
+### Faza C — HW link sanity [UZAVRETA]
 
-- [ ] `make program` — programovanie FPGA
-- [ ] `make arp-setup` + ARP overenie
-- [ ] `make hw-test` — ARP + ICMP
-- [ ] Python tools: GET_CAPS cez UART + UDP overenie
-- [ ] AXIL READ/WRITE cez UART + UDP
-- [ ] STREAM loopback (4B/64B/256B) cez UART + UDP
-- [ ] DIAG snapshot: rx_bad_hdr/rx_recovery/rx_drop = 0
+`make hw-test` overuje iba sietovu dostupnost (ARP + ICMP), nie XFCP samotne.
+
+- [x] `make program` — FPGA naprogramovany
+- [x] `make arp-setup` — staticka ARP entry
+- [x] ARP 4/4 PASS (2026-06-14)
+- [x] ICMP 4/4 PASS, RTT min/avg/max = 0.127/0.151/0.168 ms
+
+**Poznamka (navrh_01.md):** Aktualny `hw-test` je len „link sanity test" — nevolá Python XFCP
+klienta, necita GET_CAPS, netestuje AXIL/STREAM/DIAG. HW XFCP regression este nie je
+overena, pretoze Python nastroje nie su prenesene z `xfcp_test_07_axis`.
+
+**Stav:** UZAVRETA (2026-06-14)
+
+---
+
+### Faza D — HW XFCP regression [PLANOVANA]
+
+Podla navrh_01.md: preniest Python nastroje + implementovat `get_caps()` + rozsirit Makefile.
+
+**Potrebne kroky:**
+
+- [ ] Preniest `tools/` z `xfcp_test_07_axis` (protocol.py, bus.py, transport_*.py, test_hw.py)
+- [ ] Pridat `bus.get_caps()` → decode 8B payload do dict
+- [ ] Rozsirit Makefile: `hw-link-test` / `test-uart` / `test-udp` / `hw-regression`
+- [ ] UART: GET_CAPS, AXIL READ/WRITE, STREAM 4/64/256B, DIAG snapshot
+- [ ] UDP:  GET_CAPS, AXIL READ/WRITE, STREAM 4/64/256B, DIAG snapshot
+- [ ] DIAG: rx_bad_hdr = rx_recovery = rx_drop = 0
+- [ ] Tag: `xfcp_lib_v1_2_caps_pass`
+
+**Ocakavane hodnoty GET_CAPS:**
+```
+proto_major       1
+proto_minor       1
+num_axil_slots    7
+num_stream_slots  1
+max_stream_bytes  256
+stream_align      4
+caps_flags        0x07
+```
 
 ---
 
@@ -215,3 +247,4 @@ PLLs:           1 / 4
 | 7c1d8c8 | Pridaj cores/clkpll (PLL IP pre Quartus) |
 | 238b0f8 | Pridaj Makefile + soc_top.qpf pre Quartus |
 | 42402c0 | Faza B — timing closure WNS +0.355 ns (read_data_ready_r) |
+| 3724b8e | Pridaj XFCP_TEST_08_CAPS_STATUS.md |
