@@ -478,6 +478,7 @@ module xfcp_fabric_endpoint #(
   logic [SEL_W-1:0] arb_sel_q;
   logic          arb_is_axis_q;
   logic          arb_is_caps_q;
+  logic          arb_is_axil_q;  // preregistered: !(arb_is_axis_q || arb_is_caps_q)
   logic          resp_start_pulse;
   logic          resp_start_q;
   logic          packetizer_idle;
@@ -542,6 +543,7 @@ module xfcp_fabric_endpoint #(
       arb_sel_q     <= '0;
       arb_is_axis_q <= 1'b0;
       arb_is_caps_q <= 1'b0;
+      arb_is_axil_q <= 1'b1;
       resp_type_q   <= xfcp_pkg::XFCP_OP_RESP_WRITE;
       resp_seq_q    <= '0;
       resp_status_q <= '0;
@@ -551,6 +553,7 @@ module xfcp_fabric_endpoint #(
         arb_sel_q     <= ofifo_head_r.sel;
         arb_is_axis_q <= ofifo_head_r.is_axis;
         arb_is_caps_q <= ofifo_head_r.is_caps;
+        arb_is_axil_q <= !ofifo_head_r.is_axis && !ofifo_head_r.is_caps;
         resp_seq_q    <= ofifo_head_r.seq;
         if (ofifo_head_r.is_axis) begin
           resp_type_q   <= ofifo_head_r.resp_op;
@@ -565,6 +568,7 @@ module xfcp_fabric_endpoint #(
       end else if (arb_q == ARB_IDLE && arb_n == ARB_WAIT_ENG) begin
         arb_sel_q     <= ofifo_head_r.sel;
         arb_is_caps_q <= ofifo_head_r.is_caps;
+        arb_is_axil_q <= !ofifo_head_r.is_axis && !ofifo_head_r.is_caps;
       end
     end
   end
@@ -663,15 +667,14 @@ module xfcp_fabric_endpoint #(
   // ── AXI Engine instancie ─────────────────────────────────────
   // eng_pkt_idle[i]: engine sees packetizer as idle for non-matching responses.
   // !is_stream_r, !is_caps_r: prevents STREAM/CAPS dispatch from triggering AXIL eng.
-  // !arb_is_axis_q, !arb_is_caps_q: prevents engines from popping rdata during non-AXIL resp.
+  // arb_is_axil_q: preregistered !(arb_is_axis_q||arb_is_caps_q), breaks timing path.
   genvar gi;
   generate
     for (gi = 0; gi < NUM_SLAVES; gi++) begin : g_engine
       assign eng_pkt_idle[gi] = packetizer_idle
                                  || (arb_q != ARB_WAIT_PKT)
                                  || (arb_sel_q != SEL_W'(gi))
-                                 || arb_is_axis_q
-                                 || arb_is_caps_q;
+                                 || !arb_is_axil_q;
 
       xfcp_axi_engine #(
         .LITTLE_ENDIAN  (LITTLE_ENDIAN),
@@ -693,8 +696,7 @@ module xfcp_fabric_endpoint #(
         .read_data       (eng_rdata[gi]),
         .read_data_valid (eng_rdata_valid[gi]),
         .read_data_ready (rdata_ready_int && (arb_sel_q == SEL_W'(gi))
-                          && (arb_q == ARB_WAIT_PKT)
-                          && !arb_is_axis_q && !arb_is_caps_q),
+                          && (arb_q == ARB_WAIT_PKT) && arb_is_axil_q),
         .resp_start        (),
         .resp_type         (eng_resp_type[gi]),
         .resp_done         (eng_resp_done[gi]),

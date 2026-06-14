@@ -147,6 +147,7 @@ module xfcp_axi_engine #(
   logic [AXI_DATA_WIDTH-1:0] rfifo_rdata_w;
   logic                      rfifo_rvalid_w;
   logic                      rfifo_rready_w;
+  logic                      read_data_ready_r; // registered: skrati kriticku cestu state_q -> rd_ptr_q
 
   // Byte-swap: aplikovaný iba ak LITTLE_ENDIAN=1
   assign wfifo_swapped = LITTLE_ENDIAN ? byte_swap(wfifo_raw)    : wfifo_raw;
@@ -160,21 +161,30 @@ module xfcp_axi_engine #(
   );
 
   // Read buffer FIFO: engine -> vystupny register -> packetizer.
-  // Vystupny register (read_data FF port) lomi cestu:
-  //   rd_ptr_q -> mem[rd_ptr] -> read_data (port) -> cross-module routing
-  //   -> rdata MUX -> rdata_r.D  (-1.125 ns).
-  // Po registracii: rd_ptr_q -> mem -> rfifo_rdata_w -> read_data_r.D (kratka cesta ~4 ns)
-  // a read_data_r -> rdata_r.D (FF + routing + MUX, ~5 ns). Obe fituju do 8 ns.
+  //
+  // Kriticka cesta (STA): state_q.ST_PAYLOAD -> read_data_ready (port) ->
+  //   rfifo_rready_w -> i_read_buffer.rd_ptr_q (~7 LUT, prilis pomale pri 125 MHz).
+  //
+  // Oprava: read_data_ready_r je registrovana verzia read_data_ready.
+  //   Kratsia cesta: read_data_ready_r (FF) -> rfifo_rready_w -> rd_ptr_q (~3 LUT).
+  //   Pridava 1-takt latency pri signalizacii "downstream spotreboval data",
+  //   co je prijatelne (vysilanie je UART/AXI-S, ms-latency dominuje).
   xfcp_fifo #(.DATA_WIDTH(AXI_DATA_WIDTH), .DEPTH(FIFO_DEPTH)) i_read_buffer (
     .clk(clk), .rst_n(rst_n), .flush(1'b0),
     .w_valid(m_axil.RVALID && m_axil.RREADY), .w_data(rdata_swapped), .w_ready(rfifo_w_ready_w),
     .r_valid(rfifo_rvalid_w), .r_data(rfifo_rdata_w), .r_ready(rfifo_rready_w)
   );
 
-  // Vystupny pipeline register: lomi async FIFO read od module boundary.
-  // rfifo_rready_w: pop FIFO ked vystupny register moze prijat data
-  //   (prazdny alebo downstream konzumuje).
-  assign rfifo_rready_w = !read_data_valid || read_data_ready;
+  // read_data_ready_r: lomi dlhu kombinacnu cestu od packetizera
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) read_data_ready_r <= 1'b0;
+    else        read_data_ready_r <= read_data_ready;
+  end
+
+  // rfifo_rready_w: pop FIFO ked vystupny register moze prijat data.
+  //   Podmienka: slot je prazdny (!read_data_valid) ALEBO downstream spotreboval
+  //   minuly takt (read_data_ready_r). Registracia ready-vstupu skracuje STA.
+  assign rfifo_rready_w = !read_data_valid || read_data_ready_r;
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
