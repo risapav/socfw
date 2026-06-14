@@ -1,16 +1,17 @@
 include ../../Makefile.common
 
 # -----------------------------------------------------------------------------
-# xfcp_test_08_caps -- XFCP v1.1+CAPS (GET_CAPS extension)
+# xfcp_test_09_targets -- XFCP v1.2+CAPS+AXIS+TARGETS (GET_TARGET_INFO extension)
 # -----------------------------------------------------------------------------
 #
 # Board: QMTech EP4CE55
 # Takt: 125 MHz (PLL: 50 MHz sys_clk -> 125 MHz clk125)
 #
-# Protokol: XFCP v1.1+CAPS
+# Protokol: XFCP v1.2+TARGETS
 #   Response header: SOP(1)+TYPE(1)+SEQ(1)+STATUS(1) = 4 bajty
 #   AXI BRESP/RRESP -> STATUS, STREAM_WRITE/READ -> loopback FIFO
-#   GET_CAPS (0x01) -> staticka 8-bajtova odpoved
+#   GET_CAPS (0x01) -> staticka 8-bajtova odpoved (proto_minor=2, flags=0x0F)
+#   GET_TARGET_INFO (0x03) -> staticka 16B odpoved (8 targetov)
 #
 # XFCP over UART:  python3 tools/main.py  -> [1] UART /dev/ttyUSB0
 # XFCP over UDP:   python3 tools/main.py  -> [2] UDP 192.168.0.5:50000
@@ -83,7 +84,7 @@ test-icmp:
 hw-test: arp-setup
 	@echo ""
 	@echo "======================================="
-	@echo "  xfcp_test_08_caps HW test (full)"
+	@echo "  xfcp_test_09_targets HW test (full)"
 	@echo "======================================="
 	@echo ""
 	@echo "--- ARP ---"
@@ -99,12 +100,12 @@ hw-test: arp-setup
 test-uart:
 	cd tools && python3 test_hw.py \
 	  --uart $(UART_PORT) --baud $(UART_BAUD) \
-	  --caps --rw --stream --diag --repeat $(TEST_REPEAT)
+	  --caps --targets --rw --stream --diag --repeat $(TEST_REPEAT)
 
 test-udp:
 	cd tools && python3 test_hw.py \
 	  --udp $(FPGA_IP):$(XFCP_UDP_PORT) \
-	  --caps --rw --stream --diag --repeat $(TEST_REPEAT)
+	  --caps --targets --rw --stream --diag --repeat $(TEST_REPEAT)
 
 hw-regression: arp-setup test-uart test-udp
 

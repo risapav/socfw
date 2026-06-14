@@ -1,10 +1,10 @@
-# XFCP_TEST_08_CAPS — Status
+# XFCP_TEST_09_TARGETS — Status
 
-**Projekt:** XFCP v1.1+CAPS — GET_CAPS (0x01) / RESP_GET_CAPS (0x02) rozsirenie
+**Projekt:** XFCP v1.2+TARGETS — GET_TARGET_INFO (0x03) / RESP_GET_TARGET_INFO (0x04) rozsirenie
 **Takt:** 125 MHz (PLL: 50 MHz sys_clk → 125 MHz clk125)
 **Board:** QMTech EP4CE55
 **IP:** 192.168.0.5 | MAC: 00:0A:35:01:FE:C5
-**Stav:** Faza D UZAVRETA — HW XFCP regression PASS 82/82 (UART+UDP, 2 runy), tag xfcp_lib_v1_2_caps_pass
+**Stav:** Faza B UZAVRETA — sim T01-T30 PASS (142 checks, 0 failures)
 
 ---
 
@@ -42,210 +42,188 @@ eth_rx_clk (125 MHz z PHY, async)
       stream_id=0: loopback (xfcp_fifo_reg, DEPTH=256)
 
     CAPS backend (0x01 GET_CAPS → 0x02 RESP_GET_CAPS):
-      xfcp_caps_adapter: 8-bajtova staticka odpoved z parametrov
+      xfcp_caps_adapter: proto_minor=2, caps_flags=0x0F
+
+    TI backend (0x03 GET_TARGET_INFO → 0x04 RESP_GET_TARGET_INFO):
+      xfcp_target_info_adapter: staticka tabulka 8 targetov (16B/target)
 ```
 
 ---
 
-## XFCP Protokol — GET_CAPS
+## XFCP Protokol — GET_TARGET_INFO
 
 ```
-GET_CAPS REQUEST (op=0x01):
-  FE 01 seq 00 00 00 00 00 00  (8B header, COUNT=0)
+GET_TARGET_INFO REQUEST (op=0x03):
+  FE 03 seq 00 00 00 00 00 [index]  (9B, COUNT=0, ADDR[7:0]=target_index)
 
-RESP_GET_CAPS RESPONSE (op=0x02):
-  FD 02 seq status W0[3] W0[2] W0[1] W0[0] W1[3] W1[2] W1[1] W1[0] 00
-  Celkovo 12B (4B header + 8B payload + 1B TLAST byte)
+RESP_GET_TARGET_INFO RESPONSE (op=0x04, status=OK):
+  FD 04 seq 00 W0[3..0] W1[3..0] W2[3..0] W3[3..0] 00
+  Celkovo 22B (4B header + 16B payload + 1B TLAST byte)
+
+RESP_GET_TARGET_INFO RESPONSE (op=0x04, status=BAD_ADDRESS, invalid index):
+  FD 04 seq 03 00*16 00
 ```
 
-### CAPS struct (8 bajtov, MSB-first v 32-bit slovach)
+### Target struct (16 bajtov, 4×32-bit slov MSB-first)
 
-| Offset | Byte | Hodnota | Popis |
-|--------|------|---------|-------|
-| 0 | W0[3] | 0x01 | proto_major |
-| 1 | W0[2] | 0x01 | proto_minor |
-| 2 | W0[1] | 0x07 | num_axil_slots |
-| 3 | W0[0] | 0x01 | num_stream_slots |
-| 4 | W1[3] | 0x01 | max_stream_bytes[15:8] = 256 |
-| 5 | W1[2] | 0x00 | max_stream_bytes[7:0] |
-| 6 | W1[1] | 0x04 | stream_align |
-| 7 | W1[0] | 0x07 | caps_flags: bit0=HAS_AXIL, bit1=HAS_STREAM, bit2=HAS_CAPS |
+| Offset | Byte  | Popis |
+|--------|-------|-------|
+| 0      | W0[3] | target_type: 0x01=AXIL, 0x02=STREAM |
+| 1      | W0[2] | target_id (== index) |
+| 2      | W0[1] | flags (0x00) |
+| 3      | W0[0] | reserved (0x00) |
+| 4-7    | W1    | base_addr (32b big-endian) |
+| 8-9    | W2[3:2] | max_transfer (16b big-endian) |
+| 10     | W2[1] | align |
+| 11     | W2[0] | reserved (0x00) |
+| 12-15  | W3    | name (4 ASCII chars) |
+
+### GET_CAPS — aktualizovane hodnoty
+
+| Byte | Hodnota | Popis |
+|------|---------|-------|
+| 0 | 0x01 | proto_major |
+| 1 | **0x02** | proto_minor (2 = pridany TI) |
+| 2 | 0x07 | num_axil_slots |
+| 3 | 0x01 | num_stream_slots |
+| 4 | 0x01 | max_stream_bytes[15:8] = 256 |
+| 5 | 0x00 | max_stream_bytes[7:0] |
+| 6 | 0x04 | stream_align |
+| 7 | **0x0F** | caps_flags: bit0=HAS_AXIL, bit1=HAS_STREAM, bit2=HAS_CAPS, bit3=HAS_TARGETS |
 
 ---
 
-## Nové moduly oproti xfcp_test_07_axis
+## Target tabulka (8 targetov, index 0-7)
+
+| Index | Type   | Name | Base addr   | max_xfer | align |
+|-------|--------|------|-------------|----------|-------|
+| 0     | AXIL   | SYSC | 0xFF000000  | 128B     | 4     |
+| 1     | AXIL   | UART | 0xFF010000  | 128B     | 4     |
+| 2     | AXIL   | OUT_ | 0xFF020000  | 128B     | 4     |
+| 3     | AXIL   | OUT_ | 0xFF030000  | 128B     | 4     |
+| 4     | AXIL   | OUT_ | 0xFF040000  | 128B     | 4     |
+| 5     | AXIL   | SEG7 | 0xFF050000  | 128B     | 4     |
+| 6     | AXIL   | DIAG | 0xFF060000  | 128B     | 4     |
+| 7     | STREAM | STR0 | 0x00000000  | 256B     | 4     |
+| 8+    | —      | —    | —           | —        | — (BAD_ADDRESS) |
+
+---
+
+## Nove moduly oproti xfcp_test_08_caps
 
 | Modul | Zmena | Popis |
 |-------|-------|-------|
-| `xfcp_caps_adapter.sv` | **NOVY** | 3-stavovy FSM (ST_IDLE→ST_DONE_PLS→ST_DATA), 2×32-bit ROM z parametrov |
-| `xfcp_pkg.sv` | upraveny | +XFCP_OP_GET_CAPS=0x01, +XFCP_OP_RESP_GET_CAPS=0x02, +xfcp_op_is_caps(), xfcp_resp_has_payload() rozsirena |
-| `xfcp_rx_parser.sv` | upraveny | XFCP_OP_GET_CAPS pridany do opcode_valid() |
-| `xfcp_fabric_endpoint.sv` | upraveny | 3. backend (CAPS vedla AXIL+AXIS), is_caps routing, caps_done_cnt_q, arb_is_caps_q, arb_done_now, arb_is_axil_q |
-| `xfcp_axi_engine.sv` | upraveny | read_data_ready_r — registracia pre timing closure |
+| `xfcp_target_info_adapter.sv` | **NOVY** | FSM ST_IDLE→ST_DONE_PLS→ST_DATA, 4×32-bit ROM z parametrov, bad_index→BAD_ADDRESS |
+| `xfcp_pkg.sv` | upraveny | +XFCP_OP_GET_TARGET_INFO=0x03, +XFCP_OP_RESP_GET_TARGET_INFO=0x04, +xfcp_op_is_targets(), xfcp_resp_has_payload() + xfcp_resp_for_op() rozsirene |
+| `xfcp_rx_parser.sv` | upraveny | XFCP_OP_GET_TARGET_INFO pridany do opcode_valid() |
+| `xfcp_fabric_endpoint.sv` | upraveny | 4. backend (TI vedla AXIL+AXIS+CAPS): is_ti routing, ti_done_cnt_q, arb_is_ti_q, arb_is_axil_q teraz preregistrovany ako !axis && !caps && !ti |
+| `xfcp_caps_adapter.sv` | upraveny | PROTO_MINOR=2, CAPS_FLAGS=0x0F (HAS_TARGETS bit set) |
 
 ---
 
 ## Fazy
 
-### Faza A — GET_CAPS extension + sim T01-T25 [UZAVRETA]
+### Faza A — GET_TARGET_INFO RTL [UZAVRETA]
 
-- [x] xfcp_pkg.sv: XFCP_OP_GET_CAPS (0x01) / XFCP_OP_RESP_GET_CAPS (0x02), xfcp_op_is_caps()
-- [x] xfcp_rx_parser.sv: opcode_valid() rozsirena o GET_CAPS (COUNT=0 uz bolo platne)
-- [x] xfcp_caps_adapter.sv: novy modul, staticka ROM 2×32b, FSM IDLE→DONE_PLS→DATA
-- [x] xfcp_fabric_endpoint.sv: 3. backend — is_caps routing, caps_done_cnt_q, arb_is_caps_q
-- [x] T23: GET_CAPS cez UART (overenie vsetkych 8 caps bajtov)
-- [x] T24: GET_CAPS cez ETH-UDP
-- [x] T25: GET_CAPS + AXIL READ interleaved (in-order check)
-- [x] sim T01-T25 ALL PASS (commit 1dd3f0f)
+- [x] xfcp_pkg.sv: XFCP_OP_GET_TARGET_INFO (0x03) / XFCP_OP_RESP_GET_TARGET_INFO (0x04)
+- [x] xfcp_rx_parser.sv: opcode_valid() rozsirena o GET_TARGET_INFO
+- [x] xfcp_target_info_adapter.sv: novy modul, staticka ROM 4×32b, FSM IDLE→DONE_PLS→DATA
+- [x] xfcp_fabric_endpoint.sv: 4. backend TI — is_ti routing, ti_done_cnt_q, arb_is_ti_q
+- [x] xfcp_test_09_targets_top.sv: xfcp_target_info_adapter inštancia (8 targetov)
+- [x] caps_adapter: proto_minor=2, caps_flags=0x0F
+- [x] project.yaml + IP YAML: opravene na xfcp_test_09_targets_top
 
-**Bug A1: opcode_valid() chybajuci GET_CAPS**
-- `xfcp_rx_parser.sv` neprijimala op=0x01 → PROTOCOL ERROR → S_DROP
-- Fix: `8'(XFCP_OP_GET_CAPS) : return 1'b1;` v case statement opcode_valid()
-
-**Stav:** UZAVRETA (2026-06-14)
+**Stav:** UZAVRETA (2026-06-14), commit 7ae6326
 
 ---
 
-### Faza B — Quartus build + timing closure [UZAVRETA]
+### Faza B — Simulacia T01-T30 [UZAVRETA]
 
-**Quartus setup:**
-- `socfw build project.yaml` → `build/rtl/soc_top.sv`, `build/hal/files.tcl`, `build/timing/soc_top.sdc`
-- Pridane: `Makefile` (include ../../Makefile.common), `soc_top.qpf`, `soc_top.qsf`, `cores/clkpll/`
-- SEED 5 (zdedeny z xfcp_test_07_axis)
+- [x] sim/Makefile: xfcp_target_info_adapter.sv pridany do XFCP_COMMON, target premenovat
+- [x] tb_xfcp_test_09_targets_top.sv: T23/T24/T25 update (proto_minor=2, caps_flags=0x0F)
+- [x] T26: GET_TARGET_INFO index=0 → SYSC AXIL 0xFF000000 (16B overenie)
+- [x] T27: GET_TARGET_INFO index=6 → DIAG AXIL 0xFF060000
+- [x] T28: GET_TARGET_INFO index=7 → STR0 STREAM base=0 max=256
+- [x] T29: GET_TARGET_INFO index=8 (invalid) → status=BAD_ADDRESS (0x03)
+- [x] T30: GET_CAPS + GET_TARGET_INFO + AXIL READ interleaved (in-order)
+- [x] sim regression: ALL PASSED (142 checks, 0 failures)
+- [x] Python tools: protocol.py/bus.py/test_hw.py doplnene o GET_TARGET_INFO
 
-**Timing failure (pred fix):**
-- Kriticka cesta: `i_packetizer|state_q.ST_PAYLOAD → g_engine[0].i_engine|i_read_buffer|rd_ptr_q`
-- Data arrival: 8.087 ns vs period 8.000 ns → WNS = -0.205 ns (vsetky SEED 1-10 rovnake)
-- Pricina: ~7 LUT cesta: `state_q → read_data_ready → rfifo_rready_w → FIFO rd_ptr_q`
-- CAPS pridanie `arb_is_caps_q` do `read_data_ready` predlzilo cestu vs xfcp_test_07_axis
-
-**Pokus 1 — arb_is_axil_q (NEPOMOHLO):**
-- Preregistrovany `!(arb_is_axis_q || arb_is_caps_q)` → WNS stale -0.205 ns
-- Pricina: bottleneck nie je tento termin ale dlzka celej cesty
-
-**Fix — read_data_ready_r (USPECH):**
-- `xfcp_axi_engine.sv`: `read_data_ready_r <= read_data_ready` (FF registracia portu)
-- `rfifo_rready_w = !read_data_valid || read_data_ready_r`
-- Skratena cesta: `read_data_ready_r (FF) → rfifo_rready_w → rd_ptr_q` (~3 LUT, ~3 ns)
-- 1-takt latency pri backpressure acknowledge — prijatelne (UART/AXI-S ms-dominancia)
-
-**Vysledok:**
-- WNS: **-0.205 ns → +0.355 ns** (SEED 5)
-- Fmax (Slow 85C CLK125): **130.8 MHz**
-- Sim T01-T25 ALL PASS po zmene
-
-**Stav:** UZAVRETA (2026-06-14), commit 42402c0
+**Stav:** UZAVRETA (2026-06-14), commit 7ae6326
 
 ---
 
-### Faza C — HW link sanity [UZAVRETA]
+### Faza C — Quartus build + timing closure [CAKAJUCA]
 
-`make hw-test` overuje iba sietovu dostupnost (ARP + ICMP), nie XFCP samotne.
+- [ ] `socfw build project.yaml` → pregenerovat build/
+- [ ] skontrolovat `build/hal/files.tcl`: xfcp_target_info_adapter.sv + xfcp_test_09_targets_top.sv
+- [ ] Quartus compile (target SEED z xfcp_test_08_caps)
+- [ ] Timing: CLK125 WNS >= 0, ETH_RXC WNS >= 0
 
-- [x] `make program` — FPGA naprogramovany
-- [x] `make arp-setup` — staticka ARP entry
-- [x] ARP 4/4 PASS (2026-06-14)
-- [x] ICMP 4/4 PASS, RTT min/avg/max = 0.127/0.151/0.168 ms
-
-**Poznamka (navrh_01.md):** Aktualny `hw-test` je len „link sanity test" — nevolá Python XFCP
-klienta, necita GET_CAPS, netestuje AXIL/STREAM/DIAG. HW XFCP regression este nie je
-overena, pretoze Python nastroje nie su prenesene z `xfcp_test_07_axis`.
-
-**Stav:** UZAVRETA (2026-06-14)
+Ocakavany vysledok: timing by mal PASS priamo (iba 1 novy FF-chain TI adapter, ziadna nova
+kriticka cesta; arb_is_axil_q=!(axis||caps||ti) je uz preregistrovane z Fazy B xfcp_test_08_caps).
 
 ---
 
-### Faza D — HW XFCP regression [UZAVRETA]
+### Faza D — HW regresia [CAKAJUCA]
 
-`make hw-regression` — 2 kompletne runy, kazdy UART 41/41 + UDP 41/41.
+- [ ] `make program`
+- [ ] `make arp-setup`
+- [ ] `make hw-regression` (UART + UDP, kazdy s --caps --targets --rw --stream --diag)
 
-- [x] Preniest `tools/` z `xfcp_test_07_axis` + pridat GET_CAPS (commit 3cd4c8a)
-- [x] `xfcp/protocol.py`: OP_GET_CAPS, encode_get_caps(), decode_get_caps_response()
-- [x] `xfcp/bus.py`: `get_caps() -> dict | None`
-- [x] `test_hw.py`: EXPECTED_CAPS dict, run_caps_test(), --caps CLI flag
-- [x] Makefile: test-uart, test-udp, hw-regression targety
-- [x] UART: GET_CAPS 3/3, AXIL 5/5, STREAM 4/4 vektory x3, DIAG bez chyb
-- [x] UDP:  GET_CAPS 3/3, AXIL 5/5, STREAM 4/4 vektory x3, DIAG bez chyb
-- [x] DIAG: rx_lost = rx_frame = rx_overrun = rx_bad_hdr = rx_recovery = rx_drop = 0
-- [x] Tag: `xfcp_lib_v1_2_caps_pass`
+Odhadovany pocet test bodov (repeat=3):
+- Slot scan: 21 (7 slotov x 3)
+- GET_CAPS:  3
+- GET_TARGET_INFO: 8×3 + 1 (bad_addr) = 25
+- R/W (LED): 5
+- STREAM: 4 vektory x 3 = 12
+- Ping: 1
+- Celkovo: ~67 / transport → ~134 celkovo
 
-**GET_CAPS HW overenie (PASS):**
-```
-caps_flags=0x07 (HAS_AXIL | HAS_STREAM | HAS_CAPS)
-proto=1.1  axil=7  stream=1  max_stream=256B  stream_align=4
-```
-
-**Stav:** UZAVRETA (2026-06-14)
+**Tag po PASS:** `xfcp_lib_v1_3_targets_pass`
 
 ---
 
 ## Simulacia — prehlad testov
 
-| Test | Popis | Stav |
-|------|-------|------|
-| T01-T05 | AXIL READ/WRITE (UART) | PASS |
-| T06-T10 | AXIL READ/WRITE (ETH-UDP) | PASS |
-| T11-T14 | STREAM_WRITE/READ 4B/16B (UART) | PASS |
-| T15-T16 | STREAM_WRITE/READ 64B (UART) | PASS |
-| T17-T18 | STREAM chybove scenare (bad opcode, timeout) | PASS |
-| T19     | STREAM mixed AXIL+STREAM (UART) | PASS |
-| T20     | STREAM_WRITE/READ 256B (UART) | PASS |
-| T21     | ETH-UDP STREAM_WRITE 256B | PASS |
-| T22     | ETH-UDP STREAM_READ 256B | PASS |
-| T23     | GET_CAPS cez UART — 8 caps bajtov | PASS |
-| T24     | GET_CAPS cez ETH-UDP | PASS |
-| T25     | GET_CAPS + AXIL READ interleaved | PASS |
+| Test    | Popis                                             | Stav |
+|---------|---------------------------------------------------|------|
+| T01-T10 | AXIL READ/WRITE (UART, 10 adries)                 | PASS |
+| T11-T12 | AXIL ETH-UDP READ + WRITE                         | PASS |
+| T13-T15 | STREAM_WRITE/READ 4B/16B/64B loopback             | PASS |
+| T16     | STREAM_READ count=0 → BAD_LENGTH                  | PASS |
+| T17     | STREAM_WRITE sid=1 → UNSUPPORTED                  | PASS |
+| T18     | STREAM_READ sid=1 → UNSUPPORTED                   | PASS |
+| T19     | Mixed AXIL WRITE + STREAM + AXIL READ             | PASS |
+| T20     | STREAM 256B loopback (max)                        | PASS |
+| T21-T22 | ETH-UDP STREAM_WRITE/READ 256B                    | PASS |
+| T23     | GET_CAPS UART (proto_minor=2, flags=0x0F)         | PASS |
+| T24     | GET_CAPS ETH-UDP                                  | PASS |
+| T25     | GET_CAPS + AXIL READ interleaved                  | PASS |
+| T26     | GET_TARGET_INFO index=0 (SYSC) — 16B overenie     | PASS |
+| T27     | GET_TARGET_INFO index=6 (DIAG)                    | PASS |
+| T28     | GET_TARGET_INFO index=7 (STR0 STREAM, max=256)    | PASS |
+| T29     | GET_TARGET_INFO index=8 (invalid) → BAD_ADDRESS   | PASS |
+| T30     | GET_CAPS + GET_TARGET_INFO + AXIL READ interleaved | PASS |
 
-**Celkovo: T01-T25 ALL PASSED (0 failures) — 2026-06-14**
-
----
-
-## Bugy
-
-| Bug | Komponent | Popis | Fix |
-|-----|-----------|-------|-----|
-| A1 | xfcp_rx_parser.sv | opcode_valid() neobsahovala GET_CAPS → S_DROP | 1 riadok v case statement |
-| B1 | xfcp_axi_engine.sv | Kriticka cesta ~7 LUT → WNS -0.205 ns | read_data_ready_r registracia |
-
----
-
-## Timing (commit 42402c0, SEED 5)
-
-```
-CLK125 (Slow 1200mV 85C):
-  Setup WNS:    +0.355 ns
-  Hold  WNS:    +0.427 ns
-  TNS:           0.000 ns
-  Fmax:         130.8 MHz (target 125 MHz)
-
-ETH_RXC (Slow 1200mV 85C):
-  Setup WNS:    +0.749 ns
-```
-
----
-
-## Resource usage (commit 42402c0, SEED 5)
-
-```
-Logic elements: 26,258 / 55,856  (47 %)
-Registers:      20,617
-Memory bits:    44,544 / 2,396,160  (2 %)
-Pins:           66 / 325  (20 %)
-PLLs:           1 / 4
-```
+**Celkovo: T01-T30 ALL PASSED (142 checks, 0 failures) — 2026-06-14**
 
 ---
 
 ## Commits
 
-| Commit | Popis |
-|--------|-------|
-| 1dd3f0f | Faza A — GET_CAPS extension, sim T01-T25 PASS |
-| 7c1d8c8 | Pridaj cores/clkpll (PLL IP pre Quartus) |
-| 238b0f8 | Pridaj Makefile + soc_top.qpf pre Quartus |
-| 42402c0 | Faza B — timing closure WNS +0.355 ns (read_data_ready_r) |
-| 3724b8e | Pridaj XFCP_TEST_08_CAPS_STATUS.md |
-| 0dc7a2b | Faza C — HW link PASS (ARP 4/4, ICMP 4/4), navrhy_01.md |
-| 3cd4c8a | Faza D — Python tools + GET_CAPS, hw-regression targets |
+| Commit  | Popis |
+|---------|-------|
+| 7ae6326 | Faza A+B — RTL + sim T01-T30 PASS, Python tools |
 
-**Tag:** `xfcp_lib_v1_2_caps_pass` — HW UART+UDP 82/82 PASS (2026-06-14)
+---
+
+## Timing
+
+Zatial nespusteny (Faza C prebieha).
+
+Referencia: xfcp_test_08_caps (8b_caps SEED 5):
+```
+CLK125 WNS: +0.355 ns
+ETH_RXC WNS: +0.749 ns
+```

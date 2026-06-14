@@ -58,8 +58,8 @@ modules:
         no_reset: true
     reset: "~RESET_N"
 
-  - instance: xfcp_test_08_caps_top
-    type: xfcp_test_08_caps_top
+  - instance: xfcp_test_09_targets_top
+    type: xfcp_test_09_targets_top
     clocks:
       clk_i: clk125
       eth_rx_clk_i: eth_rx_clk
