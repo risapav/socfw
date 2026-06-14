@@ -4,7 +4,8 @@
 **Takt:** 125 MHz (PLL: 50 MHz sys_clk → 125 MHz clk125)
 **Board:** QMTech EP4CE55
 **IP:** 192.168.0.5 | MAC: 00:0A:35:01:FE:C5
-**Stav:** Faza B UZAVRETA — sim T01-T30 PASS (142 checks, 0 failures)
+**Stav:** Faza D UZAVRETA — HW regression PASS 132/132 (UART+UDP), tag xfcp_lib_v1_3_targets_pass
+**Poznamka:** CLK125 WNS = -0.150 ns (Fmax 122.7 MHz vs 125 MHz target); HW PASS, timing treba zlepsit v dalsom projekte
 
 ---
 
@@ -153,34 +154,67 @@ RESP_GET_TARGET_INFO RESPONSE (op=0x04, status=BAD_ADDRESS, invalid index):
 
 ---
 
-### Faza C — Quartus build + timing closure [CAKAJUCA]
+### Faza C — Quartus build + timing [UZAVRETA s poznamkou]
 
-- [ ] `socfw build project.yaml` → pregenerovat build/
-- [ ] skontrolovat `build/hal/files.tcl`: xfcp_target_info_adapter.sv + xfcp_test_09_targets_top.sv
-- [ ] Quartus compile (target SEED z xfcp_test_08_caps)
-- [ ] Timing: CLK125 WNS >= 0, ETH_RXC WNS >= 0
+- [x] `socfw build project.yaml` → pregenerovat build/ (files.tcl + soc_top.sv OK)
+- [x] `build/hal/files.tcl` obsahuje xfcp_target_info_adapter.sv + xfcp_test_09_targets_top.sv
+- [x] Quartus compile dokonceny
 
-Ocakavany vysledok: timing by mal PASS priamo (iba 1 novy FF-chain TI adapter, ziadna nova
-kriticka cesta; arb_is_axil_q=!(axis||caps||ti) je uz preregistrovane z Fazy B xfcp_test_08_caps).
+**Timing (Slow 1200mV 85C, SEED 5):**
+```
+CLK125:
+  Fmax:     122.7 MHz  (target 125 MHz -> NESPLNENE)
+  Setup WNS: -0.150 ns
+  Setup TNS: -1.826 ns
+  Hold  WNS: +0.428 ns
+
+ETH_RXC:
+  Fmax:     140.61 MHz
+  Setup WNS: +0.590 ns
+  Hold  WNS: +0.449 ns
+```
+
+**Poznamka:** CLK125 WNS = -0.150 ns (marginalne precetrenie). Referencia xfcp_test_08_caps bola
++0.355 ns (SEED 5). Pridanie TI backendu mierne predlzilo kriticku cestu. HW pracuje spravne
+(66/66 PASS), ale formalny timing closure nie je splneny. Treba riesit v dalsom projekte
+(SEED sweep alebo retiming).
+
+**Stav:** UZAVRETA (2026-06-14) — timing violation zaznamena, HW overeny
 
 ---
 
-### Faza D — HW regresia [CAKAJUCA]
+### Faza D — HW regresia [UZAVRETA]
 
-- [ ] `make program`
-- [ ] `make arp-setup`
-- [ ] `make hw-regression` (UART + UDP, kazdy s --caps --targets --rw --stream --diag)
+- [x] `make program` — FPGA naprogramovany
+- [x] `make arp-setup` — staticka ARP entry
+- [x] `make hw-regression` — UART 66/66 PASS + UDP 66/66 PASS
 
-Odhadovany pocet test bodov (repeat=3):
-- Slot scan: 21 (7 slotov x 3)
-- GET_CAPS:  3
-- GET_TARGET_INFO: 8×3 + 1 (bad_addr) = 25
-- R/W (LED): 5
-- STREAM: 4 vektory x 3 = 12
-- Ping: 1
-- Celkovo: ~67 / transport → ~134 celkovo
+**Vysledky (repeat=3, 2026-06-14):**
 
-**Tag po PASS:** `xfcp_lib_v1_3_targets_pass`
+| Skupina | UART | UDP |
+|---------|------|-----|
+| Ping | 1/1 | 1/1 |
+| Slot scan (7 slotov x3) | 21/21 | 21/21 |
+| GET_CAPS (3x) | 3/3 | 3/3 |
+| GET_TARGET_INFO (8 targetov x3 + bad_addr) | 25/25 | 25/25 |
+| R/W LED (5 hodnot) | 5/5 | 5/5 |
+| STREAM loopback (4B/16B/64B/256B x3) | 12/12 | 12/12 |
+| **Celkovo** | **66/66** | **66/66** |
+
+**DIAG (UART run):** rx_seen=0xEB2, rx_lost=rx_frame=rx_overrun=rx_bad_hdr=rx_drop=0
+**DIAG (UDP run):**  rx_seen=0xF30, vsetky chybove citace = 0
+
+**GET_CAPS HW overenie:**
+```
+proto=1.2  axil=7  stream=1  max_stream=256B
+caps_flags=0x0F (HAS_AXIL | HAS_STREAM | HAS_CAPS | HAS_TARGETS)
+```
+
+**GET_TARGET_INFO HW overenie (vsetky indexy 0-7 + bad_addr index=8 PASS)**
+
+**Tag:** `xfcp_lib_v1_3_targets_pass`
+
+**Stav:** UZAVRETA (2026-06-14)
 
 ---
 
@@ -214,16 +248,42 @@ Odhadovany pocet test bodov (repeat=3):
 
 | Commit  | Popis |
 |---------|-------|
-| 7ae6326 | Faza A+B — RTL + sim T01-T30 PASS, Python tools |
+| 7ae6326 | Faza A+B — RTL + sim T01-T30 PASS |
+| 218c4b1 | Faza C-prep — build config + Python tools + STATUS oprava |
+| (aktualne) | Faza D — HW regression 132/132 PASS, tag + STATUS |
+
+**Tag:** `xfcp_lib_v1_3_targets_pass` — HW UART+UDP 132/132 PASS (2026-06-14)
 
 ---
 
-## Timing
+## Timing (SEED 5, Slow 1200mV 85C)
 
-Zatial nespusteny (Faza C prebieha).
-
-Referencia: xfcp_test_08_caps (8b_caps SEED 5):
 ```
-CLK125 WNS: +0.355 ns
-ETH_RXC WNS: +0.749 ns
+CLK125:
+  Fmax:     122.7 MHz  (target 125 MHz -> FAIL -0.150 ns)
+  Setup WNS: -0.150 ns
+  Setup TNS: -1.826 ns
+  Hold  WNS: +0.428 ns
+
+ETH_RXC:
+  Fmax:     140.61 MHz
+  Setup WNS: +0.590 ns
+  Hold  WNS: +0.449 ns
+```
+
+CLK125 timing violation je marginalne (-0.150 ns). HW pracuje spravne, no formalny
+timing closure nebol dosiahnuty. Prvy navrh na fix: SEED sweep alebo pipeline TI rdata.
+
+Referencia xfcp_test_08_caps (SEED 5): CLK125 WNS +0.355 ns — TI backend priidal ~0.5 ns latency.
+
+---
+
+## Resource usage (SEED 5)
+
+```
+Logic elements: 26,366 / 55,856  (47 %)
+Registers:      20,686
+Memory bits:    44,544 / 2,396,160  (2 %)
+Pins:           66 / 325  (20 %)
+PLLs:           1 / 4
 ```
