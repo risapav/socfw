@@ -4,6 +4,7 @@
 **Takt:** 125 MHz (PLL: 50 MHz sys_clk → 125 MHz clk125)
 **Board:** QMTech EP4CE55
 **IP:** 192.168.0.5 | MAC: 00:0A:35:01:FE:C5
+**Stav:** UZAVRETY — HW UART 38/38 PASS, UDP 38/38 PASS (2026-06-14)
 
 ---
 
@@ -41,8 +42,9 @@ eth_rx_clk (125 MHz z PHY, async)
     Slot 6 @ 0xFF060000: axil_diag_ctrl
 
   xfcp_axis_adapter (stream_id=0 loopback slot):
-    STREAM_WRITE -> m_axis -> u_axis_loopback (xfcp_fifo, 9-bit, DEPTH=256)
-    u_axis_loopback -> axis_byte_register_slice -> s_axis -> STREAM_READ
+    STREAM_WRITE -> m_axis -> u_axis_loopback (xfcp_fifo_reg 9-bit M9K, DEPTH=256)
+    u_axis_loopback -> s_axis -> STREAM_READ
+    i_rfifo: xfcp_fifo_reg (DATA_WIDTH=32, DEPTH=64) -- M9K registered output
 ```
 
 ---
@@ -61,7 +63,7 @@ STREAM_READ REQUEST (op=0x21):
   FE 21 seq COUNT_H COUNT_L stream_id[3:0]
   Response: FD 23 seq status DATA[COUNT] 00
 
-COUNT = pocet datovych bajtov (musí byť násobok 4, max 256)
+COUNT = pocet datovych bajtov (musi byt nasobok 4, max 256)
 ```
 
 ---
@@ -71,11 +73,12 @@ COUNT = pocet datovych bajtov (musí byť násobok 4, max 256)
 | Modul | Popis |
 |-------|-------|
 | `xfcp_axis_adapter.sv` | STREAM_WRITE/READ adapter s watchdog (1024 cyklov), RFIFO (DEPTH=64) |
-| `axis_byte_register_slice.sv` | 1-beat AXI-Stream register slice (timing fix pre loopback FIFO comb cestu) |
+| `xfcp_fifo_reg.sv` | M9K registered output FIFO (2-cycle latencia, timing-critical cesty) |
 | `xfcp_pkg.sv` | +STREAM opkody + `xfcp_resp_has_payload()` funkcia |
 | `xfcp_fabric_endpoint.sv` | A-light routing: AXIL (0x10/0x11) aj AXIS (0x20/0x21), axis_busy_q |
 | `xfcp_arbiter_2to1.sv` | p0_is_write_w — rozoznava STREAM_WRITE pre dlzku syntetickeho TLAST |
 | `xfcp_tx_packetizer.sv` | xfcp_resp_has_payload() + early-exit ST_PAYLOAD |
+| `axis_byte_register_slice.sv` | 1-beat AXI-Stream register slice (nahradeny xfcp_fifo_reg v Faze D) |
 | `tools/xfcp/protocol.py` | stream_write() + stream_read() (count % 4 == 0, max 256B) |
 | `tools/xfcp/bus.py` | stream_write() + stream_read() cez XfcpBus |
 
@@ -91,7 +94,7 @@ COUNT = pocet datovych bajtov (musí byť násobok 4, max 256)
 - [x] xfcp_fabric_endpoint.sv: A-light routing + axis_busy_q clear-wins fix
 - [x] xfcp_arbiter_2to1.sv: p0_is_write_w pre spravny TLAST
 - [x] xfcp_tx_packetizer.sv: xfcp_resp_has_payload()
-- [x] xfcp_test_07_axis_top.sv: u_axis_loopback (xfcp_fifo 9-bit 256-deep) + u_axis_adapter
+- [x] xfcp_test_07_axis_top.sv: u_axis_loopback + u_axis_adapter
 - [x] tools/xfcp/: stream_write() + stream_read()
 - [x] sim T01-T19 ALL PASS (commit 94cc28f)
 - [x] Makefile + hw_regression.sh --stream --rw
@@ -144,7 +147,7 @@ UDP transport:
 
 ---
 
-### Faza C — Bug 4 + timing fix + T21/T22 [UZAVRETA]
+### Faza C — Bug 4 + T21/T22 [UZAVRETA]
 
 **Bug 4: udp_xfcp_server.MAX_PKT_BYTES=128 — silent drop 256B UDP STREAM_WRITE**
 - 265-bajtovy XFCP payload (FE+20+seq+COUNT+sid+256 data) presiahol 128B rx_buf
@@ -153,12 +156,6 @@ UDP transport:
 - Rovnaky problem: 261B STREAM_READ response presiahol 128B resp_buf
 - Fix: `MAX_PKT_BYTES (512)` v xfcp_test_07_axis_top.sv (pokryva oba smery + rezerva)
 
-**Timing fix: axis_byte_register_slice**
-- Kriticka comb cesta: `u_axis_loopback.rd_ptr_q → i_rfifo.mem` — WNS -4.097 ns
-- Pridany `axis_byte_register_slice.sv` medzi u_axis_loopback a u_axis_adapter.s_axis_*
-- Signaly: lb_s_* (FIFO out) → register slice → lb_rs_* (adapter in)
-- Pridany do: ip/xfcp_test_07_axis_top.ip.yaml + sim/Makefile XFCP_COMMON
-
 **T21/T22 — ETH-UDP 256B STREAM testy:**
 - T21: STREAM_WRITE 256B cez Ethernet, overenie ack (FD 22 A2 00)
 - T22: STREAM_READ 256B cez Ethernet, overenie vsetkych 256 bajtov payloadu
@@ -166,24 +163,73 @@ UDP transport:
 
 Sim T01-T22 ALL PASS. Commit: 8d6ac87
 
+**Stav:** UZAVRETA (2026-06-13)
+
+---
+
+### Faza D — Bug 5/6 + xfcp_fifo_reg + timing closure [UZAVRETA]
+
+**Bug 5: axis_done_cnt_q spurious increment (T19 sim failure)**
+- Fast error STREAM request (IDLE→RESP→IDLE v 2 cykloch) spôsobuje:
+  - axis_busy_q=0 (resp_done vyhrava), ale req_valid_r=1 este 1 cyklus
+  - → axis_req_valid_o=1 (spurious 2. dispatch) → adapter fireuje axis_resp_done_o 2x
+  - → axis_done_cnt_q += 2 misto 1 → stale +1 prezieva cez dalsie testy (T16→T17→T18→T19)
+  - → ARB dispatch pre STREAM_READ pred datami (0→2 direct, preskoc WAIT_ENG)
+  - → packetizer early exit → TLAST bez payloadu → uart_recv timeout
+- Fix: `axis_req_valid_o = ... && !ofifo_wvalid_r`
+  - ofifo_wvalid_r=1 presne v spurious cykle (1-cy delay req_fire)
+  - Guard uz bol pritomny v req_ready pre STREAM, chybal v dispatch
+
+**Bug 6: xfcp_fifo_reg Quartus Error 10200**
+- `if (!rst_n || flush)` v `always_ff @(posedge clk or negedge rst_n)` — Quartus odmieta
+- flush nie je hrana v sensitivity liste → latch inference
+- Fix: oddelit do synchronnej vetvy: `if (!rst_n) ... else if (flush) ...`
+
+**Timing: xfcp_fifo_reg nahradzuje xfcp_fifo + axis_byte_register_slice**
+- Kriticka cesta (pred fix): xfcp_fifo.rd_ptr_q → velky LUT mux → axis_rdata_o (az -4 ns)
+- xfcp_fifo_reg: M9K output register enable — eliminuje kombinacnu cestu (2-cycle latencia)
+- Nahradeny v: u_axis_loopback (DATA_WIDTH=9, DEPTH=256) + xfcp_axis_adapter.i_rfifo (DW=32, DEPTH=64)
+- SEED 3 → WNS -0.054 ns (Slow 85C) → SEED 5 → WNS +0.240 ns
+
+Sim T01-T22 ALL PASS. Commits: 500e863 (intermediate RS), 42deb38 (xfcp_fifo_reg + SEED 5)
+
 **Stav:** UZAVRETA (2026-06-14)
 
 ---
 
-### Faza D — HW retest [CAKA]
+### Faza E — HW retest [UZAVRETA]
 
-- [ ] `socfw build project.yaml` — regenerovat files.tcl (axis_byte_register_slice)
-- [ ] `make -C build/ compile` — Quartus recompile
-- [ ] Skontrolovat CLK125 WNS (ocakavane zlepsenie z -4.097 ns)
-- [ ] `make -C build/ program` — FPGA reprogram
-- [ ] `make hw-regression` — full UART + UDP regresia
+Reprogram s commit 42deb38 (SEED 5, WNS +0.240 ns):
 
-**Ocakavany vysledok:**
 ```
-UART transport: 38/38 PASS (4/16/64/256B)
-UDP transport:  38/38 PASS (4/16/64/256B)  <-- Bug4 fix
-CLK125 WNS: ocakavane zlepsenie (register slice)
+UART transport: 38/38 PASS
+UDP  transport: 38/38 PASS
+RESULT: 2/2 PASS — USPECH
 ```
+
+STREAM loopback (UART aj UDP):
+- 4B PASS, 16B PASS, 64B PASS, 256B PASS
+
+DIAG snapshot (UART + UDP):
+```
+rx_bad_hdr   0
+rx_recovery  0
+rx_drop      0
+rx_lost      0
+rx_frame     0
+rx_overrun   0
+```
+
+Timing:
+```
+Slow 85C CLK125 WNS:  +0.240 ns
+Slow 85C ETH_RXC WNS: +0.347 ns
+Slow 85C CLK125 hold: +0.428 ns
+TNS:                   0.000
+SEED:                  5
+```
+
+**Stav:** UZAVRETA (2026-06-14)
 
 ---
 
@@ -201,7 +247,7 @@ CLK125 WNS: ocakavane zlepsenie (register slice)
 | T21     | ETH-UDP STREAM_WRITE 256B — pokryva Bug 4 | PASS |
 | T22     | ETH-UDP STREAM_READ 256B — pokryva Bug 4 TX path | PASS |
 
-**Celkovo: T01-T22 ALL PASSED (0 failures) — 2026-06-14**
+**Celkovo: T01-T22 ALL PASSED (108 checks, 0 failures) — 2026-06-14**
 
 ---
 
@@ -213,6 +259,32 @@ CLK125 WNS: ocakavane zlepsenie (register slice)
 | 2 | xfcp_rx_parser.sv | MAX_COUNT_BYTES=128 odmietal COUNT=256 | dec_count_ok + early_count_ok rozsirene |
 | 3 | xfcp_rx_parser.sv | sop_recovery v S_PAYLOAD — deadlock pri 256B | state_q != S_PAYLOAD guard |
 | 4 | udp_xfcp_server.sv (instancia) | MAX_PKT_BYTES=128 silent drop 265B UDP paket | MAX_PKT_BYTES=512 |
+| 5 | xfcp_fabric_endpoint.sv | axis_done_cnt_q spurious +1 z fast error → T19 uart_recv timeout | axis_req_valid_o += !ofifo_wvalid_r |
+| 6 | xfcp_fifo_reg.sv | Quartus Error 10200 — flush v async rst_n condition | oddelit flush do sync else-if vetvy |
+
+---
+
+## Resource usage (commit 42deb38)
+
+```
+Logic elements: 26,191 / 55,856  (47 %)
+Registers:      20,584
+Memory bits:    44,544 / 2,396,160  (2 %)
+Pins:           66 / 325
+PLLs:           1 / 4
+```
+
+---
+
+## Known limits (xfcp_test_07_axis)
+
+```
+COUNT musi byt nasobok 4 (byte-granular dlzky nie su podporovane)
+MAX COUNT = 256 B
+stream_id = 0 (jediny loopback slot)
+single outstanding stream transaction
+target discovery (GET_CAPS) nie je implementovana
+```
 
 ---
 
@@ -222,5 +294,23 @@ CLK125 WNS: ocakavane zlepsenie (register slice)
 |--------|-------|
 | 94cc28f | Faza A + B — AXIS adapter, sim 19/19 PASS |
 | a4dacb7 | Makefile + hw_regression.sh --stream --rw |
-| ebce26a | Faza C — Bug 1/2/3 fix, sim T01-T20 PASS |
-| 8d6ac87 | Faza D — Bug4 fix + timing slice + T21/T22, sim T01-T22 PASS |
+| ebce26a | Faza C — 3 HW bugs fixed, sim T01-T20 PASS |
+| 8d6ac87 | Faza C — Bug4 fix + T21/T22, sim T01-T22 PASS |
+| 157176f | XFCP_TEST_07_AXIS_STATUS.md — status po Fazach A-D |
+| 500e863 | Faza D — timing: rfifo RS + SEED 3 (intermediate) |
+| 42deb38 | Faza D — Bug 5/6 fix + xfcp_fifo_reg + SEED 5, WNS +0.240 ns |
+
+---
+
+## Odporucany tag
+
+```
+xfcp_lib_v1_1_axis_pass
+```
+
+Verzie:
+```
+xfcp_lib_v0_9_status_pass  = UART + UDP + AXI-Lite + STATUS (xfcp_test_06)
+xfcp_lib_v1_1_axis_pass    = + AXI-Stream backend: STREAM_WRITE/READ,
+                               UART + UDP, 256B loopback, timing clean, HW PASS
+```
