@@ -4,7 +4,8 @@
 
 Sim regression T01–T37 PASS. Timing closure PASS: SEED 10, WNS +0.327 ns, Fmax 130.33 MHz.
 HW regression PASS: UART 81/81, UDP 81/81 (CAPS, TARGETS, RW, STREAM, MEM, DIAG).
-Tag: `xfcp_lib_v1_4_mem_pass`
+CLI sanity PASS: ping/caps/targets/read32/mem-read cez UART aj UDP.
+Tag: `xfcp_lib_v1_4_mem_pass` @ `6004e07`
 
 ---
 
@@ -17,6 +18,7 @@ Tag: `xfcp_lib_v1_4_mem_pass`
 | C    | Quartus build + timing       | UZAVRETA       |
 | D    | Python MEM tools             | UZAVRETA       |
 | E    | HW regression UART+UDP+MEM   | UZAVRETA       |
+| F    | xfcp_cli.py + Makefile CLI   | UZAVRETA       |
 
 ---
 
@@ -168,3 +170,34 @@ Re-run okamzite prebehol 81/81. DIAG: rx_drop=0, rx_recovery=0, rx_bad_hdr=0.
 - `tools/xfcp/bus.py`: `mem_read(addr, count)`, `mem_write(addr, data)`
 - `tools/test_hw.py`: `--mem` flag, `run_mem_test()` (4B/16B/64B/256B loopback x repeat)
 - `Makefile`: `test-uart` a `test-udp` obsahuju `--mem`
+
+---
+
+## CLI sanity log (Faza F)
+
+```
+$ make xfcp-ping
+OK  SoC odpovedá  (3.9 ms)           [UART /dev/ttyUSB0]
+
+$ make xfcp-ping XFCP_UDP=192.168.0.5:50000
+OK  SoC odpovedá  (0.2 ms)           [UDP]
+
+$ make xfcp-caps XFCP_UDP=192.168.0.5:50000
+  proto          1.3
+  axil_slots     2
+  stream_slots   1
+  max_stream     256 B
+  stream_align   4
+  caps_flags     0x1F  (HAS_AXIL | HAS_STREAM | HAS_CAPS | HAS_TARGETS | HAS_MEM)
+
+$ make xfcp-read32 ADDR=0xFF020000
+  0xFF020000 = 0x4F55545F  (1332768095)   [= "OUT_" ASCII ident]
+
+$ make xfcp CMD="mem-read 0x00000000 64"
+  00000000  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F  ................
+  00000010  10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F  ................
+  00000020  20 21 22 23 24 25 26 27 28 29 2A 2B 2C 2D 2E 2F   !"#$%&'()*+,-./
+  00000030  30 31 32 33 34 35 36 37 38 39 3A 3B 3C 3D 3E 3F  0123456789:;<=>?
+```
+
+Vsetky prikazy PASS: ping, caps, targets, read32, mem-read (UART + UDP).

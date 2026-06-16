@@ -30,6 +30,10 @@ rtl/xfcp/
     xfcp_udp_rx_adapter.sv      -- UDP RX framing -> XFCP byte stream
     xfcp_udp_tx_adapter.sv      -- XFCP byte stream -> UDP TX framing
     udp_xfcp_server.sv          -- complete UDP server (eth stack + adapters)
+
+Poznamka: axifull_sram.sv NIE JE sucastou tejto kniznice.
+Je to demo/test IP specificke pre examples/xfcp_test_10_axifull/rtl/.
+Pouzivatel si pre MEM backend dodava vlastny AXI4-Full slave.
 ```
 
 ---

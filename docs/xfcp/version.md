@@ -12,10 +12,12 @@
 - `MEM_READ` (0x30) / `MEM_WRITE` (0x31) opcodes — AXI4-Full burst backend
 - `RESP_MEM_READ` (0x32) / `RESP_MEM_WRITE` (0x33) responses
 - `xfcp_mem_adapter.sv` — single-outstanding AXI4-Full master (INCR, 32b, max 256 B)
-- `axifull_sram.sv` — 256×32b SRAM, 4 byte-lane M9K bloky
+- `axifull_sram.sv` — 256×32b SRAM, 4 byte-lane M9K bloky (test_ip, nie core)
 - `GET_CAPS` rozšírený: `caps_flags` bit4 = `HAS_MEM`
 - `GET_TARGET_INFO` rozšírený: type `0x03` = MEM
 - Python: `bus.mem_read()`, `bus.mem_write()`, `protocol.py` MEM opkódy
+- `xfcp_cli.py` — kompletný CLI klient (ping/caps/targets/read32/write32/read/write/mem-read/mem-write/stream-read/stream-write)
+- RTL exportovaný do `rtl/xfcp/` (16 SV súborov), dokumentácia v `docs/xfcp/` (8 súborov)
 
 ### Opravené bugy
 
