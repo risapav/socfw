@@ -184,7 +184,7 @@ OK  SoC odpovedá  (0.2 ms)           [UDP]
 
 $ make xfcp-caps XFCP_UDP=192.168.0.5:50000
   proto          1.3
-  axil_slots     2
+  axil_slots     7
   stream_slots   1
   max_stream     256 B
   stream_align   4
