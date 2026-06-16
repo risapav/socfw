@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-test_hw.py — skriptovany HW test pre xfcp_test_09_targets.
+test_hw.py — skriptovany HW test pre xfcp_test_10_axifull.
 
 Pouzitie:
   python3 test_hw.py --uart /dev/ttyUSB0
   python3 test_hw.py --udp 192.168.0.5:50000
-  python3 test_hw.py --uart /dev/ttyUSB0 --caps --rw --stream --targets --diag
-  python3 test_hw.py --udp 192.168.0.5:50000 --targets --repeat 3
+  python3 test_hw.py --uart /dev/ttyUSB0 --caps --rw --stream --targets --mem --diag
+  python3 test_hw.py --udp 192.168.0.5:50000 --targets --mem --repeat 3
 """
 
 import argparse
@@ -32,17 +32,19 @@ EXPECTED_IDS = {
 
 EXPECTED_CAPS = {
     "proto_major":      1,
-    "proto_minor":      2,
+    "proto_minor":      3,
     "num_axil_slots":   7,
     "num_stream_slots": 1,
     "max_stream_bytes": 256,
     "stream_align":     4,
-    "caps_flags":       0x0F,
+    "caps_flags":       0x1F,
 }
 
-CAPS_FLAGS_NAMES = {0: "HAS_AXIL", 1: "HAS_STREAM", 2: "HAS_CAPS", 3: "HAS_TARGETS"}
+CAPS_FLAGS_NAMES = {
+    0: "HAS_AXIL", 1: "HAS_STREAM", 2: "HAS_CAPS", 3: "HAS_TARGETS", 4: "HAS_MEM"
+}
 
-TARGET_TYPES = {0x01: "AXIL", 0x02: "STREAM"}
+TARGET_TYPES = {0x01: "AXIL", 0x02: "STREAM", 0x03: "MEM"}
 
 EXPECTED_TARGET_TABLE = [
     {"target_type": 0x01, "target_id": 0, "base_addr": 0xFF000000,
@@ -61,10 +63,21 @@ EXPECTED_TARGET_TABLE = [
      "max_transfer": 128, "align": 4, "name": "DIAG"},
     {"target_type": 0x02, "target_id": 7, "base_addr": 0x00000000,
      "max_transfer": 256, "align": 4, "name": "STR0"},
+    {"target_type": 0x03, "target_id": 8, "base_addr": 0x00000000,
+     "max_transfer": 256, "align": 4, "name": "MEM0"},
 ]
 
 PASS = f"{Fore.GREEN}PASS{Style.RESET_ALL}"
 FAIL = f"{Fore.RED}FAIL{Style.RESET_ALL}"
+
+MEM_BASE_ADDR = 0x00000000
+
+MEM_TEST_VECTORS = [
+    ("4B",   bytes([0xDE, 0xAD, 0xBE, 0xEF])),
+    ("16B",  bytes(range(16))),
+    ("64B",  bytes(i & 0xFF for i in range(64))),
+    ("256B", bytes(i & 0xFF for i in range(256))),
+]
 
 STREAM_TEST_VECTORS = [
     ("4B DEADBEEF", bytes([0xDE, 0xAD, 0xBE, 0xEF])),
@@ -249,6 +262,31 @@ def run_stream_loopback_test(bus, repeat, debug=False):
     return passed, failed
 
 
+def run_mem_test(bus, repeat):
+    print(f"\n{Fore.CYAN}--- MEM loopback test (addr=0x{MEM_BASE_ADDR:08X}, {repeat}x each) ---")
+    passed = 0
+    failed = 0
+    for name, data in MEM_TEST_VECTORS:
+        ok_count = 0
+        for _ in range(repeat):
+            ok_wr = bus.mem_write(MEM_BASE_ADDR, data)
+            if not ok_wr:
+                print(f"  [{name}] mem_write: {FAIL}")
+                failed += 1
+                continue
+            rx = bus.mem_read(MEM_BASE_ADDR, len(data))
+            if rx == data:
+                ok_count += 1
+                passed += 1
+            else:
+                got = rx.hex()[:32] if rx is not None else "TIMEOUT"
+                print(f"  [{name}] mismatch: got {got}...  {FAIL}")
+                failed += 1
+        status = PASS if ok_count == repeat else FAIL
+        print(f"  {name:<6}  {status}  ({ok_count}/{repeat})")
+    return passed, failed
+
+
 def dump_diag(bus):
     print(f"\n{Fore.CYAN}--- DIAG counters (snapshot) ---")
     DIAG = 0xFF060000
@@ -275,7 +313,7 @@ def dump_diag(bus):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="xfcp_test_08_caps HW test")
+    parser = argparse.ArgumentParser(description="xfcp_test_10_axifull HW test")
     grp = parser.add_mutually_exclusive_group(required=True)
     grp.add_argument("--uart", metavar="PORT",
                      help="UART transport, napr. /dev/ttyUSB0")
@@ -292,6 +330,8 @@ def main():
                         help="Pridaj R/W test na LED register")
     parser.add_argument("--stream", action="store_true",
                         help="Spusti stream loopback test (STREAM_WRITE/READ sid=0)")
+    parser.add_argument("--mem",    action="store_true",
+                        help="Spusti MEM loopback test (MEM_WRITE/READ, 4-256B)")
     parser.add_argument("--debug-stream", action="store_true",
                         help="Pri prvom STREAM zlyhani vypis surove TX/RX bajty")
     parser.add_argument("--diag",   action="store_true",
@@ -308,7 +348,7 @@ def main():
         bus = XfcpBus.udp(host=host, port=port)
         label = f"UDP {host}:{port}"
 
-    print(f"\n{Fore.LIGHTWHITE_EX}=== xfcp_test_09_targets HW test  [{label}] ===")
+    print(f"\n{Fore.LIGHTWHITE_EX}=== xfcp_test_10_axifull HW test  [{label}] ===")
 
     total_pass = 0
     total_fail = 0
@@ -343,6 +383,11 @@ def main():
             if args.stream:
                 p, f = run_stream_loopback_test(bus, args.repeat,
                                                 debug=getattr(args, 'debug_stream', False))
+                total_pass += p
+                total_fail += f
+
+            if args.mem:
+                p, f = run_mem_test(bus, args.repeat)
                 total_pass += p
                 total_fail += f
 

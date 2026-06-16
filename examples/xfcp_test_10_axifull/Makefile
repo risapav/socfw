@@ -99,12 +99,12 @@ hw-test: arp-setup
 test-uart:
 	cd tools && python3 test_hw.py \
 	  --uart $(UART_PORT) --baud $(UART_BAUD) \
-	  --caps --targets --rw --stream --diag --repeat $(TEST_REPEAT)
+	  --caps --targets --rw --stream --mem --diag --repeat $(TEST_REPEAT)
 
 test-udp:
 	cd tools && python3 test_hw.py \
 	  --udp $(FPGA_IP):$(XFCP_UDP_PORT) \
-	  --caps --targets --rw --stream --diag --repeat $(TEST_REPEAT)
+	  --caps --targets --rw --stream --mem --diag --repeat $(TEST_REPEAT)
 
 hw-regression: arp-setup test-uart test-udp
 

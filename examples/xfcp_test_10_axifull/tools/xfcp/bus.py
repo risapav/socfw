@@ -206,6 +206,36 @@ class XfcpBus:
         except (XfcpTimeoutError, XfcpProtocolError, XfcpStatusError):
             return None
 
+    def mem_write(self, addr: int, data: bytes) -> bool:
+        n = len(data)
+        if n == 0 or n % 4 != 0 or n > proto.MAX_MEM_BYTES:
+            raise ValueError(
+                f"mem_write: data must be 4-{proto.MAX_MEM_BYTES} bytes, "
+                f"multiple of 4, got {n}"
+            )
+        seq = self._next_seq()
+        pkt = proto.encode_mem_write(addr, data, seq=seq)
+        try:
+            raw = self._transact(pkt, proto.resp_len_mem_write(), retries=0)
+            proto.decode_mem_write_response(raw, expected_seq=seq)
+            return True
+        except (XfcpTimeoutError, XfcpProtocolError, XfcpStatusError):
+            return False
+
+    def mem_read(self, addr: int, count: int) -> bytes | None:
+        if count == 0 or count % 4 != 0 or count > proto.MAX_MEM_BYTES:
+            raise ValueError(
+                f"mem_read: count must be 4-{proto.MAX_MEM_BYTES}, "
+                f"multiple of 4, got {count}"
+            )
+        seq = self._next_seq()
+        pkt = proto.encode_mem_read(addr, count, seq=seq)
+        try:
+            raw = self._transact(pkt, proto.resp_len_mem_read(count))
+            return proto.decode_mem_read_response(raw, count, expected_seq=seq)
+        except (XfcpTimeoutError, XfcpProtocolError, XfcpStatusError):
+            return None
+
     def recover(self) -> bool:
         self._transport.drain()
         if not self.ping():

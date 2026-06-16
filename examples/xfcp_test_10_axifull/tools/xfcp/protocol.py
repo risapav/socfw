@@ -15,6 +15,10 @@ OP_STREAM_WRITE      = 0x20
 OP_STREAM_READ       = 0x21
 OP_RESP_STREAM_WRITE = 0x22
 OP_RESP_STREAM_READ  = 0x23
+OP_MEM_READ          = 0x30
+OP_MEM_WRITE         = 0x31
+OP_RESP_MEM_READ     = 0x32
+OP_RESP_MEM_WRITE    = 0x33
 
 CAPS_PAYLOAD_LEN   = 8   # 2x32-bit words, MSB-first
 TARGET_PAYLOAD_LEN = 16  # 4x32-bit words, MSB-first
@@ -28,6 +32,9 @@ MAX_BURST_WORDS = 32
 
 # RTL xfcp_axis_adapter MAX_STREAM_BYTES parameter
 MAX_STREAM_BYTES = 256
+
+# RTL xfcp_mem_adapter MAX_BYTES parameter
+MAX_MEM_BYTES = 256
 
 
 def resp_len(num_words: int, is_write: bool = False) -> int:
@@ -147,6 +154,62 @@ def decode_stream_read_response(raw: bytes, count: int,
         )
     if raw[3] != 0x00:
         raise XfcpStatusError(raw[3], context='stream_read')
+    return bytes(raw[RESP_HEADER: RESP_HEADER + count])
+
+
+def resp_len_mem_write() -> int:
+    return RESP_HEADER + RESP_TRAILER
+
+
+def resp_len_mem_read(count: int) -> int:
+    return RESP_HEADER + count + RESP_TRAILER
+
+
+def encode_mem_write(addr: int, data: bytes, seq: int = 0) -> bytes:
+    return (
+        bytes([SOP_REQ, OP_MEM_WRITE, seq & 0xFF])
+        + struct.pack(">H", len(data))
+        + struct.pack(">I", addr)
+        + bytes(data)
+    )
+
+
+def encode_mem_read(addr: int, count: int, seq: int = 0) -> bytes:
+    return (
+        bytes([SOP_REQ, OP_MEM_READ, seq & 0xFF])
+        + struct.pack(">H", count)
+        + struct.pack(">I", addr)
+    )
+
+
+def decode_mem_write_response(raw: bytes, expected_seq: int = None) -> None:
+    from .errors import XfcpProtocolError, XfcpStatusError
+    expected = resp_len_mem_write()
+    if len(raw) != expected:
+        raise XfcpProtocolError(f"Mem write response length {len(raw)} != {expected}")
+    if raw[0] != SOP_RESP or raw[1] != OP_RESP_MEM_WRITE:
+        raise XfcpProtocolError(f"Bad SOP/OP in mem write response: {raw[:2].hex()}")
+    if expected_seq is not None and raw[2] != (expected_seq & 0xFF):
+        raise XfcpProtocolError(
+            f"SEQ mismatch: got 0x{raw[2]:02X}, expected 0x{expected_seq & 0xFF:02X}"
+        )
+    if raw[3] != 0x00:
+        raise XfcpStatusError(raw[3], context='mem_write')
+
+
+def decode_mem_read_response(raw: bytes, count: int, expected_seq: int = None) -> bytes:
+    from .errors import XfcpProtocolError, XfcpStatusError
+    expected = resp_len_mem_read(count)
+    if len(raw) != expected:
+        raise XfcpProtocolError(f"Mem read response length {len(raw)} != {expected}")
+    if raw[0] != SOP_RESP or raw[1] != OP_RESP_MEM_READ:
+        raise XfcpProtocolError(f"Bad SOP/OP in mem read response: {raw[:2].hex()}")
+    if expected_seq is not None and raw[2] != (expected_seq & 0xFF):
+        raise XfcpProtocolError(
+            f"SEQ mismatch: got 0x{raw[2]:02X}, expected 0x{expected_seq & 0xFF:02X}"
+        )
+    if raw[3] != 0x00:
+        raise XfcpStatusError(raw[3], context='mem_read')
     return bytes(raw[RESP_HEADER: RESP_HEADER + count])
 
 
