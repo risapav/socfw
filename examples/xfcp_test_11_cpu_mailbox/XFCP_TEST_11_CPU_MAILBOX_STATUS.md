@@ -1,6 +1,6 @@
 # XFCP_TEST_11_CPU_MAILBOX — Status
 
-## Aktuálny stav: Sim PASS, HW pending
+## Aktuálny stav: Sim PASS, Timing closure PASS, HW pending
 
 **Protokol:** XFCP v1.3+MEM+MAILBOX
 
@@ -117,8 +117,15 @@ Opravené: `assign fab_resp_status_o = active_q ? a1_resp_status_i : a0_resp_sta
 
 ## HW build
 
-- Pending: Quartus synthesis + timing closure
-- Target: 125 MHz (rovnaké ako test_10, WNS +0.327 ns)
+| Parameter | Hodnota |
+|-----------|---------|
+| SEED | 3 |
+| WNS CLK125 (85C) | +0.014 ns |
+| WNS ETH_RXC (85C) | +0.712 ns |
+| Logic elements | 27,236 / 55,856 (49%) |
+| Registers | 21,310 |
+| Memory bits | 58,880 / 2,396,160 (2%) |
+| Bitfile | `output_files/soc_top.sof` |
 
 ---
 
@@ -128,5 +135,5 @@ Opravené: `assign fab_resp_status_o = active_q ? a1_resp_status_i : a0_resp_sta
 |------|-------|------|
 | Fáza A | xfcp_stream_mux + 2x adapter + top RTL | DONE |
 | Fáza B | Sim T01-T42 regression PASS | **DONE 2026-06-16** |
-| Fáza C | Quartus build + timing closure | Pending |
+| Fáza C | Quartus build + timing closure | **DONE 2026-06-16** |
 | Fáza D | HW regression UART+UDP | Pending |
