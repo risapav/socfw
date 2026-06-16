@@ -1,8 +1,10 @@
 # xfcp_test_10_axifull — Status
 
-## Stav: Faza C UZAVRETA (2026-06-16)
+## Stav: UZAVRETY (2026-06-16) — tag xfcp_lib_v1_4_mem_pass
 
 Sim regression T01–T37 PASS. Timing closure PASS: SEED 10, WNS +0.327 ns, Fmax 130.33 MHz.
+HW regression PASS: UART 81/81, UDP 81/81 (CAPS, TARGETS, RW, STREAM, MEM, DIAG).
+Tag: `xfcp_lib_v1_4_mem_pass`
 
 ---
 
@@ -13,8 +15,8 @@ Sim regression T01–T37 PASS. Timing closure PASS: SEED 10, WNS +0.327 ns, Fmax
 | A    | RTL — MEM backend (AXI-Full) | UZAVRETA       |
 | B    | Sim — T01–T37 regression     | UZAVRETA       |
 | C    | Quartus build + timing       | UZAVRETA       |
-| D    | HW regression (Python tools) | TODO           |
-| E    | Python MEM tools             | TODO           |
+| D    | Python MEM tools             | UZAVRETA       |
+| E    | HW regression UART+UDP+MEM   | UZAVRETA       |
 
 ---
 
@@ -141,8 +143,28 @@ ETH  ─►                   ─►                       ─► xfcp_axi_engin
 
 ---
 
-## Nasledujuce kroky
+## HW Regression (Faza E)
 
-1. **Faza D**: Python MEM tools — `tools/xfcp/protocol.py`, `tools/xfcp/bus.py`, `tools/test_hw.py --mem`
-2. **Faza E**: HW regression UART + UDP s MEM testami
-3. **Ciel**: tag `xfcp_lib_v1_4_mem_pass`
+### UART /dev/ttyUSB0@115200
+```
+caps PASS  targets PASS  rw PASS  stream PASS  mem PASS  diag clean
+81/81 KOMPLETNY USPECH
+```
+
+### UDP 192.168.0.5:50000
+```
+caps PASS  targets PASS  rw PASS  stream PASS  mem PASS  diag clean
+81/81 KOMPLETNY USPECH
+```
+
+Poznamka: pri prvom UDP behu nastal jednorazovy transient packet loss (write 0x3F readback 0x2A).
+Re-run okamzite prebehol 81/81. DIAG: rx_drop=0, rx_recovery=0, rx_bad_hdr=0.
+
+---
+
+## Python MEM tools (Faza D)
+
+- `tools/xfcp/protocol.py`: OP_MEM_READ/WRITE/RESP, encode/decode funkcie, MAX_MEM_BYTES=256
+- `tools/xfcp/bus.py`: `mem_read(addr, count)`, `mem_write(addr, data)`
+- `tools/test_hw.py`: `--mem` flag, `run_mem_test()` (4B/16B/64B/256B loopback x repeat)
+- `Makefile`: `test-uart` a `test-udp` obsahuju `--mem`
