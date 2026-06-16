@@ -14,6 +14,10 @@ Rozšírenie xfcp_test_10_axifull o 2-way stream mux:
 - `GET_CAPS`: `num_stream=2` (bolo 1)
 - `GET_TARGET_INFO`: index 9 = CPU0 STREAM base=0x00000001 (sid=1)
 
+> **Pozn.:** CPU0 v tomto míľniku NIE JE pripojené CPU jadro.
+> Je to druhý STREAM endpoint s loopback FIFO — mailbox transport layer,
+> pripravený pre budúce reálne CPU-side registre/FIFO (test_12).
+
 Kľúčový nový modul: `xfcp_stream_mux` — 2-way combinational dispatch.
 
 ---
@@ -119,8 +123,8 @@ Opravené: `assign fab_resp_status_o = active_q ? a1_resp_status_i : a0_resp_sta
 
 | Parameter | Hodnota |
 |-----------|---------|
-| SEED | 3 |
-| WNS CLK125 (85C) | +0.014 ns |
+| SEED | 5 |
+| WNS CLK125 (85C) | +0.081 ns |
 | WNS ETH_RXC (85C) | +0.712 ns |
 | Logic elements | 27,236 / 55,856 (49%) |
 | Registers | 21,310 |
