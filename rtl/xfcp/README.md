@@ -1,10 +1,10 @@
 # socfw/rtl/xfcp — XFCP RTL Library
 
-Reusable SystemVerilog moduly pre XFCP v1.3+MEM protokol na Cyclone IV E
-(QMTech EP4CE55). Overené v HW: UART 81/81, UDP 81/81 PASS.
+Reusable SystemVerilog moduly pre XFCP v1.3+MEM+MAILBOX protokol na Cyclone IV E
+(QMTech EP4CE55). Overené v HW: UART 81/81, UDP 81/81 PASS (test_10).
 
-Pôvod: `examples/xfcp_test_10_axifull`, commit `755cc2e`.
-Verzia: `xfcp_lib_v1_4_mem_pass`
+Pôvod: `examples/xfcp_test_10_axifull` + `examples/xfcp_test_11_cpu_mailbox`.
+Verzia: `xfcp_lib_v1_5_mailbox` (sim PASS, HW pending)
 
 ---
 
@@ -24,6 +24,7 @@ rtl/xfcp/
   xfcp_target_info_adapter.sv   -- GET_TARGET_INFO responder (static ROM table)
   xfcp_fifo.sv                  -- generic sync FIFO (power-of-2)
   xfcp_fifo_reg.sv              -- 2-entry register-based FIFO
+  xfcp_stream_mux.sv            -- 2-way stream dispatch (routes sid=0/1 to adapters)
   axis_byte_register_slice.sv   -- 1-beat AXI-Stream byte register slice
 
   transport/
@@ -68,9 +69,10 @@ Pre nový projekt:
 
 ## Simulácia
 
-| Testbench                   | Testy  | Výsledok |
-|-----------------------------|--------|----------|
-| tb_xfcp_test_10_axifull_top | T01–T37| PASS     |
+| Testbench                        | Testy   | Výsledok |
+|----------------------------------|---------|----------|
+| tb_xfcp_test_10_axifull_top      | T01–T37 | PASS     |
+| tb_xfcp_test_11_cpu_mailbox_top  | T01–T42 | PASS     |
 
 ---
 

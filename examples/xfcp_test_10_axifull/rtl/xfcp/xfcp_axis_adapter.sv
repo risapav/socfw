@@ -31,7 +31,8 @@ import xfcp_pkg::*;
 module xfcp_axis_adapter #(
   parameter int TIMEOUT_CYCLES   = 1024,
   parameter int MAX_STREAM_BYTES = 256,
-  parameter int RFIFO_DEPTH      = 64
+  parameter int RFIFO_DEPTH      = 64,
+  parameter int STREAM_ID        = 0
 )(
   input wire clk,
   input wire rst_n,
@@ -114,7 +115,7 @@ module xfcp_axis_adapter #(
   wire        req_bad    = (req_count == '0) ||
                            (req_count > 16'(MAX_STREAM_BYTES)) ||
                            (req_count[1:0] != 2'b00);
-  wire        req_unsup  = (req_sid != 8'h00);
+  wire        req_unsup  = (req_sid != 8'(STREAM_ID));
   wire        req_err    = req_bad || req_unsup;
   wire [7:0]  req_err_st = req_bad ? 8'(XFCP_ST_BAD_LENGTH)
                                    : 8'(XFCP_ST_UNSUPPORTED);
