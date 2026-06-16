@@ -2,7 +2,7 @@ version: 2
 kind: project
 
 project:
-  name: xfcp_test_09_targets
+  name: xfcp_test_10_axifull
   mode: standalone
   board: qmtech_ep4ce55
   debug: true
@@ -58,8 +58,8 @@ modules:
         no_reset: true
     reset: "~RESET_N"
 
-  - instance: xfcp_test_09_targets_top
-    type: xfcp_test_09_targets_top
+  - instance: xfcp_test_10_axifull_top
+    type: xfcp_test_10_axifull_top
     clocks:
       clk_i: clk125
       eth_rx_clk_i: eth_rx_clk

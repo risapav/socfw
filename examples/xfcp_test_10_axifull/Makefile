@@ -1,17 +1,16 @@
 include ../../Makefile.common
 
 # -----------------------------------------------------------------------------
-# xfcp_test_09_targets -- XFCP v1.2+CAPS+AXIS+TARGETS (GET_TARGET_INFO extension)
+# xfcp_test_10_axifull -- XFCP v1.3+MEM (AXI4-Full backend)
 # -----------------------------------------------------------------------------
 #
 # Board: QMTech EP4CE55
 # Takt: 125 MHz (PLL: 50 MHz sys_clk -> 125 MHz clk125)
 #
-# Protokol: XFCP v1.2+TARGETS
+# Protokol: XFCP v1.3+MEM
 #   Response header: SOP(1)+TYPE(1)+SEQ(1)+STATUS(1) = 4 bajty
-#   AXI BRESP/RRESP -> STATUS, STREAM_WRITE/READ -> loopback FIFO
-#   GET_CAPS (0x01) -> staticka 8-bajtova odpoved (proto_minor=2, flags=0x0F)
-#   GET_TARGET_INFO (0x03) -> staticka 16B odpoved (8 targetov)
+#   MEM_READ (0x30) / MEM_WRITE (0x31) -> AXI4-Full master -> axifull_sram
+#   GET_CAPS (0x01) / GET_TARGET_INFO (0x03) / AXIL RW / AXIS loopback zachovane
 #
 # XFCP over UART:  python3 tools/main.py  -> [1] UART /dev/ttyUSB0
 # XFCP over UDP:   python3 tools/main.py  -> [2] UDP 192.168.0.5:50000
@@ -84,7 +83,7 @@ test-icmp:
 hw-test: arp-setup
 	@echo ""
 	@echo "======================================="
-	@echo "  xfcp_test_09_targets HW test (full)"
+	@echo "  xfcp_test_10_axifull HW test (full)"
 	@echo "======================================="
 	@echo ""
 	@echo "--- ARP ---"

@@ -2,8 +2,8 @@ version: 2
 kind: ip
 
 ip:
-  name: xfcp_test_09_targets_top
-  module: xfcp_test_09_targets_top
+  name: xfcp_test_10_axifull_top
+  module: xfcp_test_10_axifull_top
   category: debug
 
 origin:
@@ -151,7 +151,7 @@ artifacts:
     - ../../../rtl/eth/l3/ipv4_rx.sv
     - ../../../rtl/eth/l3/ipv4_tx.sv
     - ../../../rtl/eth/l3/icmp_echo.sv
-    # XFCP stack v1.2+CAPS+AXIS+TARGETS (local)
+    # XFCP stack v1.3+MEM (local)
     - ../rtl/xfcp/xfcp_pkg.sv
     - ../rtl/xfcp/xfcp_fifo.sv
     - ../rtl/xfcp/xfcp_fifo_reg.sv
@@ -161,19 +161,24 @@ artifacts:
     - ../rtl/xfcp/xfcp_axis_adapter.sv
     - ../rtl/xfcp/xfcp_caps_adapter.sv
     - ../rtl/xfcp/xfcp_target_info_adapter.sv
+    - ../rtl/xfcp/xfcp_mem_adapter.sv
     - ../rtl/xfcp/axis_byte_register_slice.sv
     - ../rtl/xfcp/xfcp_fabric_endpoint.sv
     - ../rtl/xfcp/xfcp_arbiter_2to1.sv
     - ../rtl/xfcp/udp_xfcp_server.sv
+    # AXI-Full SRAM
+    - ../rtl/axifull_sram.sv
     # Top-level
-    - ../rtl/xfcp_test_09_targets_top.sv
+    - ../rtl/xfcp_test_10_axifull_top.sv
 
   simulation: []
   metadata: []
 
 provides:
   modules:
-    - xfcp_test_09_targets_top
+    - xfcp_test_10_axifull_top
+    - xfcp_mem_adapter
+    - axifull_sram
     - xfcp_target_info_adapter
     - xfcp_arbiter_2to1
     - udp_xfcp_server
