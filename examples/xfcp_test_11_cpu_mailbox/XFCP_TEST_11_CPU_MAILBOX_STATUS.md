@@ -1,6 +1,6 @@
 # XFCP_TEST_11_CPU_MAILBOX — Status
 
-## Aktuálny stav: Sim PASS, Timing closure PASS, HW pending
+## Aktuálny stav: **UZAVRETÝ** — Sim + Timing + HW PASS
 
 **Protokol:** XFCP v1.3+MEM+MAILBOX
 
@@ -136,4 +136,4 @@ Opravené: `assign fab_resp_status_o = active_q ? a1_resp_status_i : a0_resp_sta
 | Fáza A | xfcp_stream_mux + 2x adapter + top RTL | DONE |
 | Fáza B | Sim T01-T42 regression PASS | **DONE 2026-06-16** |
 | Fáza C | Quartus build + timing closure | **DONE 2026-06-16** |
-| Fáza D | HW regression UART+UDP | Pending |
+| Fáza D | HW regression UART+UDP | **DONE 2026-06-16** |

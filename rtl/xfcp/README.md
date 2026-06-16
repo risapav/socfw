@@ -4,7 +4,7 @@ Reusable SystemVerilog moduly pre XFCP v1.3+MEM+MAILBOX protokol na Cyclone IV E
 (QMTech EP4CE55). Overené v HW: UART 81/81, UDP 81/81 PASS (test_10).
 
 Pôvod: `examples/xfcp_test_10_axifull` + `examples/xfcp_test_11_cpu_mailbox`.
-Verzia: `xfcp_lib_v1_5_mailbox` (sim PASS, HW pending)
+Verzia: `xfcp_lib_v1_5_mailbox` (sim PASS, HW PASS)
 
 ---
 
@@ -78,10 +78,12 @@ Pre nový projekt:
 
 ## HW Validácia (QMTech EP4CE55, 125 MHz)
 
-| Transport | Testy | Výsledok |
-|-----------|-------|----------|
-| UART      | 81/81 | PASS     |
-| UDP       | 81/81 | PASS     |
+| Projekt  | Transport | Testy  | Výsledok |
+|----------|-----------|--------|----------|
+| test_10  | UART      | 81/81  | PASS     |
+| test_10  | UDP       | 81/81  | PASS     |
+| test_11  | UART      | 96/96  | PASS     |
+| test_11  | UDP       | 96/96  | PASS     |
 
 ---
 
