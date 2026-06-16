@@ -34,6 +34,7 @@ TEST_REPEAT  ?= 3
 .PHONY: sim sim-unit sim-integration sim-regression sim-clean
 .PHONY: arp-setup arp-show tcpdump
 .PHONY: test-arp test-icmp test-uart test-udp hw-test hw-regression
+.PHONY: xfcp xfcp-ping xfcp-caps xfcp-targets xfcp-read32 xfcp-write32
 .PHONY: vars
 
 # -----------------------------------------------------------------------------
@@ -107,6 +108,45 @@ test-udp:
 	  --caps --targets --rw --stream --mem --diag --repeat $(TEST_REPEAT)
 
 hw-regression: arp-setup test-uart test-udp
+
+# -----------------------------------------------------------------------------
+# XFCP CLI shortcuts  (override XFCP_UART or XFCP_UDP to select transport)
+# -----------------------------------------------------------------------------
+# Usage:
+#   make xfcp-ping  XFCP_UART=/dev/ttyUSB0
+#   make xfcp-caps  XFCP_UDP=192.168.0.5:50000
+#   make xfcp-read32  ADDR=0xFF020000
+#   make xfcp-write32 ADDR=0xFF020004 VAL=0x3F
+#   make xfcp CMD="mem-read 0x00000000 64"
+# -----------------------------------------------------------------------------
+
+XFCP_UART ?= $(UART_PORT)
+XFCP_UDP  ?=
+XFCP_CLI   = cd tools && python3 xfcp_cli.py
+
+_xfcp_transport = $(if $(XFCP_UDP),--udp $(XFCP_UDP),--uart $(XFCP_UART))
+
+ADDR ?= 0xFF020000
+VAL  ?= 0x00000000
+CMD  ?= ping
+
+xfcp:
+	$(XFCP_CLI) $(_xfcp_transport) $(CMD)
+
+xfcp-ping:
+	$(XFCP_CLI) $(_xfcp_transport) ping
+
+xfcp-caps:
+	$(XFCP_CLI) $(_xfcp_transport) caps
+
+xfcp-targets:
+	$(XFCP_CLI) $(_xfcp_transport) targets
+
+xfcp-read32:
+	$(XFCP_CLI) $(_xfcp_transport) read32 $(ADDR)
+
+xfcp-write32:
+	$(XFCP_CLI) $(_xfcp_transport) write32 $(ADDR) $(VAL)
 
 # -----------------------------------------------------------------------------
 # Debug
