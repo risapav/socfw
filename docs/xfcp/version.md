@@ -167,11 +167,47 @@ caps_flags  = 0x1F  (AXIL | STREAM | CAPS | TARGETS | MEM)
 
 ---
 
+## v1.7 — `xfcp_lib_v1_7_cpu_stub_pass` (2026-06-17)
+
+**Tag:** `xfcp_lib_v1_7_cpu_stub_pass` @ commit `af902a8`
+**Projekt:** `examples/xfcp_test_13_cpu_softcore_stub`
+
+### Nové funkcie
+
+- `xfcp_cpu_stub.sv` — CPU-side FSM agent (4 stavy: ST_IDLE/ST_RX/ST_PROC/ST_TX)
+  - PING (4B) → PONG (4B)
+  - ľubovoľný iný payload → ERR\n (4B), MAX_CMD_BYTES=8
+- `axil_cpu_mailbox.sv` rozšírený o native CPU porty:
+  - `cpu_rx_valid_o`, `cpu_rx_pop_i`, `cpu_rx_data_o[8:0]` — čítanie z RX FIFO
+  - `cpu_tx_ready_o`, `cpu_tx_push_i`, `cpu_tx_data_i[8:0]` — zápis do TX FIFO
+  - CPU má prioritu pred AXI-Lite pri simultánnom prístupe
+- Python: `test_hw.py --stub` (PING→PONG, ABCD→ERR\n, N×PING)
+- `run_cpum_regs_test()` adaptovaný: po STREAM_WRITE sid=1 sa overuje RX_LEVEL==0
+  (stub konzumuje okamžite), nie RX_POP_DATA
+
+### Timing (Cyclone IV E, SEED 7)
+
+```
+CLK125 WNS:  +0.241 ns
+ETH_RXC WNS: +0.345 ns
+TNS:         0.000
+Resources:   38657 LE, 23675 reg, 61248 memory bits
+```
+
+### HW Validation (2026-06-17)
+
+```
+UART: 102/102 PASS  rx_lost/rx_frame/rx_overrun/rx_bad_hdr/rx_drop = 0
+UDP:  102/102 PASS  rx_lost/rx_frame/rx_overrun/rx_bad_hdr/rx_drop = 0
+```
+
+---
+
 ## Plánované (future)
 
 ```
-v1.7 — CPU softcore stub (xfcp_test_13)
-         CPU-side FSM/agent cita CPUM RX FIFO a odpoveda cez TX FIFO
-         host -> STREAM_WRITE sid=1 "PING" -> STREAM_READ sid=1 "PONG"
-         overenie realneho bidirectionalneho mailbox toku
+v1.8 — kniznicna konsolidacia (xfcp_lib_core_cleanup)
+         jeden zdroj pravdy pre RTL: rtl/xfcp/ (aktualne)
+         jeden zdroj pravdy pre Python klienta: tools/xfcp/
+         aktualne docs, minimum warningov, manifest/ip.yaml
 ```
