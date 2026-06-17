@@ -2,6 +2,73 @@
 
 ---
 
+## v1.6 — `xfcp_lib_v1_6_mailbox_regs_pass` (2026-06-17)
+
+**Tag:** `xfcp_lib_v1_6_mailbox_regs_pass` @ commit `9fe2a97`
+**Projekt:** `examples/xfcp_test_12_cpu_mailbox_regs`
+
+### Nové funkcie
+
+- `axil_cpu_mailbox.sv` — CPU-facing AXI-Lite mailbox s RX/TX FIFO (DEPTH=256)
+- `xfcp_stream_mux.sv` — 2-port stream_id dispatcher (sid=0 STR0 / sid=1 CPU0)
+- `GET_TARGET_INFO` index 10 = CPUM AXIL 0xFF070000 max=128B
+- `GET_CAPS`: `num_axil_slots=8`, `num_stream_slots=2`
+- CPUM AXI-Lite register mapa (0xFF070000):
+  - 0x00 ID=0x4350554D (RO)
+  - 0x04 CTRL [0]=rx_flush [1]=tx_flush
+  - 0x08 STATUS [0]=rx_not_empty [1]=rx_full [2]=tx_not_empty [3]=tx_full
+  - 0x10 RX_LEVEL / 0x14 TX_LEVEL (RO)
+  - 0x18 RX_POP_DATA: read=pop; [7:0]=data [8]=tlast [10]=underflow
+  - 0x1C TX_PUSH_DATA: write=push; [7:0]=data [8]=tlast
+- Python: `test_hw.py --cpum` (ID, TX_PUSH→STREAM_READ, STREAM_WRITE→RX_POP, flush)
+- `xfcp_mem_adapter.sv` fix: manualne rfifo pole nahradene `xfcp_fifo_reg` instaciou
+  (eliminuje Quartus Warning 276020 — M9K read-during-write bypass combinatorial path)
+
+### Timing (Cyclone IV E, SEED 5)
+
+```
+CLK125 WNS:  +0.252 ns
+ETH_RXC WNS: +0.345 ns
+TNS:         0.000
+```
+
+### HW Validation (2026-06-17)
+
+```
+UART: 98/98 PASS  rx_lost/rx_frame/rx_overrun/rx_bad_hdr/rx_drop = 0
+UDP:  98/98 PASS  rx_lost/rx_frame/rx_overrun/rx_bad_hdr/rx_drop = 0
+```
+
+---
+
+## v1.5 — `xfcp_lib_v1_5_cpu0_stream_mailbox_pass` (2026-06-16)
+
+**Tag:** `xfcp_lib_v1_5_cpu0_stream_mailbox_pass` @ commit (xfcp_test_11)
+**Projekt:** `examples/xfcp_test_11_cpu_mailbox`
+
+### Nové funkcie
+
+- `xfcp_axis_adapter` rozšírený na 2 STREAM sloty (sid=0 STR0, sid=1 CPU0)
+- `GET_TARGET_INFO` index 9 = CPU0 STREAM (stream_id=1)
+- `GET_CAPS`: `num_stream_slots=2`
+- CPU0 sid=1 ako independent stream endpoint (loopback FIFO 256B)
+
+### Timing (Cyclone IV E, SEED 5)
+
+```
+CLK125 WNS:  +0.081 ns
+ETH_RXC WNS: +0.345 ns
+```
+
+### HW Validation
+
+```
+UART: 96/96 PASS
+UDP:  96/96 PASS
+```
+
+---
+
 ## v1.4 — `xfcp_lib_v1_4_mem_pass` (2026-06-16)
 
 **Tag:** `xfcp_lib_v1_4_mem_pass` @ commit `755cc2e`  
@@ -103,7 +170,8 @@ caps_flags  = 0x1F  (AXIL | STREAM | CAPS | TARGETS | MEM)
 ## Plánované (future)
 
 ```
-v1.5 — CPU mailbox (xfcp_test_11_cpu_mailbox)
-         STREAM slot 1 = CPU mailbox input/output
-         IRQ/event flag pre CPU
+v1.7 — CPU softcore stub (xfcp_test_13)
+         CPU-side FSM/agent cita CPUM RX FIFO a odpoveda cez TX FIFO
+         host -> STREAM_WRITE sid=1 "PING" -> STREAM_READ sid=1 "PONG"
+         overenie realneho bidirectionalneho mailbox toku
 ```
