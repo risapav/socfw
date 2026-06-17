@@ -284,29 +284,18 @@ def run_cpum_regs_test(bus):
     rx = bus.stream_read(len(TX_DATA), stream_id=1)
     chk(rx == TX_DATA, "STREAM_READ sid=1 TX data match")
 
-    # RX path: STREAM_WRITE sid=1, pop via RX_POP_DATA
+    # RX path: STREAM_WRITE sid=1 -> stub consumes immediately (no AXI-Lite pop)
     RX_DATA = b'\xAA\xBB\xCC\xDD'
     ok_wr = bus.stream_write(RX_DATA, stream_id=1)
     chk(bool(ok_wr), "STREAM_WRITE sid=1 OK")
+    time.sleep(0.02)  # allow stub FSM to process
     rx_level = bus.read32(RX_LEVEL_REG)
-    chk(rx_level == len(RX_DATA), f"RX_LEVEL=={len(RX_DATA)}", rx_level, len(RX_DATA))
-    pop_ok = True
-    for i, exp_b in enumerate(RX_DATA):
-        raw = bus.read32(RX_POP_REG)
-        if raw is None:
-            pop_ok = False
-            break
-        data_b = raw & 0xFF
-        tlast_bit = (raw >> 8) & 1
-        exp_tlast = 1 if i == len(RX_DATA) - 1 else 0
-        if data_b != exp_b or tlast_bit != exp_tlast:
-            print(f"  pop[{i}] got data=0x{data_b:02X} tlast={tlast_bit}"
-                  f" exp data=0x{exp_b:02X} tlast={exp_tlast}")
-            pop_ok = False
-    chk(pop_ok, "RX_POP_DATA x4 data+tlast correct")
+    chk(rx_level == 0, "RX_LEVEL==0 stub_consumed", rx_level, 0)
+    # Drain ERR\n that stub produced in TX FIFO (non-PING data)
+    bus.write32(CTRL_REG, 0x2)
+    time.sleep(0.02)
 
-    # RX flush
-    bus.stream_write(b'\x01\x02\x03\x04', stream_id=1)
+    # RX flush sanity: issue rx_flush on already-empty FIFO
     bus.write32(CTRL_REG, 0x1)
     time.sleep(0.02)
     rx_level = bus.read32(RX_LEVEL_REG)
@@ -368,8 +357,8 @@ def run_stub_test(bus, repeat=10):
     time.sleep(0.05)
 
     # Test 1: PING -> PONG (1x)
-    bus.stream_write(1, PING)
-    rx = bus.stream_read(1, len(PONG))
+    bus.stream_write(PING, stream_id=1)
+    rx = bus.stream_read(len(PONG), stream_id=1)
     if rx == PONG:
         print(f"  PING->PONG (1x):   {PASS}")
         passed += 1
@@ -379,8 +368,8 @@ def run_stub_test(bus, repeat=10):
         failed += 1
 
     # Test 2: unknown -> ERR\n
-    bus.stream_write(1, UNKNOWN)
-    rx = bus.stream_read(1, len(ERR))
+    bus.stream_write(UNKNOWN, stream_id=1)
+    rx = bus.stream_read(len(ERR), stream_id=1)
     if rx == ERR:
         print(f"  ABCD->ERR\\n (1x):  {PASS}")
         passed += 1
@@ -392,8 +381,8 @@ def run_stub_test(bus, repeat=10):
     # Test 3: opakovat PING repeat-krat
     ok_count = 0
     for i in range(repeat):
-        bus.stream_write(1, PING)
-        rx = bus.stream_read(1, len(PONG))
+        bus.stream_write(PING, stream_id=1)
+        rx = bus.stream_read(len(PONG), stream_id=1)
         if rx == PONG:
             ok_count += 1
         else:
