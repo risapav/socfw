@@ -1,10 +1,10 @@
 # XFCP Library — Overview
 
-**Version:** 1.6 (xfcp_lib_v1_6_mailbox_regs_pass)
+**Version:** 1.7 (xfcp_lib_v1_7_cpu_stub_pass)
 **Target:** Intel Cyclone IV E (QMTech EP4CE55), Quartus Prime 25.1 Lite
 **Language:** SystemVerilog
 **Transport:** UART (115200 baud) + UDP (100 Mbps Ethernet)
-**Status:** `xfcp_lib_v1_6_mailbox_regs_pass` @ commit `9fe2a97`
+**Status:** `xfcp_lib_v1_7_cpu_stub_pass` @ commit `af902a8`
 
 XFCP (eXtensible FPGA Control Protocol) je jednoduchý request/response protokol
 pre prístup k registrom, AXI-Stream a pamäti cez UART alebo UDP.
@@ -73,19 +73,19 @@ Podrobnosti: [protocol.md](protocol.md) | [status.md](status.md) | [targets.md](
 
 ---
 
-## Resource Usage (xfcp_test_12_cpu_mailbox_regs_top, Cyclone IV E, 125 MHz)
+## Resource Usage (xfcp_test_13_cpu_softcore_stub_top, Cyclone IV E, 125 MHz)
 
 | Metric          | Hodnota               |
 |-----------------|-----------------------|
-| LEs             | 30,001 / 55,856 (54%) |
-| Registers       | 23,632                |
+| LEs             | 38,657 / 55,856 (69%) |
+| Registers       | 23,675                |
 | Memory bits     | 61,248 / 2,396,160 (3%) |
 | PLLs            | 1 / 4                 |
 | Fmax (85C slow) | 125+ MHz              |
-| WNS CLK125      | +0.252 ns (SEED 5)    |
+| WNS CLK125      | +0.241 ns (SEED 7)    |
 | WNS ETH_RXC     | +0.345 ns             |
 
-Poznamka: zahrnuje cely SoC (ETH stack, UART periféria, LED/SEG7 registre, axil_cpu_mailbox).
+Poznamka: zahrnuje cely SoC (ETH stack, UART periféria, LED/SEG7 registre, axil_cpu_mailbox + xfcp_cpu_stub).
 Samotna XFCP infrastruktura (parser+packetizer+fabric+adaptery) je ~8 000–10 000 LEs.
 
 ---
@@ -94,36 +94,35 @@ Samotna XFCP infrastruktura (parser+packetizer+fabric+adaptery) je ~8 000–10 0
 
 | Testbench                                    | Testy   | Vysledok |
 |----------------------------------------------|---------|----------|
-| tb_xfcp_test_12_cpu_mailbox_regs_top         | T01–T49 | PASS     |
+| tb_xfcp_test_13_cpu_softcore_stub_top        | T01–T54 | PASS     |
 
-| Test              | Popis                                              |
-|-------------------|----------------------------------------------------|
-| T01–T10           | AXIL READ/WRITE (1B, 4B, burst, multiword)         |
-| T11–T20           | STATUS, GET_CAPS, GET_TARGET_INFO, AXIS loopback   |
-| T21–T30           | Multi-engine AXIL, STREAM_WRITE/READ sid=0/1       |
-| T31–T37           | MEM_WRITE + MEM_READ (4B/16B/64B/256B), interleave |
-| T38–T39           | xfcp_stream_mux dispatch sid=0/1                  |
-| T40–T42           | CPUM ID/STATUS/CTRL rx_flush                      |
-| T43               | GET_TARGET_INFO index=10 -> CPUM AXIL             |
-| T44               | STREAM_WRITE 256B -> RX_LEVEL==256 -> rx_flush    |
-| T45               | TX_PUSH_DATA 4B -> STATUS.tx_not_empty -> STREAM_READ |
-| T46               | STREAM_WRITE 8B sid=1 -> RX_POP_DATA x8 + tlast  |
-| T47               | RX underflow bit[10]==1 when FIFO empty           |
-| T48               | STATUS sanity + rx_flush                          |
-| T49               | TX_PUSH_DATA -> tx_flush -> TX_LEVEL==0           |
+| Test              | Popis                                                   |
+|-------------------|---------------------------------------------------------|
+| T01–T17           | AXIL READ/WRITE, STATUS, GET_CAPS, GET_TARGET_INFO      |
+| T18               | STREAM_WRITE sid=1 → stub spotrebuje → TX ERR\n         |
+| T19–T37           | Multi-engine AXIL, MEM_READ/WRITE, STREAM loopback      |
+| T38               | TX flush pred AXIL priamym testom                       |
+| T39–T43           | MEM burst regresia, stream_mux dispatch                 |
+| T44               | STREAM_WRITE 256B → ERR\n (MAX_CMD_BYTES limit)         |
+| T45–T49           | CPUM register sanity (stub-aware)                       |
+| T50               | PING → PONG (1×)                                        |
+| T51               | ABCD → ERR\n (1×)                                       |
+| T52               | PING × 4 (loop)                                         |
+| T53               | STR0 izolácia (sid=0 neovplyvnený stubom na sid=1)      |
+| T54               | 8B PING+padding → ERR\n (MAX_CMD_BYTES=8 limit)         |
 
 ---
 
 ## HW Validation (QMTech EP4CE55, 125 MHz)
 
-| Transport | Testy    | Vysledok    |
-|-----------|----------|-------------|
-| UART      | 98/98    | PASS        |
-| UDP       | 98/98    | PASS        |
+| Projekt  | Transport | Testy      | Vysledok |
+|----------|-----------|------------|----------|
+| test_13  | UART      | 102/102    | PASS     |
+| test_13  | UDP       | 102/102    | PASS     |
 
-Testovana sada (98 testov): ping, slot scan (8 slots), GET_CAPS, GET_TARGET_INFO (11 targets + BAD_ADDRESS),
-AXIL RW (5 hodnot), STREAM loopback STR0 (4B/16B/64B/256B), CPUM regs (ID/TX/RX/flush),
-MEM loopback (4B/16B/64B/256B), DIAG counters.
+Testovana sada (102 testov): ping, slot scan (8 slots), GET_CAPS, GET_TARGET_INFO (11 targets + BAD_ADDRESS),
+AXIL RW (5 hodnot), STREAM loopback STR0 (4B/16B/64B/256B), CPUM regs (stub-aware),
+CPU stub (PING→PONG, ABCD→ERR\n, 3×PING), MEM loopback (4B/16B/64B/256B), DIAG counters.
 
 ---
 

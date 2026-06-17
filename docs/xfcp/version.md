@@ -2,6 +2,42 @@
 
 ---
 
+## v1.7 — `xfcp_lib_v1_7_cpu_stub_pass` (2026-06-17)
+
+**Tag:** `xfcp_lib_v1_7_cpu_stub_pass` @ commit `af902a8`
+**Projekt:** `examples/xfcp_test_13_cpu_softcore_stub`
+
+### Nové funkcie
+
+- `xfcp_cpu_stub.sv` — CPU-side FSM agent (4 stavy: ST_IDLE/ST_RX/ST_PROC/ST_TX)
+  - PING (4B) → PONG (4B)
+  - ľubovoľný iný payload → ERR\n (4B), MAX_CMD_BYTES=8
+- `axil_cpu_mailbox.sv` rozšírený o native CPU porty:
+  - `cpu_rx_valid_o`, `cpu_rx_pop_i`, `cpu_rx_data_o[8:0]` — čítanie z RX FIFO
+  - `cpu_tx_ready_o`, `cpu_tx_push_i`, `cpu_tx_data_i[8:0]` — zápis do TX FIFO
+  - CPU má prioritu pred AXI-Lite pri simultánnom prístupe
+- Python: `test_hw.py --stub` (PING→PONG, ABCD→ERR\n, N×PING)
+- `run_cpum_regs_test()` adaptovaný: po STREAM_WRITE sid=1 sa overuje RX_LEVEL==0
+  (stub konzumuje okamžite), nie RX_POP_DATA
+
+### Timing (Cyclone IV E, SEED 7)
+
+```
+CLK125 WNS:  +0.241 ns
+ETH_RXC WNS: +0.345 ns
+TNS:         0.000
+Resources:   38657 LE, 23675 reg, 61248 memory bits
+```
+
+### HW Validation (2026-06-17)
+
+```
+UART: 102/102 PASS  rx_lost/rx_frame/rx_overrun/rx_bad_hdr/rx_drop = 0
+UDP:  102/102 PASS  rx_lost/rx_frame/rx_overrun/rx_bad_hdr/rx_drop = 0
+```
+
+---
+
 ## v1.6 — `xfcp_lib_v1_6_mailbox_regs_pass` (2026-06-17)
 
 **Tag:** `xfcp_lib_v1_6_mailbox_regs_pass` @ commit `9fe2a97`
@@ -71,7 +107,7 @@ UDP:  96/96 PASS
 
 ## v1.4 — `xfcp_lib_v1_4_mem_pass` (2026-06-16)
 
-**Tag:** `xfcp_lib_v1_4_mem_pass` @ commit `755cc2e`  
+**Tag:** `xfcp_lib_v1_4_mem_pass` @ commit `755cc2e`
 **Projekt:** `examples/xfcp_test_10_axifull`
 
 ### Nové funkcie
@@ -83,7 +119,7 @@ UDP:  96/96 PASS
 - `GET_CAPS` rozšírený: `caps_flags` bit4 = `HAS_MEM`
 - `GET_TARGET_INFO` rozšírený: type `0x03` = MEM
 - Python: `bus.mem_read()`, `bus.mem_write()`, `protocol.py` MEM opkódy
-- `xfcp_cli.py` — kompletný CLI klient (ping/caps/targets/read32/write32/read/write/mem-read/mem-write/stream-read/stream-write)
+- `xfcp_cli.py` — kompletný CLI klient
 - RTL exportovaný do `rtl/xfcp/` (16 SV súborov), dokumentácia v `docs/xfcp/` (8 súborov)
 
 ### Opravené bugy
@@ -115,7 +151,7 @@ caps_flags  = 0x1F  (AXIL | STREAM | CAPS | TARGETS | MEM)
 
 ## v1.3 — `xfcp_lib_v1_3_targets_pass` (2026-06-14)
 
-**Tag:** `xfcp_lib_v1_3_targets_pass`  
+**Tag:** `xfcp_lib_v1_3_targets_pass`
 **Projekt:** `examples/xfcp_test_09_targets`
 
 - `GET_TARGET_INFO` (0x03) — statická ROM tabuľka N targetov
@@ -129,7 +165,7 @@ caps_flags  = 0x1F  (AXIL | STREAM | CAPS | TARGETS | MEM)
 
 ## v1.2 — `xfcp_lib_v1_2_caps_pass` (2026-06-14)
 
-**Tag:** `xfcp_lib_v1_2_caps_pass`  
+**Tag:** `xfcp_lib_v1_2_caps_pass`
 **Projekt:** `examples/xfcp_test_08_caps`
 
 - `GET_CAPS` (0x01) — statická odpoveď s parametrami FPGA
@@ -142,7 +178,7 @@ caps_flags  = 0x1F  (AXIL | STREAM | CAPS | TARGETS | MEM)
 
 ## v1.1 — `xfcp_lib_v1_1_axis_pass` (2026-06-14)
 
-**Tag:** `xfcp_lib_v1_1_axis_pass`  
+**Tag:** `xfcp_lib_v1_1_axis_pass`
 **Projekt:** `examples/xfcp_test_07_axis`
 
 - `STREAM_WRITE` (0x20) / `STREAM_READ` (0x21) opcodes
@@ -154,7 +190,7 @@ caps_flags  = 0x1F  (AXIL | STREAM | CAPS | TARGETS | MEM)
 
 ## v0.9 — `xfcp_lib_v0_9_status_pass` (2026-06-13)
 
-**Tag:** (interný míľnik)  
+**Tag:** (interný míľnik)
 **Projekt:** `examples/xfcp_test_06`
 
 - XFCP v0.9+STATUS: 4-bajtový response header (SOP+TYPE+SEQ+STATUS)
@@ -167,47 +203,11 @@ caps_flags  = 0x1F  (AXIL | STREAM | CAPS | TARGETS | MEM)
 
 ---
 
-## v1.7 — `xfcp_lib_v1_7_cpu_stub_pass` (2026-06-17)
-
-**Tag:** `xfcp_lib_v1_7_cpu_stub_pass` @ commit `af902a8`
-**Projekt:** `examples/xfcp_test_13_cpu_softcore_stub`
-
-### Nové funkcie
-
-- `xfcp_cpu_stub.sv` — CPU-side FSM agent (4 stavy: ST_IDLE/ST_RX/ST_PROC/ST_TX)
-  - PING (4B) → PONG (4B)
-  - ľubovoľný iný payload → ERR\n (4B), MAX_CMD_BYTES=8
-- `axil_cpu_mailbox.sv` rozšírený o native CPU porty:
-  - `cpu_rx_valid_o`, `cpu_rx_pop_i`, `cpu_rx_data_o[8:0]` — čítanie z RX FIFO
-  - `cpu_tx_ready_o`, `cpu_tx_push_i`, `cpu_tx_data_i[8:0]` — zápis do TX FIFO
-  - CPU má prioritu pred AXI-Lite pri simultánnom prístupe
-- Python: `test_hw.py --stub` (PING→PONG, ABCD→ERR\n, N×PING)
-- `run_cpum_regs_test()` adaptovaný: po STREAM_WRITE sid=1 sa overuje RX_LEVEL==0
-  (stub konzumuje okamžite), nie RX_POP_DATA
-
-### Timing (Cyclone IV E, SEED 7)
-
-```
-CLK125 WNS:  +0.241 ns
-ETH_RXC WNS: +0.345 ns
-TNS:         0.000
-Resources:   38657 LE, 23675 reg, 61248 memory bits
-```
-
-### HW Validation (2026-06-17)
-
-```
-UART: 102/102 PASS  rx_lost/rx_frame/rx_overrun/rx_bad_hdr/rx_drop = 0
-UDP:  102/102 PASS  rx_lost/rx_frame/rx_overrun/rx_bad_hdr/rx_drop = 0
-```
-
----
-
 ## Plánované (future)
 
 ```
-v1.8 — kniznicna konsolidacia (xfcp_lib_core_cleanup)
-         jeden zdroj pravdy pre RTL: rtl/xfcp/ (aktualne)
-         jeden zdroj pravdy pre Python klienta: tools/xfcp/
-         aktualne docs, minimum warningov, manifest/ip.yaml
+sdram_lib_v0_x — samostatna SDRAM kniznica
+  vlastne sim/HW milniky nezavisle od XFCP
+  po overeni: integracia ako xfcp_sdram_test_01
+  axifull_sram.sv (testovaci) nahradeny SDRAM controllerom na MEM backende
 ```
