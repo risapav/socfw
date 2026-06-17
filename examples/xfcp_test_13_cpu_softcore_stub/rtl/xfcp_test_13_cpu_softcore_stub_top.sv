@@ -1,6 +1,6 @@
 /**
- * @file xfcp_test_12_cpu_mailbox_regs_top.sv
- * @brief XFCP switch: UART + ETH-UDP, v1.3+CAPS+AXIS+TARGETS+MEM + mailbox regs.
+ * @file xfcp_test_13_cpu_softcore_stub_top.sv
+ * @brief XFCP + CPU softcore stub: PING->PONG cez axil_cpu_mailbox native CPU porty.
  * @param LOCAL_MAC       48-bit FPGA MAC adresa.
  * @param LOCAL_IP        32-bit FPGA IP adresa.
  * @param XFCP_PORT       UDP port pre XFCP (default 50000).
@@ -10,11 +10,10 @@
  *   Systemovy takt: clk_i = 125 MHz (PLL: 50 MHz -> 125 MHz).
  *   ETH RX domena: eth_rx_clk_i (125 MHz z PHY, async k clk_i).
  *
- *   Rozsirenia oproti xfcp_test_11_cpu_mailbox_top:
- *     - axil_cpu_mailbox (slot 7 @ 0xFF070000): realne RX/TX FIFO registre
- *     - xfcp_axis_adapter[1] (CPU0) napojeny na axil_cpu_mailbox.s_axis/m_axis
- *     - GET_CAPS: num_axil=8 (bolo 7)
- *     - GET_TARGET_INFO: index 10 = AXIL CPUM 0xFF070000 max=128B
+ *   Rozsirenia oproti xfcp_test_12:
+ *     - xfcp_cpu_stub: RTL FSM napojeny na axil_cpu_mailbox native CPU porty
+ *       host STREAM_WRITE sid=1 "PING" -> stub -> STREAM_READ sid=1 "PONG"
+ *       host STREAM_WRITE sid=1 ine   -> stub -> STREAM_READ sid=1 "ERR\n"
  *
  *   AXI-Lite mapa (stride 0x10000):
  *     Slot 0 @ 0xFF000000 : axil_sys_ctrl
@@ -52,8 +51,8 @@
  *    10: AXIL  CPUM  0xFF070000 max=128B (axil_cpu_mailbox)
  */
 
-`ifndef XFCP_TEST_12_CPU_MAILBOX_REGS_TOP_SV
-`define XFCP_TEST_12_CPU_MAILBOX_REGS_TOP_SV
+`ifndef XFCP_TEST_13_CPU_SOFTCORE_STUB_TOP_SV
+`define XFCP_TEST_13_CPU_SOFTCORE_STUB_TOP_SV
 
 `default_nettype none
 
@@ -61,7 +60,7 @@ import axi_pkg::*;
 import uart_pkg::*;
 import xfcp_pkg::*;
 
-module xfcp_test_12_cpu_mailbox_regs_top #(
+module xfcp_test_13_cpu_softcore_stub_top #(
   parameter logic [47:0] LOCAL_MAC      = 48'h00_0A_35_01_FE_C5,
   parameter logic [31:0] LOCAL_IP       = 32'hC0A8_0005,
   parameter logic [15:0] XFCP_PORT      = 16'd50000,
@@ -984,6 +983,11 @@ module xfcp_test_12_cpu_mailbox_regs_top #(
   logic [8:0] cpu0_tx_data_w;
   logic       cpu0_tx_valid_w, cpu0_tx_ready_w;
 
+  logic [8:0] stub_rx_data_w;
+  logic       stub_rx_valid_w, stub_rx_pop_w;
+  logic [8:0] stub_tx_data_w;
+  logic       stub_tx_push_w, stub_tx_ready_w;
+
   axil_cpu_mailbox #(.FIFO_DEPTH(256)) u_cpu_mailbox (
     .clk_i          (clk_i),
     .rst_ni         (rst_ni),
@@ -994,12 +998,23 @@ module xfcp_test_12_cpu_mailbox_regs_top #(
     .m_axis_tdata_o (cpu0_tx_data_w),
     .m_axis_tvalid_o(cpu0_tx_valid_w),
     .m_axis_tready_i(cpu0_tx_ready_w),
-    .cpu_rx_data_o  (),
-    .cpu_rx_valid_o (),
-    .cpu_rx_pop_i   (1'b0),
-    .cpu_tx_data_i  (9'h0),
-    .cpu_tx_push_i  (1'b0),
-    .cpu_tx_ready_o ()
+    .cpu_rx_data_o  (stub_rx_data_w),
+    .cpu_rx_valid_o (stub_rx_valid_w),
+    .cpu_rx_pop_i   (stub_rx_pop_w),
+    .cpu_tx_data_i  (stub_tx_data_w),
+    .cpu_tx_push_i  (stub_tx_push_w),
+    .cpu_tx_ready_o (stub_tx_ready_w)
+  );
+
+  xfcp_cpu_stub #(.MAX_CMD_BYTES(8)) u_cpu_stub (
+    .clk_i          (clk_i),
+    .rst_ni         (rst_ni),
+    .cpu_rx_data_i  (stub_rx_data_w),
+    .cpu_rx_valid_i (stub_rx_valid_w),
+    .cpu_rx_pop_o   (stub_rx_pop_w),
+    .cpu_tx_data_o  (stub_tx_data_w),
+    .cpu_tx_push_o  (stub_tx_push_w),
+    .cpu_tx_ready_i (stub_tx_ready_w)
   );
 
   xfcp_axis_adapter #(
@@ -1273,8 +1288,8 @@ module xfcp_test_12_cpu_mailbox_regs_top #(
     else         hb_cnt_q <= hb_cnt_q + 27'd1;
   end
 
-endmodule : xfcp_test_12_cpu_mailbox_regs_top
+endmodule : xfcp_test_13_cpu_softcore_stub_top
 
 `default_nettype wire
 
-`endif // XFCP_TEST_12_CPU_MAILBOX_REGS_TOP_SV
+`endif // XFCP_TEST_13_CPU_SOFTCORE_STUB_TOP_SV

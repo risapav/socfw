@@ -1,13 +1,13 @@
 /**
  * @file  axil_cpu_mailbox.sv
- * @brief AXI-Lite CPU mailbox — RX/TX FIFO s registrovym rozhranim.
+ * @brief AXI-Lite CPU mailbox — RX/TX FIFO s registrovym rozhranim a native CPU portami.
  *
  * @details
  *   Bidirectional mailbox medzi XFCP STREAM endpointom a CPU.
  *   RX FIFO (host->CPU, depth=FIFO_DEPTH): XFCP stream data sa zapisuju cez
- *   s_axis port, CPU cita cez RX_POP_DATA register (read triggers pop).
+ *   s_axis port, CPU cita cez RX_POP_DATA register alebo native cpu_rx_* porty.
  *   TX FIFO (CPU->host, depth=FIFO_DEPTH): CPU zapisuje cez TX_PUSH_DATA
- *   register, XFCP cita cez m_axis port.
+ *   register alebo native cpu_tx_* porty, XFCP cita cez m_axis port.
  *
  *   Register mapa (byte offset):
  *   0x00  ID            RO    0x4350554D ("CPUM")
@@ -21,6 +21,14 @@
  *                             [7:0]=data, [8]=tlast, [10]=underflow
  *   0x1C  TX_PUSH_DATA  WO*   zapis = push do TX FIFO;
  *                             [7:0]=data, [8]=tlast
+ *
+ *   Native CPU porty (priamy pristup k FIFO, CPU pop/push ma prioritu pred AXI-Lite):
+ *   cpu_rx_valid_o: RX FIFO obsahuje data (platne ked =1).
+ *   cpu_rx_data_o:  {tlast, data[7:0]} aktualneho slova v tom istom cykle ako valid.
+ *   cpu_rx_pop_i:   pop strobe (assert len ked cpu_rx_valid_o=1; 1-cyklovy pulse).
+ *   cpu_tx_ready_o: TX FIFO ma miesto (platne push iba ked ready=1).
+ *   cpu_tx_data_i:  {tlast, data[7:0]} slova na push.
+ *   cpu_tx_push_i:  push strobe (assert len ked cpu_tx_ready_o=1; 1-cyklovy pulse).
  *
  * @param FIFO_DEPTH  Hlbka RX a TX FIFO v 9-bit slovach (default 256)
  *
@@ -50,7 +58,16 @@ module axil_cpu_mailbox #(
   // AXI-S master: CPU->host (drains TX FIFO)
   output logic [8:0]       m_axis_tdata_o,   // [8]=tlast, [7:0]=data
   output logic             m_axis_tvalid_o,
-  input  wire              m_axis_tready_i
+  input  wire              m_axis_tready_i,
+
+  // Native CPU-side direct FIFO access (CPU pop/push ma prioritu pred AXI-Lite)
+  output logic [8:0]       cpu_rx_data_o,    // {tlast, data[7:0]}; platne s cpu_rx_valid_o
+  output logic             cpu_rx_valid_o,   // RX FIFO not empty
+  input  wire              cpu_rx_pop_i,     // pop strobe; assert len ked valid=1
+
+  input  wire  [8:0]       cpu_tx_data_i,   // {tlast, data[7:0]}
+  input  wire              cpu_tx_push_i,    // push strobe; assert len ked ready=1
+  output logic             cpu_tx_ready_o    // TX FIFO not full
 );
 
   import axi_pkg::*;
@@ -147,6 +164,11 @@ module axil_cpu_mailbox #(
 
   assign s_axis_tready_o = rx_w_ready_w;
 
+  // ── Native CPU port assignments ───────────────────────────────────────────
+  assign cpu_rx_data_o  = rx_r_data_w;
+  assign cpu_rx_valid_o = rx_r_valid_w;
+  assign cpu_tx_ready_o = tx_w_ready_w;
+
   // ── AXI-Lite read state machine ────────────────────────────────────────────
   // RD_IDLE  → accept AR
   // RD_LATCH → sample rdata mux (pop RX FIFO if ADDR_RX_POP)
@@ -162,8 +184,9 @@ module axil_cpu_mailbox #(
   logic [4:0]  ar_addr_q;
   logic [31:0] rd_data_q;
 
-  // RX pop: assert rx_r_ready_w for 1 cycle in RD_LATCH when addr matches
-  assign rx_r_ready_w = (rd_state_q == RD_LATCH) && (ar_addr_q == ADDR_RX_POP);
+  // RX pop: CPU has priority; AXI-Lite pop blocked when CPU pops simultaneously
+  wire axil_rx_pop_w = (rd_state_q == RD_LATCH) && (ar_addr_q == ADDR_RX_POP) && !cpu_rx_pop_i;
+  assign rx_r_ready_w = axil_rx_pop_w || cpu_rx_pop_i;
 
   // Combinatorial rdata mux
   logic [31:0] rdata_mux_w;
@@ -247,11 +270,11 @@ module axil_cpu_mailbox #(
   logic [4:0] aw_addr_q;
   logic [31:0] wr_data_latch_q;
 
-  // TX push: combinatorial strobe when WR_DATA captures TX_PUSH_DATA
-  assign tx_w_data_w  = s_axil.WDATA[8:0];
-  assign tx_w_valid_w = (wr_state_q == WR_DATA) &&
-                        s_axil.WVALID &&
-                        (aw_addr_q == ADDR_TX_PUSH);
+  // TX push: CPU has priority; AXI-Lite push blocked when CPU pushes simultaneously
+  wire axil_tx_push_w = (wr_state_q == WR_DATA) && s_axil.WVALID &&
+                        (aw_addr_q == ADDR_TX_PUSH) && !cpu_tx_push_i;
+  assign tx_w_valid_w = cpu_tx_push_i || axil_tx_push_w;
+  assign tx_w_data_w  = cpu_tx_push_i ? cpu_tx_data_i : s_axil.WDATA[8:0];
 
   logic rx_flush_q;
   logic tx_flush_q;
