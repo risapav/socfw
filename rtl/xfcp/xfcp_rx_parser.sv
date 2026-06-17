@@ -194,11 +194,6 @@ module xfcp_rx_parser #(
   // STAGE 2 – PARALLEL DECODE (kombinačný, platný v S_DECODE)
   // Validácia prebieha v rovnakom takte ako decode.
   // ============================================================
-  // COUNT % 4 == 0 AND within MAX_COUNT_BYTES bound (prevents huge garbage reads).
-  // <= 256: upper byte is 0 (COUNT 0..255) OR COUNT == 256 exactly (0x0100).
-  wire dec_count_ok  = (dec_count[1:0] == 2'b00)
-                    && ((dec_count[15:8] == 8'h00) || (dec_count == 16'd256));
-
   // dec_count je zaručene násobok 4 (COUNT alignment check).
   // Jednoduchý posun namiesto (count+3)>>2 – žiadny adder, menej LUT.
   wire [COUNT_WIDTH-1:0] dec_words = COUNT_WIDTH'(dec_count >> 2);
@@ -639,7 +634,8 @@ module xfcp_rx_parser #(
         $warning("[%0t] %m: WATCHDOG - paket > %0d bajtov, drop", $time, MAX_PKT_BYTES);
       if (sop_recovery)
         $warning("[%0t] %m: SOP RECOVERY v stave 0x%02h - resync", $time, 6'(state_q));
-      if (state_q == S_DECODE && !dec_count_ok)
+      if (state_q == S_DECODE && !(dec_count[1:0] == 2'b00 &&
+                                    (dec_count[15:8] == 8'h00 || dec_count == 16'd256)))
         $warning("[%0t] %m: COUNT=0x%04h nie je nasobok 4 - drop", $time, dec_count);
     end
   end

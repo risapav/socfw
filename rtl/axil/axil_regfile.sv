@@ -124,8 +124,13 @@ module axil_regfile #(
           if (!rst_ni) begin
             val_r <= RVAL;
           end else begin
-            val_r <= (val_r | hw_rdata_i[i*32 +: 32]) &
-                     ~(reg_sel_w ? wdata_r : 32'h0);
+            for (int b = 0; b < 4; b++) begin
+              if (reg_sel_w && wstrb_r[b])
+                val_r[b*8 +: 8] <= (val_r[b*8 +: 8] | hw_rdata_i[i*32 + b*8 +: 8]) &
+                                   ~wdata_r[b*8 +: 8];
+              else
+                val_r[b*8 +: 8] <= val_r[b*8 +: 8] | hw_rdata_i[i*32 + b*8 +: 8];
+            end
           end
         end
         assign rdata_mux[i]           = val_r;

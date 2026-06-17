@@ -182,7 +182,6 @@ module axil_cpu_mailbox #(
 
   rd_state_e   rd_state_q;
   logic [4:0]  ar_addr_q;
-  logic [31:0] rd_data_q;
 
   // RX pop: CPU has priority; AXI-Lite pop blocked when CPU pops simultaneously
   wire axil_rx_pop_w = (rd_state_q == RD_LATCH) && (ar_addr_q == ADDR_RX_POP) && !cpu_rx_pop_i;
@@ -216,7 +215,6 @@ module axil_cpu_mailbox #(
     if (!rst_ni) begin
       rd_state_q      <= RD_IDLE;
       ar_addr_q       <= '0;
-      rd_data_q       <= '0;
       s_axil.ARREADY  <= 1'b0;
       s_axil.RDATA    <= '0;
       s_axil.RRESP    <= AXI_RESP_OKAY;
@@ -236,7 +234,6 @@ module axil_cpu_mailbox #(
         RD_LATCH: begin
           s_axil.ARREADY <= 1'b0;
           // rx_r_ready_w fires this cycle for ADDR_RX_POP → pop happens
-          rd_data_q      <= rdata_mux_w;
           s_axil.RDATA   <= rdata_mux_w;
           s_axil.RRESP   <= AXI_RESP_OKAY;
           s_axil.RVALID  <= 1'b1;
@@ -268,7 +265,6 @@ module axil_cpu_mailbox #(
 
   wr_state_e  wr_state_q;
   logic [4:0] aw_addr_q;
-  logic [31:0] wr_data_latch_q;
 
   // TX push: CPU has priority; AXI-Lite push blocked when CPU pushes simultaneously
   wire axil_tx_push_w = (wr_state_q == WR_DATA) && s_axil.WVALID &&
@@ -285,7 +281,6 @@ module axil_cpu_mailbox #(
     if (!rst_ni) begin
       wr_state_q      <= WR_IDLE;
       aw_addr_q       <= '0;
-      wr_data_latch_q <= '0;
       irq_en_q        <= '0;
       rx_flush_q      <= 1'b0;
       tx_flush_q      <= 1'b0;
@@ -313,7 +308,6 @@ module axil_cpu_mailbox #(
         WR_DATA: begin
           s_axil.AWREADY <= 1'b0;
           if (s_axil.WVALID) begin
-            wr_data_latch_q <= s_axil.WDATA;
             s_axil.WREADY   <= 1'b0;
             case (aw_addr_q)
               ADDR_CTRL: begin
