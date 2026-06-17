@@ -151,29 +151,28 @@ artifacts:
     - ../../../rtl/eth/l3/ipv4_rx.sv
     - ../../../rtl/eth/l3/ipv4_tx.sv
     - ../../../rtl/eth/l3/icmp_echo.sv
-    # XFCP stack v1.3+MEM+MAILBOX+CPUM (local)
-    - ../rtl/xfcp/xfcp_pkg.sv
-    - ../rtl/xfcp/xfcp_fifo.sv
-    - ../rtl/xfcp/xfcp_fifo_reg.sv
-    - ../rtl/xfcp/xfcp_rx_parser.sv
-    - ../rtl/xfcp/xfcp_tx_packetizer.sv
-    - ../rtl/xfcp/xfcp_axi_engine.sv
-    - ../rtl/xfcp/xfcp_axis_adapter.sv
-    - ../rtl/xfcp/xfcp_caps_adapter.sv
-    - ../rtl/xfcp/xfcp_target_info_adapter.sv
-    - ../rtl/xfcp/xfcp_mem_adapter.sv
-    - ../rtl/xfcp/axis_byte_register_slice.sv
-    - ../rtl/xfcp/xfcp_fabric_endpoint.sv
-    - ../rtl/xfcp/xfcp_arbiter_2to1.sv
-    - ../rtl/xfcp/transport/udp_xfcp_server.sv
-    - ../rtl/xfcp/transport/xfcp_udp_rx_adapter.sv
-    - ../rtl/xfcp/transport/xfcp_udp_tx_adapter.sv
-    # 2-way stream mux (local)
-    - ../rtl/xfcp/xfcp_stream_mux.sv
-    # AXI-Full SRAM
+    # XFCP stack v1.6 (rtl/xfcp)
+    - ../../../rtl/xfcp/xfcp_pkg.sv
+    - ../../../rtl/xfcp/xfcp_fifo.sv
+    - ../../../rtl/xfcp/xfcp_fifo_reg.sv
+    - ../../../rtl/xfcp/xfcp_rx_parser.sv
+    - ../../../rtl/xfcp/xfcp_tx_packetizer.sv
+    - ../../../rtl/xfcp/xfcp_axi_engine.sv
+    - ../../../rtl/xfcp/xfcp_axis_adapter.sv
+    - ../../../rtl/xfcp/xfcp_caps_adapter.sv
+    - ../../../rtl/xfcp/xfcp_target_info_adapter.sv
+    - ../../../rtl/xfcp/xfcp_mem_adapter.sv
+    - ../../../rtl/xfcp/axis_byte_register_slice.sv
+    - ../../../rtl/xfcp/xfcp_fabric_endpoint.sv
+    - ../../../rtl/xfcp/xfcp_arbiter_2to1.sv
+    - ../../../rtl/xfcp/transport/udp_xfcp_server.sv
+    - ../../../rtl/xfcp/transport/xfcp_udp_rx_adapter.sv
+    - ../../../rtl/xfcp/transport/xfcp_udp_tx_adapter.sv
+    - ../../../rtl/xfcp/xfcp_stream_mux.sv
+    # AXI-Full SRAM (test IP, local)
     - ../rtl/axifull_sram.sv
-    # CPU mailbox (new)
-    - ../rtl/axil_cpu_mailbox.sv
+    # CPU mailbox (rtl/axil)
+    - ../../../rtl/axil/axil_cpu_mailbox.sv
     # Top-level
     - ../rtl/xfcp_test_12_cpu_mailbox_regs_top.sv
 
