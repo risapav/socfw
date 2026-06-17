@@ -45,10 +45,10 @@ echo "  Opakovania na slot: $REPEAT"
 echo "=========================================="
 
 run_test "UART transport ($UART_PORT @ $BAUD)" \
-    --uart "$UART_PORT" --baud "$BAUD" --caps --targets --rw --stream --cpu0 --cpum --mem --diag
+    --uart "$UART_PORT" --baud "$BAUD" --caps --targets --rw --stream --cpum --mem --diag
 
 run_test "UDP  transport ($FPGA_IP:$UDP_PORT)" \
-    --udp  "$FPGA_IP:$UDP_PORT" --caps --targets --rw --stream --cpu0 --cpum --mem --diag
+    --udp  "$FPGA_IP:$UDP_PORT" --caps --targets --rw --stream --cpum --mem --diag
 
 TOTAL=$((PASS + FAIL))
 sep

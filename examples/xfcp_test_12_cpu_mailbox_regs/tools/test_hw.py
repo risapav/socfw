@@ -260,6 +260,10 @@ def run_cpum_regs_test(bus):
             print(f"  {FAIL}  {label}{suffix}")
             failed += 1
 
+    # Flush both FIFOs to ensure clean state before tests
+    bus.write32(CTRL_REG, 0x3)
+    time.sleep(0.02)
+
     # ID
     val = bus.read32(CPUM_BASE)
     chk(val == CPUM_ID, "ID==0x4350554D (CPUM)", val, CPUM_ID)

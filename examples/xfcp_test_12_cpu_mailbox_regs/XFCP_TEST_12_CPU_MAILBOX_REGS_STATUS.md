@@ -1,6 +1,6 @@
 # XFCP_TEST_12_CPU_MAILBOX_REGS — Status
 
-## Aktuálny stav: **FÁZA D — HW REGRESSION PENDING**
+## Aktuálny stav: **UZAVRETÝ — HW UART+UDP 98/98 PASS**
 
 **Protokol:** XFCP v1.3+MEM+MAILBOX+CPUM_REGS
 
@@ -113,4 +113,4 @@ Warning 276020 zmizol, WNS prešlo z -0.220 ns na +0.252 ns.
 | Fáza B | Sim T01-T44 regression PASS | **DONE 2026-06-16** |
 | Fáza C | Quartus timing closure WNS +0.252 ns | **DONE 2026-06-17** |
 | Fáza D | Sim T01-T49 regression PASS | **DONE 2026-06-17** |
-| Fáza E | HW regression UART+UDP | **PENDING** |
+| Fáza E | HW regression UART+UDP 98/98 PASS | **DONE 2026-06-17** |
