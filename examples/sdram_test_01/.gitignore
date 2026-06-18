@@ -1,0 +1,12 @@
+sim/work/
+sim/transcript
+*.wlf
+*.vcd
+*.fst
+*.qdb
+*.qpg
+*.qtl
+*.log.tmp
+output_files/
+db/
+incremental_db/
