@@ -1,6 +1,6 @@
 # sdram_test_01 — SDRAM Library Bring-up
 
-## Aktuálny stav: **IN PROGRESS — sdram_test_05_axi_burst_rw (M1–M4 PASS)**
+## Aktuálny stav: **IN PROGRESS — sdram_test_06_hw_bist (M1–M5b PASS, regression 6/6)**
 
 ---
 
@@ -30,7 +30,8 @@ Out of scope:
 | `sdram_test_02_single_rw` | jeden write/read bez AXI | **PASS 2026-06-17** |
 | `sdram_test_03_scheduler_rw` | scheduler + bank_machine + timing | **PASS 2026-06-18** |
 | `sdram_test_04_axi_single_rw` | AXI 32-bit single write/read | **PASS 2026-06-18** |
-| `sdram_test_05_axi_burst_rw` | AXI burst, RLAST/BVALID, backpressure | TODO |
+| `sdram_test_05a_axi_burst_rw` | AXI 2-beat burst, RLAST, bez backpressure | **PASS 2026-06-18** |
+| `sdram_test_05b_axi_backpressure` | RREADY stall, skid buffer drain | **PASS 2026-06-18** |
 | `sdram_test_06_hw_bist` | FPGA BIST smoke test | TODO |
 
 ---
@@ -124,6 +125,85 @@ rtl/fifo/
 5. `sdram_model_pro` — chýba overenie init sekvencie, tREFI watchdog, MRS decode
 
 Tieto budú riešené postupne v milstonoch 2–5.
+
+---
+
+## Míľnik: sdram_test_05b_axi_backpressure — **PASS (2026-06-18)**
+
+### Cieľ
+
+Overiť skid buffer v `read_engine` pri RREADY=0 stalle počas 2-beat burstu.
+Oba beaty musia byť zachované a drainované v správnom poradí po RREADY=1.
+
+### RTL zmena (read_engine.sv v160)
+
+- Pridaný 1-entry skid buffer (`skid_rdata/rid/rlast/valid`)
+- AXI R output register + skid v samostatnom `always_ff`
+- Routing: beat_valid → output (ak voľný) alebo skid (ak busy)
+- Drain: pri rready && rvalid && skid_valid → skid do output
+
+### Sim výsledok
+
+```
+Questa 2025.2, 2026-06-18
+RVALID_drops=0  (AXI protocol: RVALID stabilny pocas stallu)
+ACT=1  WR=4  RD=4  PRE=0
+Beat0: 0xdeadbeef  rlast=0  rid=0x5  (zo skid output registra)
+Beat1: 0x12345678  rlast=1  rid=0x5  (zo skid registra po drainu)
+sdram_model_pro: vsetky prikazy OK
+*** PASS ***
+Regression: 6/6 PASS
+```
+
+### Zname obmedzenie
+
+Skid buffer ma kapacitu 1 entry. Overflow ak RREADY=0 dlhsie nez inter-beat interval
+(~3 clk cykly pre back-to-back RD). Pre dlhsie bursts alebo horsiu backpressure treba
+plnohodnotny R FIFO.
+
+---
+
+## Míľnik: sdram_test_05a_axi_burst_rw — **PASS (2026-06-18)**
+
+### Cieľ
+
+AXI 2-beat burst write/read (AWLEN=1, ARLEN=1). RREADY=1, BREADY=1 (bez backpressure).
+Overenie správneho RLAST[0]=0, RLAST[1]=1 a dátovej integrity cez gearbox.
+
+### RTL oprava pred M5a
+
+`read_engine.sv`: pridaný `read_cmd_phase` toggle flip-flop.
+Meta FIFO push zmenený z `read_issue && issue_last` na `read_issue && read_cmd_phase`.
+
+**Prečo**: Pre burst reads (ARLEN>0) sa na každý AXI beat emitujú 2 CMD_RDs (phase0, phase1).
+Predtým push iba pri `issue_last=1` = len pre phase1 posledného beatu → meta FIFO underflow
+pre non-last beaty. Nová podmienka pushuje raz za beat (pri každom phase1 CMD_RD). ✓
+
+### Sim výsledok
+
+```
+Questa 2025.2, 2026-06-18
+ACT=1  WR=4  RD=4  PRE=0
+Beat0: 0xdeadbeef  rlast=0  rid=0x5
+Beat1: 0x12345678  rlast=1  rid=0x5
+sdram_model_pro: vsetky prikazy OK (tWTR, row-hit)
+*** PASS ***
+Regression: 5/5 PASS
+```
+
+### SDRAM command trace
+
+```
+ACT    B0 Row:0010
+WR     B0 Col:008  (OK)  <- 0xBEEF (low beat0)
+WR     B0 Col:009  (OK)  <- 0xDEAD (high beat0)
+WR     B0 Col:00A  (OK)  <- 0x5678 (low beat1)
+WR     B0 Col:00B  (OK)  <- 0x1234 (high beat1)
+RD     B0 Col:008  (OK)
+RD     B0 Col:009  (OK)
+RD     B0 Col:00A  (OK)
+RD     B0 Col:00B  (OK)
+```
 
 ---
 

@@ -40,9 +40,9 @@ SDRAM_SIM = \
 	model/sdram_model_pro.sv \
 	sdram_cmd_trace.sv
 
-.PHONY: all init_refresh phy_single_rw scheduler_rw axi_single_rw regression clean
+.PHONY: all init_refresh phy_single_rw scheduler_rw axi_single_rw axi_burst_rw axi_backpressure regression clean
 
-all: init_refresh phy_single_rw scheduler_rw axi_single_rw
+all: init_refresh phy_single_rw scheduler_rw axi_single_rw axi_burst_rw axi_backpressure
 
 $(LOGDIR):
 	mkdir -p $(LOGDIR)
@@ -67,8 +67,18 @@ axi_single_rw: $(LOGDIR)
 	$(VLOG) $(SDRAM_RTL_M4) $(SDRAM_SIM) tb_axi_single_rw.sv
 	$(VSIM) tb_axi_single_rw | tee $(LOGDIR)/tb_axi_single_rw.log
 
+# ── Milestone 05a: AXI 2-beat burst write/read (no backpressure) ─────────────
+axi_burst_rw: $(LOGDIR)
+	$(VLOG) $(SDRAM_RTL_M4) $(SDRAM_SIM) tb_axi_burst_rw.sv
+	$(VSIM) tb_axi_burst_rw | tee $(LOGDIR)/tb_axi_burst_rw.log
+
+# ── Milestone 05b: AXI R backpressure (RREADY stall + skid buffer drain) ──────
+axi_backpressure: $(LOGDIR)
+	$(VLOG) $(SDRAM_RTL_M4) $(SDRAM_SIM) tb_axi_backpressure.sv
+	$(VSIM) tb_axi_backpressure | tee $(LOGDIR)/tb_axi_backpressure.log
+
 # ── Regression ───────────────────────────────────────────────────────────────
-regression: init_refresh phy_single_rw scheduler_rw axi_single_rw
+regression: init_refresh phy_single_rw scheduler_rw axi_single_rw axi_burst_rw axi_backpressure
 	@if grep -ql "FAIL\|\*\* Fatal:" $(LOGDIR)/tb_*.log 2>/dev/null; then \
 		echo "===================================="; \
 		echo " SDRAM_TEST_01 REGRESSION FAILED"; \
