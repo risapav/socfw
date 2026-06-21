@@ -37,5 +37,22 @@ req_ready = (state == IDLE). req_ready goes LOW when request accepted.
 
 ## AXI bug from sdram_test_01 is confirmed NOT in native layer
 
-The bug (0xzzzz_1234) is above native_word_port. Investigation continues
+The bug (0xzzzz_1234) is above native_word_port. Investigation was continued
 in sdram_test_04 at the AXI adapter level.
+
+## sdram_test_04 conclusion (2026-06-21)
+
+The AXI adapter layer is clean. E001-E007 cover:
+- AXI write/read positive path (unit + fake backend)
+- Protocol guards (unaligned addr, partial WSTRB -> SLVERR)
+- AW/W separated handshake (AW-first, W-first)
+- native_req_ready stall
+- Full integration: AXI->NWP->PHY->SDRAM model single write/read
+- Immediate read-after-BVALID (early BVALID hazard, no corruption)
+- Multi-address 3xW + 3xR at AXI 0x00/0x04/0x08, all MATCH
+- Full-chain BREADY and RREADY backpressure, BVALID/RVALID/RDATA stable
+
+The bug (0xzzzz_1234 vs 0x1234_A5C3) was NOT reproduced in simulation at the
+AXI adapter layer. It likely manifests only in hardware (capture timing, I/O
+delays, or board-level signal integrity). Investigation continues in sdram_test_05
+with Quartus synthesis + HW BIST @125 MHz.

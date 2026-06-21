@@ -4,37 +4,44 @@
 |-------|-------|
 | Project | sdram_test_04 |
 | Purpose | AXI adapter over proven native_word_port |
-| Current milestone | M1c — AXI assertion hardening |
-| Current active test | tb_axi_native_adapter_protocol_unit |
+| Current milestone | M5 — COMPLETE |
+| Final result | **PASS** |
 | Selected config | RSHIFT=0, CMDREG=1 |
-| Latest test result | **PASS** — E003: 54 checks (P3×12 + P4×12 + P5×12 + E1-E3×6), no RTL change (2026-06-21) |
-| Next allowed action | M2 awaiting user approval |
+| Latest test result | **PASS** — E007: BREADY+RREADY stall 3/3 all stable, ADDR0/4 MATCH (2026-06-21) |
+| Status | **CLOSED** (2026-06-21) |
 
 ---
 
-## Goal
+## Conclusion
 
-Find and fix the original sdram_test_01 AXI 2-read bug:
+AXI adapter over native_word_port is proven in simulation.
 
-```
-expected 0x1234_A5C3
-got      0xzzzz_1234
-```
+Verified:
+- AXI positive write/read
+- AXI protocol guards
+- AW/W separated handshake
+- native_req_ready stall
+- BREADY stall
+- RREADY stall
+- unaligned/partial access SLVERR
+- AXI -> native -> PHY -> SDRAM model single write/read
+- immediate read-after-BVALID
+- AXI multi-address smoke
+- full-chain AXI backpressure smoke
 
-Lower layers proven:
-- sdram_test_02: PHY + 2×16 assembly PASS
-- sdram_test_03: native_word_port (unit + single + multi-address) PASS
+The original sdram_test_01 failure (0xzzzz_1234 vs 0x1234_A5C3) was **not reproduced** in
+simulation at the AXI adapter layer. The adapter layer is clean. The bug likely manifests
+only in hardware (capture timing, I/O delays, or board-level signal integrity), which is
+outside the scope of sdram_test_04.
 
-Suspect: AXI adapter / address conversion / handshake / response timing / backpressure
+Remaining work:
+  Move to sdram_test_05 for Quartus + HW BIST @125 MHz.
 
 ---
 
 ## Not allowed
 
-- Quartus / HW / board.yaml
-- BIST, XFCP
-- Modifying native_word_port.sv (proven baseline)
-- Claim PASS without valid log header
+Do not extend sdram_test_04 with Quartus, HW, BIST, XFCP, or board files.
 
 ---
 

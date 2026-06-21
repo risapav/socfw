@@ -7,7 +7,7 @@ SHELL      := bash
 # No Quartus. No HW. No AXI files from sdram_test_01 yet.
 # -------------------------------------------------------------------------
 
-.PHONY: clean gen-cfg test-axi-unit test-axi-protocol help
+.PHONY: clean gen-cfg test-axi-unit test-axi-protocol test-axi-native-single test-axi-raw-raw test-axi-multi test-axi-backpressure help
 
 RSHIFT  ?= 0
 CMDREG  := 1
@@ -81,6 +81,94 @@ test-axi-protocol:
 	fi
 
 # -------------------------------------------------------------------------
+# M2: Full integration -- AXI adapter + native_word_port + PHY + SDRAM model
+# -------------------------------------------------------------------------
+test-axi-native-single: gen-cfg
+	$(VLOG) \
+	  $(RTL_NAT)/sdram_pkg.sv \
+	  $(RTL_NAT)/sdram_phy.sv \
+	  $(RTL_NAT)/read_word_assembler.sv \
+	  $(RTL_NAT)/native_word_port.sv \
+	  $(RTL_AXI)/axi_native_adapter.sv \
+	  $(MODEL)/sdram_model_pro.sv \
+	  $(TB)/tb_axi_native_single_write_read.sv
+	$(call write_log_header,tb_axi_native_single_write_read)
+	$(VSIM) tb_axi_native_single_write_read 2>&1 | tee -a $(LOGDIR)/tb_axi_native_single_write_read.log
+	@echo ""
+	@echo "RESULT:"
+	@if grep -q "\*\*\* PASS \*\*\*" $(LOGDIR)/tb_axi_native_single_write_read.log; then \
+	  echo "  PASS"; \
+	else \
+	  echo "  FAIL"; exit 1; \
+	fi
+
+# -------------------------------------------------------------------------
+# M2b: AXI raw read-after-BVALID (no manual NWP wait -- hazard test)
+# -------------------------------------------------------------------------
+test-axi-raw-raw: gen-cfg
+	$(VLOG) \
+	  $(RTL_NAT)/sdram_pkg.sv \
+	  $(RTL_NAT)/sdram_phy.sv \
+	  $(RTL_NAT)/read_word_assembler.sv \
+	  $(RTL_NAT)/native_word_port.sv \
+	  $(RTL_AXI)/axi_native_adapter.sv \
+	  $(MODEL)/sdram_model_pro.sv \
+	  $(TB)/tb_axi_native_raw_read_after_bvalid.sv
+	$(call write_log_header,tb_axi_native_raw_read_after_bvalid)
+	$(VSIM) tb_axi_native_raw_read_after_bvalid 2>&1 | tee -a $(LOGDIR)/tb_axi_native_raw_read_after_bvalid.log
+	@echo ""
+	@echo "RESULT:"
+	@if grep -q "\*\*\* PASS \*\*\*" $(LOGDIR)/tb_axi_native_raw_read_after_bvalid.log; then \
+	  echo "  PASS"; \
+	else \
+	  echo "  FAIL"; exit 1; \
+	fi
+
+# -------------------------------------------------------------------------
+# M3: AXI multi-address smoke -- 3 writes + 3 reads at 0x00, 0x04, 0x08
+# -------------------------------------------------------------------------
+test-axi-multi: gen-cfg
+	$(VLOG) \
+	  $(RTL_NAT)/sdram_pkg.sv \
+	  $(RTL_NAT)/sdram_phy.sv \
+	  $(RTL_NAT)/read_word_assembler.sv \
+	  $(RTL_NAT)/native_word_port.sv \
+	  $(RTL_AXI)/axi_native_adapter.sv \
+	  $(MODEL)/sdram_model_pro.sv \
+	  $(TB)/tb_axi_native_multi_address_smoke.sv
+	$(call write_log_header,tb_axi_native_multi_address_smoke)
+	$(VSIM) tb_axi_native_multi_address_smoke 2>&1 | tee -a $(LOGDIR)/tb_axi_native_multi_address_smoke.log
+	@echo ""
+	@echo "RESULT:"
+	@if grep -q "\*\*\* PASS \*\*\*" $(LOGDIR)/tb_axi_native_multi_address_smoke.log; then \
+	  echo "  PASS"; \
+	else \
+	  echo "  FAIL"; exit 1; \
+	fi
+
+# -------------------------------------------------------------------------
+# M4: AXI backpressure smoke -- BREADY stall + RREADY stall, full chain
+# -------------------------------------------------------------------------
+test-axi-backpressure: gen-cfg
+	$(VLOG) \
+	  $(RTL_NAT)/sdram_pkg.sv \
+	  $(RTL_NAT)/sdram_phy.sv \
+	  $(RTL_NAT)/read_word_assembler.sv \
+	  $(RTL_NAT)/native_word_port.sv \
+	  $(RTL_AXI)/axi_native_adapter.sv \
+	  $(MODEL)/sdram_model_pro.sv \
+	  $(TB)/tb_axi_native_backpressure_smoke.sv
+	$(call write_log_header,tb_axi_native_backpressure_smoke)
+	$(VSIM) tb_axi_native_backpressure_smoke 2>&1 | tee -a $(LOGDIR)/tb_axi_native_backpressure_smoke.log
+	@echo ""
+	@echo "RESULT:"
+	@if grep -q "\*\*\* PASS \*\*\*" $(LOGDIR)/tb_axi_native_backpressure_smoke.log; then \
+	  echo "  PASS"; \
+	else \
+	  echo "  FAIL"; exit 1; \
+	fi
+
+# -------------------------------------------------------------------------
 # Clean
 # -------------------------------------------------------------------------
 clean:
@@ -100,7 +188,11 @@ help:
 	@echo "Targets:"
 	@echo "  make gen-cfg          Regenerate sdram_build_cfg.svh"
 	@echo "  make test-axi-unit      M1:  AXI adapter unit (fake native backend)"
-	@echo "  make test-axi-protocol  M1b: AXI protocol guard unit (P1-P5, E1-E3)"
-	@echo "  make clean              Remove work/ and logs"
+	@echo "  make test-axi-protocol         M1b: AXI protocol guard unit (P1-P5, E1-E3)"
+	@echo "  make test-axi-native-single    M2:  Full integration: AXI+NWP+PHY+model"
+	@echo "  make test-axi-raw-raw          M2b: Read-after-BVALID hazard (no NWP wait)"
+	@echo "  make test-axi-multi            M3:  Multi-address smoke (3 wr + 3 rd)"
+	@echo "  make test-axi-backpressure     M4:  Backpressure smoke (BREADY+RREADY stall)"
+	@echo "  make clean                     Remove work/ and logs"
 	@echo ""
 	@echo "Log header: # BUILD_CONFIG PROJECT=sdram_test_04 RSHIFT=0 CMDREG=1"
